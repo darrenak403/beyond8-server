@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Beyond8.ServiceDefaults")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7305ffed56c0aefd89a91712c7ce926ea34273df")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5782472544e4d65af59aa9d4b319d725c4dcb848")]
 [assembly: System.Reflection.AssemblyProductAttribute("Beyond8.ServiceDefaults")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Beyond8.ServiceDefaults")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -20,7 +20,7 @@ public static class ExternalServiceRegistrationExtensions
 
         var identityDb = postgres.AddDatabase("identity-db", "Identities");
 
-        var identityService = builder.AddProject<Projects.Beyond8_Identity_Api>("IdentityService")
+        var identityService = builder.AddProject<Projects.Beyond8_Identity_Api>("Identity-Service")
             .WithReference(identityDb)
             .WaitFor(postgres);
 
@@ -32,8 +32,12 @@ public static class ExternalServiceRegistrationExtensions
 
             });
 
-        var scalarDocs = builder.AddScalarApiReference()
+        var scalarDocs = builder.AddScalarApiReference("api-docs")
            .WithContainerName("ScalarDocs")
+           .WithEndpoint("http", endpoint =>
+           {
+               endpoint.Port = 8081;
+           })
            .WithApiReference(identityService);
 
         return builder;
