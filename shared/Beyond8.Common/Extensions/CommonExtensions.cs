@@ -1,15 +1,10 @@
-using System;
-using System.Reflection;
-using System.Text.Json.Serialization;
 using Beyond8.Common.Middlewares;
-using Beyond8.Common.Utilities;
-using MassTransit;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System.Text.Json.Serialization;
 
 namespace Beyond8.Common.Extensions;
 

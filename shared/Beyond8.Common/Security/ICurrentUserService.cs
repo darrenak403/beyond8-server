@@ -1,5 +1,3 @@
-using System;
-
 namespace Beyond8.Common.Security;
 
 public interface ICurrentUserService

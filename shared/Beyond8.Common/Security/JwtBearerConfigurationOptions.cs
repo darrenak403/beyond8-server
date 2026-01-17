@@ -1,5 +1,6 @@
 
 namespace Beyond8.Common.Security;
+
 public class JwtBearerConfigurationOptions
 {
     public const string SectionName = "JwtBearer";

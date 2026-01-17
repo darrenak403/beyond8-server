@@ -1,6 +1,5 @@
-using System;
-using System.ComponentModel.DataAnnotations;
 using Beyond8.Common.Data.Interfaces;
+using System.ComponentModel.DataAnnotations;
 
 namespace Beyond8.Common.Data.Base;
 
