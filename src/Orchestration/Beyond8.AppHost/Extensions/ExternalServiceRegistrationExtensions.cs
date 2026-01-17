@@ -1,4 +1,3 @@
-using System;
 using Aspire.Hosting.Yarp;
 using Scalar.Aspire;
 using Yarp.ReverseProxy.Configuration;
@@ -19,15 +18,27 @@ public static class ExternalServiceRegistrationExtensions
                        .WithHostPort(5050);
             });
 
+        var identityDb = postgres.AddDatabase("identity-db", "Identities");
+
+        var identityService = builder.AddProject<Projects.Beyond8_Identity_Api>("Identity-Service")
+            .WithReference(identityDb)
+            .WaitFor(postgres);
+
         var apiGateway = builder.AddYarp("api-gateway")
             .WithContainerName("ApiGateway")
             .WithHostPort(8080)
             .WithConfiguration(config =>
             {
+
             });
 
-        var scalarDocs = builder.AddScalarApiReference("scalar-docs")
-            .WithContainerName("ScalarDocs");
+        var scalarDocs = builder.AddScalarApiReference("api-docs")
+           .WithContainerName("ScalarDocs")
+           .WithEndpoint("http", endpoint =>
+           {
+               endpoint.Port = 8081;
+           })
+           .WithApiReference(identityService);
 
         return builder;
     }
