@@ -1,0 +1,61 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.3.11408.92 d18.3
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "shared", "shared", "{4F52FD11-658E-A102-6CD3-7D7C16FFA15B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Beyond8.Common", "shared\Beyond8.Common\Beyond8.Common.csproj", "{56CE2E3F-9C0D-6C79-2548-738CA7C41A24}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Beyond8.DatabaseMigrationHelpers", "shared\Beyond8.DatabaseMigrationHelpers\Beyond8.DatabaseMigrationHelpers.csproj", "{D299DE89-5F9B-441C-D656-143464094E4F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Orchestration", "Orchestration", "{8B260A08-A83E-5A86-27DB-EBC08B683631}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Beyond8.AppHost", "src\Orchestration\Beyond8.AppHost\Beyond8.AppHost.csproj", "{A73FF4D6-3D6F-A343-1D05-07D8BFD3BB70}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Beyond8.ServiceDefaults", "src\Orchestration\Beyond8.ServiceDefaults\Beyond8.ServiceDefaults.csproj", "{61A2EF66-B61B-0442-4244-E63DCAD7C3A9}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Services", "Services", "{984BB9B3-3FA3-BE33-9484-CAC21695A33C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Identity", "Identity", "{1BFC9479-12BF-35C3-06B8-42D89D95092B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{56CE2E3F-9C0D-6C79-2548-738CA7C41A24}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{56CE2E3F-9C0D-6C79-2548-738CA7C41A24}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{56CE2E3F-9C0D-6C79-2548-738CA7C41A24}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{56CE2E3F-9C0D-6C79-2548-738CA7C41A24}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D299DE89-5F9B-441C-D656-143464094E4F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D299DE89-5F9B-441C-D656-143464094E4F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D299DE89-5F9B-441C-D656-143464094E4F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D299DE89-5F9B-441C-D656-143464094E4F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A73FF4D6-3D6F-A343-1D05-07D8BFD3BB70}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A73FF4D6-3D6F-A343-1D05-07D8BFD3BB70}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A73FF4D6-3D6F-A343-1D05-07D8BFD3BB70}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A73FF4D6-3D6F-A343-1D05-07D8BFD3BB70}.Release|Any CPU.Build.0 = Release|Any CPU
+		{61A2EF66-B61B-0442-4244-E63DCAD7C3A9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{61A2EF66-B61B-0442-4244-E63DCAD7C3A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{61A2EF66-B61B-0442-4244-E63DCAD7C3A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{61A2EF66-B61B-0442-4244-E63DCAD7C3A9}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{56CE2E3F-9C0D-6C79-2548-738CA7C41A24} = {4F52FD11-658E-A102-6CD3-7D7C16FFA15B}
+		{D299DE89-5F9B-441C-D656-143464094E4F} = {4F52FD11-658E-A102-6CD3-7D7C16FFA15B}
+		{8B260A08-A83E-5A86-27DB-EBC08B683631} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{A73FF4D6-3D6F-A343-1D05-07D8BFD3BB70} = {8B260A08-A83E-5A86-27DB-EBC08B683631}
+		{61A2EF66-B61B-0442-4244-E63DCAD7C3A9} = {8B260A08-A83E-5A86-27DB-EBC08B683631}
+		{984BB9B3-3FA3-BE33-9484-CAC21695A33C} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{1BFC9479-12BF-35C3-06B8-42D89D95092B} = {984BB9B3-3FA3-BE33-9484-CAC21695A33C}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D077F82B-62F7-4539-B6D9-FD8A32DA6D9D}
+	EndGlobalSection
+EndGlobal

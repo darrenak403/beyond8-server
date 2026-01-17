@@ -1,0 +1,13 @@
+D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.ServiceDefaults\bin\Debug\net10.0\Beyond8.ServiceDefaults.deps.json
+D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.ServiceDefaults\bin\Debug\net10.0\Beyond8.ServiceDefaults.dll
+D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.ServiceDefaults\bin\Debug\net10.0\Beyond8.ServiceDefaults.pdb
+D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.ServiceDefaults\obj\Debug\net10.0\Beyond8.ServiceDefaults.csproj.AssemblyReference.cache
+D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.ServiceDefaults\obj\Debug\net10.0\Beyond8.ServiceDefaults.GeneratedMSBuildEditorConfig.editorconfig
+D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.ServiceDefaults\obj\Debug\net10.0\Beyond8.ServiceDefaults.AssemblyInfoInputs.cache
+D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.ServiceDefaults\obj\Debug\net10.0\Beyond8.ServiceDefaults.AssemblyInfo.cs
+D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.ServiceDefaults\obj\Debug\net10.0\Beyond8.ServiceDefaults.csproj.CoreCompileInputs.cache
+D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.ServiceDefaults\obj\Debug\net10.0\Beyond8.ServiceDefaults.sourcelink.json
+D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.ServiceDefaults\obj\Debug\net10.0\Beyond8.ServiceDefaults.dll
+D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.ServiceDefaults\obj\Debug\net10.0\refint\Beyond8.ServiceDefaults.dll
+D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.ServiceDefaults\obj\Debug\net10.0\Beyond8.ServiceDefaults.pdb
+D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.ServiceDefaults\obj\Debug\net10.0\ref\Beyond8.ServiceDefaults.dll
