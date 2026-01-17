@@ -4,18 +4,18 @@ namespace Projects;
 
 #pragma warning disable CS8981 // The type name only contains lower-cased ascii characters. Such names may become reserved for the language.
 /// <summary>
-/// Metadata for the Beyond8_IdentityService project.
+/// Metadata for the Beyond8_Identity_Api project.
 /// </summary>
 [global::System.CodeDom.Compiler.GeneratedCode("Aspire.Hosting", null)]
 [global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage(Justification = "Generated code.")]
 [global::System.Diagnostics.DebuggerDisplay("Type = {GetType().Name,nq}, ProjectPath = {ProjectPath}")]
-public class Beyond8_IdentityService : global::Aspire.Hosting.IProjectMetadata
+public class Beyond8_Identity_Api : global::Aspire.Hosting.IProjectMetadata
 #pragma warning restore CS8981
 {
     /// <summary>
-    /// The path to the Beyond8_IdentityService project.
+    /// The path to the Beyond8_Identity_Api project.
     /// </summary>
-    public string ProjectPath => """D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Services\Identity\Beyond8.IdentityService\Beyond8.IdentityService.csproj""";
+    public string ProjectPath => """D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Services\Identity\Beyond8.Identity.Api\Beyond8.Identity.Api.csproj""";
 
     /// <summary>
     /// Gets a value indicating whether building the project before running it should be suppressed.

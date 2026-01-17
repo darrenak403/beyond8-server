@@ -54,6 +54,18 @@
               "target": "Package",
               "version": "[13.1.0, )"
             },
+            "Aspire.StackExchange.Redis": {
+              "target": "Package",
+              "version": "[13.1.0, )"
+            },
+            "MassTransit": {
+              "target": "Package",
+              "version": "[9.0.0, )"
+            },
+            "MassTransit.RabbitMQ": {
+              "target": "Package",
+              "version": "[9.0.0, )"
+            },
             "Microsoft.AspNetCore.Authentication.JwtBearer": {
               "target": "Package",
               "version": "[10.0.2, )"
@@ -69,6 +81,10 @@
             "Microsoft.Extensions.Logging": {
               "target": "Package",
               "version": "[10.0.2, )"
+            },
+            "Swashbuckle.AspNetCore": {
+              "target": "Package",
+              "version": "[6.7.0, )"
             }
           },
           "imports": [

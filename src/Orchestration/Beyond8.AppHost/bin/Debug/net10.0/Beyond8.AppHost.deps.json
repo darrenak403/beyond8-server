@@ -8,7 +8,10 @@
     ".NETCoreApp,Version=v10.0": {
       "Beyond8.AppHost/1.0.0": {
         "dependencies": {
-          "Aspire.Hosting.AppHost": "13.1.0"
+          "Aspire.Hosting.AppHost": "13.1.0",
+          "Aspire.Hosting.PostgreSQL": "13.1.0",
+          "Aspire.Hosting.Yarp": "13.1.0",
+          "Scalar.Aspire": "0.8.20"
         },
         "runtime": {
           "Beyond8.AppHost.dll": {}
@@ -97,6 +100,65 @@
           "lib/net10.0/Aspire.Hosting.AppHost.dll": {
             "assemblyVersion": "13.1.0.0",
             "fileVersion": "13.100.25.61603"
+          }
+        }
+      },
+      "Aspire.Hosting.PostgreSQL/13.1.0": {
+        "dependencies": {
+          "AspNetCore.HealthChecks.NpgSql": "9.0.0",
+          "AspNetCore.HealthChecks.Uris": "9.0.0",
+          "Aspire.Hosting": "13.1.0",
+          "Google.Protobuf": "3.33.0",
+          "Grpc.AspNetCore": "2.71.0",
+          "Grpc.Net.ClientFactory": "2.71.0",
+          "Humanizer.Core": "2.14.1",
+          "JsonPatch.Net": "3.3.0",
+          "KubernetesClient": "18.0.5",
+          "Newtonsoft.Json": "13.0.4",
+          "Polly.Core": "8.6.4",
+          "Semver": "3.0.0",
+          "StreamJsonRpc": "2.22.23",
+          "System.IO.Hashing": "9.0.10"
+        },
+        "runtime": {
+          "lib/net8.0/Aspire.Hosting.PostgreSQL.dll": {
+            "assemblyVersion": "13.1.0.0",
+            "fileVersion": "13.100.25.61603"
+          }
+        }
+      },
+      "Aspire.Hosting.Yarp/13.1.0": {
+        "dependencies": {
+          "AspNetCore.HealthChecks.Uris": "9.0.0",
+          "Aspire.Hosting": "13.1.0",
+          "Google.Protobuf": "3.33.0",
+          "Grpc.AspNetCore": "2.71.0",
+          "Grpc.Net.ClientFactory": "2.71.0",
+          "Humanizer.Core": "2.14.1",
+          "JsonPatch.Net": "3.3.0",
+          "KubernetesClient": "18.0.5",
+          "Newtonsoft.Json": "13.0.4",
+          "Polly.Core": "8.6.4",
+          "Semver": "3.0.0",
+          "StreamJsonRpc": "2.22.23",
+          "System.IO.Hashing": "9.0.10",
+          "Yarp.ReverseProxy": "2.3.0"
+        },
+        "runtime": {
+          "lib/net8.0/Aspire.Hosting.Yarp.dll": {
+            "assemblyVersion": "13.1.0.0",
+            "fileVersion": "13.100.25.61603"
+          }
+        }
+      },
+      "AspNetCore.HealthChecks.NpgSql/9.0.0": {
+        "dependencies": {
+          "Npgsql": "8.0.3"
+        },
+        "runtime": {
+          "lib/net8.0/HealthChecks.NpgSql.dll": {
+            "assemblyVersion": "9.0.0.0",
+            "fileVersion": "9.0.0.0"
           }
         }
       },
@@ -394,11 +456,30 @@
           }
         }
       },
+      "Npgsql/8.0.3": {
+        "runtime": {
+          "lib/net8.0/Npgsql.dll": {
+            "assemblyVersion": "8.0.3.0",
+            "fileVersion": "8.0.3.0"
+          }
+        }
+      },
       "Polly.Core/8.6.4": {
         "runtime": {
           "lib/net8.0/Polly.Core.dll": {
             "assemblyVersion": "8.0.0.0",
             "fileVersion": "8.6.4.5033"
+          }
+        }
+      },
+      "Scalar.Aspire/0.8.20": {
+        "dependencies": {
+          "Aspire.Hosting": "13.1.0"
+        },
+        "runtime": {
+          "lib/net10.0/Scalar.Aspire.dll": {
+            "assemblyVersion": "0.8.20.0",
+            "fileVersion": "0.8.20.0"
           }
         }
       },
@@ -481,6 +562,17 @@
             "fileVersion": "16.3.0.0"
           }
         }
+      },
+      "Yarp.ReverseProxy/2.3.0": {
+        "dependencies": {
+          "System.IO.Hashing": "9.0.10"
+        },
+        "runtime": {
+          "lib/net8.0/Yarp.ReverseProxy.dll": {
+            "assemblyVersion": "2.3.0.0",
+            "fileVersion": "2.300.25.12702"
+          }
+        }
       }
     }
   },
@@ -503,6 +595,27 @@
       "sha512": "sha512-mjE/g+r/copJNVWBk/SytyfekaNbp7QB/hj5G3tcaFm138rnNK6jkBYCbk8MZDdGflL4FYoqN656yhLDiH9faQ==",
       "path": "aspire.hosting.apphost/13.1.0",
       "hashPath": "aspire.hosting.apphost.13.1.0.nupkg.sha512"
+    },
+    "Aspire.Hosting.PostgreSQL/13.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-PxGe4UXh/Gcfr69m/IicL01nicv8n5k6T/l2NVoyosk2/xt6yGNfTwUyU4fIRmvnLpFl+ow1lZs7R4GYY37dLw==",
+      "path": "aspire.hosting.postgresql/13.1.0",
+      "hashPath": "aspire.hosting.postgresql.13.1.0.nupkg.sha512"
+    },
+    "Aspire.Hosting.Yarp/13.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-qENxJVvefNBkOD47S3elvYJjURjvBpPDVpwk6iRQPkFDBfgWwxOMsaWPb9fwV7L/WHkB048xsj9hJu9NkFy2FQ==",
+      "path": "aspire.hosting.yarp/13.1.0",
+      "hashPath": "aspire.hosting.yarp.13.1.0.nupkg.sha512"
+    },
+    "AspNetCore.HealthChecks.NpgSql/9.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-npc58/AD5zuVxERdhCl2Kb7WnL37mwX42SJcXIwvmEig0/dugOLg3SIwtfvvh3TnvTwR/sk5LYNkkPaBdks61A==",
+      "path": "aspnetcore.healthchecks.npgsql/9.0.0",
+      "hashPath": "aspnetcore.healthchecks.npgsql.9.0.0.nupkg.sha512"
     },
     "AspNetCore.HealthChecks.Uris/9.0.0": {
       "type": "package",
@@ -658,12 +771,26 @@
       "path": "newtonsoft.json/13.0.4",
       "hashPath": "newtonsoft.json.13.0.4.nupkg.sha512"
     },
+    "Npgsql/8.0.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-6WEmzsQJCZAlUG1pThKg/RmeF6V+I0DmBBBE/8YzpRtEzhyZzKcK7ulMANDm5CkxrALBEC8H+5plxHWtIL7xnA==",
+      "path": "npgsql/8.0.3",
+      "hashPath": "npgsql.8.0.3.nupkg.sha512"
+    },
     "Polly.Core/8.6.4": {
       "type": "package",
       "serviceable": true,
       "sha512": "sha512-4AWqYnQ2TME0E+Mzovt1Uu+VyvpR84ymUldMcPw7Mbj799Phaag14CKrMtlJGx5jsvYP+S3oR1QmysgmXoD5cw==",
       "path": "polly.core/8.6.4",
       "hashPath": "polly.core.8.6.4.nupkg.sha512"
+    },
+    "Scalar.Aspire/0.8.20": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-0FW9cPWA/Ad25+t6SVQ2uCz+y+fCxP93F/2vSd3kRjJr2wueO1vGgEUNC/Jm0Utpfcw27EqB03IfsWzQ+j1QFg==",
+      "path": "scalar.aspire/0.8.20",
+      "hashPath": "scalar.aspire.0.8.20.nupkg.sha512"
     },
     "Semver/3.0.0": {
       "type": "package",
@@ -692,6 +819,13 @@
       "sha512": "sha512-SgMOdxbz8X65z8hraIs6hOEdnkH6hESTAIUa7viEngHOYaH+6q5XJmwr1+yb9vJpNQ19hCQY69xbFsLtXpobQA==",
       "path": "yamldotnet/16.3.0",
       "hashPath": "yamldotnet.16.3.0.nupkg.sha512"
+    },
+    "Yarp.ReverseProxy/2.3.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-gxtkN3a+9biu9V9Zd5NaTO6VZWXAnS2mhQ0R/VXmSPoTuiQNZsakKikrKpDtKxrL5nUYzbRsHtl40WNq+ZBKKg==",
+      "path": "yarp.reverseproxy/2.3.0",
+      "hashPath": "yarp.reverseproxy.2.3.0.nupkg.sha512"
     }
   }
 }

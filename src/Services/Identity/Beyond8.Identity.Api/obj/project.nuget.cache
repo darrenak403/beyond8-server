@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "txrxA2LNabE=",
+  "success": true,
+  "projectFilePath": "D:\\Spring-2026\\SWD392\\Beyond8\\beyond8-server\\src\\Services\\Identity\\Beyond8.Identity.Api\\Beyond8.Identity.Api.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\hoade\\.nuget\\packages\\microsoft.aspnetcore.openapi\\10.0.2\\microsoft.aspnetcore.openapi.10.0.2.nupkg.sha512",
+    "C:\\Users\\hoade\\.nuget\\packages\\microsoft.openapi\\2.0.0\\microsoft.openapi.2.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}
