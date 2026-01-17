@@ -1,6 +1,5 @@
-using System;
-using System.Text.Json;
 using StackExchange.Redis;
+using System.Text.Json;
 
 namespace Beyond8.Common.Caching;
 
