@@ -29,8 +29,12 @@ public static class ExternalServiceRegistrationExtensions
             .WithHostPort(8080)
             .WithConfiguration(config =>
             {
-                
+
             });
+
+        var scalarDocs = builder.AddScalarApiReference()
+           .WithContainerName("ScalarDocs")
+           .WithApiReference(identityService);
 
         return builder;
     }

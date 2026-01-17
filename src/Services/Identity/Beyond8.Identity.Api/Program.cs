@@ -13,6 +13,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.MapGet("/test", () => "Hello World");
+
 app.UseHttpsRedirection();
 app.UseCommonService();
 

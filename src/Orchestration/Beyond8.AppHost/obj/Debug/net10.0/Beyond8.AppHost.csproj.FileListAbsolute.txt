@@ -5,6 +5,9 @@ D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\b
 D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\Beyond8.AppHost.pdb
 D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\Aspire.Hosting.dll
 D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\Aspire.Hosting.AppHost.dll
+D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\Aspire.Hosting.PostgreSQL.dll
+D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\Aspire.Hosting.Yarp.dll
+D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\HealthChecks.NpgSql.dll
 D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\HealthChecks.Uris.dll
 D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\Fractions.dll
 D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\Google.Protobuf.dll
@@ -26,11 +29,14 @@ D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\b
 D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\Microsoft.VisualStudio.Validation.dll
 D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\Nerdbank.Streams.dll
 D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\Newtonsoft.Json.dll
+D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\Npgsql.dll
 D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\Polly.Core.dll
+D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\Scalar.Aspire.dll
 D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\Semver.dll
 D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\StreamJsonRpc.dll
 D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\System.IO.Hashing.dll
 D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\YamlDotNet.dll
+D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\Yarp.ReverseProxy.dll
 D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\cs\Aspire.Hosting.resources.dll
 D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\de\Aspire.Hosting.resources.dll
 D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\es\Aspire.Hosting.resources.dll
@@ -88,6 +94,7 @@ D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\o
 D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\obj\Debug\net10.0\Beyond8.AppHost.AssemblyInfoInputs.cache
 D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\obj\Debug\net10.0\Beyond8.AppHost.AssemblyInfo.cs
 D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\obj\Debug\net10.0\Beyond8.AppHost.csproj.CoreCompileInputs.cache
+D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\obj\Debug\net10.0\Aspire\references\Beyond8_Identity_Api.ProjectMetadata.g.cs
 D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\obj\Debug\net10.0\Aspire\references\_AppHost.ProjectMetadata.g.cs
 D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\obj\Debug\net10.0\Beyond8.AppHost.sourcelink.json
 D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\obj\Debug\net10.0\Beyond8..27A0DBEC.Up2Date
@@ -96,10 +103,3 @@ D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\o
 D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\obj\Debug\net10.0\Beyond8.AppHost.pdb
 D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\obj\Debug\net10.0\Beyond8.AppHost.genruntimeconfig.cache
 D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\obj\Debug\net10.0\ref\Beyond8.AppHost.dll
-D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\Aspire.Hosting.PostgreSQL.dll
-D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\Aspire.Hosting.Yarp.dll
-D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\HealthChecks.NpgSql.dll
-D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\Npgsql.dll
-D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\Scalar.Aspire.dll
-D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\bin\Debug\net10.0\Yarp.ReverseProxy.dll
-D:\Spring-2026\SWD392\Beyond8\beyond8-server\src\Orchestration\Beyond8.AppHost\obj\Debug\net10.0\Aspire\references\.ProjectMetadata.g.cs

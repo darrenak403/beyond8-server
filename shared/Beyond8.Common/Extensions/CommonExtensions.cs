@@ -74,17 +74,13 @@ public static class CommonExtensions
         });
 
         builder.AddJwtAuthentication();
-        builder.AddSwagger();
+        builder.AddDocumentGlobalAuthentication();
 
         return builder;
     }
 
     public static WebApplication UseCommonService(this WebApplication app)
     {
-        if (app.Environment.IsDevelopment())
-        {
-            app.UseSwagger();
-        }
         app.UseCors("AllowDevelopmentClients");
         app.UseMiddleware<GlobalExceptionsMiddleware>();
         app.UseAuthentication();
