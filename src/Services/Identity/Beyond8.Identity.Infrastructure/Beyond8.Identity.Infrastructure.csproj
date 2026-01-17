@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Beyond8.Identity.Application\Beyond8.Identity.Application.csproj" />
+    <ProjectReference Include="..\Beyond8.Identity.Domain\Beyond8.Identity.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

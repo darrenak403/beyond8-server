@@ -10,4 +10,9 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Orchestration\Beyond8.ServiceDefaults\Beyond8.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\Beyond8.Identity.Application\Beyond8.Identity.Application.csproj" />
+  </ItemGroup>
+
 </Project>
