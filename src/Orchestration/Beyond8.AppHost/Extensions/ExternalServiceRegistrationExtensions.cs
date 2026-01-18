@@ -35,8 +35,8 @@ public static class ExternalServiceRegistrationExtensions
             .WithHostPort(8080)
             .WithConfiguration(config =>
             {
-                var identityCluster = AddProjectCluster(config, identityService);
-                config.AddRoute("/api/v1/auth", identityCluster);
+                var identityCluster = config.AddProjectCluster(identityService);
+                config.AddRoute("/api/v1/auth/{**catch-all}", identityCluster);
             });
 
         var scalarDocs = builder.AddScalarApiReference("api-docs")
