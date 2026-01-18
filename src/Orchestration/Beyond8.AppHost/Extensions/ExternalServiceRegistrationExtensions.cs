@@ -36,7 +36,7 @@ public static class ExternalServiceRegistrationExtensions
             .WithConfiguration(config =>
             {
                 var identityCluster = config.AddProjectCluster(identityService);
-                config.AddRoute("/api/v1/auth", identityCluster);
+                config.AddRoute("/api/v1/auth/{**catch-all}", identityCluster);
             });
 
         var scalarDocs = builder.AddScalarApiReference("api-docs")
