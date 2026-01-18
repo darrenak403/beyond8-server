@@ -26,12 +26,6 @@ public class CreateUserRequest
     [Phone(ErrorMessage = "Số điện thoại không hợp lệ.")]
     public string? PhoneNumber { get; set; }
 
-    [MaxLength(50, ErrorMessage = "Múi giờ không được vượt quá 50 ký tự.")]
-    public string Timezone { get; set; } = "Asia/Ho_Chi_Minh";
-
-    [MaxLength(10, ErrorMessage = "Ngôn ngữ không được vượt quá 10 ký tự.")]
-    public string Locale { get; set; } = "vi-VN";
-
     // Nếu cần roles, thêm list (nhưng có thể set default hoặc handle riêng)
     public List<UserRole> Roles { get; set; } = new List<UserRole>();
 }

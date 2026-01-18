@@ -1,7 +1,7 @@
-using System;
 using Beyond8.Identity.Application.Dtos.Tokens;
 using Beyond8.Identity.Application.Dtos.Users;
 using Beyond8.Identity.Domain.Entities;
+using Beyond8.Identity.Domain.Enums;
 
 namespace Beyond8.Identity.Application.Mappings.AuthMappings;
 
@@ -46,4 +46,17 @@ public static class UserMappings
             Roles = user.Roles,
         };
     }
+
+    public static User ToCreateUserEntity(this CreateUserRequest request)
+    {
+        return new User
+        {
+            Email = request.Email,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = Guid.Empty,
+            Roles = new List<UserRole> { UserRole.Student },
+            FullName = request.Email.Split('@')[0]
+        };
+    }
+
 }
