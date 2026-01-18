@@ -20,4 +20,8 @@
     <ProjectReference Include="..\Beyond8.Integration.Domain\Beyond8.Integration.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Beyond8.Integration.Application\Beyond8.Integration.Application.csproj" />
+  </ItemGroup>
+
 </Project>

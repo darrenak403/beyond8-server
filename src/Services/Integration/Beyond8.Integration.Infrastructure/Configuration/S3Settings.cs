@@ -4,7 +4,7 @@ namespace Beyond8.Integration.Infrastructure.Configuration;
 
 public class S3Settings
 {
-    public const string SectionName = "S3";
+    public const string SectionName = "AWS:S3";
 
     public string AccessKey { get; set; } = string.Empty;
     public string SecretKey { get; set; } = string.Empty;
