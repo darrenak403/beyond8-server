@@ -16,12 +16,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\..\shared\Beyond8.Common\Beyond8.Common.csproj" />
     <ProjectReference Include="..\Beyond8.Integration.Application\Beyond8.Integration.Application.csproj" />
     <ProjectReference Include="..\Beyond8.Integration.Domain\Beyond8.Integration.Domain.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Beyond8.Integration.Application\Beyond8.Integration.Application.csproj" />
   </ItemGroup>
 
 </Project>

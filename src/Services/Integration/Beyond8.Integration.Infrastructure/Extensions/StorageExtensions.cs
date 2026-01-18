@@ -1,7 +1,8 @@
+using Amazon;
 using Amazon.S3;
-using Beyond8.Integration.Application.Services;
+using Beyond8.Integration.Application.Services.Interfaces;
 using Beyond8.Integration.Infrastructure.Configuration;
-using Beyond8.Integration.Infrastructure.Services;
+using Beyond8.Integration.Infrastructure.ExternalServices;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -21,7 +22,7 @@ public static class StorageExtensions
         {
             var config = new AmazonS3Config
             {
-                RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(s3Settings.Region)
+                RegionEndpoint = RegionEndpoint.GetBySystemName(s3Settings.Region)
             };
 
             return new AmazonS3Client(s3Settings.AccessKey, s3Settings.SecretKey, config);
@@ -43,7 +44,7 @@ public static class StorageExtensions
         {
             var config = new AmazonS3Config
             {
-                RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(s3Settings.Region)
+                RegionEndpoint = RegionEndpoint.GetBySystemName(s3Settings.Region)
             };
 
             return new AmazonS3Client(s3Settings.AccessKey, s3Settings.SecretKey, config);
