@@ -1,4 +1,3 @@
-using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace Beyond8.Identity.Application.Dtos.Auth;
