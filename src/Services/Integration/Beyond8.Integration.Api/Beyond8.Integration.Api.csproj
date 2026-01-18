@@ -7,7 +7,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\shared\Beyond8.DatabaseMigrationHelpers\Beyond8.DatabaseMigrationHelpers.csproj" />
+    <ProjectReference Include="..\..\..\Orchestration\Beyond8.ServiceDefaults\Beyond8.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\Beyond8.Integration.Application\Beyond8.Integration.Application.csproj" />
+    <ProjectReference Include="..\Beyond8.Integration.Infrastructure\Beyond8.Integration.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
