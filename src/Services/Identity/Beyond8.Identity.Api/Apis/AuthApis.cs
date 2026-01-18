@@ -1,10 +1,12 @@
 using System;
+using Beyond8.Common.Extensions;
 using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
 using Beyond8.Identity.Application.Dtos.Auth;
 using Beyond8.Identity.Application.Dtos.Tokens;
 using Beyond8.Identity.Application.Dtos.Users;
 using Beyond8.Identity.Application.Services.Interfaces;
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Beyond8.Identity.Api.Apis;
@@ -93,8 +95,12 @@ public static class AuthApis
 
     private static async Task<IResult> LoginUserAsync(
         [FromBody] LoginRequest request,
-        [FromServices] IAuthService authService)
+        [FromServices] IAuthService authService,
+        [FromServices] IValidator<LoginRequest> validator)
     {
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
         var result = await authService.LoginUserAsync(request);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
@@ -109,8 +115,12 @@ public static class AuthApis
 
     private static async Task<IResult> RegisterUserAsync(
         [FromBody] RegisterRequest request,
-        [FromServices] IAuthService authService)
+        [FromServices] IAuthService authService,
+        [FromServices] IValidator<RegisterRequest> validator)
     {
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
         var result = await authService.RegisterUserAsync(request);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
@@ -118,8 +128,12 @@ public static class AuthApis
     private static async Task<IResult> RefreshTokenAsync(
     [FromBody] RefreshTokenRequest request,
     [FromServices] IAuthService authService,
-    [FromServices] ICurrentUserService currentUserService)
+    [FromServices] ICurrentUserService currentUserService,
+    [FromServices] IValidator<RefreshTokenRequest> validator)
     {
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
         var result = await authService.RefreshTokenAsync(currentUserService.UserId, request.RefreshToken);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
 
@@ -127,24 +141,36 @@ public static class AuthApis
 
     private static async Task<IResult> ChangePasswordAsync([FromBody] ChangePasswordRequest request,
         [FromServices] IAuthService authService,
-        [FromServices] ICurrentUserService currentUserService)
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IValidator<ChangePasswordRequest> validator)
     {
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
         var result = await authService.ChangePasswordAsync(currentUserService.UserId, request);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result.Message);
     }
 
     private static async Task<IResult> VerifyOtpAsync(
         [FromBody] VerifyOtpRequest request,
-        [FromServices] IAuthService authService)
+        [FromServices] IAuthService authService,
+        [FromServices] IValidator<VerifyOtpRequest> validator)
     {
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
         var result = await authService.VerifyRegisterOtpAsync(request);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
     private static async Task<IResult> ResendOtpAsync(
         [FromBody] ResendOtpRequest request,
-        [FromServices] IAuthService authService)
+        [FromServices] IAuthService authService,
+        [FromServices] IValidator<ResendOtpRequest> validator)
     {
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
         var result = await authService.ResendRegisterOtpAsync(request);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
@@ -152,16 +178,24 @@ public static class AuthApis
 
     private static async Task<IResult> ResetPasswordAsync(
         [FromBody] ResetPasswordRequest request,
-        [FromServices] IAuthService authService)
+        [FromServices] IAuthService authService,
+        [FromServices] IValidator<ResetPasswordRequest> validator)
     {
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
         var result = await authService.ResetPasswordAsync(request);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
     private static async Task<IResult> ForgotPasswordAsync(
         [FromBody] ForgotPasswordRequest request,
-        [FromServices] IAuthService authService)
+        [FromServices] IAuthService authService,
+        [FromServices] IValidator<ForgotPasswordRequest> validator)
     {
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
         var result = await authService.ForgotPasswordAsync(request);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
