@@ -1,4 +1,5 @@
 using System;
+using Beyond8.Identity.Application.Dtos.Tokens;
 using Beyond8.Identity.Application.Dtos.Users;
 using Beyond8.Identity.Domain.Entities;
 
@@ -32,6 +33,17 @@ public static class UserMappings
             Id = user.Id,
             Email = user.Email,
             FullName = user.FullName,
+        };
+    }
+
+    public static TokenClaims ToTokenClaims(this User user)
+    {
+        return new TokenClaims
+        {
+            UserId = user.Id,
+            Email = user.Email,
+            UserName = user.FullName,
+            Roles = user.Roles,
         };
     }
 }

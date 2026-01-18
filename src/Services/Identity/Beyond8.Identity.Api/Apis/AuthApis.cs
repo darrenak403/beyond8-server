@@ -1,4 +1,5 @@
 using System;
+using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
 using Beyond8.Identity.Application.Dtos.Auth;
 using Beyond8.Identity.Application.Dtos.Tokens;
@@ -22,12 +23,12 @@ public static class AuthApis
 
     public static RouteGroupBuilder MapAuthRoutes(this RouteGroupBuilder group)
     {
-        // group.MapPost("/login", LoginUserAsync)
-        //     .WithName("Login")
-        //     .WithDescription("Đăng nhập người dùng")
-        //     .AllowAnonymous()
-        //     .Produces<ApiResponse<TokenResponse>>(StatusCodes.Status200OK)
-        //     .Produces<ApiResponse<TokenResponse>>(StatusCodes.Status400BadRequest);
+        group.MapPost("/login", LoginUserAsync)
+            .WithName("Login")
+            .WithDescription("Đăng nhập người dùng")
+            .AllowAnonymous()
+            .Produces<ApiResponse<TokenResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<TokenResponse>>(StatusCodes.Status400BadRequest);
 
         group.MapPost("/register", RegisterUserAsync)
             .WithName("Register")
@@ -36,58 +37,74 @@ public static class AuthApis
             .Produces<ApiResponse<UserSimpleResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<string>>(StatusCodes.Status400BadRequest);
 
-        // group.MapPost("/refresh-token", RefreshTokenAsync)
-        //     .WithName("RefreshToken")
-        //     .WithDescription("Làm mới access token")
-        //     .RequireAuthorization()
-        //     .Produces<ApiResponse<TokenResponse>>(StatusCodes.Status200OK)
-        //     .Produces<ApiResponse<TokenResponse>>(StatusCodes.Status400BadRequest)
-        //     .Produces(StatusCodes.Status401Unauthorized);
+        group.MapPost("/refresh-token", RefreshTokenAsync)
+            .WithName("RefreshToken")
+            .WithDescription("Làm mới access token")
+            .RequireAuthorization()
+            .Produces<ApiResponse<TokenResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<TokenResponse>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
 
-        // group.MapPut("/change-password", ChangePasswordAsync)
-        //     .WithName("ChangePassword")
-        //     .WithDescription("Đổi mật khẩu người dùng")
-        //     .RequireAuthorization()
-        //     .Produces<ApiResponse<UserSimpleResponse>>(StatusCodes.Status200OK)
-        //     .Produces<ApiResponse<UserSimpleResponse>>(StatusCodes.Status400BadRequest)
-        //     .Produces(StatusCodes.Status401Unauthorized);
+        group.MapPut("/change-password", ChangePasswordAsync)
+            .WithName("ChangePassword")
+            .WithDescription("Đổi mật khẩu người dùng")
+            .RequireAuthorization()
+            .Produces<ApiResponse<UserSimpleResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<UserSimpleResponse>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
 
-        // group.MapPost("/verify-otp", VerifyOtpAsync)
-        //     .WithName("VerifyOtp")
-        //     .WithDescription("Xác thực OTP đăng ký")
-        //     .AllowAnonymous()
-        //     .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
-        //     .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest);
+        group.MapPost("/verify-otp", VerifyOtpAsync)
+            .WithName("VerifyOtp")
+            .WithDescription("Xác thực OTP đăng ký")
+            .AllowAnonymous()
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest);
 
-        // group.MapPost("/resend-otp", ResendOtpAsync)
-        //     .WithName("ResendOtp")
-        //     .WithDescription("Gửi lại mã OTP (Giới hạn 60s/lần)")
-        //     .AllowAnonymous()
-        //     .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
-        //     .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest);
+        group.MapPost("/resend-otp", ResendOtpAsync)
+            .WithName("ResendOtp")
+            .WithDescription("Gửi lại mã OTP (Giới hạn 60s/lần)")
+            .AllowAnonymous()
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest);
 
-        // group.MapPost("/forgot-password", ForgotPasswordAsync)
-        //     .WithName("ForgotPassword")
-        //     .WithDescription("Yêu cầu mã OTP lấy lại mật khẩu")
-        //     .AllowAnonymous()
-        //     .Produces<ApiResponse<bool>>(StatusCodes.Status200OK);
+        group.MapPost("/forgot-password", ForgotPasswordAsync)
+            .WithName("ForgotPassword")
+            .WithDescription("Yêu cầu mã OTP lấy lại mật khẩu")
+            .AllowAnonymous()
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK);
 
-        // group.MapPost("/reset-password", ResetPasswordAsync)
-        //     .WithName("ResetPassword")
-        //     .WithDescription("Đặt lại mật khẩu người dùng")
-        //     .AllowAnonymous()
-        //     .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
-        //     .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest);
+        group.MapPost("/reset-password", ResetPasswordAsync)
+            .WithName("ResetPassword")
+            .WithDescription("Đặt lại mật khẩu người dùng")
+            .AllowAnonymous()
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest);
 
-        // group.MapPost("/logout", LogoutUserAsync)
-        //     .WithName("Logout")
-        //     .WithDescription("Đăng xuất người dùng")
-        //     .RequireAuthorization()
-        //     .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
-        //     .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
-        //     .Produces(StatusCodes.Status401Unauthorized);
+        group.MapPost("/logout", LogoutUserAsync)
+            .WithName("Logout")
+            .WithDescription("Đăng xuất người dùng")
+            .RequireAuthorization()
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
 
         return group;
+    }
+
+    private static async Task<IResult> LoginUserAsync(
+        [FromBody] LoginRequest request,
+        [FromServices] IAuthService authService)
+    {
+        var result = await authService.LoginUserAsync(request);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> LogoutUserAsync(
+        [FromServices] IAuthService authService,
+        [FromServices] ICurrentUserService currentUserService)
+    {
+        var result = await authService.LogoutUserAsync(currentUserService.UserId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
     private static async Task<IResult> RegisterUserAsync(
@@ -95,6 +112,59 @@ public static class AuthApis
         [FromServices] IAuthService authService)
     {
         var result = await authService.RegisterUserAsync(request);
-        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result.Message);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> RefreshTokenAsync(
+    [FromBody] RefreshTokenRequest request,
+    [FromServices] IAuthService authService,
+    [FromServices] ICurrentUserService currentUserService)
+    {
+        var result = await authService.RefreshTokenAsync(currentUserService.UserId, request.RefreshToken);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+
+    }
+
+    private static async Task<IResult> ChangePasswordAsync([FromBody] ChangePasswordRequest request,
+        [FromServices] IAuthService authService,
+        [FromServices] ICurrentUserService currentUserService)
+    {
+        var result = await authService.ChangePasswordAsync(currentUserService.UserId, request);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> VerifyOtpAsync(
+        [FromBody] VerifyOtpRequest request,
+        [FromServices] IAuthService authService)
+    {
+        var result = await authService.VerifyRegisterOtpAsync(request);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> ResendOtpAsync(
+        [FromBody] ResendOtpRequest request,
+        [FromServices] IAuthService authService)
+    {
+        var result = await authService.ResendRegisterOtpAsync(request);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+
+    private static async Task<IResult> ResetPasswordAsync(
+        [FromBody] ResetPasswordRequest request,
+        [FromServices] IAuthService authService)
+    {
+        var result = await authService.ResetPasswordAsync(request);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> ForgotPasswordAsync(
+        [FromBody] ForgotPasswordRequest request,
+        [FromServices] IAuthService authService)
+    {
+        var result = await authService.ForgotPasswordAsync(request);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 }
+
+

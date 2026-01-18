@@ -47,17 +47,17 @@ public class TokenService : ITokenService
     {
         var claims = new List<Claim>
             {
-                new(JwtRegisteredClaimNames.Sub, tokenClaims.UserId),
+                new(JwtRegisteredClaimNames.Sub, tokenClaims.UserId.ToString()),
                 new(JwtRegisteredClaimNames.Email, tokenClaims.Email),
                 new(JwtRegisteredClaimNames.UniqueName, tokenClaims.UserName),
                 new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
-                new("userId", tokenClaims.UserId),
+                new("userId", tokenClaims.UserId.ToString()),
                 new("userName", tokenClaims.UserName)
             };
         foreach (var role in tokenClaims.Roles)
         {
-            claims.Add(new Claim(ClaimTypes.Role, role));
+            claims.Add(new Claim(ClaimTypes.Role, role.ToString()));
         }
         var credentials = new SigningCredentials(_signingKey, SecurityAlgorithms.HmacSha256);
 
