@@ -22,31 +22,25 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
         try
         {
             var user = await unitOfWork.UserRepository.FindOneAsync(x => x.Email == request.Email);
-            if (user == null)
-            {
-                logger.LogError("User with email {Email} not found", request.Email);
-                return ApiResponse<TokenResponse>.FailureResponse("Email hoặc mật khẩu không đúng, vui lòng thử lại.");
-            }
-            var verificationResult = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
-            if (verificationResult == PasswordVerificationResult.Failed)
+            var validation = ValidateUserByEmail(user, request.Email);
+            if (!validation.IsValid)
+                return ApiResponse<TokenResponse>.FailureResponse(validation.ErrorMessage!);
+            var u = validation.ValidUser!;
+
+            var verifyPasswordResult = passwordHasher.VerifyHashedPassword(u, u.PasswordHash, request.Password);
+            if (verifyPasswordResult == PasswordVerificationResult.Failed)
             {
                 logger.LogError("Invalid password for user with email {Email}", request.Email);
-                return ApiResponse<TokenResponse>.FailureResponse("Email hoặc mật khẩu không đúng, vui lòng thử lại.");
-            }
-            if (user.Status != UserStatus.Active)
-            {
-                logger.LogError("User with email {Email} has status {Status}", request.Email, user.Status);
-                return ApiResponse<TokenResponse>.FailureResponse("Tài khoản của bạn không hoạt động, vui lòng liên hệ quản trị viên.");
+                return ApiResponse<TokenResponse>.FailureResponse("Mật khẩu không đúng, vui lòng thử lại.");
             }
 
-            var tokenResponse = tokenService.GenerateTokens(user.ToTokenClaims());
+            var tokenResponse = tokenService.GenerateTokens(u.ToTokenClaims());
 
-            user.RefreshToken = tokenResponse.RefreshToken;
-            user.RefreshTokenExpiresAt = tokenResponse.ExpiresAt.AddDays(7);
-            user.UpdatedAt = DateTime.UtcNow;
-            user.UpdatedBy = user.Id;
+            u.RefreshToken = tokenResponse.RefreshToken;
+            u.RefreshTokenExpiresAt = tokenResponse.ExpiresAt.AddDays(7);
+            u.LastLoginAt = DateTime.UtcNow;
 
-            await unitOfWork.UserRepository.UpdateAsync(user.Id, user);
+            await unitOfWork.UserRepository.UpdateAsync(u.Id, u);
             await unitOfWork.SaveChangesAsync();
 
             logger.LogInformation("User with email {Email} logged in successfully", request.Email);
@@ -98,21 +92,16 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
         try
         {
             var user = await unitOfWork.UserRepository.FindOneAsync(x => x.Id == userId);
-            if (user == null)
-            {
-                logger.LogError("User with ID {UserId} not found", userId);
-                return ApiResponse<bool>.FailureResponse("Người dùng không tồn tại.");
-            }
+            var validation = ValidateUserById(user, userId);
+            if (!validation.IsValid)
+                return ApiResponse<bool>.FailureResponse(validation.ErrorMessage!);
+            var u = validation.ValidUser!;
 
-            user.RefreshToken = null;
-            user.RefreshTokenExpiresAt = null;
-            user.UpdatedAt = DateTime.UtcNow;
-            user.UpdatedBy = user.Id;
+            u.IsRevoked = true;
+            u.RevokedAt = DateTime.UtcNow;
 
-            await unitOfWork.UserRepository.UpdateAsync(user.Id, user);
+            await unitOfWork.UserRepository.UpdateAsync(u.Id, u);
             await unitOfWork.SaveChangesAsync();
-
-            logger.LogInformation("User with ID {UserId} logged out successfully", userId);
             return ApiResponse<bool>.SuccessResponse(true, "Đăng xuất thành công.");
         }
         catch (Exception ex)
@@ -127,54 +116,34 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
         try
         {
             var user = await unitOfWork.UserRepository.FindOneAsync(x => x.Id == userId);
-            if (user == null)
-            {
-                logger.LogError("User with ID {UserId} not found", userId);
-                return ApiResponse<TokenResponse>.FailureResponse("Người dùng không tồn tại.");
-            }
-            if (user.Status != UserStatus.Active)
-            {
-                logger.LogError("User with ID {UserId} has status {Status}", userId, user.Status);
-                return ApiResponse<TokenResponse>.FailureResponse("Tài khoản của bạn không hoạt động, vui lòng liên hệ quản trị viên.");
-            }
+            var validation = ValidateUserById(user, userId, requireActive: true, requireValidRefreshToken: true, refreshToken);
+            if (!validation.IsValid)
+                return ApiResponse<TokenResponse>.FailureResponse(validation.ErrorMessage!);
+            var u = validation.ValidUser!;
 
-            if (string.IsNullOrEmpty(user.RefreshToken) || user.RefreshToken != refreshToken)
-            {
-                logger.LogError("Invalid refresh token for user with ID {UserId}", userId);
-                return ApiResponse<TokenResponse>.FailureResponse("Token làm mới không hợp lệ, vui lòng đăng nhập lại.");
-            }
-            if (user.RefreshTokenExpiresAt == null || user.RefreshTokenExpiresAt <= DateTime.UtcNow)
-            {
-                logger.LogError("Expired refresh token for user with ID {UserId}", userId);
-                return ApiResponse<TokenResponse>.FailureResponse("Token làm mới đã hết hạn, vui lòng đăng nhập lại.");
-            }
+            var tokenResponse = tokenService.GenerateTokens(u.ToTokenClaims());
 
-            var tokenResponse = tokenService.GenerateTokens(user.ToTokenClaims());
-
-            var timeUntilExpiry = user.RefreshTokenExpiresAt.Value - DateTime.UtcNow;
+            var timeUntilExpiry = u.RefreshTokenExpiresAt!.Value - DateTime.UtcNow;
 
             var shouldRotateRefreshToken = timeUntilExpiry.TotalDays < 2;
 
             if (shouldRotateRefreshToken)
             {
-                user.RefreshToken = tokenResponse.RefreshToken;
-                user.RefreshTokenExpiresAt = tokenResponse.ExpiresAt.AddDays(7);
-                user.UpdatedAt = DateTime.UtcNow;
-                user.UpdatedBy = user.Id;
+                u.RefreshToken = tokenResponse.RefreshToken;
+                u.RefreshTokenExpiresAt = tokenResponse.ExpiresAt.AddDays(7);
 
-                await unitOfWork.UserRepository.UpdateAsync(user.Id, user);
+                await unitOfWork.UserRepository.UpdateAsync(u.Id, u);
                 await unitOfWork.SaveChangesAsync();
             }
             else
             {
-                tokenResponse.RefreshToken = user.RefreshToken;
-
+                tokenResponse.RefreshToken = u.RefreshToken!;
                 logger.LogInformation("Access token refreshed for user: {UserId}, refresh token still valid for {Days} days",
                              userId, timeUntilExpiry.TotalDays);
             }
 
             logger.LogInformation("Refresh token for user with ID {UserId} successfully", userId);
-            return ApiResponse<TokenResponse>.SuccessResponse(tokenResponse, "Làm mới token thành công.");
+            return ApiResponse<TokenResponse>.SuccessResponse(tokenResponse, "Làm mới token thành công, vui lòng sử dụng token mới để truy cập vào hệ thống.");
         }
         catch (Exception ex)
         {
@@ -188,26 +157,29 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
         try
         {
             var user = await unitOfWork.UserRepository.FindOneAsync(x => x.Id == userId);
-            if (user == null)
-            {
-                logger.LogError("User with ID {UserId} not found", userId);
-                return ApiResponse<UserSimpleResponse>.FailureResponse("Người dùng không tồn tại.");
-            }
-            var verificationResult = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.OldPassword);
-            if (verificationResult == PasswordVerificationResult.Failed)
+            var validation = ValidateUserById(user, userId);
+            if (!validation.IsValid)
+                return ApiResponse<UserSimpleResponse>.FailureResponse(validation.ErrorMessage!);
+            var u = validation.ValidUser!;
+
+            var verifyOldPasswordResult = passwordHasher.VerifyHashedPassword(u, u.PasswordHash, request.OldPassword);
+            if (verifyOldPasswordResult == PasswordVerificationResult.Failed)
             {
                 logger.LogError("Invalid old password for user with ID {UserId}", userId);
                 return ApiResponse<UserSimpleResponse>.FailureResponse("Mật khẩu cũ không đúng, vui lòng thử lại.");
             }
-            user.PasswordHash = passwordHasher.HashPassword(user, request.NewPassword);
-            user.UpdatedAt = DateTime.UtcNow;
-            user.UpdatedBy = user.Id;
+            if (request.OldPassword == request.NewPassword)
+            {
+                logger.LogError("New password cannot be the same as the old password for user with ID {UserId}", userId);
+                return ApiResponse<UserSimpleResponse>.FailureResponse("Mật khẩu mới không được trùng với mật khẩu cũ, vui lòng chọn mật khẩu khác.");
+            }
 
-            await unitOfWork.UserRepository.UpdateAsync(user.Id, user);
+            u.PasswordHash = passwordHasher.HashPassword(u, request.NewPassword);
+            await unitOfWork.UserRepository.UpdateAsync(u.Id, u);
             await unitOfWork.SaveChangesAsync();
 
             logger.LogInformation("Password changed successfully for user with ID {UserId}", userId);
-            return ApiResponse<UserSimpleResponse>.SuccessResponse(user.ToUserSimpleResponse(), "Đổi mật khẩu thành công.");
+            return ApiResponse<UserSimpleResponse>.SuccessResponse(u.ToUserSimpleResponse(), "Đổi mật khẩu thành công.");
         }
         catch (Exception ex)
         {
@@ -220,24 +192,24 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
     {
         try
         {
+            var lockKey = $"otp_forgot_password_lock:{request.Email}";
+            var isLocked = await cacheService.GetAsync<bool?>(lockKey);
+            if (isLocked == true)
+            {
+                logger.LogError("Forgot password request is locked for email {Email}", request.Email);
+                return ApiResponse<bool>.FailureResponse("Vui lòng đợi 60 giây khi gửi lại mã OTP.");
+            }
             var user = await unitOfWork.UserRepository.FindOneAsync(x => x.Email == request.Email);
-            if (user == null)
-            {
-                logger.LogError("User with email {Email} not found", request.Email);
-                return ApiResponse<bool>.FailureResponse("Người dùng không tồn tại.");
-            }
-
-            if (user.Status != UserStatus.Active)
-            {
-                logger.LogError("User with email {Email} has status {Status}", request.Email, user.Status);
-                return ApiResponse<bool>.FailureResponse("Tài khoản của bạn không hoạt động, vui lòng liên hệ quản trị viên.");
-            }
+            var validation = ValidateUserByEmail(user, request.Email);
+            if (!validation.IsValid)
+                return ApiResponse<bool>.FailureResponse(validation.ErrorMessage!);
 
             var otpCode = GetOtpCode();
             logger.LogInformation("Send OTP code to email: {Email} with OTP: {OtpCode}", request.Email, otpCode);
-
             var cacheKey = $"otp_forgot_password:{request.Email}";
             await cacheService.SetAsync(cacheKey, otpCode, TimeSpan.FromMinutes(5));
+            await cacheService.SetAsync(lockKey, true, TimeSpan.FromSeconds(60));
+
             return ApiResponse<bool>.SuccessResponse(true, "Mã OTP đã được gửi đến email của bạn.");
         }
         catch (Exception ex)
@@ -252,18 +224,9 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
         try
         {
             var user = await unitOfWork.UserRepository.FindOneAsync(x => x.Email == request.Email);
-
-            if (user == null)
-            {
-                logger.LogError("User with email {Email} not found", request.Email);
-                return ApiResponse<bool>.FailureResponse("Người dùng không tồn tại.");
-            }
-
-            if (user.Status == UserStatus.Active)
-            {
-                logger.LogError("User with email {Email} is already active", request.Email);
-                return ApiResponse<bool>.FailureResponse("Tài khoản đã được kích hoạt trước đó.");
-            }
+            var validation = ValidateUserByEmail(user, request.Email);
+            if (!validation.IsValid)
+                return ApiResponse<bool>.FailureResponse(validation.ErrorMessage!);
 
             var lockKey = $"otp_resend_lock:{request.Email}";
             var isLocked = await cacheService.GetAsync<bool?>(lockKey);
@@ -307,17 +270,13 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
             }
 
             var user = await unitOfWork.UserRepository.FindOneAsync(x => x.Email == request.Email);
-            if (user == null)
-            {
-                logger.LogError("User with email {Email} not found during password reset", request.Email);
-                return ApiResponse<bool>.FailureResponse("Người dùng không tồn tại.");
-            }
+            var validation = ValidateUserByEmail(user, request.Email);
+            if (!validation.IsValid)
+                return ApiResponse<bool>.FailureResponse(validation.ErrorMessage!);
+            var u = validation.ValidUser!;
 
-            user.PasswordHash = passwordHasher.HashPassword(user, request.NewPassword);
-            user.UpdatedAt = DateTime.UtcNow;
-            user.UpdatedBy = user.Id;
-
-            await unitOfWork.UserRepository.UpdateAsync(user.Id, user);
+            u.PasswordHash = passwordHasher.HashPassword(u, request.NewPassword);
+            await unitOfWork.UserRepository.UpdateAsync(u.Id, u);
             await unitOfWork.SaveChangesAsync();
 
             await cacheService.RemoveAsync(cacheKey);
@@ -365,8 +324,7 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
 
             user.Status = UserStatus.Active;
             user.IsEmailVerified = true;
-            user.UpdatedAt = DateTime.UtcNow;
-            user.UpdatedBy = user.Id;
+
 
             await unitOfWork.UserRepository.UpdateAsync(user.Id, user);
             await unitOfWork.SaveChangesAsync();
@@ -381,6 +339,74 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
             logger.LogError(ex, "Error verifying registration OTP for email {Email}", request.Email);
             return ApiResponse<bool>.FailureResponse("Xác thực OTP thất bại, vui lòng thử lại.");
         }
+    }
+
+    /// <summary>
+    /// Validates user by Id. Returns (IsValid, ErrorMessage, ValidUser). Use for Logout, ChangePassword, RefreshToken.
+    /// </summary>
+    private (bool IsValid, string? ErrorMessage, User? ValidUser) ValidateUserById(
+        User? user,
+        Guid userId,
+        bool requireActive = false,
+        bool requireValidRefreshToken = false,
+        string? refreshToken = null)
+    {
+        if (user == null)
+        {
+            logger.LogError("User with ID {UserId} not found", userId);
+            return (false, "Người dùng không tồn tại.", null);
+        }
+        if (requireActive && user.Status != UserStatus.Active)
+        {
+            logger.LogError("User with ID {UserId} has status {Status}", userId, user.Status);
+            return (false, "Tài khoản của bạn không hoạt động, vui lòng liên hệ quản trị viên.", null);
+        }
+        if (requireValidRefreshToken && !string.IsNullOrEmpty(refreshToken))
+        {
+            if (string.IsNullOrEmpty(user.RefreshToken) || user.RefreshToken != refreshToken)
+            {
+                logger.LogError("Invalid refresh token for user with ID {UserId}", userId);
+                return (false, "Token làm mới không hợp lệ, vui lòng đăng nhập lại.", null);
+            }
+            if (user.IsRevoked == true)
+            {
+                logger.LogError("User with ID {UserId} is revoked", userId);
+                return (false, "Tài khoản của bạn đã bị đăng xuất, vui lòng đăng nhập lại.", null);
+            }
+            if (user.RefreshTokenExpiresAt == null || user.RefreshTokenExpiresAt <= DateTime.UtcNow)
+            {
+                logger.LogError("Expired refresh token for user with ID {UserId}", userId);
+                return (false, "Token làm mới đã hết hạn, vui lòng đăng nhập lại.", null);
+            }
+        }
+        return (true, null, user);
+    }
+
+    /// <summary>
+    /// Validates user by Email. Returns (IsValid, ErrorMessage, ValidUser). Use for Login, ForgotPassword, ResendOtp, ResetPassword.
+    /// </summary>
+    private (bool IsValid, string? ErrorMessage, User? ValidUser) ValidateUserByEmail(
+        User? user,
+        string email,
+        bool requireActive = true,
+        bool requireEmailVerified = true)
+    {
+        if (user == null)
+        {
+            logger.LogError("User with email {Email} not found", email);
+            return (false, "Người dùng không tồn tại.", null);
+        }
+        if (requireActive && user.Status != UserStatus.Active)
+        {
+            logger.LogError("User with email {Email} has status {Status}", email, user.Status);
+            return (false, "Tài khoản của bạn không hoạt động, vui lòng liên hệ quản trị viên.", null);
+        }
+        if (requireEmailVerified && !user.IsEmailVerified)
+        {
+            logger.LogError("User with email {Email} is not verified", email);
+            return (false, "Tài khoản của bạn chưa được xác thực, vui lòng kiểm tra email để xác thực.", null);
+        }
+        return (true, null, user);
     }
 
     private string GetOtpCode()

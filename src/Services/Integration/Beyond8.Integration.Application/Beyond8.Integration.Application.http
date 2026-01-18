@@ -1,0 +1,6 @@
+@Beyond8.Integration.Application_HostAddress = http://localhost:5168
+
+GET {{Beyond8.Integration.Application_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

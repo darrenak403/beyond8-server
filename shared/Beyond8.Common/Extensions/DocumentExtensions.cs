@@ -1,3 +1,7 @@
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi;
@@ -32,16 +36,23 @@ public static class DocumentExtensions
                     Name = "Authorization"
                 };
 
-                document.Security = new List<OpenApiSecurityRequirement>
+                return Task.CompletedTask;
+            });
+
+            _ = options.AddOperationTransformer((operation, context, cancellationToken) =>
+            {
+                var metadata = context.Description?.ActionDescriptor?.EndpointMetadata ?? System.Array.Empty<object>();
+                var allowAnonymous = metadata.OfType<IAllowAnonymous>().Any();
+                var requiresAuth = metadata.OfType<IAuthorizeData>().Any();
+
+                if (requiresAuth && !allowAnonymous)
                 {
-                    new OpenApiSecurityRequirement
+                    operation.Security ??= new List<OpenApiSecurityRequirement>();
+                    operation.Security.Add(new OpenApiSecurityRequirement
                     {
-                        {
-                            new OpenApiSecuritySchemeReference("Bearer"),
-                            new List<string>()
-                        }
-                    }
-                };
+                        { new OpenApiSecuritySchemeReference("Bearer"), new List<string>() }
+                    });
+                }
 
                 return Task.CompletedTask;
             });

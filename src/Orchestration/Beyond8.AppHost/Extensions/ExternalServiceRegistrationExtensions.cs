@@ -45,7 +45,7 @@ public static class ExternalServiceRegistrationExtensions
            {
                endpoint.Port = 8081;
            })
-           .WithApiReference(identityService);
+           .WithApiReference(identityService, options => options.AddPreferredSecuritySchemes("Bearer"));
 
         return builder;
     }
