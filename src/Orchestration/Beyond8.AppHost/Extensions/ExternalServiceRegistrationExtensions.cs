@@ -18,18 +18,25 @@ public static class ExternalServiceRegistrationExtensions
                        .WithHostPort(5050);
             });
 
+        var redis = builder.AddRedis("redis-cache")
+            .WithImageTag("alpine")
+            .WithDataVolume();
+
         var identityDb = postgres.AddDatabase("identity-db", "Identities");
 
         var identityService = builder.AddProject<Projects.Beyond8_Identity_Api>("Identity-Service")
             .WithReference(identityDb)
-            .WaitFor(postgres);
+            .WithReference(redis)
+            .WaitFor(postgres)
+            .WaitFor(redis);
 
         var apiGateway = builder.AddYarp("api-gateway")
             .WithContainerName("ApiGateway")
             .WithHostPort(8080)
             .WithConfiguration(config =>
             {
-
+                var identityCluster = AddProjectCluster(config, identityService);
+                config.AddRoute("/api/v1/auth", identityCluster);
             });
 
         var scalarDocs = builder.AddScalarApiReference("api-docs")

@@ -4,15 +4,10 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Beyond8.Common.Data.Implements;
 
-public abstract class BaseUnitOfWork<TContext> : IBaseUnitOfWork where TContext : DbContext
+public abstract class BaseUnitOfWork<TContext>(TContext context) : IBaseUnitOfWork where TContext : DbContext
 {
-    protected readonly TContext Context;
+    protected readonly TContext Context = context;
     private IDbContextTransaction? _transaction;
-
-    protected BaseUnitOfWork(TContext context)
-    {
-        Context = context;
-    }
 
     public virtual async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
