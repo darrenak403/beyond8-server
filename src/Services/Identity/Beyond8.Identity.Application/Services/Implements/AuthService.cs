@@ -1,4 +1,3 @@
-using System;
 using Beyond8.Common.Caching;
 using Beyond8.Common.Utilities;
 using Beyond8.Identity.Application.Dtos.Auth;
@@ -9,7 +8,6 @@ using Beyond8.Identity.Application.Services.Interfaces;
 using Beyond8.Identity.Domain.Entities;
 using Beyond8.Identity.Domain.Enums;
 using Beyond8.Identity.Domain.Repositories.Interfaces;
-using MassTransit.Internals;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 
@@ -39,6 +37,9 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
             u.RefreshToken = tokenResponse.RefreshToken;
             u.RefreshTokenExpiresAt = tokenResponse.ExpiresAt.AddDays(7);
             u.LastLoginAt = DateTime.UtcNow;
+            u.LoginAttempts = 0;
+            u.LockedUntil = null;
+            u.IsRevoked = false;
 
             await unitOfWork.UserRepository.UpdateAsync(u.Id, u);
             await unitOfWork.SaveChangesAsync();
@@ -116,10 +117,17 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
         try
         {
             var user = await unitOfWork.UserRepository.FindOneAsync(x => x.Id == userId);
+
             var validation = ValidateUserById(user, userId, requireActive: true, requireValidRefreshToken: true, refreshToken);
             if (!validation.IsValid)
                 return ApiResponse<TokenResponse>.FailureResponse(validation.ErrorMessage!);
+
             var u = validation.ValidUser!;
+
+            if (u.RefreshTokenExpiresAt <= DateTime.UtcNow)
+            {
+                return ApiResponse<TokenResponse>.FailureResponse("Refresh token đã hết hạn. Vui lòng đăng nhập lại.");
+            }
 
             var tokenResponse = tokenService.GenerateTokens(u.ToTokenClaims());
 
@@ -139,7 +147,7 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
             {
                 tokenResponse.RefreshToken = u.RefreshToken!;
                 logger.LogInformation("Access token refreshed for user: {UserId}, refresh token still valid for {Days} days",
-                             userId, timeUntilExpiry.TotalDays);
+                                userId, timeUntilExpiry.TotalDays);
             }
 
             logger.LogInformation("Refresh token for user with ID {UserId} successfully", userId);
