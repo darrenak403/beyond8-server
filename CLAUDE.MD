@@ -152,9 +152,32 @@ logger.LogInformation($"User registered successfully: {request.Email}");
 ```
 
 ### Validation
-- Use Data Annotations on DTOs
+**FluentValidation (Recommended):**
+- Use FluentValidation for all request validation in Minimal APIs
+- Create validators in `Application/Validators` folder organized by domain
+- Register validators: `services.AddValidatorsFromAssemblyContaining<RegisterRequest>()`
+- Inject validators into endpoints: `IValidator<TRequest> validator`
+- Validate at endpoint start: `if (!request.ValidateRequest(validator, out var result)) return result!;`
 - Provide error messages in Vietnamese for user-facing validation
-- Common attributes: `[Required]`, `[EmailAddress]`, `[MinLength]`, `[MaxLength]`
+
+**Example Validator:**
+```csharp
+public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
+{
+    public RegisterRequestValidator()
+    {
+        RuleFor(x => x.Email)
+            .NotEmpty().WithMessage("Email không được để trống")
+            .EmailAddress().WithMessage("Email không hợp lệ");
+
+        RuleFor(x => x.Password)
+            .NotEmpty().WithMessage("Password không được để trống")
+            .MinimumLength(8).WithMessage("Password tối thiểu 8 ký tự")
+            .Matches(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)")
+            .WithMessage("Password phải có ít nhất 1 chữ thường, 1 chữ hoa và 1 số");
+    }
+}
+```
 
 ### Security
 - **Passwords**: Hash with `PasswordHasher<User>`, never store plain text

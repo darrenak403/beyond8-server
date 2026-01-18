@@ -68,18 +68,47 @@ Best practices and coding standards for ASP.NET Core development in the Beyond8 
 
 ## 4. Validation
 
-### Data Annotations
-- Always use Data Annotations on DTOs for validation
-- Provide meaningful error messages in Vietnamese for user-facing validation messages
-- Use appropriate validation attributes: [Required], [EmailAddress], [MinLength], [MaxLength]
-- Enable automatic model validation in Program.cs for controllers
-- Always validate input before processing in service layer
+### FluentValidation (Recommended)
+- Always use FluentValidation for request validation in Minimal APIs
+- FluentValidation provides better type safety, testability, and separation of concerns
+- Create validators in Application/Validators folder, organized by domain (e.g., Auth, Users)
+- Register validators using `AddValidatorsFromAssemblyContaining<T>()` in DI container
+- Inject validators into endpoint handlers using `IValidator<TRequest>`
+- Use ValidationExtensions.ValidateRequest() method for consistent validation handling
 
-### Validation Attributes
-- Use [Required] with ErrorMessage for required fields
-- Use [EmailAddress] with ErrorMessage for email validation
-- Use [MinLength] and [MaxLength] with ErrorMessage for string length validation
-- Use [MaxLength] with numeric values for database column constraints
+### Validator Rules
+- Use NotEmpty() instead of Required for non-nullable types
+- Provide meaningful error messages in Vietnamese for user-facing validation
+- Common rules: NotEmpty(), EmailAddress(), MinimumLength(), MaximumLength(), Matches(), Equal(), NotEqual()
+- Use Length(exact) for fixed-length strings like OTP codes
+- Chain multiple rules using method chaining for readability
+- Use Matches() with regex for complex patterns (passwords, phone numbers)
+
+### Validation in Endpoints
+- Always validate request DTOs at the beginning of endpoint handlers
+- Pattern: `if (!request.ValidateRequest(validator, out var validationResult)) return validationResult!;`
+- Validation errors are automatically formatted as ApiResponse<object>.FailureResponse()
+- Never process requests without validation
+
+### Validator Examples
+```csharp
+public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
+{
+    public RegisterRequestValidator()
+    {
+        RuleFor(x => x.Email)
+            .NotEmpty().WithMessage("Email không được để trống")
+            .EmailAddress().WithMessage("Email không hợp lệ")
+            .MaximumLength(256).WithMessage("Email không được vượt quá 256 ký tự");
+
+        RuleFor(x => x.Password)
+            .NotEmpty().WithMessage("Password không được để trống")
+            .MinimumLength(8).WithMessage("Password tối thiểu 8 ký tự")
+            .Matches(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)")
+            .WithMessage("Password phải có ít nhất 1 chữ thường, 1 chữ hoa và 1 số");
+    }
+}
+```
 
 ---
 
