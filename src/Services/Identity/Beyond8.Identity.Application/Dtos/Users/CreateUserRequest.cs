@@ -26,6 +26,5 @@ public class CreateUserRequest
     [Phone(ErrorMessage = "Số điện thoại không hợp lệ.")]
     public string? PhoneNumber { get; set; }
 
-    // Nếu cần roles, thêm list (nhưng có thể set default hoặc handle riêng)
-    public List<UserRole> Roles { get; set; } = new List<UserRole>();
+    public List<UserRole> Roles { get; set; } = [UserRole.Student];
 }

@@ -8,10 +8,12 @@ namespace Beyond8.Identity.Application.Services.Interfaces;
 public interface IUserService
 {
     Task<ApiResponse<UserResponse>> GetUserByIdAsync(Guid id);
+    Task<ApiResponse<UserResponse>> GetMyProfileAsync();
     Task<ApiResponse<List<UserResponse>>> GetAllUsersAsync(PaginationRequest request);
     Task<ApiResponse<UserResponse>> CreateUserAsync(CreateUserRequest request);
     Task<ApiResponse<UserResponse>> UpdateUserAsync(Guid id, UpdateUserRequest request);
     Task<ApiResponse<bool>> UpdateUserStatusAsync(Guid id, UpdateUserStatusRequest request);
     Task<ApiResponse<bool>> DeleteUserAsync(Guid id);
+    Task<ApiResponse<UserResponse>> UpdateMyProfileAsync(UpdateUserRequest request);
     // Task<ApiResponse<string>> UploadUserAvatarAsync(Guid id, byte[] avatarData, string fileName);
 }

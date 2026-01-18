@@ -50,6 +50,8 @@ public static class Bootstrapper
         app.UseHttpsRedirection();
 
         app.MapAuthApi();
+        app.MapUserApi();
+
         return app;
     }
 }

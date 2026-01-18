@@ -6,18 +6,12 @@ namespace Beyond8.Identity.Application.Dtos.Users;
 
 public class UpdateUserRequest
 {
-    [Required(ErrorMessage = "Email là bắt buộc.")]
     [EmailAddress(ErrorMessage = "Email không hợp lệ.")]
     [MaxLength(255, ErrorMessage = "Email không được vượt quá 255 ký tự.")]
-    public string Email { get; set; } = null!;
+    public string? Email { get; set; }
 
-    [Required(ErrorMessage = "Mật khẩu là bắt buộc.")]
-    [MinLength(8, ErrorMessage = "Mật khẩu phải có ít nhất 8 ký tự.")]
-    public string Password { get; set; } = null!;
-
-    [Required(ErrorMessage = "Họ tên là bắt buộc.")]
     [MaxLength(100, ErrorMessage = "Họ tên không được vượt quá 100 ký tự.")]
-    public string FullName { get; set; } = null!;
+    public string? FullName { get; set; }
 
     // [MaxLength(500, ErrorMessage = "URL avatar không được vượt quá 500 ký tự.")]
     // public string? AvatarUrl { get; set; }
@@ -26,6 +20,9 @@ public class UpdateUserRequest
     [Phone(ErrorMessage = "Số điện thoại không hợp lệ.")]
     public string? PhoneNumber { get; set; }
 
-    // Nếu cần roles, thêm list (nhưng có thể set default hoặc handle riêng)
-    public List<UserRole> Roles { get; set; } = new List<UserRole>();
+    [MaxLength(50, ErrorMessage = "Timezone không được vượt quá 50 ký tự.")]
+    public string? Timezone { get; set; }
+
+    [MaxLength(10, ErrorMessage = "Locale không được vượt quá 10 ký tự.")]
+    public string? Locale { get; set; }
 }

@@ -1,4 +1,5 @@
 using Beyond8.Common.Caching;
+using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
 using Beyond8.Identity.Application.Dtos.Users;
 using Beyond8.Identity.Application.Mappings.AuthMappings;
@@ -13,7 +14,9 @@ namespace Beyond8.Identity.Application.Services.Implements;
 
 public class UserService(
     ILogger<UserService> logger,
-    IUnitOfWork unitOfWork) : IUserService
+    IUnitOfWork unitOfWork,
+    ICurrentUserService currentUserService,
+    PasswordHasher<User> passwordHasher) : IUserService
 {
     public async Task<ApiResponse<UserResponse>> GetUserByIdAsync(Guid id)
     {
@@ -49,7 +52,7 @@ public class UserService(
 
             return ApiResponse<List<UserResponse>>.SuccessPagedResponse(
                 userResponses,
-                userResponses.Count,
+                users.TotalCount,
                 request.PageNumber,
                 request.PageSize,
                 "Lấy danh sách tài khoản thành công.");
@@ -71,13 +74,14 @@ public class UserService(
                 logger.LogWarning("Tài khoản với email {Email} đã tồn tại.", request.Email);
                 return ApiResponse<UserResponse>.FailureResponse("Email này đã được sử dụng.");
             }
-            var newUser = request.ToCreateUserEntity();
+
+            var newUser = request.ToUserEntity(currentUserService.UserId);
+            newUser.PasswordHash = passwordHasher.HashPassword(newUser, request.Password);
 
             await unitOfWork.UserRepository.AddAsync(newUser);
             await unitOfWork.SaveChangesAsync();
 
-            logger.LogInformation("Tài khoản với email {Email} đã được tạo thành công.", request.Email);
-            logger.LogInformation("Tài khoản với ID: {UserId}", newUser.Id);
+            logger.LogInformation("Tài khoản với email {Email} đã được tạo thành công với ID: {UserId}", request.Email, newUser.Id);
 
             return ApiResponse<UserResponse>.SuccessResponse(newUser.ToUserResponse(), "Tạo tài khoản thành công.");
         }
@@ -113,8 +117,10 @@ public class UserService(
                     logger.LogWarning("Email {Email} đã được sử dụng bởi tài khoản khác.", request.Email);
                     return ApiResponse<UserResponse>.FailureResponse("Email này đã được sử dụng.");
                 }
-                user.Email = request.Email;
+                user.IsEmailVerified = false;
             }
+
+            user.UpdateFromRequest(request, currentUserService.UserId);
 
             await unitOfWork.UserRepository.UpdateAsync(user.Id, user);
             await unitOfWork.SaveChangesAsync();
@@ -139,17 +145,21 @@ public class UserService(
                 logger.LogWarning("Không tìm thấy tài khoản với ID: {UserId}", id);
                 return ApiResponse<bool>.FailureResponse("Không tìm thấy tài khoản.");
             }
+
             if (user.Status == UserStatus.Inactive)
             {
-                logger.LogWarning("Chỉ có thể xóa tài khoản không hoạt động. ID: {UserId}", id);
-                return ApiResponse<bool>.FailureResponse("Chỉ có thể xóa tài khoản không hoạt động.");
+                logger.LogWarning("Tài khoản với ID: {UserId} đã ở trạng thái không hoạt động.", id);
+                return ApiResponse<bool>.FailureResponse("Tài khoản đã ở trạng thái không hoạt động.");
             }
 
             user.Status = UserStatus.Inactive;
+            user.UpdatedAt = DateTime.UtcNow;
+            user.UpdatedBy = currentUserService.UserId;
+
             await unitOfWork.UserRepository.UpdateAsync(user.Id, user);
             await unitOfWork.SaveChangesAsync();
 
-            logger.LogInformation("Tài khoản với ID: {UserId} đã được xóa thành công.", id);
+            logger.LogInformation("Tài khoản với ID: {UserId} đã được xóa (đánh dấu không hoạt động) thành công.", id);
             return ApiResponse<bool>.SuccessResponse(true, "Xóa tài khoản thành công.");
         }
         catch (Exception ex)
@@ -178,6 +188,9 @@ public class UserService(
 
             var oldStatus = user.Status;
             user.Status = request.NewStatus;
+            user.UpdatedAt = DateTime.UtcNow;
+            user.UpdatedBy = currentUserService.UserId;
+
             await unitOfWork.UserRepository.UpdateAsync(user.Id, user);
             await unitOfWork.SaveChangesAsync();
 
@@ -188,6 +201,79 @@ public class UserService(
         {
             logger.LogError(ex, "Đã xảy ra lỗi khi cập nhật trạng thái tài khoản với ID {UserId}", id);
             return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi cập nhật trạng thái tài khoản.");
+        }
+    }
+
+    public async Task<ApiResponse<UserResponse>> UpdateMyProfileAsync(UpdateUserRequest request)
+    {
+        try
+        {
+            var user = await unitOfWork.UserRepository.FindOneAsync(u => u.Id == currentUserService.UserId);
+            if (user == null)
+            {
+                logger.LogWarning("Không tìm thấy tài khoản với ID: {UserId}", currentUserService.UserId);
+                return ApiResponse<UserResponse>.FailureResponse("Không tìm thấy tài khoản.");
+            }
+
+            if (user.Status == UserStatus.Inactive)
+            {
+                logger.LogWarning("Không thể cập nhật tài khoản không hoạt động. ID: {UserId}", currentUserService.UserId);
+                return ApiResponse<UserResponse>.FailureResponse("Tài khoản của bạn không hoạt động.");
+            }
+
+            // Kiểm tra email nếu có thay đổi
+            if (!string.IsNullOrEmpty(request.Email) && request.Email != user.Email)
+            {
+                var emailExists = await unitOfWork.UserRepository.FindOneAsync(u => u.Email == request.Email);
+                if (emailExists != null)
+                {
+                    logger.LogWarning("Email {Email} đã được sử dụng bởi tài khoản khác.", request.Email);
+                    return ApiResponse<UserResponse>.FailureResponse("Email này đã được sử dụng.");
+                }
+                user.IsEmailVerified = false; // Reset email verification khi đổi email
+            }
+
+            // Sử dụng mapping UpdateFromRequest để cập nhật user
+            user.UpdateFromRequest(request, currentUserService.UserId);
+
+            await unitOfWork.UserRepository.UpdateAsync(user.Id, user);
+            await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation("Người dùng với ID: {UserId} đã cập nhật thông tin cá nhân thành công.", currentUserService.UserId);
+            return ApiResponse<UserResponse>.SuccessResponse(user.ToUserResponse(), "Cập nhật thông tin cá nhân thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Đã xảy ra lỗi khi cập nhật thông tin cá nhân với ID {UserId}", currentUserService.UserId);
+            return ApiResponse<UserResponse>.FailureResponse("Đã xảy ra lỗi khi cập nhật thông tin cá nhân.");
+        }
+    }
+
+    public async Task<ApiResponse<UserResponse>> GetMyProfileAsync()
+    {
+        try
+        {
+            var user = await unitOfWork.UserRepository.FindOneAsync(u => u.Id == currentUserService.UserId);
+
+            if (user == null)
+            {
+                logger.LogWarning("Không tìm thấy tài khoản với ID: {UserId}", currentUserService.UserId);
+                return ApiResponse<UserResponse>.FailureResponse("Không tìm thấy tài khoản.");
+            }
+
+            if (user.Status == UserStatus.Inactive)
+            {
+                logger.LogWarning("Tài khoản với ID: {UserId} không hoạt động.", currentUserService.UserId);
+                return ApiResponse<UserResponse>.FailureResponse("Tài khoản của bạn không hoạt động.");
+            }
+
+            logger.LogInformation("Lấy thông tin cá nhân cho người dùng với ID: {UserId} thành công.", currentUserService.UserId);
+            return ApiResponse<UserResponse>.SuccessResponse(user.ToUserResponse(), "Lấy thông tin cá nhân thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Đã xảy ra lỗi khi lấy thông tin cá nhân với ID {UserId}", currentUserService.UserId);
+            return ApiResponse<UserResponse>.FailureResponse("Đã xảy ra lỗi khi lấy thông tin cá nhân.");
         }
     }
 }

@@ -2,6 +2,7 @@ using Beyond8.Identity.Application.Dtos.Tokens;
 using Beyond8.Identity.Application.Dtos.Users;
 using Beyond8.Identity.Domain.Entities;
 using Beyond8.Identity.Domain.Enums;
+using Microsoft.AspNetCore.Identity;
 
 namespace Beyond8.Identity.Application.Mappings.AuthMappings;
 
@@ -47,16 +48,46 @@ public static class UserMappings
         };
     }
 
-    public static User ToCreateUserEntity(this CreateUserRequest request)
+    public static User ToUserEntity(this CreateUserRequest request, Guid createdBy)
     {
-        return new User
+        var user = new User
         {
             Email = request.Email,
+            FullName = request.FullName,
+            // AvatarUrl = request.AvatarUrl,
+            PhoneNumber = request.PhoneNumber,
+            Roles = request.Roles ?? [UserRole.Student],
+            IsActive = true,
+            IsEmailVerified = false,
+            Status = UserStatus.Active,
             CreatedAt = DateTime.UtcNow,
-            CreatedBy = Guid.Empty,
-            Roles = new List<UserRole> { UserRole.Student },
-            FullName = request.Email.Split('@')[0]
+            CreatedBy = createdBy
         };
-    }
 
+        return user;
+    }
+    public static void UpdateFromRequest(this User user, UpdateUserRequest request, Guid updatedBy)
+    {
+        // Chỉ cập nhật các trường có giá trị, KHÔNG cập nhật password
+        if (!string.IsNullOrEmpty(request.Email))
+            user.Email = request.Email;
+
+        if (!string.IsNullOrEmpty(request.FullName))
+            user.FullName = request.FullName;
+
+        // if (request.AvatarUrl != null)
+        //     user.AvatarUrl = request.AvatarUrl;
+
+        if (request.PhoneNumber != null)
+            user.PhoneNumber = request.PhoneNumber;
+
+        if (!string.IsNullOrEmpty(request.Timezone))
+            user.Timezone = request.Timezone;
+
+        if (!string.IsNullOrEmpty(request.Locale))
+            user.Locale = request.Locale;
+
+        user.UpdatedAt = DateTime.UtcNow;
+        user.UpdatedBy = updatedBy;
+    }
 }
