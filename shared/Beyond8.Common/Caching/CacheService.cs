@@ -3,16 +3,10 @@ using System.Text.Json;
 
 namespace Beyond8.Common.Caching;
 
-public class CacheService : ICacheService
+public class CacheService(IDatabase database, string serviceName) : ICacheService
 {
-    private readonly IDatabase _database;
-    private readonly string _prefix;
-
-    public CacheService(IDatabase database, string serviceName)
-    {
-        _database = database;
-        _prefix = $"{serviceName}:";
-    }
+    private readonly IDatabase _database = database;
+    private readonly string _prefix = $"{serviceName}:";
 
     private string GetFullKey(string key) => $"{_prefix}{key}";
 
