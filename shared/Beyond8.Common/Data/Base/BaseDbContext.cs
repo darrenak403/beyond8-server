@@ -24,6 +24,16 @@ public abstract class BaseDbContext(DbContextOptions options) : DbContext(option
             }
         }
 
+        var deletedEntries = ChangeTracker.Entries<ISoftDeleteEntity>();
+        foreach (var entry in deletedEntries)
+        {
+            if (entry.State == EntityState.Deleted)
+            {
+                entry.Entity.DeletedAt = DateTime.UtcNow;
+                entry.Entity.DeletedBy = entry.Entity.Id;
+            }
+        }
+
         return base.SaveChangesAsync(cancellationToken);
     }
 }
