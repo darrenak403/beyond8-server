@@ -227,6 +227,39 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
         }
     }
 
+    public async Task<ApiResponse<bool>> VerifyForgotPasswordOtpAsync(VerifyForgotPasswordOtpRequest request)
+    {
+        try
+        {
+            var cacheKey = $"otp_forgot_password:{request.Email}";
+            var cachedOtp = await cacheService.GetAsync<string>(cacheKey);
+            if (string.IsNullOrEmpty(cachedOtp))
+            {
+                logger.LogError("OTP for email {Email} not found or expired", request.Email);
+                return ApiResponse<bool>.FailureResponse("Mã OTP không hợp lệ hoặc đã hết hạn, vui lòng thử lại.");
+            }
+
+            if (cachedOtp != request.OtpCode)
+            {
+                logger.LogError("Invalid OTP for email {Email}", request.Email);
+                return ApiResponse<bool>.FailureResponse("Mã OTP không đúng, vui lòng thử lại.");
+            }
+
+            var user = await unitOfWork.UserRepository.FindOneAsync(x => x.Email == request.Email);
+            var validation = ValidateUserByEmail(user, request.Email);
+            if (!validation.IsValid)
+                return ApiResponse<bool>.FailureResponse(validation.ErrorMessage!);
+
+            logger.LogInformation("OTP verified successfully for forgot password: {Email}", request.Email);
+            return ApiResponse<bool>.SuccessResponse(true, "Xác thực OTP thành công. Bạn có thể đặt lại mật khẩu.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error verifying forgot password OTP for email {Email}", request.Email);
+            return ApiResponse<bool>.FailureResponse("Xác thực OTP thất bại, vui lòng thử lại.");
+        }
+    }
+
     public async Task<ApiResponse<bool>> ResendRegisterOtpAsync(ResendOtpRequest request)
     {
         try
