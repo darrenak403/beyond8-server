@@ -10,11 +10,11 @@ public class CreateUserRequestValidator : AbstractValidator<CreateUserRequest>
         RuleFor(x => x.Email)
             .NotEmpty().WithMessage("Email không được để trống")
             .EmailAddress().WithMessage("Email không hợp lệ")
-            .MaximumLength(255).WithMessage("Email không được vượt quá 255 ký tự");
+            .MaximumLength(256).WithMessage("Email không được vượt quá 256 ký tự");
 
         RuleFor(x => x.Password)
             .NotEmpty().WithMessage("Mật khẩu không được để trống")
-            .MinimumLength(8).WithMessage("Mật khẩu phải có ít nhất 8 ký tự")
+            .MinimumLength(8).WithMessage("Mật khẩu tối thiểu 8 ký tự")
             .MaximumLength(100).WithMessage("Mật khẩu không được vượt quá 100 ký tự")
             .Matches(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)")
             .WithMessage("Mật khẩu phải có ít nhất 1 chữ thường, 1 chữ hoa và 1 số");
@@ -23,6 +23,13 @@ public class CreateUserRequestValidator : AbstractValidator<CreateUserRequest>
             .NotEmpty().WithMessage("Họ tên không được để trống")
             .MaximumLength(100).WithMessage("Họ tên không được vượt quá 100 ký tự");
 
+        When(x => !string.IsNullOrEmpty(x.AvatarUrl), () =>
+        {
+            RuleFor(x => x.AvatarUrl)
+                .MaximumLength(500).WithMessage("URL avatar không được vượt quá 500 ký tự")
+                .Matches(@"^https?://").WithMessage("URL avatar không hợp lệ");
+        });
+
         When(x => !string.IsNullOrEmpty(x.PhoneNumber), () =>
         {
             RuleFor(x => x.PhoneNumber)
@@ -30,8 +37,21 @@ public class CreateUserRequestValidator : AbstractValidator<CreateUserRequest>
                 .Matches(@"^\+?[0-9\s\-\(\)]+$").WithMessage("Số điện thoại không hợp lệ");
         });
 
+        When(x => !string.IsNullOrEmpty(x.Timezone), () =>
+        {
+            RuleFor(x => x.Timezone)
+                .MaximumLength(50).WithMessage("Timezone không được vượt quá 50 ký tự");
+        });
+
+        When(x => !string.IsNullOrEmpty(x.Locale), () =>
+        {
+            RuleFor(x => x.Locale)
+                .MaximumLength(10).WithMessage("Locale không được vượt quá 10 ký tự")
+                .Matches(@"^[a-z]{2}(-[A-Z]{2})?$").WithMessage("Locale không hợp lệ (ví dụ: vi, vi-VN, en-US)");
+        });
+
         RuleFor(x => x.Roles)
             .NotEmpty().WithMessage("Phải có ít nhất một vai trò")
-            .Must(roles => roles.Count > 0).WithMessage("Phải có ít nhất một vai trò");
+            .Must(roles => roles != null && roles.Count > 0).WithMessage("Phải có ít nhất một vai trò");
     }
 }

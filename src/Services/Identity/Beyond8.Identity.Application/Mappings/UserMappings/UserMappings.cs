@@ -14,7 +14,6 @@ public static class UserMappings
         {
             Id = user.Id,
             Email = user.Email,
-            PasswordHash = user.PasswordHash,
             Roles = user.Roles,
             FullName = user.FullName,
             AvatarUrl = user.AvatarUrl,
@@ -43,8 +42,10 @@ public static class UserMappings
         {
             Email = request.Email,
             FullName = request.FullName,
-            // AvatarUrl = request.AvatarUrl,
+            AvatarUrl = request.AvatarUrl,
             PhoneNumber = request.PhoneNumber,
+            Timezone = request.Timezone,
+            Locale = request.Locale,
             Roles = request.Roles ?? [UserRole.Student],
             IsActive = true,
             IsEmailVerified = false,
@@ -57,17 +58,16 @@ public static class UserMappings
     }
     public static void UpdateFromRequest(this User user, UpdateUserRequest request, Guid updatedBy)
     {
-        // Chỉ cập nhật các trường có giá trị, KHÔNG cập nhật password
         if (!string.IsNullOrEmpty(request.Email))
             user.Email = request.Email;
 
         if (!string.IsNullOrEmpty(request.FullName))
             user.FullName = request.FullName;
 
-        // if (request.AvatarUrl != null)
-        //     user.AvatarUrl = request.AvatarUrl;
+        if (!string.IsNullOrEmpty(request.AvatarUrl))
+            user.AvatarUrl = request.AvatarUrl;
 
-        if (request.PhoneNumber != null)
+        if (!string.IsNullOrEmpty(request.PhoneNumber))
             user.PhoneNumber = request.PhoneNumber;
 
         if (!string.IsNullOrEmpty(request.Timezone))

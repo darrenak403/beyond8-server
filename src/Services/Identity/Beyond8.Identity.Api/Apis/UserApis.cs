@@ -103,9 +103,9 @@ namespace Beyond8.Identity.Api.Apis
         }
 
         private static async Task<IResult> GetMyProfileAsync(
-            [FromServices] IUserService userService)
+            [FromServices] IUserService userService, [FromServices] ICurrentUserService currentUserService)
         {
-            var response = await userService.GetMyProfileAsync();
+            var response = await userService.GetUserByIdAsync(currentUserService.UserId);
 
             return response.IsSuccess
                 ? Results.Ok(response)
@@ -115,12 +115,13 @@ namespace Beyond8.Identity.Api.Apis
         private static async Task<IResult> UpdateMyProfileAsync(
             [FromBody] UpdateUserRequest request,
             [FromServices] IUserService userService,
-            [FromServices] IValidator<UpdateUserRequest> validator)
+            [FromServices] IValidator<UpdateUserRequest> validator,
+            [FromServices] ICurrentUserService currentUserService)
         {
             if (!request.ValidateRequest(validator, out var validationResult))
                 return validationResult!;
 
-            var response = await userService.UpdateMyProfileAsync(request);
+            var response = await userService.UpdateUserAsync(currentUserService.UserId, request);
 
             return response.IsSuccess
                 ? Results.Ok(response)
@@ -140,14 +141,9 @@ namespace Beyond8.Identity.Api.Apis
 
         private static async Task<IResult> GetAllUsersAsync(
             [FromServices] IUserService userService,
-            [FromQuery] int pageNumber = 1,
-            [FromQuery] int pageSize = 10)
+            [AsParameters] PaginationRequest paginationRequest)
         {
-            var response = await userService.GetAllUsersAsync(new PaginationRequest
-            {
-                PageNumber = pageNumber,
-                PageSize = pageSize
-            });
+            var response = await userService.GetAllUsersAsync(paginationRequest);
 
             return response.IsSuccess
                 ? Results.Ok(response)
