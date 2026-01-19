@@ -236,8 +236,8 @@ Connection string constants defined in `Const` class (e.g., `Const.IdentityServi
 ## Git Workflow
 
 - **Main Branch**: `main`
-- **Current Branch**: `youthful-kare`
-- **Worktree Path**: `C:\Users\hoade\.claude-worktrees\beyond8-server\youthful-kare`
+- **Current Branch**: `cranky-beaver`
+- **Worktree Path**: `C:\Users\hoade\.claude-worktrees\beyond8-server\cranky-beaver`
 - **Main Repository**: `D:\Spring-2026\SWD392\Beyond8\beyond8-server`
 
 ## Development Guidelines
