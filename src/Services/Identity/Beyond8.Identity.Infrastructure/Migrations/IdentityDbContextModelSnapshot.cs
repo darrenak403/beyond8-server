@@ -142,9 +142,6 @@ namespace Beyond8.Identity.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
                     b.Property<bool>("IsEmailVerified")
                         .HasColumnType("boolean");
 

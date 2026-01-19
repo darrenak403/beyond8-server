@@ -23,6 +23,7 @@ public static class ExternalServiceRegistrationExtensions
             .WithDataVolume();
 
         var identityDb = postgres.AddDatabase("identity-db", "Identities");
+        var integrationDb = postgres.AddDatabase("integration-db", "Integrations");
 
         var identityService = builder.AddProject<Projects.Beyond8_Identity_Api>("Identity-Service")
             .WithReference(identityDb)
@@ -30,13 +31,20 @@ public static class ExternalServiceRegistrationExtensions
             .WaitFor(postgres)
             .WaitFor(redis);
 
+        var integrationService = builder.AddProject<Projects.Beyond8_Integration_Api>("Integration-Service")
+            .WithReference(integrationDb)
+            .WaitFor(postgres);
+
         var apiGateway = builder.AddYarp("api-gateway")
             .WithContainerName("ApiGateway")
             .WithHostPort(8080)
             .WithConfiguration(config =>
             {
-                var identityCluster = AddProjectCluster(config, identityService);
-                config.AddRoute("/api/v1/auth", identityCluster);
+                var identityCluster = config.AddProjectCluster(identityService);
+                config.AddRoute("/api/v1/auth/{**catch-all}", identityCluster);
+
+                var integrationCluster = config.AddProjectCluster(integrationService);
+                config.AddRoute("/api/v1/media/{**catch-all}", integrationCluster);
             });
 
         var scalarDocs = builder.AddScalarApiReference("api-docs")
@@ -45,7 +53,8 @@ public static class ExternalServiceRegistrationExtensions
            {
                endpoint.Port = 8081;
            })
-           .WithApiReference(identityService, options => options.AddPreferredSecuritySchemes("Bearer"));
+           .WithApiReference(identityService, options => options.AddPreferredSecuritySchemes("Bearer"))
+           .WithApiReference(integrationService, options => options.AddPreferredSecuritySchemes("Bearer"));
 
         return builder;
     }

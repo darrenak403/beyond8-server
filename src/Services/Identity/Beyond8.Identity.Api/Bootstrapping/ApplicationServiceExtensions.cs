@@ -7,6 +7,7 @@ using Beyond8.Identity.Application.Services.Interfaces;
 using Beyond8.Identity.Domain.Entities;
 using Beyond8.Identity.Domain.Repositories.Interfaces;
 using Beyond8.Identity.Infrastructure.Data;
+using FluentValidation;
 using Microsoft.AspNetCore.Identity;
 
 namespace Beyond8.Identity.Api.Bootstrapping;
@@ -30,6 +31,10 @@ public static class Bootstrapper
         builder.Services.AddScoped<IAuthService, AuthService>();
         builder.Services.AddScoped<ITokenService, TokenService>();
         builder.Services.AddScoped<IUserService, UserService>();
+
+        // Add FluentValidation validators
+        builder.Services.AddValidatorsFromAssemblyContaining<Beyond8.Identity.Application.Dtos.Auth.RegisterRequest>();
+
         return builder;
     }
 
@@ -45,6 +50,8 @@ public static class Bootstrapper
         app.UseHttpsRedirection();
 
         app.MapAuthApi();
+        app.MapUserApi();
+
         return app;
     }
 }
