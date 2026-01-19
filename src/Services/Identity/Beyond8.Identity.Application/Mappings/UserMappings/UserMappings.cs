@@ -56,14 +56,8 @@ public static class UserMappings
     }
     public static void UpdateFromRequest(this User user, UpdateUserRequest request, Guid updatedBy)
     {
-        if (!string.IsNullOrEmpty(request.Email))
-            user.Email = request.Email;
-
         if (!string.IsNullOrEmpty(request.FullName))
             user.FullName = request.FullName;
-
-        if (!string.IsNullOrEmpty(request.AvatarUrl))
-            user.AvatarUrl = request.AvatarUrl;
 
         if (!string.IsNullOrEmpty(request.PhoneNumber))
             user.PhoneNumber = request.PhoneNumber;
