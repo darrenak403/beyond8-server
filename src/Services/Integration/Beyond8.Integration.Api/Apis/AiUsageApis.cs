@@ -2,7 +2,6 @@ using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
 using Beyond8.Integration.Application.Dtos.AiIntegration;
 using Beyond8.Integration.Application.Services.Interfaces;
-using Beyond8.Integration.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Beyond8.Integration.Api.Apis;
