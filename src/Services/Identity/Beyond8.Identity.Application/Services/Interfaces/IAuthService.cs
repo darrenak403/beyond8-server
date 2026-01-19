@@ -15,6 +15,7 @@ public interface IAuthService
     Task<ApiResponse<bool>> VerifyRegisterOtpAsync(VerifyOtpRequest request);
     Task<ApiResponse<bool>> ResendRegisterOtpAsync(ResendOtpRequest request);
     Task<ApiResponse<bool>> ForgotPasswordAsync(ForgotPasswordRequest request);
+    Task<ApiResponse<bool>> VerifyForgotPasswordOtpAsync(VerifyForgotPasswordOtpRequest request);
     Task<ApiResponse<bool>> ResetPasswordAsync(ResetPasswordRequest request);
     Task<ApiResponse<bool>> LogoutUserAsync(Guid userId);
 }

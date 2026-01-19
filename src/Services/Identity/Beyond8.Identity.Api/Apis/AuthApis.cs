@@ -75,6 +75,13 @@ public static class AuthApis
             .AllowAnonymous()
             .Produces<ApiResponse<bool>>(StatusCodes.Status200OK);
 
+        group.MapPost("/forgot-password/verify-otp", VerifyForgotPasswordOtpAsync)
+            .WithName("VerifyForgotPasswordOtp")
+            .WithDescription("Xác thực OTP quên mật khẩu (Không cần xác thực)")
+            .AllowAnonymous()
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest);
+
         group.MapPost("/reset-password", ResetPasswordAsync)
             .WithName("ResetPassword")
             .WithDescription("Đặt lại mật khẩu người dùng (Không cần xác thực)")
@@ -197,6 +204,18 @@ public static class AuthApis
             return validationResult!;
 
         var result = await authService.ForgotPasswordAsync(request);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> VerifyForgotPasswordOtpAsync(
+        [FromBody] VerifyForgotPasswordOtpRequest request,
+        [FromServices] IAuthService authService,
+        [FromServices] IValidator<VerifyForgotPasswordOtpRequest> validator)
+    {
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
+        var result = await authService.VerifyForgotPasswordOtpAsync(request);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 }
