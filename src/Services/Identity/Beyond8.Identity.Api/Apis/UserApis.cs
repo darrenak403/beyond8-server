@@ -23,7 +23,6 @@ namespace Beyond8.Identity.Api.Apis
 
         public static RouteGroupBuilder MapUserRoutes(this RouteGroupBuilder group)
         {
-            // Admin, Instructor, Student: Xem danh sách users (nhưng service có thể filter theo role)
             group.MapGet("/", GetAllUsersAsync)
                 .WithName("GetAllUsers")
                 .WithDescription("Lấy danh sách tất cả người dùng")
