@@ -7,7 +7,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AWSSDK.S3" Version="3.7.7" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\shared\Beyond8.Common\Beyond8.Common.csproj" />
+    <ProjectReference Include="..\Beyond8.Integration.Application\Beyond8.Integration.Application.csproj" />
+    <ProjectReference Include="..\Beyond8.Integration.Domain\Beyond8.Integration.Domain.csproj" />
   </ItemGroup>
 
 </Project>

@@ -6,4 +6,5 @@ public static class Const
     public const string RabbitMQ = "rabbitmq";
 
     public const string IdentityServiceDatabase = "identity-db";
+    public const string IntegrationServiceDatabase = "integration-db";
 }
