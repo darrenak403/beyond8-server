@@ -33,6 +33,7 @@ public static class UserMappings
             Id = user.Id,
             Email = user.Email,
             FullName = user.FullName,
+            AvatarUrl = user.AvatarUrl,
         };
     }
 
