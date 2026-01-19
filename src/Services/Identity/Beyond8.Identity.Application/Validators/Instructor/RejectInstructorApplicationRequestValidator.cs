@@ -7,7 +7,7 @@ public class RejectInstructorApplicationRequestValidator : AbstractValidator<Rej
 {
     public RejectInstructorApplicationRequestValidator()
     {
-        RuleFor(x => x.VerificationNotes)
+        RuleFor(x => x.RejectionReason)
             .NotEmpty().WithMessage("Lý do từ chối không được để trống")
             .MinimumLength(10).WithMessage("Lý do từ chối phải có ít nhất 10 ký tự")
             .MaximumLength(500).WithMessage("Lý do từ chối không được vượt quá 500 ký tự")
