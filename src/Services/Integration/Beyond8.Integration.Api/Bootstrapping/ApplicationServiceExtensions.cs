@@ -3,7 +3,8 @@ using Amazon.S3;
 using Beyond8.Common.Extensions;
 using Beyond8.Common.Utilities;
 using Beyond8.Integration.Api.Apis;
-using Beyond8.Integration.Application.Dtos;
+using Beyond8.Integration.Application.Dtos.AiIntegration;
+using Beyond8.Integration.Application.Dtos.MediaFiles;
 using Beyond8.Integration.Application.Services.Implements;
 using Beyond8.Integration.Application.Services.Interfaces;
 using Beyond8.Integration.Domain.Repositories.Interfaces;
@@ -43,14 +44,23 @@ public static class Bootstrapper
             return new AmazonS3Client(s3Settings.AccessKey, s3Settings.SecretKey, config);
         });
 
+        // Register Gemini configuration
+        builder.Services.AddHttpClient();
+        builder.Services.Configure<GeminiConfiguration>(builder.Configuration.GetSection(GeminiConfiguration.SectionName));
+
         // Register repositories
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         // Register services
         builder.Services.AddScoped<IStorageService, S3Service>();
         builder.Services.AddScoped<IMediaFileService, MediaFileService>();
+        builder.Services.AddScoped<IAiUsageService, AiUsageService>();
+        builder.Services.AddScoped<IAiPromptService, AiPromptService>();
+        builder.Services.AddScoped<IGeminiService, GeminiService>();
 
+        // Register validators
         builder.Services.AddValidatorsFromAssemblyContaining<UploadFileRequest>();
+        builder.Services.AddValidatorsFromAssemblyContaining<AiUsageRequest>();
 
         return builder;
     }
