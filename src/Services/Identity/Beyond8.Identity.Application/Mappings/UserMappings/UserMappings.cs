@@ -58,9 +58,6 @@ public static class UserMappings
         if (!string.IsNullOrEmpty(request.FullName))
             user.FullName = request.FullName;
 
-        if (!string.IsNullOrEmpty(request.AvatarUrl))
-            user.AvatarUrl = request.AvatarUrl;
-
         if (!string.IsNullOrEmpty(request.PhoneNumber))
             user.PhoneNumber = request.PhoneNumber;
 

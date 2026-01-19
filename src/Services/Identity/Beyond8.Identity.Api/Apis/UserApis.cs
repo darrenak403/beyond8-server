@@ -99,7 +99,28 @@ namespace Beyond8.Identity.Api.Apis
                .Produces<ApiResponse<UserResponse>>(StatusCodes.Status400BadRequest)
                .Produces(StatusCodes.Status401Unauthorized);
 
+            group.MapPost("/{id:guid}/avatar", UploadUserAvatarAsync)
+                .WithName("UploadUserAvatar")
+                .WithDescription("Tải lên ảnh đại diện cho người dùng theo ID")
+                .RequireAuthorization()
+                .Produces<ApiResponse<string>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<string>>(StatusCodes.Status404NotFound)
+                .Produces<ApiResponse<string>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
             return group;
+        }
+
+        private static async Task<IResult> UploadUserAvatarAsync(
+            [FromServices] ICurrentUserService currentUserService,
+            [FromBody] UpdateAvatarRequest request,
+            [FromServices] IUserService userService)
+        {
+            var response = await userService.UploadUserAvatarAsync(currentUserService.UserId, request);
+
+            return response.IsSuccess
+                ? Results.Ok(response)
+                : Results.NotFound(response);
         }
 
         private static async Task<IResult> GetMyProfileAsync(
