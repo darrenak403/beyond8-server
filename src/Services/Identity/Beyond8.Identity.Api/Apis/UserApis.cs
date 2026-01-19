@@ -23,11 +23,10 @@ namespace Beyond8.Identity.Api.Apis
 
         public static RouteGroupBuilder MapUserRoutes(this RouteGroupBuilder group)
         {
-            // Admin, Instructor, Student: Xem danh sách users (nhưng service có thể filter theo role)
             group.MapGet("/", GetAllUsersAsync)
                 .WithName("GetAllUsers")
                 .WithDescription("Lấy danh sách tất cả người dùng")
-                .RequireAuthorization("Admin", "Instructor")
+                .RequireAuthorization(x => x.RequireRole(Role.Admin))
                 .Produces<ApiResponse<List<UserResponse>>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<List<UserResponse>>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized)
@@ -36,17 +35,16 @@ namespace Beyond8.Identity.Api.Apis
             group.MapGet("/{id:guid}", GetUserByIdAsync)
                 .WithName("GetUserById")
                 .WithDescription("Lấy thông tin người dùng theo ID")
-                .RequireAuthorization("Admin", "Instructor")
+                .RequireAuthorization()
                 .Produces<ApiResponse<UserResponse>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<UserResponse>>(StatusCodes.Status404NotFound)
                 .Produces<ApiResponse<UserResponse>>(StatusCodes.Status400BadRequest)
-                .Produces(StatusCodes.Status401Unauthorized)
-                .Produces(StatusCodes.Status403Forbidden);
+                .Produces(StatusCodes.Status401Unauthorized);
 
             group.MapPost("/", CreateUserAsync)
                 .WithName("CreateUser")
                 .WithDescription("Tạo tài khoản người dùng mới")
-                .RequireAuthorization("Admin")
+                .RequireAuthorization(x => x.RequireRole(Role.Admin))
                 .Produces<ApiResponse<UserResponse>>(StatusCodes.Status201Created)
                 .Produces<ApiResponse<UserResponse>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized)
@@ -55,9 +53,8 @@ namespace Beyond8.Identity.Api.Apis
             group.MapPut("/{id:guid}", UpdateUserAsync)
                 .WithName("UpdateUser")
                 .WithDescription("Cập nhật thông tin người dùng theo ID")
-                .RequireAuthorization("Admin")
+                .RequireAuthorization(x => x.RequireRole(Role.Admin))
                 .Produces<ApiResponse<UserResponse>>(StatusCodes.Status200OK)
-                .Produces<ApiResponse<UserResponse>>(StatusCodes.Status404NotFound)
                 .Produces<ApiResponse<UserResponse>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized)
                 .Produces(StatusCodes.Status403Forbidden);
@@ -65,9 +62,8 @@ namespace Beyond8.Identity.Api.Apis
             group.MapDelete("/{id:guid}", DeleteUserAsync)
                 .WithName("DeleteUser")
                 .WithDescription("Xóa tài khoản người dùng theo ID")
-                .RequireAuthorization("Admin")
+                .RequireAuthorization(x => x.RequireRole(Role.Admin))
                 .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
-                .Produces<ApiResponse<bool>>(StatusCodes.Status404NotFound)
                 .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized)
                 .Produces(StatusCodes.Status403Forbidden);
@@ -75,9 +71,8 @@ namespace Beyond8.Identity.Api.Apis
             group.MapPut("/{id:guid}/status", UpdateUserStatusAsync)
                 .WithName("UpdateUserStatus")
                 .WithDescription("Cập nhật trạng thái người dùng theo ID")
-                .RequireAuthorization("Admin")
+                .RequireAuthorization(x => x.RequireRole(Role.Admin))
                 .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
-                .Produces<ApiResponse<bool>>(StatusCodes.Status404NotFound)
                 .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized)
                 .Produces(StatusCodes.Status403Forbidden);
@@ -87,7 +82,6 @@ namespace Beyond8.Identity.Api.Apis
                .WithDescription("Lấy thông tin cá nhân của người dùng hiện tại")
                .RequireAuthorization()
                .Produces<ApiResponse<UserResponse>>(StatusCodes.Status200OK)
-               .Produces<ApiResponse<UserResponse>>(StatusCodes.Status404NotFound)
                .Produces<ApiResponse<UserResponse>>(StatusCodes.Status400BadRequest)
                .Produces(StatusCodes.Status401Unauthorized);
 
@@ -104,7 +98,6 @@ namespace Beyond8.Identity.Api.Apis
                 .WithDescription("Tải lên ảnh đại diện cho người dùng theo ID")
                 .RequireAuthorization()
                 .Produces<ApiResponse<string>>(StatusCodes.Status200OK)
-                .Produces<ApiResponse<string>>(StatusCodes.Status404NotFound)
                 .Produces<ApiResponse<string>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 

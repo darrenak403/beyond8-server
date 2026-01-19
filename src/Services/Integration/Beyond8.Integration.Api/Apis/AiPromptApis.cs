@@ -25,28 +25,28 @@ public static class AiPromptApis
         group.MapGet("/", GetAllPrompts)
             .WithName("GetAllActivePrompts")
             .WithDescription("Lấy tất cả AI prompt templates đang active")
-            .RequireAuthorization(r => r.RequireRole("Admin"))
+            .RequireAuthorization(r => r.RequireRole(Role.Admin))
             .Produces<ApiResponse<List<AiPromptResponse>>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<List<AiPromptResponse>>>(StatusCodes.Status400BadRequest);
 
         group.MapGet("/{id:guid}", GetPromptById)
             .WithName("GetPromptById")
             .WithDescription("Lấy AI prompt template theo ID")
-            .RequireAuthorization(r => r.RequireRole("Admin"))
+            .RequireAuthorization(r => r.RequireRole(Role.Admin))
             .Produces<ApiResponse<AiPromptResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<AiPromptResponse>>(StatusCodes.Status404NotFound);
 
         group.MapGet("/category/{category}", GetPromptsByCategory)
             .WithName("GetPromptsByCategory")
             .WithDescription("Lấy AI prompt templates theo category")
-            .RequireAuthorization(r => r.RequireRole("Admin"))
+            .RequireAuthorization(r => r.RequireRole(Role.Admin))
             .Produces<ApiResponse<List<AiPromptResponse>>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<List<AiPromptResponse>>>(StatusCodes.Status400BadRequest);
 
         group.MapPost("/", CreatePrompt)
             .WithName("CreatePrompt")
             .WithDescription("Tạo AI prompt template mới (Admin only)")
-            .RequireAuthorization(r => r.RequireRole("Admin"))
+            .RequireAuthorization(r => r.RequireRole(Role.Admin))
             .Produces<ApiResponse<AiPromptResponse>>(StatusCodes.Status201Created)
             .Produces<ApiResponse<AiPromptResponse>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
@@ -54,7 +54,7 @@ public static class AiPromptApis
         group.MapPut("/{id:guid}", UpdatePrompt)
             .WithName("UpdatePrompt")
             .WithDescription("Cập nhật AI prompt template (Admin only)")
-            .RequireAuthorization(r => r.RequireRole("Admin"))
+            .RequireAuthorization(r => r.RequireRole(Role.Admin))
             .Produces<ApiResponse<AiPromptResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<AiPromptResponse>>(StatusCodes.Status404NotFound)
             .Produces<ApiResponse<AiPromptResponse>>(StatusCodes.Status400BadRequest)
@@ -63,7 +63,7 @@ public static class AiPromptApis
         group.MapDelete("/{id:guid}", DeletePrompt)
             .WithName("DeletePrompt")
             .WithDescription("Soft delete AI prompt template (Admin only)")
-            .RequireAuthorization(r => r.RequireRole("Admin"))
+            .RequireAuthorization(r => r.RequireRole(Role.Admin))
             .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<bool>>(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status401Unauthorized);
@@ -71,7 +71,7 @@ public static class AiPromptApis
         group.MapPatch("/{id:guid}/toggle-status", TogglePromptStatus)
             .WithName("TogglePromptStatus")
             .WithDescription("Kích hoạt AI prompt template (Admin only)")
-            .RequireAuthorization(r => r.RequireRole("Admin"))
+            .RequireAuthorization(r => r.RequireRole(Role.Admin))
             .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<bool>>(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status401Unauthorized);
