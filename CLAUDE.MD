@@ -127,6 +127,78 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 - Document with `.Produces<T>()` for OpenAPI generation
 - Add descriptive tags and names for documentation
 
+### Pagination
+- **ALWAYS use PaginationRequest** for endpoints that return lists of data
+- Use `[AsParameters]` attribute to bind pagination parameters from query string
+- For endpoints requiring additional filters (e.g., date ranges), create a new DTO that **inherits from PaginationRequest**
+- Return paginated responses using `ApiResponse<List<T>>.SuccessPagedResponse()`
+
+**Example - Standard Pagination:**
+```csharp
+// Endpoint
+private static async Task<IResult> GetUsers(
+    [FromServices] IUserService userService,
+    [AsParameters] PaginationRequest pagination)
+{
+    var result = await userService.GetUsersAsync(pagination);
+    return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+}
+
+// Service
+public async Task<ApiResponse<List<UserResponse>>> GetUsersAsync(PaginationRequest pagination)
+{
+    var users = await _unitOfWork.UserRepository.GetPagedAsync(
+        pageNumber: pagination.PageNumber,
+        pageSize: pagination.PageSize,
+        orderBy: query => query.OrderByDescending(u => u.CreatedAt)
+    );
+
+    return ApiResponse<List<UserResponse>>.SuccessPagedResponse(
+        users.Items.Select(u => u.ToResponse()).ToList(),
+        users.TotalCount,
+        pagination.PageNumber,
+        pagination.PageSize,
+        "Users retrieved successfully");
+}
+```
+
+**Example - Extended Pagination (with filters):**
+```csharp
+// DTO inheriting from PaginationRequest
+public class DateRangePaginationRequest : PaginationRequest
+{
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
+}
+
+// Endpoint
+private static async Task<IResult> GetByDateRange(
+    [FromServices] IService service,
+    [AsParameters] DateRangePaginationRequest request)
+{
+    var result = await service.GetByDateRangeAsync(request);
+    return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+}
+
+// Service
+public async Task<ApiResponse<List<Response>>> GetByDateRangeAsync(DateRangePaginationRequest request)
+{
+    var items = await _unitOfWork.Repository.GetPagedAsync(
+        pageNumber: request.PageNumber,
+        pageSize: request.PageSize,
+        filter: x => x.CreatedAt >= request.StartDate && x.CreatedAt <= request.EndDate,
+        orderBy: query => query.OrderByDescending(x => x.CreatedAt)
+    );
+
+    return ApiResponse<List<Response>>.SuccessPagedResponse(
+        items.Items.Select(x => x.ToResponse()).ToList(),
+        items.TotalCount,
+        request.PageNumber,
+        request.PageSize,
+        "Items retrieved successfully");
+}
+```
+
 ### Error Handling
 - Global exception handling via `GlobalExceptionsMiddleware`
 - Exception mapping:
@@ -207,9 +279,9 @@ Handles authentication and user management:
 - User profile management
 
 ### Integration Service
-Handles media file uploads and storage management using AWS S3:
+Handles media file uploads, storage management using AWS S3, and AI integration tracking:
 
-#### Features
+#### Media File Management Features
 - **Presigned URL Generation**: Generate secure upload URLs for client-side file uploads
 - **File Upload Workflow**:
   1. Client requests presigned URL with file metadata
@@ -220,8 +292,16 @@ Handles media file uploads and storage management using AWS S3:
 - **Folder Organization**: Organize files by type (avatars, certificates, identity cards)
 - **File Status Tracking**: Track upload status (Pending, Uploaded, Failed, Deleted)
 
+#### AI Integration Features
+- **AI Usage Tracking**: Track AI API calls (tokens, costs, providers)
+- **AI Prompt Management**: Store and manage reusable AI prompts
+- **Gemini Integration**: Integration with Google's Gemini AI service
+- **Usage Analytics**: Statistics and reports on AI usage per user or system-wide
+
 #### API Endpoints
-All endpoints require authentication and use `/api/v1/media` base path:
+
+**Media File Endpoints** (`/api/v1/media`):
+All endpoints require authentication.
 
 **Upload Endpoints** (POST with presigned URL generation):
 - `/avatar/presigned-url` - Upload user avatar (max 5MB, images only)
@@ -234,6 +314,15 @@ All endpoints require authentication and use `/api/v1/media` base path:
 - `GET /{fileId}` - Get file information by ID
 - `GET /folder/{folder}` - Get all user files in a specific folder
 - `DELETE /{fileId}` - Delete a file (soft delete)
+
+**AI Usage Endpoints** (`/api/v1/ai-usage`):
+All endpoints require authentication. Admin-only endpoints require "Admin" role.
+
+- `GET /my-usage` - Get current user's AI usage history (paginated)
+- `GET /all` - Get all AI usage records (Admin only, paginated)
+- `GET /user/{userId}` - Get specific user's AI usage history (Admin only, paginated)
+- `GET /statistics` - Get overall AI usage statistics (Admin only)
+- `GET /by-date-range?startDate={date}&endDate={date}&pageNumber={n}&pageSize={n}` - Get AI usage within date range (Admin only, paginated)
 
 #### Storage Configuration
 - **Provider**: AWS S3
