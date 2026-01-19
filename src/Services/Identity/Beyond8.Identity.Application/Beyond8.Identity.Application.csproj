@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Mappings\InstructorMappings\" />
     <Folder Include="Validators\User\" />
   </ItemGroup>
 
