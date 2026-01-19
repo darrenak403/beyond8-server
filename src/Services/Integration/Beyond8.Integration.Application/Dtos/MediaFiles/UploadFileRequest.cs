@@ -1,4 +1,4 @@
-namespace Beyond8.Integration.Application.Dtos;
+namespace Beyond8.Integration.Application.Dtos.MediaFiles;
 
 public class UploadFileRequest
 {
