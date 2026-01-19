@@ -24,7 +24,6 @@ namespace Beyond8.Identity.Domain.Entities
 
         [MaxLength(20)]
         public string? PhoneNumber { get; set; }
-        public bool IsActive { get; set; } = true;
         public bool IsEmailVerified { get; set; } = false;
         public DateTime? LastLoginAt { get; set; }
         public int LoginAttempts { get; set; } = 0;
