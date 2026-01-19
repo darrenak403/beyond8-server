@@ -14,13 +14,6 @@ public class UpdateUserRequestValidator : AbstractValidator<UpdateUserRequest>
                 .MaximumLength(100).WithMessage("Họ tên không được vượt quá 100 ký tự");
         });
 
-        When(x => !string.IsNullOrEmpty(x.AvatarUrl), () =>
-        {
-            RuleFor(x => x.AvatarUrl)
-                .MaximumLength(500).WithMessage("URL avatar không được vượt quá 500 ký tự")
-                .Matches(@"^https?://").WithMessage("URL avatar không hợp lệ");
-        });
-
         When(x => !string.IsNullOrEmpty(x.PhoneNumber), () =>
         {
             RuleFor(x => x.PhoneNumber)
