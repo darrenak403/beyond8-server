@@ -3,6 +3,7 @@ using Beyond8.Integration.Application.Dtos.AiIntegration;
 using Beyond8.Integration.Application.Mappings.AiIntegrationMappings;
 using Beyond8.Integration.Application.Services.Interfaces;
 using Beyond8.Integration.Domain.Repositories.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace Beyond8.Integration.Application.Services.Implements;
 

@@ -45,6 +45,7 @@ public static class ExternalServiceRegistrationExtensions
 
                 var integrationCluster = config.AddProjectCluster(integrationService);
                 config.AddRoute("/api/v1/media/{**catch-all}", integrationCluster);
+                config.AddRoute("/api/v1/ai/{**catch-all}", integrationCluster);
             });
 
         var scalarDocs = builder.AddScalarApiReference("api-docs")

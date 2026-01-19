@@ -7,6 +7,7 @@ using Beyond8.Integration.Application.Services.Interfaces;
 using Beyond8.Integration.Domain.Enums;
 using Beyond8.Integration.Domain.Repositories.Interfaces;
 using Beyond8.Integration.Infrastructure.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Beyond8.Integration.Infrastructure.ExternalServices;
