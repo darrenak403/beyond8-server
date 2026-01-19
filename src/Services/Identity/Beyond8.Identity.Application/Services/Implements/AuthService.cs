@@ -67,12 +67,10 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
             }
 
             var otpCode = GetOtpCode();
-            logger.LogError("Send OTP code to email: {Email} with OTP: {OtpCode}", request.Email, otpCode);
+            logger.LogInformation("Sending OTP code to email: {Email} with OTP: {OtpCode}", request.Email, otpCode);
             await cacheService.SetAsync($"otp_register:{request.Email}", otpCode, TimeSpan.FromMinutes(5));
 
             var newUser = request.ToEntity(passwordHasher);
-            newUser.Status = UserStatus.Inactive;
-
             await unitOfWork.UserRepository.AddAsync(newUser);
             await unitOfWork.SaveChangesAsync();
 
@@ -213,7 +211,7 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
                 return ApiResponse<bool>.FailureResponse(validation.ErrorMessage!);
 
             var otpCode = GetOtpCode();
-            logger.LogInformation("Send OTP code to email: {Email} with OTP: {OtpCode}", request.Email, otpCode);
+            logger.LogInformation("Sending forgot password OTP to email: {Email} with OTP: {OtpCode}", request.Email, otpCode);
             var cacheKey = $"otp_forgot_password:{request.Email}";
             await cacheService.SetAsync(cacheKey, otpCode, TimeSpan.FromMinutes(5));
             await cacheService.SetAsync(lockKey, true, TimeSpan.FromSeconds(60));
@@ -272,8 +270,7 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
             await cacheService.SetAsync($"otp_register:{request.Email}", otpCode, TimeSpan.FromMinutes(5));
             await cacheService.SetAsync(lockKey, true, TimeSpan.FromSeconds(60));
 
-            logger.LogInformation("Resend registration OTP to email: {Email}, OTP: {OtpCode}", request.Email, otpCode);
-            logger.LogInformation("Registration OTP resent successfully for user: {Email}", request.Email);
+            logger.LogInformation("Resending registration OTP to email: {Email}, OTP: {OtpCode}", request.Email, otpCode);
             return ApiResponse<bool>.SuccessResponse(true, "Mã OTP đã được gửi lại. Vui lòng kiểm tra email của bạn.");
         }
         catch (Exception ex)
@@ -330,15 +327,13 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
                 return ApiResponse<bool>.FailureResponse("Người dùng không tồn tại.");
             }
 
-            if (user.Status == UserStatus.Active)
+            if (user.IsEmailVerified)
             {
-                logger.LogError("User with email {Email} is already active", request.Email);
-                return ApiResponse<bool>.FailureResponse("Tài khoản đã được kích hoạt trước đó.");
+                logger.LogError("User with email {Email} is already verified", request.Email);
+                return ApiResponse<bool>.FailureResponse("Tài khoản đã được xác thực trước đó.");
             }
 
-            user.Status = UserStatus.Active;
             user.IsEmailVerified = true;
-
 
             await unitOfWork.UserRepository.UpdateAsync(user.Id, user);
             await unitOfWork.SaveChangesAsync();
@@ -346,7 +341,7 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
             await cacheService.RemoveAsync(cacheKey);
 
             logger.LogInformation("User with email {Email} verified successfully", request.Email);
-            return ApiResponse<bool>.SuccessResponse(true, "Xác thực OTP thành công. Tài khoản của bạn đã được kích hoạt.");
+            return ApiResponse<bool>.SuccessResponse(true, "Xác thực OTP thành công. Tài khoản của bạn đã được xác thực.");
         }
         catch (Exception ex)
         {
@@ -410,15 +405,15 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
             logger.LogError("User with email {Email} not found", email);
             return (false, "Người dùng không tồn tại.", null);
         }
-        if (requireActive && user.Status != UserStatus.Active)
-        {
-            logger.LogError("User with email {Email} has status {Status}", email, user.Status);
-            return (false, "Tài khoản của bạn không hoạt động, vui lòng liên hệ quản trị viên.", null);
-        }
         if (requireEmailVerified && !user.IsEmailVerified)
         {
             logger.LogError("User with email {Email} is not verified", email);
             return (false, "Tài khoản của bạn chưa được xác thực, vui lòng kiểm tra email để xác thực.", null);
+        }
+        if (requireActive && user.Status != UserStatus.Active)
+        {
+            logger.LogError("User with email {Email} has status {Status}", email, user.Status);
+            return (false, "Tài khoản của bạn không hoạt động, vui lòng liên hệ quản trị viên.", null);
         }
         return (true, null, user);
     }

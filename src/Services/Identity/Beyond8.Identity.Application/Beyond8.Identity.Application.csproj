@@ -15,4 +15,10 @@
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Dtos\Instructor\" />
+    <Folder Include="Mappings\InstructorMappings\" />
+    <Folder Include="Validators\User\" />
+  </ItemGroup>
+
 </Project>
