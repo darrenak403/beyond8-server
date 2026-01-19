@@ -93,14 +93,6 @@ public class UserService(
             var (isValid, error, user) = await ValidateUserByIdAsync(id, requireActive: true);
             if (!isValid) return ApiResponse<UserResponse>.FailureResponse(error!);
 
-            if (!string.IsNullOrEmpty(request.Email) && request.Email != user!.Email)
-            {
-                var (isEmailValid, emailError) = await ValidateEmailUniqueAsync(request.Email, user.Id);
-                if (!isEmailValid)
-                    return ApiResponse<UserResponse>.FailureResponse(emailError!);
-                user.IsEmailVerified = false;
-            }
-
             user!.UpdateFromRequest(request, currentUserService.UserId);
 
             await unitOfWork.UserRepository.UpdateAsync(user!.Id, user!);
