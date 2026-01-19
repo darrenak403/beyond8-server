@@ -1,7 +1,6 @@
 using System;
 using Beyond8.Common.Utilities;
-using Beyond8.Identity.Application.Dtos.Instructor;
-using Beyond8.Identity.Application.Dtos.InstructorProfiles;
+using Beyond8.Identity.Application.Dtos.Instructors;
 
 namespace Beyond8.Identity.Application.Services.Interfaces;
 

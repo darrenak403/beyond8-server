@@ -2,6 +2,7 @@ using System;
 using Beyond8.Common.Extensions;
 using Beyond8.Common.Utilities;
 using Beyond8.Identity.Api.Apis;
+using Beyond8.Identity.Application.Dtos.Auth;
 using Beyond8.Identity.Application.Services.Implements;
 using Beyond8.Identity.Application.Services.Interfaces;
 using Beyond8.Identity.Domain.Entities;
@@ -34,7 +35,8 @@ public static class Bootstrapper
         // builder.Services.AddScoped<IInstructorService, InstructorService>();
 
         // Add FluentValidation validators
-        builder.Services.AddValidatorsFromAssemblyContaining<Beyond8.Identity.Application.Dtos.Auth.RegisterRequest>();
+        builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequest>();
+        
 
         return builder;
     }

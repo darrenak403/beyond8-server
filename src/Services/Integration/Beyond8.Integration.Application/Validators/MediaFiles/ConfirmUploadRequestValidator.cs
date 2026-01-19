@@ -1,7 +1,7 @@
-using Beyond8.Integration.Application.Dtos;
+using Beyond8.Integration.Application.Dtos.MediaFiles;
 using FluentValidation;
 
-namespace Beyond8.Integration.Application.Validators;
+namespace Beyond8.Integration.Application.Validators.MediaFiles;
 
 public class ConfirmUploadRequestValidator : AbstractValidator<ConfirmUploadRequest>
 {
