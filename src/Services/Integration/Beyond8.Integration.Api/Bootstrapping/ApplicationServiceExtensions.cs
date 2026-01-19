@@ -77,6 +77,8 @@ public static class Bootstrapper
         app.UseHttpsRedirection();
 
         app.MapMediaFileApi();
+        app.MapAiUsageApi();
+        app.MapAiPromptApi();
 
         return app;
     }
