@@ -207,7 +207,79 @@ Handles authentication and user management:
 - User profile management
 
 ### Integration Service
-Handles external integrations and third-party service connections.
+Handles media file uploads and storage management using AWS S3:
+
+#### Features
+- **Presigned URL Generation**: Generate secure upload URLs for client-side file uploads
+- **File Upload Workflow**:
+  1. Client requests presigned URL with file metadata
+  2. Client uploads file directly to S3 using presigned URL
+  3. Client confirms upload completion
+  4. System verifies file exists in S3 and updates database
+- **File Management**: Get, list, and delete user files
+- **Folder Organization**: Organize files by type (avatars, certificates, identity cards)
+- **File Status Tracking**: Track upload status (Pending, Uploaded, Failed, Deleted)
+
+#### API Endpoints
+All endpoints require authentication and use `/api/v1/media` base path:
+
+**Upload Endpoints** (POST with presigned URL generation):
+- `/avatar/presigned-url` - Upload user avatar (max 5MB, images only)
+- `/certificate/presigned-url` - Upload instructor certificates (max 10MB, PDF/images)
+- `/identity-card/front/presigned-url` - Upload front side of ID card (max 10MB, PDF/images)
+- `/identity-card/back/presigned-url` - Upload back side of ID card (max 10MB, PDF/images)
+
+**File Management**:
+- `POST /confirm` - Confirm file upload completion
+- `GET /{fileId}` - Get file information by ID
+- `GET /folder/{folder}` - Get all user files in a specific folder
+- `DELETE /{fileId}` - Delete a file (soft delete)
+
+#### Storage Configuration
+- **Provider**: AWS S3
+- **File Key Format**: `{folder}/{userId}/{filename}` or `{folder}/{userId}/{subFolder}/{filename}`
+- **Presigned URL Expiration**: 15 minutes
+- **File Validation**: Type-specific validators for avatars and documents
+
+#### Validation Rules
+**Avatar Upload**:
+- Allowed formats: JPEG, JPG, PNG, WebP
+- Max size: 5MB
+
+**Document Upload** (Certificates, ID Cards):
+- Allowed formats: PDF, JPEG, JPG, PNG
+- Max size: 10MB
+
+#### Usage Flow
+```csharp
+// 1. Request presigned URL
+POST /api/v1/media/avatar/presigned-url
+{
+    "fileName": "avatar.jpg",
+    "contentType": "image/jpeg",
+    "size": 1024000
+}
+
+// Response includes presigned URL and fileId
+{
+    "isSuccess": true,
+    "data": {
+        "fileId": "guid",
+        "presignedUrl": "https://s3.amazonaws.com/...",
+        "expiresAt": "2026-01-19T10:15:00Z"
+    }
+}
+
+// 2. Upload file to S3 using presigned URL (client-side)
+PUT {presignedUrl}
+Body: [file binary data]
+
+// 3. Confirm upload
+POST /api/v1/media/confirm
+{
+    "fileId": "guid"
+}
+```
 
 ## Database
 
@@ -236,8 +308,8 @@ Connection string constants defined in `Const` class (e.g., `Const.IdentityServi
 ## Git Workflow
 
 - **Main Branch**: `main`
-- **Current Branch**: `sad-visvesvaraya`
-- **Worktree Path**: `C:\Users\hoade\.claude-worktrees\beyond8-server\sad-visvesvaraya`
+- **Current Branch**: `cranky-beaver`
+- **Worktree Path**: `C:\Users\hoade\.claude-worktrees\beyond8-server\cranky-beaver`
 - **Main Repository**: `D:\Spring-2026\SWD392\Beyond8\beyond8-server`
 
 ## Development Guidelines

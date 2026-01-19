@@ -3,7 +3,8 @@
     "allow": [
       "Bash(dotnet add:*)",
       "Bash(dotnet build:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(dir /s /b \"C:\\\\Users\\\\hoade\\\\.claude-worktrees\\\\beyond8-server\\\\cranky-beaver\\\\src\\\\Services\\\\Integration\\\\Beyond8.Integration.Application\\\\Services\")"
     ]
   }
 }
