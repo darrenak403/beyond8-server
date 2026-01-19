@@ -29,7 +29,7 @@ public class UserService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Đã xảy ra lỗi khi lấy thông tin tài khoản với ID {UserId}", id);
+            logger.LogError(ex, "Error getting user by ID {UserId}", id);
             return ApiResponse<UserResponse>.FailureResponse("Đã xảy ra lỗi khi lấy thông tin tài khoản.");
         }
     }
@@ -46,7 +46,7 @@ public class UserService(
             );
             var userResponses = users.Items.Select(u => u.ToUserResponse()).ToList();
 
-            logger.LogInformation("Lấy được {Count} tài khoản trên trang {PageNumber}", userResponses.Count, request.PageNumber);
+            logger.LogInformation("Retrieved {Count} users on page {PageNumber}", userResponses.Count, request.PageNumber);
 
             return ApiResponse<List<UserResponse>>.SuccessPagedResponse(
                 userResponses,
@@ -57,7 +57,7 @@ public class UserService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Đã xảy ra lỗi khi lấy danh sách tài khoản.");
+            logger.LogError(ex, "Error getting all users");
             return ApiResponse<List<UserResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách tài khoản.");
         }
     }
@@ -75,13 +75,13 @@ public class UserService(
             await unitOfWork.UserRepository.AddAsync(newUser);
             await unitOfWork.SaveChangesAsync();
 
-            logger.LogInformation("Tài khoản với email {Email} đã được tạo thành công với ID: {UserId}", request.Email, newUser.Id);
+            logger.LogInformation("User created successfully with email {Email} and ID: {UserId}", request.Email, newUser.Id);
 
             return ApiResponse<UserResponse>.SuccessResponse(newUser.ToUserResponse(), "Tạo tài khoản thành công.");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Đã xảy ra lỗi khi tạo tài khoản với email {Email}", request.Email);
+            logger.LogError(ex, "Error creating user with email {Email}", request.Email);
             return ApiResponse<UserResponse>.FailureResponse("Đã xảy ra lỗi khi tạo tài khoản.");
         }
     }
@@ -96,21 +96,22 @@ public class UserService(
             if (!string.IsNullOrEmpty(request.Email) && request.Email != user!.Email)
             {
                 var (isEmailValid, emailError) = await ValidateEmailUniqueAsync(request.Email, user.Id);
-                if (!isEmailValid) return ApiResponse<UserResponse>.FailureResponse(emailError!);
+                if (!isEmailValid)
+                    return ApiResponse<UserResponse>.FailureResponse(emailError!);
                 user.IsEmailVerified = false;
             }
 
-            user.UpdateFromRequest(request, currentUserService.UserId);
+            user!.UpdateFromRequest(request, currentUserService.UserId);
 
-            await unitOfWork.UserRepository.UpdateAsync(user.Id, user);
+            await unitOfWork.UserRepository.UpdateAsync(user!.Id, user!);
             await unitOfWork.SaveChangesAsync();
 
-            logger.LogInformation("Tài khoản với ID: {UserId} đã được cập nhật thành công.", id);
+            logger.LogInformation("User with ID: {UserId} updated successfully", id);
             return ApiResponse<UserResponse>.SuccessResponse(user.ToUserResponse(), "Cập nhật tài khoản thành công.");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Đã xảy ra lỗi khi cập nhật tài khoản với ID {UserId}", id);
+            logger.LogError(ex, "Error updating user with ID {UserId}", id);
             return ApiResponse<UserResponse>.FailureResponse("Đã xảy ra lỗi khi cập nhật tài khoản.");
         }
     }
@@ -123,18 +124,16 @@ public class UserService(
             if (!isValid) return ApiResponse<bool>.FailureResponse(error!);
 
             user!.Status = UserStatus.Inactive;
-            user.UpdatedAt = DateTime.UtcNow;
-            user.UpdatedBy = currentUserService.UserId;
 
             await unitOfWork.UserRepository.UpdateAsync(user.Id, user);
             await unitOfWork.SaveChangesAsync();
 
-            logger.LogInformation("Tài khoản với ID: {UserId} đã được xóa (đánh dấu không hoạt động) thành công.", id);
+            logger.LogInformation("User with ID: {UserId} deleted (marked as inactive) successfully", id);
             return ApiResponse<bool>.SuccessResponse(true, "Xóa tài khoản thành công.");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Đã xảy ra lỗi khi xóa tài khoản với ID {UserId}", id);
+            logger.LogError(ex, "Error deleting user with ID {UserId}", id);
             return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi xóa tài khoản.");
         }
     }
@@ -148,24 +147,22 @@ public class UserService(
 
             if (user!.Status == request.NewStatus)
             {
-                logger.LogWarning("Tài khoản với ID: {UserId} đã có trạng thái {Status}.", id, request.NewStatus);
+                logger.LogWarning("User with ID: {UserId} already has status {Status}", id, request.NewStatus);
                 return ApiResponse<bool>.FailureResponse("Tài khoản đã có trạng thái này.");
             }
 
-            var oldStatus = user.Status;
+            var oldStatus = user!.Status;
             user.Status = request.NewStatus;
-            user.UpdatedAt = DateTime.UtcNow;
-            user.UpdatedBy = currentUserService.UserId;
 
             await unitOfWork.UserRepository.UpdateAsync(user.Id, user);
             await unitOfWork.SaveChangesAsync();
 
-            logger.LogInformation("Trạng thái tài khoản với ID: {UserId} đã được cập nhật từ {OldStatus} sang {NewStatus}.", id, oldStatus, request.NewStatus);
+            logger.LogInformation("User status updated from {OldStatus} to {NewStatus} for user with ID: {UserId}", oldStatus, request.NewStatus, id);
             return ApiResponse<bool>.SuccessResponse(true, "Cập nhật trạng thái tài khoản thành công.");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Đã xảy ra lỗi khi cập nhật trạng thái tài khoản với ID {UserId}", id);
+            logger.LogError(ex, "Error updating user status for user with ID {UserId}", id);
             return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi cập nhật trạng thái tài khoản.");
         }
     }
@@ -177,16 +174,16 @@ public class UserService(
         Guid userId,
         bool requireActive = false)
     {
-        var user = await unitOfWork.UserRepository.FindOneAsync(u => u.Id == userId);
+        var user = await unitOfWork.UserRepository.GetByIdAsync(userId);
         if (user == null)
         {
-            logger.LogWarning("Không tìm thấy tài khoản với ID: {UserId}", userId);
+            logger.LogWarning("User not found with ID: {UserId}", userId);
             return (false, "Không tìm thấy tài khoản.", null);
         }
 
         if (requireActive && user.Status == UserStatus.Inactive)
         {
-            logger.LogWarning("Tài khoản với ID: {UserId} không hoạt động.", userId);
+            logger.LogWarning("User with ID: {UserId} is inactive", userId);
             return (false, "Tài khoản không hoạt động.", user);
         }
 
@@ -202,7 +199,7 @@ public class UserService(
             u.Email == email && (excludeUserId == null || u.Id != excludeUserId));
         if (existingUser != null)
         {
-            logger.LogWarning("Email {Email} đã được sử dụng.", email);
+            logger.LogWarning("Email {Email} is already in use", email);
             return (false, "Email này đã được sử dụng.");
         }
 

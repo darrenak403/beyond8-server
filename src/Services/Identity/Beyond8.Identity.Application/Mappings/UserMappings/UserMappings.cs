@@ -18,7 +18,7 @@ public static class UserMappings
             FullName = user.FullName,
             AvatarUrl = user.AvatarUrl,
             PhoneNumber = user.PhoneNumber,
-            IsActive = user.IsActive,
+            Status = user.Status,
             IsEmailVerified = user.IsEmailVerified,
             LastLoginAt = user.LastLoginAt,
             Timezone = user.Timezone,
@@ -47,11 +47,8 @@ public static class UserMappings
             Timezone = request.Timezone,
             Locale = request.Locale,
             Roles = request.Roles ?? [UserRole.Student],
-            IsActive = true,
-            IsEmailVerified = false,
             Status = UserStatus.Active,
-            CreatedAt = DateTime.UtcNow,
-            CreatedBy = createdBy
+            IsEmailVerified = false
         };
 
         return user;
@@ -75,8 +72,5 @@ public static class UserMappings
 
         if (!string.IsNullOrEmpty(request.Locale))
             user.Locale = request.Locale;
-
-        user.UpdatedAt = DateTime.UtcNow;
-        user.UpdatedBy = updatedBy;
     }
 }

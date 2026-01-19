@@ -17,7 +17,8 @@ public static class RegisterMappings
             CreatedAt = DateTime.UtcNow,
             CreatedBy = Guid.Empty,
             Roles = [UserRole.Student],
-            FullName = request.Email.Split('@')[0]
+            FullName = request.Email.Split('@')[0],
+            IsEmailVerified = false,
         };
     }
 }
