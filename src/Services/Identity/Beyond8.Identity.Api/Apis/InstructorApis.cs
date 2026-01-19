@@ -31,9 +31,29 @@ namespace Beyond8.Identity.Api.Apis
                  .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status400BadRequest)
                  .Produces(StatusCodes.Status401Unauthorized);
 
+
+            // Thêm admin authorization
+            group.MapPost("/{profileId}/approve", ApproveInstructorApplicationAsync)
+                 .WithName("ApproveInstructorApplication")
+                 .WithDescription("Duyệt đơn đăng ký giảng viên (Admin only)")
+                 .RequireAuthorization()
+                 .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status200OK)
+                 .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status400BadRequest)
+                 .Produces(StatusCodes.Status401Unauthorized)
+                 .Produces(StatusCodes.Status403Forbidden);
+
+            group.MapPost("/{profileId}/reject", RejectInstructorApplicationAsync)
+                 .WithName("RejectInstructorApplication")
+                 .WithDescription("Từ chối đơn đăng ký giảng viên (Admin only)")
+                 .RequireAuthorization()
+                 .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status200OK)
+                 .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status400BadRequest)
+                 .Produces(StatusCodes.Status401Unauthorized)
+                 .Produces(StatusCodes.Status403Forbidden);
+
+
             return group;
         }
-
         private static async Task<IResult> SubmitInstructorApplicationAsync(
             [FromBody] CreateInstructorProfileRequest request,
             [FromServices] IInstructorService instructorService,
@@ -49,6 +69,35 @@ namespace Beyond8.Identity.Api.Apis
                             ? Results.Created($"/api/v1/instructors/applications/{response.Data!.Id}", response)
                             : Results.BadRequest(response);
 
+        }
+
+        private static async Task<IResult> ApproveInstructorApplicationAsync(
+        [FromRoute] Guid profileId,
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IInstructorService instructorService)
+        {
+            var response = await instructorService.ApproveInstructorApplicationAsync(profileId, currentUserService.UserId);
+
+            return response.IsSuccess
+                            ? Results.Ok(response)
+                            : Results.BadRequest(response);
+        }
+
+        private static async Task<IResult> RejectInstructorApplicationAsync(
+        [FromRoute] Guid profileId,
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IInstructorService instructorService,
+        [FromBody] RejectInstructorApplicationRequest request,
+        [FromServices] IValidator<RejectInstructorApplicationRequest> validator)
+        {
+            if (!request.ValidateRequest(validator, out var validationResult))
+                return Results.BadRequest(validationResult);
+
+            var response = await instructorService.RejectInstructorApplicationAsync(profileId, request, currentUserService.UserId);
+
+            return response.IsSuccess
+                            ? Results.Ok(response)
+                            : Results.BadRequest(response);
         }
     }
 }
