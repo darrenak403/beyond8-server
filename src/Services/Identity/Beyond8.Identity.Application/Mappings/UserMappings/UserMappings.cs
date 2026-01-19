@@ -37,17 +37,6 @@ public static class UserMappings
         };
     }
 
-    public static TokenClaims ToTokenClaims(this User user)
-    {
-        return new TokenClaims
-        {
-            UserId = user.Id,
-            Email = user.Email,
-            UserName = user.FullName,
-            Roles = user.Roles,
-        };
-    }
-
     public static User ToUserEntity(this CreateUserRequest request, Guid createdBy)
     {
         var user = new User
