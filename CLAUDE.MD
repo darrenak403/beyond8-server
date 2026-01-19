@@ -236,8 +236,8 @@ Connection string constants defined in `Const` class (e.g., `Const.IdentityServi
 ## Git Workflow
 
 - **Main Branch**: `main`
-- **Current Branch**: `youthful-kare`
-- **Worktree Path**: `C:\Users\hoade\.claude-worktrees\beyond8-server\youthful-kare`
+- **Current Branch**: `sad-visvesvaraya`
+- **Worktree Path**: `C:\Users\hoade\.claude-worktrees\beyond8-server\sad-visvesvaraya`
 - **Main Repository**: `D:\Spring-2026\SWD392\Beyond8\beyond8-server`
 
 ## Development Guidelines
@@ -256,6 +256,7 @@ Connection string constants defined in `Const` class (e.g., `Const.IdentityServi
 - [ ] Configuration stored in appsettings.json, not hardcoded
 - [ ] Code follows consistent naming conventions (PascalCase, camelCase)
 - [ ] Database operations use async methods only
+- [ ] No duplicate code - extract common validation/logic into reusable private methods
 
 ### Naming Conventions
 - **PascalCase**: Classes, methods, properties, interfaces
@@ -268,6 +269,53 @@ Connection string constants defined in `Const` class (e.g., `Const.IdentityServi
 - Use descriptive namespaces matching folder structure
 - Keep files focused on single responsibility
 - Separate interfaces from implementations
+
+### Code Reusability & DRY Principle
+**Avoid Duplicate Code:**
+- Extract common validation logic into reusable private methods
+- Use tuple returns for validation methods: `(bool IsValid, string? ErrorMessage)`
+- Create helper methods for repeated operations (e.g., OTP validation, user validation)
+- Prefer composition over duplication
+
+**Example - Extract Common Validation:**
+```csharp
+// Bad - Duplicate validation code in multiple methods
+public async Task<ApiResponse<bool>> Method1(Request request)
+{
+    var cachedOtp = await cacheService.GetAsync<string>($"otp:{request.Email}");
+    if (string.IsNullOrEmpty(cachedOtp))
+        return ApiResponse<bool>.FailureResponse("OTP không hợp lệ");
+    if (cachedOtp != request.OtpCode)
+        return ApiResponse<bool>.FailureResponse("OTP không đúng");
+    // ... rest of logic
+}
+
+// Good - Extract to reusable method
+private async Task<(bool IsValid, string? ErrorMessage)> ValidateOtpFromCacheAsync(
+    string cacheKey, string otpCode, string email)
+{
+    var cachedOtp = await cacheService.GetAsync<string>(cacheKey);
+    if (string.IsNullOrEmpty(cachedOtp))
+        return (false, "OTP không hợp lệ hoặc đã hết hạn");
+    if (cachedOtp != otpCode)
+        return (false, "OTP không đúng");
+    return (true, null);
+}
+
+public async Task<ApiResponse<bool>> Method1(Request request)
+{
+    var validation = await ValidateOtpFromCacheAsync($"otp:{request.Email}", request.OtpCode, request.Email);
+    if (!validation.IsValid)
+        return ApiResponse<bool>.FailureResponse(validation.ErrorMessage!);
+    // ... rest of logic
+}
+```
+
+**Benefits:**
+- Single source of truth for validation logic
+- Easier to maintain and update
+- Reduces code size and complexity
+- Improves testability
 
 ## Quick Reference
 
@@ -317,3 +365,5 @@ When working with this codebase:
 8. Use dependency injection for all dependencies
 9. Keep error handling centralized in middleware
 10. Write meaningful error messages in Vietnamese for user-facing validation
+11. **Apply DRY principle** - identify and eliminate duplicate code by extracting common logic into reusable private methods
+12. Use tuple returns `(bool IsValid, string? ErrorMessage)` for validation helper methods
