@@ -7,12 +7,6 @@ public class UpdateUserRequestValidator : AbstractValidator<UpdateUserRequest>
 {
     public UpdateUserRequestValidator()
     {
-        When(x => !string.IsNullOrEmpty(x.Email), () =>
-        {
-            RuleFor(x => x.Email)
-                .EmailAddress().WithMessage("Email không hợp lệ")
-                .MaximumLength(256).WithMessage("Email không được vượt quá 256 ký tự");
-        });
 
         When(x => !string.IsNullOrEmpty(x.FullName), () =>
         {
