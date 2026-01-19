@@ -232,18 +232,9 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
         try
         {
             var cacheKey = $"otp_forgot_password:{request.Email}";
-            var cachedOtp = await cacheService.GetAsync<string>(cacheKey);
-            if (string.IsNullOrEmpty(cachedOtp))
-            {
-                logger.LogError("OTP for email {Email} not found or expired", request.Email);
-                return ApiResponse<bool>.FailureResponse("Mã OTP không hợp lệ hoặc đã hết hạn, vui lòng thử lại.");
-            }
-
-            if (cachedOtp != request.OtpCode)
-            {
-                logger.LogError("Invalid OTP for email {Email}", request.Email);
-                return ApiResponse<bool>.FailureResponse("Mã OTP không đúng, vui lòng thử lại.");
-            }
+            var otpValidation = await ValidateOtpFromCacheAsync(cacheKey, request.OtpCode, request.Email);
+            if (!otpValidation.IsValid)
+                return ApiResponse<bool>.FailureResponse(otpValidation.ErrorMessage!);
 
             var user = await unitOfWork.UserRepository.FindOneAsync(x => x.Email == request.Email);
             var validation = ValidateUserByEmail(user, request.Email);
@@ -297,18 +288,9 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
         try
         {
             var cacheKey = $"otp_forgot_password:{request.Email}";
-            var cachedOtp = await cacheService.GetAsync<string>(cacheKey);
-            if (string.IsNullOrEmpty(cachedOtp))
-            {
-                logger.LogError("OTP for email {Email} not found or expired", request.Email);
-                return ApiResponse<bool>.FailureResponse("Mã OTP không hợp lệ hoặc đã hết hạn, vui lòng thử lại.");
-            }
-
-            if (cachedOtp != request.OtpCode)
-            {
-                logger.LogError("Invalid OTP for email {Email}", request.Email);
-                return ApiResponse<bool>.FailureResponse("Mã OTP không đúng, vui lòng thử lại.");
-            }
+            var otpValidation = await ValidateOtpFromCacheAsync(cacheKey, request.OtpCode, request.Email);
+            if (!otpValidation.IsValid)
+                return ApiResponse<bool>.FailureResponse(otpValidation.ErrorMessage!);
 
             var user = await unitOfWork.UserRepository.FindOneAsync(x => x.Email == request.Email);
             var validation = ValidateUserByEmail(user, request.Email);
@@ -337,18 +319,9 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
         try
         {
             var cacheKey = $"otp_register:{request.Email}";
-            var cachedOtp = await cacheService.GetAsync<string>(cacheKey);
-            if (string.IsNullOrEmpty(cachedOtp))
-            {
-                logger.LogError("OTP for email {Email} not found or expired", request.Email);
-                return ApiResponse<bool>.FailureResponse("Mã OTP không hợp lệ hoặc đã hết hạn, vui lòng thử lại.");
-            }
-
-            if (cachedOtp != request.OtpCode)
-            {
-                logger.LogError("Invalid OTP for email {Email}", request.Email);
-                return ApiResponse<bool>.FailureResponse("Mã OTP không đúng, vui lòng thử lại.");
-            }
+            var otpValidation = await ValidateOtpFromCacheAsync(cacheKey, request.OtpCode, request.Email);
+            if (!otpValidation.IsValid)
+                return ApiResponse<bool>.FailureResponse(otpValidation.ErrorMessage!);
 
             var user = await unitOfWork.UserRepository.FindOneAsync(x => x.Email == request.Email);
             if (user == null)
@@ -448,6 +421,27 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
             return (false, "Tài khoản của bạn chưa được xác thực, vui lòng kiểm tra email để xác thực.", null);
         }
         return (true, null, user);
+    }
+
+    /// <summary>
+    /// Validates OTP from cache. Returns (IsValid, ErrorMessage).
+    /// </summary>
+    private async Task<(bool IsValid, string? ErrorMessage)> ValidateOtpFromCacheAsync(string cacheKey, string otpCode, string email)
+    {
+        var cachedOtp = await cacheService.GetAsync<string>(cacheKey);
+        if (string.IsNullOrEmpty(cachedOtp))
+        {
+            logger.LogError("OTP for email {Email} not found or expired", email);
+            return (false, "Mã OTP không hợp lệ hoặc đã hết hạn, vui lòng thử lại.");
+        }
+
+        if (cachedOtp != otpCode)
+        {
+            logger.LogError("Invalid OTP for email {Email}", email);
+            return (false, "Mã OTP không đúng, vui lòng thử lại.");
+        }
+
+        return (true, null);
     }
 
     private string GetOtpCode()
