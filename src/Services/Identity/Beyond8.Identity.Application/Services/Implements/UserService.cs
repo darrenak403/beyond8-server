@@ -93,14 +93,6 @@ public class UserService(
             var (isValid, error, user) = await ValidateUserByIdAsync(id, requireActive: true);
             if (!isValid) return ApiResponse<UserResponse>.FailureResponse(error!);
 
-            if (!string.IsNullOrEmpty(request.Email) && request.Email != user!.Email)
-            {
-                var (isEmailValid, emailError) = await ValidateEmailUniqueAsync(request.Email, user.Id);
-                if (!isEmailValid)
-                    return ApiResponse<UserResponse>.FailureResponse(emailError!);
-                user.IsEmailVerified = false;
-            }
-
             user!.UpdateFromRequest(request, currentUserService.UserId);
 
             await unitOfWork.UserRepository.UpdateAsync(user!.Id, user!);
@@ -204,5 +196,27 @@ public class UserService(
         }
 
         return (true, null);
+    }
+
+    public async Task<ApiResponse<string>> UploadUserAvatarAsync(Guid id, UpdateAvatarRequest request)
+    {
+        try
+        {
+            var (isValid, error, user) = await ValidateUserByIdAsync(id);
+            if (!isValid) return ApiResponse<string>.FailureResponse(error!);
+
+            user!.AvatarUrl = request.AvatarUrl;
+
+            await unitOfWork.UserRepository.UpdateAsync(user.Id, user!);
+            await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation("User with ID: {UserId} updated avatar successfully", id);
+            return ApiResponse<string>.SuccessResponse(user.AvatarUrl!, "Cập nhật ảnh đại diện thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error uploading avatar for user with ID {UserId}", id);
+            return ApiResponse<string>.FailureResponse("Đã xảy ra lỗi khi tải lên ảnh đại diện.");
+        }
     }
 }
