@@ -254,7 +254,7 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
         try
         {
             var user = await unitOfWork.UserRepository.FindOneAsync(x => x.Email == request.Email);
-            var validation = ValidateUserByEmail(user, request.Email);
+            var validation = ValidateUserByEmail(user, request.Email, false, false);
             if (!validation.IsValid)
                 return ApiResponse<bool>.FailureResponse(validation.ErrorMessage!);
 

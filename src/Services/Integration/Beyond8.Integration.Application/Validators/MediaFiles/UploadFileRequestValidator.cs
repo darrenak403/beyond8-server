@@ -37,6 +37,20 @@ public class UploadFileRequestValidator : AbstractValidator<UploadFileRequest>
         return validator;
     }
 
+    public static UploadFileRequestValidator ForCover()
+    {
+        var validator = new UploadFileRequestValidator();
+
+        validator.RuleFor(x => x.ContentType)
+            .Must(ct => AllowedImageTypes.Contains(ct.ToLower()))
+            .WithMessage($"Cover chỉ chấp nhận định dạng: {string.Join(", ", AllowedImageTypes)}");
+
+        validator.RuleFor(x => x.Size)
+            .LessThanOrEqualTo(5242880).WithMessage("Kích thước cover không được vượt quá 5MB");
+
+        return validator;
+    }
+
     public static UploadFileRequestValidator ForDocument()
     {
         var validator = new UploadFileRequestValidator();
