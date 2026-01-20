@@ -17,6 +17,7 @@ public static class UserMappings
             Roles = user.Roles,
             FullName = user.FullName,
             AvatarUrl = user.AvatarUrl,
+            CoverUrl = user.CoverUrl,
             PhoneNumber = user.PhoneNumber,
             Status = user.Status,
             IsEmailVerified = user.IsEmailVerified,
@@ -34,16 +35,18 @@ public static class UserMappings
             Email = user.Email,
             FullName = user.FullName,
             AvatarUrl = user.AvatarUrl,
+            CoverUrl = user.CoverUrl,
         };
     }
 
-    public static User ToUserEntity(this CreateUserRequest request, Guid createdBy)
+    public static User ToUserEntity(this CreateUserRequest request)
     {
         var user = new User
         {
             Email = request.Email,
             FullName = request.FullName,
             AvatarUrl = request.AvatarUrl,
+            CoverUrl = request.CoverUrl,
             PhoneNumber = request.PhoneNumber,
             Timezone = request.Timezone,
             Locale = request.Locale,
