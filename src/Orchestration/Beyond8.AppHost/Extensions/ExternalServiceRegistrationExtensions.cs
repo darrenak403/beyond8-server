@@ -42,6 +42,7 @@ public static class ExternalServiceRegistrationExtensions
             {
                 var identityCluster = config.AddProjectCluster(identityService);
                 config.AddRoute("/api/v1/auth/{**catch-all}", identityCluster);
+                config.AddRoute("/api/v1/users/{**catch-all}", identityCluster);
 
                 var integrationCluster = config.AddProjectCluster(integrationService);
                 config.AddRoute("/api/v1/media/{**catch-all}", integrationCluster);
