@@ -16,9 +16,15 @@ public static class CommonExtensions
                     {
                         options.AddPolicy("AllowDevelopmentClients", builder =>
                         {
-                            builder.WithOrigins("http://localhost:3000", "http://localhost:5173")
+                            builder.WithOrigins(
+                                       "http://localhost:3000",
+                                       "http://localhost:5173",
+                                       "http://api-gateway.beyond8.dev",
+                                       "https://api-gateway.beyond8.dev"
+                                   )
                                    .AllowAnyMethod()
-                                   .AllowAnyHeader();
+                                   .AllowAnyHeader()
+                                   .AllowCredentials();
                         });
                     });
 
