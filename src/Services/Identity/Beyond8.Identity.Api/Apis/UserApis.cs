@@ -101,7 +101,7 @@ namespace Beyond8.Identity.Api.Apis
                 .Produces<ApiResponse<string>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
-            group.MapPost("/coverimage", UploadUserCoverAsync)
+            group.MapPost("/cover", UploadUserCoverAsync)
                 .WithName("UploadUserCover")
                 .WithDescription("Tải lên ảnh bìa cho người dùng hiện tại")
                 .RequireAuthorization()

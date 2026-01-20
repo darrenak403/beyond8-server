@@ -68,7 +68,7 @@ public class UserService(
             var (isEmailValid, emailError) = await ValidateEmailUniqueAsync(request.Email);
             if (!isEmailValid) return ApiResponse<UserResponse>.FailureResponse(emailError!);
 
-            var newUser = request.ToUserEntity(currentUserService.UserId);
+            var newUser = request.ToUserEntity();
             newUser.PasswordHash = passwordHasher.HashPassword(newUser, request.Password);
 
             await unitOfWork.UserRepository.AddAsync(newUser);
@@ -192,13 +192,13 @@ public class UserService(
             await unitOfWork.UserRepository.UpdateAsync(user.Id, user!);
             await unitOfWork.SaveChangesAsync();
 
-            logger.LogInformation("User with ID: {UserId} updated avatar successfully", id);
-            return ApiResponse<string>.SuccessResponse(user.AvatarUrl!, "Cập nhật ảnh đại diện thành công.");
+            logger.LogInformation("User with ID: {UserId} updated cover successfully", id);
+            return ApiResponse<string>.SuccessResponse(user.CoverUrl!, "Cập nhật ảnh bìa thành công.");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error uploading avatar for user with ID {UserId}", id);
-            return ApiResponse<string>.FailureResponse("Đã xảy ra lỗi khi tải lên ảnh đại diện.");
+            logger.LogError(ex, "Error uploading cover for user with ID {UserId}", id);
+            return ApiResponse<string>.FailureResponse("Đã xảy ra lỗi khi tải lên ảnh bìa.");
         }
     }
 
