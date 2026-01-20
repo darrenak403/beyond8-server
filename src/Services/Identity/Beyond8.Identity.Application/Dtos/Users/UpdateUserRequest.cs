@@ -6,8 +6,9 @@ namespace Beyond8.Identity.Application.Dtos.Users;
 
 public class UpdateUserRequest
 {
-    public string FullName { get; set; } = null!;
-    public string PhoneNumber { get; set; } = null!;
-    public string Timezone { get; set; } = null!;
-    public string Locale { get; set; } = null!;
+    public string? FullName { get; set; }
+    public DateTime? DateOfBirth { get; set; }
+    public string? PhoneNumber { get; set; }
+    public string? Timezone { get; set; }
+    public string? Locale { get; set; }
 }

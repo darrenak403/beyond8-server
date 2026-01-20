@@ -10,6 +10,7 @@ public class UserResponse
     public string PasswordHash { get; set; } = null!;
     public List<UserRole> Roles { get; set; } = [];
     public string FullName { get; set; } = null!;
+    public DateTime? DateOfBirth { get; set; }
     public string? AvatarUrl { get; set; }
     public string? CoverUrl { get; set; }
     public string? PhoneNumber { get; set; }
@@ -26,6 +27,7 @@ public class UserSimpleResponse
     public Guid Id { get; set; }
     public string Email { get; set; } = null!;
     public string FullName { get; set; } = null!;
+    public DateTime? DateOfBirth { get; set; }
     public string? AvatarUrl { get; set; }
     public string? CoverUrl { get; set; }
 }
