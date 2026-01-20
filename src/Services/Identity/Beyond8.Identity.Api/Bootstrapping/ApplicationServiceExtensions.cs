@@ -36,7 +36,6 @@ public static class Bootstrapper
 
         // Add FluentValidation validators
         builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequest>();
-        
 
         return builder;
     }

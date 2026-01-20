@@ -158,45 +158,6 @@ public class UserService(
         }
     }
 
-    /// <summary>
-    /// Validates user by Id. Returns (IsValid, ErrorMessage, ValidUser). Use for GetUserById, UpdateUser, DeleteUser, UpdateUserStatus.
-    /// </summary>
-    private async Task<(bool IsValid, string? ErrorMessage, User? ValidUser)> ValidateUserByIdAsync(
-        Guid userId,
-        bool requireActive = false)
-    {
-        var user = await unitOfWork.UserRepository.GetByIdAsync(userId);
-        if (user == null)
-        {
-            logger.LogWarning("User not found with ID: {UserId}", userId);
-            return (false, "Không tìm thấy tài khoản.", null);
-        }
-
-        if (requireActive && user.Status == UserStatus.Inactive)
-        {
-            logger.LogWarning("User with ID: {UserId} is inactive", userId);
-            return (false, "Tài khoản không hoạt động.", user);
-        }
-
-        return (true, null, user);
-    }
-
-    /// <summary>
-    /// Validates email uniqueness. Returns (IsValid, ErrorMessage).
-    /// </summary>
-    private async Task<(bool IsValid, string? ErrorMessage)> ValidateEmailUniqueAsync(string email, Guid? excludeUserId = null)
-    {
-        var existingUser = await unitOfWork.UserRepository.FindOneAsync(u =>
-            u.Email == email && (excludeUserId == null || u.Id != excludeUserId));
-        if (existingUser != null)
-        {
-            logger.LogWarning("Email {Email} is already in use", email);
-            return (false, "Email này đã được sử dụng.");
-        }
-
-        return (true, null);
-    }
-
     public async Task<ApiResponse<string>> UploadUserAvatarAsync(Guid id, UpdateFileUrlRequest request)
     {
         try
@@ -239,5 +200,44 @@ public class UserService(
             logger.LogError(ex, "Error uploading avatar for user with ID {UserId}", id);
             return ApiResponse<string>.FailureResponse("Đã xảy ra lỗi khi tải lên ảnh đại diện.");
         }
+    }
+
+    /// <summary>
+    /// Validates user by Id. Returns (IsValid, ErrorMessage, ValidUser). Use for GetUserById, UpdateUser, DeleteUser, UpdateUserStatus.
+    /// </summary>
+    private async Task<(bool IsValid, string? ErrorMessage, User? ValidUser)> ValidateUserByIdAsync(
+        Guid userId,
+        bool requireActive = false)
+    {
+        var user = await unitOfWork.UserRepository.GetByIdAsync(userId);
+        if (user == null)
+        {
+            logger.LogWarning("User not found with ID: {UserId}", userId);
+            return (false, "Không tìm thấy tài khoản.", null);
+        }
+
+        if (requireActive && user.Status == UserStatus.Inactive)
+        {
+            logger.LogWarning("User with ID: {UserId} is inactive", userId);
+            return (false, "Tài khoản không hoạt động.", user);
+        }
+
+        return (true, null, user);
+    }
+
+    /// <summary>
+    /// Validates email uniqueness. Returns (IsValid, ErrorMessage).
+    /// </summary>
+    private async Task<(bool IsValid, string? ErrorMessage)> ValidateEmailUniqueAsync(string email, Guid? excludeUserId = null)
+    {
+        var existingUser = await unitOfWork.UserRepository.FindOneAsync(u =>
+            u.Email == email && (excludeUserId == null || u.Id != excludeUserId));
+        if (existingUser != null)
+        {
+            logger.LogWarning("Email {Email} is already in use", email);
+            return (false, "Email này đã được sử dụng.");
+        }
+
+        return (true, null);
     }
 }

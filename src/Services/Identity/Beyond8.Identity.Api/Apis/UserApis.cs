@@ -95,19 +95,19 @@ namespace Beyond8.Identity.Api.Apis
 
             group.MapPost("/avatar", UploadUserAvatarAsync)
                 .WithName("UploadUserAvatar")
-                .WithDescription("Tải lên ảnh đại diện cho người dùng theo ID")
+                .WithDescription("Tải lên ảnh đại diện cho người dùng hiện tại")
                 .RequireAuthorization()
                 .Produces<ApiResponse<string>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<string>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
             group.MapPost("/coverimage", UploadUserCoverAsync)
-            .WithName("UploadUserCover")
-            .WithDescription("Tải lên ảnh bìa cho người dùng theo ID")
-            .RequireAuthorization()
-            .Produces<ApiResponse<string>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<string>>(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized);
+                .WithName("UploadUserCover")
+                .WithDescription("Tải lên ảnh bìa cho người dùng hiện tại")
+                .RequireAuthorization()
+                .Produces<ApiResponse<string>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<string>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
 
             return group;
         }
