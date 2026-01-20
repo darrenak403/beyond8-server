@@ -55,11 +55,5 @@ public class UpdateAiPromptRequestValidator : AbstractValidator<UpdateAiPromptRe
             RuleFor(x => x.SystemPrompt)
                 .MaximumLength(2000).WithMessage("System prompt không được vượt quá 2000 ký tự");
         });
-
-        When(x => x.Tags != null, () =>
-        {
-            RuleFor(x => x.Tags)
-                .MaximumLength(500).WithMessage("Tags không được vượt quá 500 ký tự");
-        });
     }
 }
