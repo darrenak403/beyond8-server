@@ -1,4 +1,3 @@
-using System;
 using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
 using Beyond8.Identity.Application.Dtos.Instructors;
@@ -167,7 +166,7 @@ public class InstructorService(
             }
 
             // 3. Update profile
-            profile!.VerificationStatus = VerificationStatus.Rejected;
+            profile!.VerificationStatus = request.VerificationStatus;
             profile.VerificationNotes = request.RejectionReason;
 
             logger.LogInformation("Rejecting instructor application for profile {ProfileId} by admin {AdminId} with reason: {Reason}",
