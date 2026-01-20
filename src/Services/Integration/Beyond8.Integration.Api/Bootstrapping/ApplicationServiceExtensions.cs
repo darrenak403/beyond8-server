@@ -3,17 +3,22 @@ using Amazon.S3;
 using Beyond8.Common.Extensions;
 using Beyond8.Common.Utilities;
 using Beyond8.Integration.Api.Apis;
+using Beyond8.Integration.Application.Consumers.Identity;
 using Beyond8.Integration.Application.Dtos.AiIntegration;
 using Beyond8.Integration.Application.Dtos.MediaFiles;
 using Beyond8.Integration.Application.Services.Implements;
 using Beyond8.Integration.Application.Services.Interfaces;
 using Beyond8.Integration.Domain.Repositories.Interfaces;
 using Beyond8.Integration.Infrastructure.Configuration;
+using Beyond8.Integration.Infrastructure.Configurations;
 using Beyond8.Integration.Infrastructure.Data;
 using Beyond8.Integration.Infrastructure.ExternalServices;
+using Beyond8.Integration.Infrastructure.ExternalServices.Email;
 using Beyond8.Integration.Infrastructure.Repositories.Implements;
 using FluentValidation;
+using MassTransit;
 using Microsoft.Extensions.Options;
+using Resend;
 
 namespace Beyond8.Integration.Api.Bootstrapping;
 
@@ -48,8 +53,30 @@ public static class Bootstrapper
         builder.Services.AddHttpClient();
         builder.Services.Configure<GeminiConfiguration>(builder.Configuration.GetSection(GeminiConfiguration.SectionName));
 
+        builder.Services.Configure<ResendConfiguration>(
+            builder.Configuration.GetSection(ResendConfiguration.SectionName));
+
+        builder.Services.AddSingleton<IResend>(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<ResendConfiguration>>().Value;
+            if (string.IsNullOrWhiteSpace(options.ApiKey))
+                throw new InvalidOperationException("ApiKey is missing in ResendConfiguration");
+
+            return ResendClient.Create(options.ApiKey.Trim());
+        });
+
         // Register repositories
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+        // Configure MassTransit with RabbitMQ and register consumers
+        builder.AddMassTransitWithRabbitMq(config =>
+        {
+            // Register consumers from Identity events
+            config.AddConsumer<OtpEmailConsumer>();
+            config.AddConsumer<InstructorApprovalEmailConsumer>();
+            config.AddConsumer<InstructorRejectionEmailConsumer>();
+            config.AddConsumer<InstructorUpdateRequestEmailConsumer>();
+        });
 
         // Register services
         builder.Services.AddScoped<IStorageService, S3Service>();
@@ -57,6 +84,7 @@ public static class Bootstrapper
         builder.Services.AddScoped<IAiUsageService, AiUsageService>();
         builder.Services.AddScoped<IAiPromptService, AiPromptService>();
         builder.Services.AddScoped<IGeminiService, GeminiService>();
+        builder.Services.AddScoped<IEmailService, EmailService>();
 
         // Register validators
         builder.Services.AddValidatorsFromAssemblyContaining<UploadFileRequest>();

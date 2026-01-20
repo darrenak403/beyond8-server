@@ -1,3 +1,4 @@
+using Beyond8.Common.Events.Identity;
 using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
 using Beyond8.Identity.Application.Dtos.Instructors;
@@ -6,13 +7,15 @@ using Beyond8.Identity.Application.Services.Interfaces;
 using Beyond8.Identity.Domain.Entities;
 using Beyond8.Identity.Domain.Enums;
 using Beyond8.Identity.Domain.Repositories.Interfaces;
+using MassTransit;
 using Microsoft.Extensions.Logging;
 
 namespace Beyond8.Identity.Application.Services.Implements;
 
 public class InstructorService(
     ILogger<InstructorService> logger,
-    IUnitOfWork unitOfWork
+    IUnitOfWork unitOfWork,
+    IPublishEndpoint publishEndpoint
 ) : IInstructorService
 {
     public async Task<ApiResponse<InstructorProfileResponse>> SubmitInstructorApplicationAsync(CreateInstructorProfileRequest request, Guid userId)
@@ -71,6 +74,16 @@ public class InstructorService(
             await unitOfWork.InstructorProfileRepository.UpdateAsync(profile.Id, profile);
             await unitOfWork.SaveChangesAsync();
 
+            // Publish event for approval email
+            var profileUrl = $"https://beyond8.dev/instructor/{user.Id}"; // TODO: Update with actual profile URL
+            var approvalEvent = new InstructorApprovalEmailEvent(
+                user.Email,
+                user.FullName,
+                profileUrl,
+                DateTime.UtcNow
+            );
+            await publishEndpoint.Publish(approvalEvent);
+
             return ApiResponse<InstructorProfileResponse>.SuccessResponse(profile.ToInstructorProfileResponse(user), "Đơn đăng ký giảng viên đã được duyệt thành công.");
 
         }
@@ -101,6 +114,28 @@ public class InstructorService(
 
             await unitOfWork.InstructorProfileRepository.UpdateAsync(profile.Id, profile);
             await unitOfWork.SaveChangesAsync();
+
+            // Publish appropriate event based on verification status
+            if (profile.VerificationStatus == VerificationStatus.Rejected)
+            {
+                var rejectionEvent = new InstructorRejectionEmailEvent(
+                    user!.Email,
+                    user.FullName,
+                    request.NotApproveReason,
+                    DateTime.UtcNow
+                );
+                await publishEndpoint.Publish(rejectionEvent);
+            }
+            else if (profile.VerificationStatus == VerificationStatus.RequestUpdate)
+            {
+                var updateRequestEvent = new InstructorUpdateRequestEmailEvent(
+                    user!.Email,
+                    user.FullName,
+                    request.NotApproveReason,
+                    DateTime.UtcNow
+                );
+                await publishEndpoint.Publish(updateRequestEvent);
+            }
 
             return ApiResponse<InstructorProfileResponse>.SuccessResponse(profile.ToInstructorProfileResponse(user!), "Đơn đăng ký giảng viên đã được không phê duyệt.");
         }

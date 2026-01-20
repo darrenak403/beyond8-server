@@ -28,6 +28,10 @@ public static class Bootstrapper
 
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
+        // Configure MassTransit with RabbitMQ 
+        builder.AddMassTransitWithRabbitMq();
+
+        // Register services
         builder.Services.AddScoped<PasswordHasher<User>>();
         builder.Services.AddScoped<IAuthService, AuthService>();
         builder.Services.AddScoped<ITokenService, TokenService>();
