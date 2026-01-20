@@ -93,7 +93,7 @@ namespace Beyond8.Identity.Api.Apis
                .Produces<ApiResponse<UserResponse>>(StatusCodes.Status400BadRequest)
                .Produces(StatusCodes.Status401Unauthorized);
 
-            group.MapPost("/{id:guid}/avatar", UploadUserAvatarAsync)
+            group.MapPost("/avatar", UploadUserAvatarAsync)
                 .WithName("UploadUserAvatar")
                 .WithDescription("Tải lên ảnh đại diện cho người dùng theo ID")
                 .RequireAuthorization()
