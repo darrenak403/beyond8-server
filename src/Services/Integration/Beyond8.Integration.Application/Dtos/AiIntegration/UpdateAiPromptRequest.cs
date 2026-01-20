@@ -8,12 +8,12 @@ public class UpdateAiPromptRequest
     public string? Description { get; set; }
     public PromptCategory? Category { get; set; }
     public string? Template { get; set; }
-    public string? Variables { get; set; }
-    public string? DefaultParameters { get; set; }
+    public Dictionary<string, object>? Variables { get; set; }
+    public Dictionary<string, object>? DefaultParameters { get; set; }
     public string? SystemPrompt { get; set; }
     public int? MaxTokens { get; set; }
     public decimal? Temperature { get; set; }
     public decimal? TopP { get; set; }
     public bool? IsActive { get; set; }
-    public string? Tags { get; set; }
+    public List<string>? Tags { get; set; }
 }
