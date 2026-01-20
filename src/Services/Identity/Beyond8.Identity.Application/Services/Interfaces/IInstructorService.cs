@@ -12,7 +12,7 @@ public interface IInstructorService
     Task<ApiResponse<InstructorProfileResponse>> ApproveInstructorApplicationAsync(
         Guid profileId, Guid adminId);
     Task<ApiResponse<InstructorProfileResponse>> RejectInstructorApplicationAsync(
-        Guid profileId, string rejectionReason, Guid adminId);
+        Guid profileId, RejectInstructorApplicationRequest request, Guid adminId);
     Task<ApiResponse<List<InstructorProfileResponse>>> GetPendingApplicationsAsync();
 
     // Quản lý hồ sơ

@@ -1,4 +1,3 @@
-using Beyond8.Common.Caching;
 using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
 using Beyond8.Identity.Application.Dtos.Users;
@@ -198,14 +197,36 @@ public class UserService(
         return (true, null);
     }
 
-    public async Task<ApiResponse<string>> UploadUserAvatarAsync(Guid id, UpdateAvatarRequest request)
+    public async Task<ApiResponse<string>> UploadUserAvatarAsync(Guid id, UpdateFileUrlRequest request)
     {
         try
         {
             var (isValid, error, user) = await ValidateUserByIdAsync(id);
             if (!isValid) return ApiResponse<string>.FailureResponse(error!);
 
-            user!.AvatarUrl = request.AvatarUrl;
+            user!.AvatarUrl = request.FileUrl;
+
+            await unitOfWork.UserRepository.UpdateAsync(user.Id, user!);
+            await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation("User with ID: {UserId} updated avatar successfully", id);
+            return ApiResponse<string>.SuccessResponse(user.AvatarUrl!, "Cập nhật ảnh đại diện thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error uploading avatar for user with ID {UserId}", id);
+            return ApiResponse<string>.FailureResponse("Đã xảy ra lỗi khi tải lên ảnh đại diện.");
+        }
+    }
+
+    public async Task<ApiResponse<string>> UploadUserCoverAsync(Guid id, UpdateFileUrlRequest request)
+    {
+        try
+        {
+            var (isValid, error, user) = await ValidateUserByIdAsync(id);
+            if (!isValid) return ApiResponse<string>.FailureResponse(error!);
+
+            user!.CoverUrl = request.FileUrl;
 
             await unitOfWork.UserRepository.UpdateAsync(user.Id, user!);
             await unitOfWork.SaveChangesAsync();

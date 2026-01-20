@@ -32,7 +32,7 @@ public static class Bootstrapper
         builder.Services.AddScoped<IAuthService, AuthService>();
         builder.Services.AddScoped<ITokenService, TokenService>();
         builder.Services.AddScoped<IUserService, UserService>();
-        // builder.Services.AddScoped<IInstructorService, InstructorService>();
+        builder.Services.AddScoped<IInstructorService, InstructorService>();
 
         // Add FluentValidation validators
         builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequest>();
@@ -54,7 +54,7 @@ public static class Bootstrapper
 
         app.MapAuthApi();
         app.MapUserApi();
-
+        app.MapInstructorApi();
         return app;
     }
 }
