@@ -3,9 +3,6 @@ using Amazon.S3;
 using Beyond8.Integration.Application.Services.Interfaces;
 using Beyond8.Integration.Infrastructure.Configuration;
 using Beyond8.Integration.Infrastructure.ExternalServices;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 namespace Beyond8.Integration.Infrastructure.Extensions;
 

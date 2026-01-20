@@ -1,6 +1,6 @@
 using Beyond8.Common.Extensions;
-using Beyond8.Common.Utilities;
 using Beyond8.Common.Security;
+using Beyond8.Common.Utilities;
 using Beyond8.Integration.Application.Dtos;
 using Beyond8.Integration.Application.Services.Interfaces;
 using Beyond8.Integration.Application.Validators;

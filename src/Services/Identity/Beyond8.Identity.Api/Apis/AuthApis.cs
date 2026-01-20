@@ -1,4 +1,3 @@
-using System;
 using Beyond8.Common.Extensions;
 using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;

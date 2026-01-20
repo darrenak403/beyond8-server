@@ -1,10 +1,9 @@
-using System.Net;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Beyond8.Integration.Application.Services.Interfaces;
 using Beyond8.Integration.Infrastructure.Configuration;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Net;
 
 namespace Beyond8.Integration.Infrastructure.ExternalServices;
 

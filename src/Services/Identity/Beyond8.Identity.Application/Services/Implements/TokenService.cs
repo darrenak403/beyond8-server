@@ -1,13 +1,12 @@
-using System;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
 using Beyond8.Common.Security;
 using Beyond8.Identity.Application.Dtos.Tokens;
 using Beyond8.Identity.Application.Services.Interfaces;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Beyond8.Identity.Application.Services.Implements;
 

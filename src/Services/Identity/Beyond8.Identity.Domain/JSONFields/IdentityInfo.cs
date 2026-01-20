@@ -1,5 +1,3 @@
-using System;
-
 namespace Beyond8.Identity.Domain.JSONFields;
 
 public class IdentityInfo

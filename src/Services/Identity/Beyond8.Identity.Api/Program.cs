@@ -1,5 +1,5 @@
-using Beyond8.Identity.Api.Bootstrapping;
 using Beyond8.DatabaseMigrationHelpers;
+using Beyond8.Identity.Api.Bootstrapping;
 using Beyond8.Identity.Infrastructure.Data;
 
 
