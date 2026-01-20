@@ -22,6 +22,9 @@ namespace Beyond8.Identity.Domain.Entities
         [MaxLength(500)]
         public string? AvatarUrl { get; set; }
 
+        [MaxLength(500)]
+        public string? CoverUrl { get; set; }
+
         [MaxLength(20)]
         public string? PhoneNumber { get; set; }
         public bool IsEmailVerified { get; set; } = false;

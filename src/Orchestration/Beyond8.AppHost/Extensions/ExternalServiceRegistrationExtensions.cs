@@ -2,6 +2,7 @@ using Aspire.Hosting.Yarp;
 using Scalar.Aspire;
 using Yarp.ReverseProxy.Configuration;
 
+
 namespace Beyond8.AppHost.Extensions;
 
 public static class ExternalServiceRegistrationExtensions
@@ -22,18 +23,28 @@ public static class ExternalServiceRegistrationExtensions
             .WithImageTag("alpine")
             .WithDataVolume();
 
+        var rabbitMq = builder.AddRabbitMQ("rabbitmq")
+            .WithContainerName("RabbitMQ")
+            .WithImageTag("4.0.2-management-alpine")
+            .WithManagementPlugin()
+            .WithDataVolume();
+
         var identityDb = postgres.AddDatabase("identity-db", "Identities");
         var integrationDb = postgres.AddDatabase("integration-db", "Integrations");
 
         var identityService = builder.AddProject<Projects.Beyond8_Identity_Api>("Identity-Service")
             .WithReference(identityDb)
             .WithReference(redis)
+            .WithReference(rabbitMq)
             .WaitFor(postgres)
-            .WaitFor(redis);
+            .WaitFor(redis)
+            .WaitFor(rabbitMq);
 
         var integrationService = builder.AddProject<Projects.Beyond8_Integration_Api>("Integration-Service")
             .WithReference(integrationDb)
-            .WaitFor(postgres);
+            .WithReference(rabbitMq)
+            .WaitFor(postgres)
+            .WaitFor(rabbitMq);
 
         var apiGateway = builder.AddYarp("api-gateway")
             .WithContainerName("ApiGateway")
@@ -42,6 +53,7 @@ public static class ExternalServiceRegistrationExtensions
             {
                 var identityCluster = config.AddProjectCluster(identityService);
                 config.AddRoute("/api/v1/auth/{**catch-all}", identityCluster);
+                config.AddRoute("/api/v1/users/{**catch-all}", identityCluster);
 
                 var integrationCluster = config.AddProjectCluster(integrationService);
                 config.AddRoute("/api/v1/media/{**catch-all}", integrationCluster);
