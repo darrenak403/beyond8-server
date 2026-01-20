@@ -16,6 +16,7 @@ public static class UserMappings
             Email = user.Email,
             Roles = user.Roles,
             FullName = user.FullName,
+            DateOfBirth = user.DateOfBirth,
             AvatarUrl = user.AvatarUrl,
             CoverUrl = user.CoverUrl,
             PhoneNumber = user.PhoneNumber,
@@ -45,6 +46,9 @@ public static class UserMappings
         {
             Email = request.Email,
             FullName = request.FullName,
+            DateOfBirth = request.DateOfBirth.HasValue
+                ? DateTime.SpecifyKind(request.DateOfBirth.Value.Date, DateTimeKind.Utc)
+                : null,
             AvatarUrl = request.AvatarUrl,
             CoverUrl = request.CoverUrl,
             PhoneNumber = request.PhoneNumber,
@@ -61,6 +65,9 @@ public static class UserMappings
     {
         if (!string.IsNullOrEmpty(request.FullName))
             user.FullName = request.FullName;
+
+        if (request.DateOfBirth.HasValue)
+            user.DateOfBirth = DateTime.SpecifyKind(request.DateOfBirth.Value.Date, DateTimeKind.Utc);
 
         if (!string.IsNullOrEmpty(request.PhoneNumber))
             user.PhoneNumber = request.PhoneNumber;
