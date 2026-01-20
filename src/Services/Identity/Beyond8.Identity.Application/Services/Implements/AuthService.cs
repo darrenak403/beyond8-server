@@ -1,5 +1,7 @@
 using Beyond8.Common.Caching;
+using Beyond8.Common.Events.Identity;
 using Beyond8.Common.Utilities;
+using MassTransit;
 using Beyond8.Identity.Application.Dtos.Auth;
 using Beyond8.Identity.Application.Dtos.Tokens;
 using Beyond8.Identity.Application.Dtos.Users;
@@ -13,7 +15,13 @@ using Microsoft.Extensions.Logging;
 
 namespace Beyond8.Identity.Application.Services.Implements;
 
-public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, ITokenService tokenService, PasswordHasher<User> passwordHasher, ICacheService cacheService) : IAuthService
+public class AuthService(
+    ILogger<AuthService> logger,
+    IUnitOfWork unitOfWork,
+    ITokenService tokenService,
+    PasswordHasher<User> passwordHasher,
+    ICacheService cacheService,
+    IPublishEndpoint publishEndpoint) : IAuthService
 {
     public async Task<ApiResponse<TokenResponse>> LoginUserAsync(LoginRequest request)
     {
@@ -69,6 +77,16 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
             var otpCode = GetOtpCode();
             logger.LogInformation("Sending OTP code to email: {Email} with OTP: {OtpCode}", request.Email, otpCode);
             await cacheService.SetAsync($"otp_register:{request.Email}", otpCode, TimeSpan.FromMinutes(5));
+
+            // Publish event for email service
+            var otpEvent = new OtpEmailEvent(
+                request.Email,
+                request.Email, // Use email as name since FullName not in RegisterRequest
+                otpCode,
+                "Đăng ký tài khoản",
+                DateTime.UtcNow
+            );
+            await publishEndpoint.Publish(otpEvent);
 
             var newUser = request.ToEntity(passwordHasher);
             await unitOfWork.UserRepository.AddAsync(newUser);
@@ -216,6 +234,17 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
             await cacheService.SetAsync(cacheKey, otpCode, TimeSpan.FromMinutes(5));
             await cacheService.SetAsync(lockKey, true, TimeSpan.FromSeconds(60));
 
+            // Publish event for email service
+            var u = validation.ValidUser!;
+            var otpEvent = new OtpEmailEvent(
+                request.Email,
+                u.FullName,
+                otpCode,
+                "Quên mật khẩu",
+                DateTime.UtcNow
+            );
+            await publishEndpoint.Publish(otpEvent);
+
             return ApiResponse<bool>.SuccessResponse(true, "Mã OTP đã được gửi đến email của bạn.");
         }
         catch (Exception ex)
@@ -254,7 +283,7 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
         try
         {
             var user = await unitOfWork.UserRepository.FindOneAsync(x => x.Email == request.Email);
-            var validation = ValidateUserByEmail(user, request.Email);
+            var validation = ValidateUserByEmail(user, request.Email, false, false);
             if (!validation.IsValid)
                 return ApiResponse<bool>.FailureResponse(validation.ErrorMessage!);
 
@@ -269,6 +298,17 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
             var otpCode = GetOtpCode();
             await cacheService.SetAsync($"otp_register:{request.Email}", otpCode, TimeSpan.FromMinutes(5));
             await cacheService.SetAsync(lockKey, true, TimeSpan.FromSeconds(60));
+
+            // Publish event for email service
+            var u = validation.ValidUser!;
+            var otpEvent = new OtpEmailEvent(
+                request.Email,
+                u.FullName,
+                otpCode,
+                "Gửi lại OTP đăng ký",
+                DateTime.UtcNow
+            );
+            await publishEndpoint.Publish(otpEvent);
 
             logger.LogInformation("Resending registration OTP to email: {Email}, OTP: {OtpCode}", request.Email, otpCode);
             return ApiResponse<bool>.SuccessResponse(true, "Mã OTP đã được gửi lại. Vui lòng kiểm tra email của bạn.");

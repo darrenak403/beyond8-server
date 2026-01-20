@@ -3,7 +3,13 @@
     "allow": [
       "Bash(dotnet add:*)",
       "Bash(dotnet build:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(dotnet clean:*)",
+      "Bash(for file in *.cs)",
+      "Bash(do sed -i 's/namespace Beyond8.Integration.Application.Dtos.Ai;/namespace Beyond8.Integration.Application.Dtos.AiIntegration;/g' \"$file\")",
+      "Bash(done)"
+      "Bash(git checkout:*)",
+      "Bash(dir /s /b \"C:\\\\Users\\\\hoade\\\\.claude-worktrees\\\\beyond8-server\\\\cranky-beaver\\\\src\\\\Services\\\\Integration\\\\Beyond8.Integration.Application\\\\Services\")"
     ]
   }
 }

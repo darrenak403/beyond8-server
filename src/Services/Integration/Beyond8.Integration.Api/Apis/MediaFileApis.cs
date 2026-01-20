@@ -1,9 +1,9 @@
 using Beyond8.Common.Extensions;
 using Beyond8.Common.Utilities;
 using Beyond8.Common.Security;
-using Beyond8.Integration.Application.Dtos;
+using Beyond8.Integration.Application.Dtos.MediaFiles;
 using Beyond8.Integration.Application.Services.Interfaces;
-using Beyond8.Integration.Application.Validators;
+using Beyond8.Integration.Application.Validators.MediaFiles;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,7 +11,8 @@ namespace Beyond8.Integration.Api.Apis;
 
 public static class MediaFileApis
 {
-    private const string AvatarFolder = "avatars";
+    private const string AvatarFolder = "user/avatars";
+    private const string CoverFolder = "user/covers";
     private const string InstructorProfileCertificatesFolder = "instructor/profile/certificates";
     private const string InstructorProfileIdentityCardsFolder = "instructor/profile/identity-cards";
 
@@ -30,6 +31,13 @@ public static class MediaFileApis
         group.MapPost("/avatar/presigned-url", GetAvatarPresignUrlAsync)
             .WithName("GetAvatarPresignedUrl")
             .WithDescription("Lấy presigned URL để upload avatar")
+            .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
+        group.MapPost("/cover/presigned-url", GetCoverPresignUrlAsync)
+            .WithName("GetCoverPresignedUrl")
+            .WithDescription("Lấy presigned URL để upload cover")
             .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
@@ -77,6 +85,23 @@ public static class MediaFileApis
             .Produces(StatusCodes.Status401Unauthorized);
 
         return group;
+    }
+
+    private static async Task<IResult> GetCoverPresignUrlAsync(
+        [FromBody] UploadFileRequest request,
+        [FromServices] IMediaFileService mediaFileService,
+        [FromServices] ICurrentUserService currentUserService)
+    {
+        var validator = UploadFileRequestValidator.ForCover();
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
+        var result = await mediaFileService.InitiateUploadAsync(
+            currentUserService.UserId,
+            request,
+            CoverFolder);
+
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
     private static async Task<IResult> GetAvatarPresignUrlAsync(
