@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Beyond8.Integration.Application.Dtos.AiIntegration;
 using Beyond8.Integration.Domain.Entities;
 
@@ -15,13 +16,13 @@ public static class AiPromptMappings
             Template = request.Template,
             Version = request.Version,
             IsActive = true,
-            Variables = request.Variables,
-            DefaultParameters = request.DefaultParameters,
+            Variables = request.Variables != null ? JsonSerializer.Serialize(request.Variables) : null,
+            DefaultParameters = request.DefaultParameters != null ? JsonSerializer.Serialize(request.DefaultParameters) : null,
             SystemPrompt = request.SystemPrompt,
             MaxTokens = request.MaxTokens,
             Temperature = request.Temperature,
             TopP = request.TopP,
-            Tags = request.Tags,
+            Tags = request.Tags != null ? string.Join(", ", request.Tags) : null,
             CreatedBy = userId
         };
     }
@@ -32,14 +33,14 @@ public static class AiPromptMappings
         if (request.Description != null) entity.Description = request.Description;
         if (request.Category != null) entity.Category = request.Category.Value;
         if (request.Template != null) entity.Template = request.Template;
-        if (request.Variables != null) entity.Variables = request.Variables;
-        if (request.DefaultParameters != null) entity.DefaultParameters = request.DefaultParameters;
+        if (request.Variables != null) entity.Variables = JsonSerializer.Serialize(request.Variables);
+        if (request.DefaultParameters != null) entity.DefaultParameters = JsonSerializer.Serialize(request.DefaultParameters);
         if (request.SystemPrompt != null) entity.SystemPrompt = request.SystemPrompt;
         if (request.MaxTokens != null) entity.MaxTokens = request.MaxTokens.Value;
         if (request.Temperature != null) entity.Temperature = request.Temperature.Value;
         if (request.TopP != null) entity.TopP = request.TopP.Value;
         if (request.IsActive != null) entity.IsActive = request.IsActive.Value;
-        if (request.Tags != null) entity.Tags = request.Tags;
+        if (request.Tags != null) entity.Tags = string.Join(", ", request.Tags);
         entity.UpdatedBy = userId;
     }
 
@@ -54,13 +55,19 @@ public static class AiPromptMappings
             Template = entity.Template,
             Version = entity.Version,
             IsActive = entity.IsActive,
-            Variables = entity.Variables,
-            DefaultParameters = entity.DefaultParameters,
+            Variables = !string.IsNullOrEmpty(entity.Variables)
+                ? JsonSerializer.Deserialize<Dictionary<string, object>>(entity.Variables)
+                : null,
+            DefaultParameters = !string.IsNullOrEmpty(entity.DefaultParameters)
+                ? JsonSerializer.Deserialize<Dictionary<string, object>>(entity.DefaultParameters)
+                : null,
             SystemPrompt = entity.SystemPrompt,
             MaxTokens = entity.MaxTokens,
             Temperature = entity.Temperature,
             TopP = entity.TopP,
-            Tags = entity.Tags,
+            Tags = !string.IsNullOrEmpty(entity.Tags)
+                ? entity.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList()
+                : null,
             CreatedBy = entity.CreatedBy,
             UpdatedBy = entity.UpdatedBy,
             CreatedAt = entity.CreatedAt,

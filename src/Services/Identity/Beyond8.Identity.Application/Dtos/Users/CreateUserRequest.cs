@@ -7,7 +7,8 @@ public class CreateUserRequest
     public string Email { get; set; } = null!;
     public string Password { get; set; } = null!;
     public string FullName { get; set; } = null!;
-    public string AvatarUrl { get; set; } = null!;
+    public string? AvatarUrl { get; set; } = null;
+    public string? CoverUrl { get; set; } = null;
     public string PhoneNumber { get; set; } = null!;
     public string Timezone { get; set; } = "Asia/Ho_Chi_Minh";
     public string Locale { get; set; } = "vi-VN";

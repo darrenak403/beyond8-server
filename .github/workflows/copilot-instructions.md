@@ -44,6 +44,7 @@ beyond8-server/
 Each service follows Clean Architecture with four distinct layers:
 
 ### 1. Domain Layer (`*.Domain`)
+
 - **Purpose**: Core business logic and entities
 - **Contains**:
   - Domain entities (inherit from `BaseEntity`)
@@ -53,6 +54,7 @@ Each service follows Clean Architecture with four distinct layers:
 - **Dependencies**: None (completely independent)
 
 ### 2. Application Layer (`*.Application`)
+
 - **Purpose**: Business logic and use cases
 - **Contains**:
   - DTOs (Data Transfer Objects)
@@ -62,6 +64,7 @@ Each service follows Clean Architecture with four distinct layers:
 - **Dependencies**: Domain layer only
 
 ### 3. Infrastructure Layer (`*.Infrastructure`)
+
 - **Purpose**: External concerns and data persistence
 - **Contains**:
   - DbContext implementations
@@ -71,6 +74,7 @@ Each service follows Clean Architecture with four distinct layers:
 - **Dependencies**: Domain and Application layers
 
 ### 4. API Layer (`*.Api`)
+
 - **Purpose**: HTTP endpoints and API configuration
 - **Contains**:
   - Minimal API endpoints
@@ -82,13 +86,16 @@ Each service follows Clean Architecture with four distinct layers:
 ## Key Architectural Patterns
 
 ### 1. Repository Pattern with Unit of Work
+
 - All data access goes through `IUnitOfWork`
 - Generic repository (`IGenericRepository<T>`) for common CRUD operations
 - Specific repositories expose domain-specific queries
 - Example: `_unitOfWork.UserRepository.FindOneAsync(u => u.Email == email)`
 
 ### 2. ApiResponse Wrapper
+
 All API responses use a consistent wrapper pattern:
+
 ```csharp
 // Success response
 ApiResponse<UserDto>.SuccessResponse(user, "User retrieved successfully")
@@ -101,18 +108,22 @@ ApiResponse<List<UserDto>>.SuccessPagedResponse(users, totalCount, pageNumber, p
 ```
 
 ### 3. Service Layer Pattern
+
 - Services contain business logic
 - Return `ApiResponse<T>` instead of throwing exceptions for business errors
 - Handle exceptions and return meaningful error messages
 - Use structured logging with `ILogger<T>`
 
 ### 4. Dependency Injection
+
 **Service Lifetimes:**
+
 - **Scoped**: Services with database context (IUnitOfWork, application services)
 - **Transient**: Stateless services without context dependencies
 - **Singleton**: Thread-safe services (caching, configuration)
 
 **Registration:**
+
 ```csharp
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -121,6 +132,7 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 ## Important Conventions
 
 ### API Endpoints
+
 - Use Minimal APIs with MapGroup for versioning: `/api/v1/...`
 - Create static extension methods for endpoint mapping (e.g., `MapAuthApi()`)
 - Specify authorization explicitly: `RequireAuthorization()` or `AllowAnonymous()`
@@ -128,6 +140,7 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 - Add descriptive tags and names for documentation
 
 ### Error Handling
+
 - Global exception handling via `GlobalExceptionsMiddleware`
 - Exception mapping:
   - `UnauthorizedAccessException` → 401 Unauthorized
@@ -136,13 +149,16 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
   - Other exceptions → 500 Internal Server Error
 
 ### Async/Await
+
 - Always use async/await for I/O operations
 - Never use `.Result` or `.Wait()` (causes deadlocks)
 - Return `Task<T>` or `Task`, never async void
 - Suffix async methods with `Async` (e.g., `RegisterUserAsync`)
 
 ### Logging
+
 Use structured logging with named parameters:
+
 ```csharp
 // Good
 logger.LogInformation("User registered successfully: {Email}", request.Email);
@@ -152,7 +168,9 @@ logger.LogInformation($"User registered successfully: {request.Email}");
 ```
 
 ### Validation
+
 **FluentValidation (Recommended):**
+
 - Use FluentValidation for all request validation in Minimal APIs
 - Create validators in `Application/Validators` folder organized by domain
 - Register validators: `services.AddValidatorsFromAssemblyContaining<RegisterRequest>()`
@@ -161,6 +179,7 @@ logger.LogInformation($"User registered successfully: {request.Email}");
 - Provide error messages in Vietnamese for user-facing validation
 
 **Example Validator:**
+
 ```csharp
 public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
 {
@@ -180,18 +199,21 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
 ```
 
 ### Security
+
 - **Passwords**: Hash with `PasswordHasher<User>`, never store plain text
 - **JWT**: Store configuration in appsettings.json, implement refresh tokens
 - **Authorization**: Validate on endpoints and in service layer
 - **Sensitive Data**: Use User Secrets (dev) or environment variables (prod)
 
 ### Caching
+
 - Use `ICacheService` for all caching operations
 - Key format: `"prefix:identifier"` (e.g., `"otp_register:{email}"`)
 - Set appropriate expiration times
 - Handle cache misses gracefully
 
 ### Database Operations
+
 - Always use async methods: `FindOneAsync`, `AddAsync`, `UpdateAsync`, `SaveChangesAsync`
 - Entities inherit from `BaseEntity` (Id, CreatedAt, UpdatedAt)
 - Configure relationships in `OnModelCreating`
@@ -200,13 +222,16 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
 ## Services
 
 ### Identity Service
+
 Handles authentication and user management:
+
 - User registration and login
 - JWT token generation
 - Password hashing and verification
 - User profile management
 
 ### Integration Service
+
 Handles external integrations and third-party service connections.
 
 ## Database
@@ -219,9 +244,11 @@ Handles external integrations and third-party service connections.
 ## Common Shared Projects
 
 ### Beyond8.Common
+
 Contains shared utilities, constants, and helper classes used across all services.
 
 ### Beyond8.DatabaseMigrationHelpers
+
 Contains helpers and extensions for database migration management.
 
 ## Configuration
@@ -236,13 +263,14 @@ Connection string constants defined in `Const` class (e.g., `Const.IdentityServi
 ## Git Workflow
 
 - **Main Branch**: `main`
-- **Current Branch**: `sad-visvesvaraya`
-- **Worktree Path**: `C:\Users\hoade\.claude-worktrees\beyond8-server\sad-visvesvaraya`
+- **Current Branch**: `cranky-beaver`
+- **Worktree Path**: `C:\Users\hoade\.claude-worktrees\beyond8-server\cranky-beaver`
 - **Main Repository**: `D:\Spring-2026\SWD392\Beyond8\beyond8-server`
 
 ## Development Guidelines
 
 ### Before Submitting Code
+
 - [ ] All API endpoints use `ApiResponse<T>` wrapper
 - [ ] Services return `ApiResponse<T>` instead of throwing exceptions for business errors
 - [ ] All async methods use async/await properly, no `.Result` or `.Wait()`
@@ -256,22 +284,77 @@ Connection string constants defined in `Const` class (e.g., `Const.IdentityServi
 - [ ] Configuration stored in appsettings.json, not hardcoded
 - [ ] Code follows consistent naming conventions (PascalCase, camelCase)
 - [ ] Database operations use async methods only
+- [ ] No duplicate code - extract common validation/logic into reusable private methods
 
 ### Naming Conventions
+
 - **PascalCase**: Classes, methods, properties, interfaces
 - **camelCase**: Local variables, method parameters
 - **Interfaces**: Prefix with `I` (e.g., `IAuthService`, `IUserRepository`)
 - **Async Methods**: Suffix with `Async` (e.g., `RegisterUserAsync`)
 
 ### File Organization
+
 - Group related files in folders: Dtos, Services, Entities, Repositories, Mappings
 - Use descriptive namespaces matching folder structure
 - Keep files focused on single responsibility
 - Separate interfaces from implementations
 
+### Code Reusability & DRY Principle
+
+**Avoid Duplicate Code:**
+
+- Extract common validation logic into reusable private methods
+- Use tuple returns for validation methods: `(bool IsValid, string? ErrorMessage)`
+- Create helper methods for repeated operations (e.g., OTP validation, user validation)
+- Prefer composition over duplication
+
+**Example - Extract Common Validation:**
+
+```csharp
+// Bad - Duplicate validation code in multiple methods
+public async Task<ApiResponse<bool>> Method1(Request request)
+{
+    var cachedOtp = await cacheService.GetAsync<string>($"otp:{request.Email}");
+    if (string.IsNullOrEmpty(cachedOtp))
+        return ApiResponse<bool>.FailureResponse("OTP không hợp lệ");
+    if (cachedOtp != request.OtpCode)
+        return ApiResponse<bool>.FailureResponse("OTP không đúng");
+    // ... rest of logic
+}
+
+// Good - Extract to reusable method
+private async Task<(bool IsValid, string? ErrorMessage)> ValidateOtpFromCacheAsync(
+    string cacheKey, string otpCode, string email)
+{
+    var cachedOtp = await cacheService.GetAsync<string>(cacheKey);
+    if (string.IsNullOrEmpty(cachedOtp))
+        return (false, "OTP không hợp lệ hoặc đã hết hạn");
+    if (cachedOtp != otpCode)
+        return (false, "OTP không đúng");
+    return (true, null);
+}
+
+public async Task<ApiResponse<bool>> Method1(Request request)
+{
+    var validation = await ValidateOtpFromCacheAsync($"otp:{request.Email}", request.OtpCode, request.Email);
+    if (!validation.IsValid)
+        return ApiResponse<bool>.FailureResponse(validation.ErrorMessage!);
+    // ... rest of logic
+}
+```
+
+**Benefits:**
+
+- Single source of truth for validation logic
+- Easier to maintain and update
+- Reduces code size and complexity
+- Improves testability
+
 ## Quick Reference
 
 ### Common Patterns
+
 ```csharp
 // Service Response
 ApiResponse<T>.SuccessResponse(data, message)
@@ -301,12 +384,14 @@ builder.Services.AddScoped<IService, Service>()
 ## Additional Documentation
 
 For detailed ASP.NET Core best practices and coding standards, refer to:
+
 - `.cursor/skills/asp-rules/SKILL.md` - Comprehensive ASP.NET Core guidelines
 - `.github/copilot-instructions.md` - GitHub Copilot instructions
 
 ## Notes for AI Assistants
 
 When working with this codebase:
+
 1. Follow Clean Architecture layer boundaries strictly
 2. Use the ApiResponse pattern for all service and API responses
 3. Apply proper async/await patterns throughout
@@ -317,3 +402,5 @@ When working with this codebase:
 8. Use dependency injection for all dependencies
 9. Keep error handling centralized in middleware
 10. Write meaningful error messages in Vietnamese for user-facing validation
+11. **Apply DRY principle** - identify and eliminate duplicate code by extracting common logic into reusable private methods
+12. Use tuple returns `(bool IsValid, string? ErrorMessage)` for validation helper methods

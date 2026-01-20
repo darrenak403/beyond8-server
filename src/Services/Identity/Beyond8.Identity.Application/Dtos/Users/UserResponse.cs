@@ -11,6 +11,7 @@ public class UserResponse
     public List<UserRole> Roles { get; set; } = [];
     public string FullName { get; set; } = null!;
     public string? AvatarUrl { get; set; }
+    public string? CoverUrl { get; set; }
     public string? PhoneNumber { get; set; }
     public bool IsActive { get; set; } = true;
     public bool IsEmailVerified { get; set; } = false;
@@ -26,4 +27,5 @@ public class UserSimpleResponse
     public string Email { get; set; } = null!;
     public string FullName { get; set; } = null!;
     public string? AvatarUrl { get; set; }
+    public string? CoverUrl { get; set; }
 }
