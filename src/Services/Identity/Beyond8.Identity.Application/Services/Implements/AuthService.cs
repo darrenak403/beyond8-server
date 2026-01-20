@@ -256,7 +256,7 @@ public class AuthService(ILogger<AuthService> logger, IUnitOfWork unitOfWork, IT
             var user = await unitOfWork.UserRepository.FindOneAsync(x => x.Email == request.Email);
             var validation = ValidateUserByEmail(user, request.Email, false, false);
             if (!validation.IsValid)
-                return ApiResponse<bool>.FailureResponse(validation.ErrorMessage!)
+                return ApiResponse<bool>.FailureResponse(validation.ErrorMessage!);
 
             var lockKey = $"otp_resend_lock:{request.Email}";
             var isLocked = await cacheService.GetAsync<bool?>(lockKey);
