@@ -35,7 +35,6 @@ public static class UserMappings
             Id = user.Id,
             Email = user.Email,
             FullName = user.FullName,
-            DateOfBirth = user.DateOfBirth,
             AvatarUrl = user.AvatarUrl,
             CoverUrl = user.CoverUrl,
         };
