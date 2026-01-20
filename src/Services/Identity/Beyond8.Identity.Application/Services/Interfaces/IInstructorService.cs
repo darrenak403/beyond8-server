@@ -1,7 +1,6 @@
 using System;
 using Beyond8.Common.Utilities;
-using Beyond8.Identity.Application.Dtos.Instructor;
-using Beyond8.Identity.Application.Dtos.InstructorProfiles;
+using Beyond8.Identity.Application.Dtos.Instructors;
 
 namespace Beyond8.Identity.Application.Services.Interfaces;
 
@@ -13,7 +12,7 @@ public interface IInstructorService
     Task<ApiResponse<InstructorProfileResponse>> ApproveInstructorApplicationAsync(
         Guid profileId, Guid adminId);
     Task<ApiResponse<InstructorProfileResponse>> RejectInstructorApplicationAsync(
-        Guid profileId, string rejectionReason, Guid adminId);
+        Guid profileId, RejectInstructorApplicationRequest request, Guid adminId);
     Task<ApiResponse<List<InstructorProfileResponse>>> GetPendingApplicationsAsync();
 
     // Quản lý hồ sơ

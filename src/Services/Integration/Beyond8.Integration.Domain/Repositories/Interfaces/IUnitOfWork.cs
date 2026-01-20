@@ -6,4 +6,6 @@ namespace Beyond8.Integration.Domain.Repositories.Interfaces;
 public interface IUnitOfWork : IBaseUnitOfWork
 {
     IMediaFileRepository MediaFileRepository { get; }
+    IAiUsageRepository AiUsageRepository { get; }
+    IAiPromptRepository AiPromptRepository { get; }
 }
