@@ -60,7 +60,7 @@ namespace Beyond8.Identity.Api.Apis
             .Produces(StatusCodes.Status403Forbidden);
 
             group.MapGet("/me", GetMyInstructorProfileAsync)
-            .WithName("GetMyProfile")
+            .WithName("GetMyInstructorProfile")
             .WithDescription("Lấy hồ sơ giảng viên của riêng tôi (Require Authorization)")
             .RequireAuthorization()
             .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status200OK)
@@ -68,7 +68,7 @@ namespace Beyond8.Identity.Api.Apis
             .Produces(StatusCodes.Status401Unauthorized);
 
             group.MapPut("/me", UpdateInstructorProfileAsync)
-            .WithName("UpdateMyProfile")
+            .WithName("UpdateMyInstructorProfile")
             .WithDescription("Cập nhật hồ sơ giảng viên của riêng tôi (Require Authorization)")
             .RequireAuthorization()
             .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status200OK)
