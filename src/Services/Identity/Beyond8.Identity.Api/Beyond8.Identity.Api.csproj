@@ -11,8 +11,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\..\shared\Beyond8.DatabaseMigrationHelpers\Beyond8.DatabaseMigrationHelpers.csproj" />
     <ProjectReference Include="..\..\..\Orchestration\Beyond8.ServiceDefaults\Beyond8.ServiceDefaults.csproj" />
     <ProjectReference Include="..\Beyond8.Identity.Application\Beyond8.Identity.Application.csproj" />
+    <ProjectReference Include="..\Beyond8.Identity.Infrastructure\Beyond8.Identity.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,5 +1,3 @@
-using System;
-
 namespace Beyond8.Common.Data.Interfaces;
 
 public interface IEntity

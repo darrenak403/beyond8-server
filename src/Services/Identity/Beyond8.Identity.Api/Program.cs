@@ -1,21 +1,16 @@
-using Beyond8.Common.Extensions;
+using Beyond8.Identity.Api.Bootstrapping;
+using Beyond8.DatabaseMigrationHelpers;
+using Beyond8.Identity.Infrastructure.Data;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddOpenApi();
-
-builder.AddCommonExtensions();
+builder.AddApplicationServices();
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
+await app.MigrateDbContextAsync<IdentityDbContext>();
 
-app.MapGet("/test", () => "Hello World");
-
-app.UseHttpsRedirection();
-app.UseCommonService();
+app.UseApplicationServices();
 
 app.Run();

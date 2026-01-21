@@ -10,12 +10,15 @@
 
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="13.1.0" />
+    <PackageReference Include="Aspire.Hosting.RabbitMQ" Version="13.1.0" />
+    <PackageReference Include="Aspire.Hosting.Redis" Version="13.1.0" />
     <PackageReference Include="Aspire.Hosting.Yarp" Version="13.1.0" />
     <PackageReference Include="Scalar.Aspire" Version="0.8.20" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Services\Identity\Beyond8.Identity.Api\Beyond8.Identity.Api.csproj" />
+    <ProjectReference Include="..\..\Services\Integration\Beyond8.Integration.Api\Beyond8.Integration.Api.csproj" />
   </ItemGroup>
 
 </Project>

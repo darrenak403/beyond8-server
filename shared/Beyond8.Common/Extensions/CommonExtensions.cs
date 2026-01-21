@@ -1,15 +1,10 @@
-using System;
-using System.Reflection;
-using System.Text.Json.Serialization;
 using Beyond8.Common.Middlewares;
-using Beyond8.Common.Utilities;
-using MassTransit;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System.Text.Json.Serialization;
 
 namespace Beyond8.Common.Extensions;
 
@@ -21,9 +16,15 @@ public static class CommonExtensions
                     {
                         options.AddPolicy("AllowDevelopmentClients", builder =>
                         {
-                            builder.WithOrigins("http://localhost:3000", "http://localhost:5173")
+                            builder.WithOrigins(
+                                       "http://localhost:3000",
+                                       "http://localhost:5173",
+                                       "http://api-gateway.beyond8.dev",
+                                       "https://api-gateway.beyond8.dev"
+                                   )
                                    .AllowAnyMethod()
-                                   .AllowAnyHeader();
+                                   .AllowAnyHeader()
+                                   .AllowCredentials();
                         });
                     });
 
@@ -36,37 +37,21 @@ public static class CommonExtensions
                 options.QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
                 options.QueueLimit = 0;
             });
+
+            options.AddTokenBucketLimiter(policyName: "AiFixedLimit", options =>
+            {
+                options.TokenLimit = 10;
+                options.ReplenishmentPeriod = TimeSpan.FromSeconds(60);
+                options.TokensPerPeriod = 10;
+                options.QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
+                options.QueueLimit = 0;
+            });
         });
 
         builder.Services.Configure<RateLimiterOptions>(options =>
         {
             options.RejectionStatusCode = 429;
         });
-
-        // builder.Services.AddMassTransit(config =>
-        // {
-        //     config.AddConsumers(Assembly.GetEntryAssembly());
-
-        //     config.UsingRabbitMq((context, cfg) =>
-        //     {
-        //         var rabbitMqConnectionString = builder.Configuration.GetConnectionString(Const.RabbitMQ)
-        //             ?? throw new ArgumentNullException(nameof(builder.Configuration), "RabbitMq connection string is empty");
-
-        //         cfg.Host(new Uri(rabbitMqConnectionString));
-
-        //         cfg.ConfigureEndpoints(context);
-
-        //         cfg.UseMessageRetry(retry =>
-        //         {
-        //             retry.Exponential(
-        //                 retryLimit: 5,
-        //                 minInterval: TimeSpan.FromSeconds(2),
-        //                 maxInterval: TimeSpan.FromSeconds(30),
-        //                 intervalDelta: TimeSpan.FromSeconds(5)
-        //             );
-        //         });
-        //     });
-        // });
 
         builder.Services.Configure<JsonOptions>(options =>
         {
