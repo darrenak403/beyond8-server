@@ -71,13 +71,17 @@ public class GeminiService(
             var httpClient = httpClientFactory.CreateClient();
             httpClient.Timeout = TimeSpan.FromSeconds(_config.TimeoutSeconds);
 
-            var url = $"{_config.ApiEndpoint}/models/{selectedModel}:generateContent?key={_config.ApiKey}";
+            var url = $"{_config.ApiEndpoint.TrimEnd('/')}/models/{selectedModel}:generateContent";
             var jsonContent = new StringContent(
                 JsonSerializer.Serialize(requestBody),
                 Encoding.UTF8,
                 "application/json");
 
-            var response = await httpClient.PostAsync(url, jsonContent);
+            using var request = new HttpRequestMessage(HttpMethod.Post, url);
+            request.Headers.TryAddWithoutValidation("X-goog-api-key", _config.ApiKey);
+            request.Content = jsonContent;
+
+            var response = await httpClient.SendAsync(request);
             var responseContent = await response.Content.ReadAsStringAsync();
 
             stopwatch.Stop();
