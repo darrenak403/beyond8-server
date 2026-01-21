@@ -158,40 +158,60 @@ Hãy:
 
     private static List<AiPrompt> GetModerationPrompts()
     {
-        // TODO: Add moderation prompts
-        // Examples: Review instructor applications, moderate forum posts
         return new List<AiPrompt>
         {
             new AiPrompt
             {
                 Name = "Instructor Application Review",
-                Description = "Review and assess instructor application submissions",
+                Description = "Đánh giá hồ sơ ứng tuyển giảng viên. Trả về JSON.",
                 Category = PromptCategory.Moderation,
-                Template = @"Bạn là người đánh giá hồ sơ giảng viên. Hãy xem xét đơn đăng ký sau:
+                Template = @"Bạn là chuyên gia đánh giá hồ sơ giảng viên.
 
-Thông tin ứng viên:
-Tên: {applicantName}
-Kinh nghiệm: {experience}
-Trình độ: {education}
-Chứng chỉ: {certifications}
+Nhiệm vụ: Đánh giá hồ sơ theo 6 phần:
+- Bio & Headline
+- Expertise Areas
+- Education
+- Work Experience
+- Identity Documents
+- Certificates
 
-Mô tả bản thân:
-{description}
+Với mỗi phần, trả về:
+- status: ""Valid"" | ""Warning"" | ""Invalid""
+- score: 0–100
+- issues: liệt kê ngắn gọn vấn đề chính
+- suggestions: gợi ý cải thiện, đi thẳng vào hành động
 
-Môn học đăng ký dạy:
-{subjects}
+Riêng Identity Documents và Certificates: đánh giá cả nội dung text và ảnh đính kèm.
 
-Hãy đánh giá:
-1. Điểm mạnh của ứng viên
-2. Điểm cần lưu ý
-3. Đề xuất: Chấp nhận / Yêu cầu bổ sung / Từ chối
-4. Lý do cụ thể cho đề xuất
-5. Câu hỏi cần làm rõ thêm (nếu có)",
-                SystemPrompt = "Bạn là chuyên gia tuyển dụng giảng viên, đánh giá công bằng và khách quan.",
-                Version = "1.0",
+Quy tắc:
+- totalScore = trung bình có trọng số các phần
+- isAccepted = true chỉ khi totalScore ≥ 70 và KHÔNG có phần nào status = ""Invalid""
+
+Chỉ trả về MỘT JSON object (không markdown, không text thừa):
+
+{
+  ""isAccepted"": boolean,
+  ""totalScore"": number,
+  ""feedbackSummary"": ""tóm tắt ngắn gọn, thân thiện, tiếng Việt"",
+  ""details"": [
+    {
+      ""sectionName"": string,
+      ""status"": ""Valid"" | ""Warning"" | ""Invalid"",
+      ""score"": number,
+      ""issues"": [string],
+      ""suggestions"": [string]
+    }
+  ],
+  ""additionalFeedback"": ""lời khuyên tổng thể, tiếng Việt""
+}
+
+--- HỒ SƠ ---
+{ApplicationText}",
+                SystemPrompt = "Bạn là chuyên gia tuyển dụng giảng viên, đánh giá công bằng, khách quan.",
+                Version = "1.0.0",
                 IsActive = true,
-                Variables = @"{""applicantName"": ""tên ứng viên"", ""experience"": ""kinh nghiệm"", ""education"": ""trình độ học vấn"", ""certifications"": ""chứng chỉ"", ""description"": ""mô tả bản thân"", ""subjects"": ""môn học""}",
-                MaxTokens = 2500,
+                Variables = @"{""ApplicationText"": ""nội dung hồ sơ""}",
+                MaxTokens = 4096,
                 Temperature = 0.6m,
                 TopP = 0.9m,
                 Tags = "moderation,instructor,application-review"

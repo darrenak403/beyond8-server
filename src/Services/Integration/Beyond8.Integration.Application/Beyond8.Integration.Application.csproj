@@ -15,8 +15,4 @@
     <ProjectReference Include="..\Beyond8.Integration.Domain\Beyond8.Integration.Domain.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Services\Implements\" />
-  </ItemGroup>
-
 </Project>
