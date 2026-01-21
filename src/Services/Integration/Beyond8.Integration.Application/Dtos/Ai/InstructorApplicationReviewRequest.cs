@@ -13,8 +13,6 @@ public class CreateInstructorProfileRequest
 
     public List<WorkInfo> WorkExperience { get; set; } = [];
 
-    public SocialInfo? SocialLinks { get; set; }
-
     public List<IdentityInfo> IdentityDocuments { get; set; } = [];
 
     public List<CertificateInfo> Certificates { get; set; } = [];
@@ -34,13 +32,6 @@ public class WorkInfo
     public string Role { get; set; } = string.Empty;
     public string From { get; set; } = string.Empty;
     public string To { get; set; } = string.Empty;
-}
-
-public class SocialInfo
-{
-    public string? Facebook { get; set; }
-    public string? LinkedIn { get; set; }
-    public string? Website { get; set; }
 }
 
 public class IdentityInfo

@@ -56,13 +56,10 @@ public class AiService(
                 return ApiResponse<AiInstructorApplicationReviewResponse>.FailureResponse(
                     geminiResult.Message ?? "Đã xảy ra lỗi khi đánh giá hồ sơ.");
 
-            var parsed = TryParseReviewResponse(geminiResult.Data.Content);
+            var parsed = TryParseReviewResponse(geminiResult.Data.Content, userId);
             if (parsed == null)
-            {
-                logger.LogWarning("Failed to parse Gemini review response for user {UserId}", userId);
                 return ApiResponse<AiInstructorApplicationReviewResponse>.FailureResponse(
                     "Không thể phân tích kết quả đánh giá từ AI. Vui lòng thử lại.");
-            }
 
             return ApiResponse<AiInstructorApplicationReviewResponse>.SuccessResponse(
                 parsed, "Đánh giá hồ sơ giảng viên thành công.");
@@ -95,13 +92,6 @@ public class AiService(
                 sb.AppendLine($"- {w.Company}, {w.Role} ({w.From} - {w.To})");
         else
             sb.AppendLine("(trống)");
-
-        if (r.SocialLinks != null)
-        {
-            sb.AppendLine("\n## Social Links");
-            var links = new[] { r.SocialLinks.Facebook, r.SocialLinks.LinkedIn, r.SocialLinks.Website }.Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
-            sb.AppendLine(links.Count > 0 ? string.Join(", ", links) : "(trống)");
-        }
 
         sb.AppendLine("\n## Identity Documents");
         if (r.IdentityDocuments?.Count > 0)
@@ -146,7 +136,9 @@ public class AiService(
         return (sb.ToString(), imageParts);
     }
 
-    /// <summary>Ưu tiên tải từ S3 theo key (key trực tiếp hoặc rút từ URL CloudFront/S3); nếu không có key hoặc S3 lỗi thì tải qua HTTP.</summary>
+    /// <summary>
+    /// Ưu tiên tải từ S3 theo key (key trực tiếp hoặc rút từ URL CloudFront/S3); nếu không có key hoặc S3 lỗi thì tải qua HTTP.
+    /// </summary>
     private async Task<(byte[]? Data, string? MimeType)> DownloadImageAsync(string urlOrKey)
     {
         if (string.IsNullOrWhiteSpace(urlOrKey)) return (null, null);
@@ -170,21 +162,29 @@ public class AiService(
         return (data2, ct ?? "image/jpeg");
     }
 
-    private static AiInstructorApplicationReviewResponse? TryParseReviewResponse(string content)
+    private AiInstructorApplicationReviewResponse? TryParseReviewResponse(string content, Guid userId)
     {
         var json = ExtractJson(content);
-        if (string.IsNullOrWhiteSpace(json)) return null;
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            var raw = content?.Length > 800 ? content[..800] : content ?? "";
+            logger.LogWarning("Failed to parse Gemini review response for user {UserId}: no JSON found. Raw (first 800 chars): {Raw}", userId, raw);
+            return null;
+        }
 
         try
         {
             return JsonSerializer.Deserialize<AiInstructorApplicationReviewResponse>(json, JsonOptions);
         }
-        catch
+        catch (JsonException ex)
         {
+            var raw = content?.Length > 800 ? content[..800] : content ?? "";
+            logger.LogWarning(ex, "Failed to parse Gemini review response for user {UserId}. Raw (first 800 chars): {Raw}", userId, raw);
             return null;
         }
     }
 
+    /// <summary>Trích JSON từ nội dung: ưu tiên block ```json...```; nếu không có thì tìm object {...} đầu tiên (đếm ngoặc, bỏ qua trong chuỗi).</summary>
     private static string? ExtractJson(string content)
     {
         if (string.IsNullOrWhiteSpace(content)) return null;
@@ -192,6 +192,31 @@ public class AiService(
         var match = Regex.Match(s, @"```(?:json)?\s*([\s\S]*?)\s*```", RegexOptions.IgnoreCase);
         if (match.Success)
             return match.Groups[1].Value.Trim();
-        return s;
+
+        var start = s.IndexOf('{');
+        if (start < 0) return null;
+
+        var inString = false;
+        var escape = false;
+        var depth = 1;
+        for (var j = start + 1; j < s.Length; j++)
+        {
+            var c = s[j];
+            if (escape) { escape = false; continue; }
+            if (inString)
+            {
+                if (c == '\\') { escape = true; continue; }
+                if (c == '"') { inString = false; continue; }
+                continue;
+            }
+            if (c == '"') { inString = true; continue; }
+            if (c == '{') { depth++; continue; }
+            if (c == '}')
+            {
+                depth--;
+                if (depth == 0) return s.Substring(start, j - start + 1);
+            }
+        }
+        return null;
     }
 }
