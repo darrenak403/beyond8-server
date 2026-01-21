@@ -49,9 +49,28 @@ namespace Beyond8.Identity.Api.Apis
                  .Produces(StatusCodes.Status401Unauthorized)
                  .Produces(StatusCodes.Status403Forbidden);
 
+            group.MapGet("/registration/pending", GetPendingApplicationsAsync)
+            .WithName("GetPendingApplications")
+            .WithDescription("Lấy danh sách đơn đăng ký giảng viên đang chờ duyệt (Admin, Staff only)")
+            .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
+            .Produces<ApiResponse<List<InstructorProfileResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<List<InstructorProfileResponse>>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
+
 
             return group;
         }
+
+        private static async Task<IResult> GetPendingApplicationsAsync(
+            [FromServices] IInstructorService instructorService)
+        {
+            var response = await instructorService.GetPendingApplicationsAsync();
+            return response.IsSuccess
+                            ? Results.Ok(response)
+                            : Results.BadRequest(response);
+        }
+
         private static async Task<IResult> SubmitInstructorApplicationAsync(
             [FromBody] CreateInstructorProfileRequest request,
             [FromServices] IInstructorService instructorService,

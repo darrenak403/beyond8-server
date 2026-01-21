@@ -16,6 +16,58 @@ public class InstructorService(
     ICurrentUserService currentUserService
 ) : IInstructorService
 {
+
+    /// <summary>
+    /// Start Helpers
+    /// </summary>
+    private async Task<(bool IsValid, string? ErrorMessage, InstructorProfile? Profile)> ValidateProfileForReviewAsync(Guid profileId)
+    {
+        var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(
+            p => p.Id == profileId && p.DeletedAt == null);
+
+        if (profile == null)
+            return (false, "Đơn đăng ký giảng viên không tồn tại.", null);
+
+        if (profile.VerificationStatus != VerificationStatus.Pending)
+            return (false, "Chỉ có thể xử lý đơn đăng ký đang chờ duyệt.", null);
+
+        return (true, null, profile);
+    }
+
+    private async Task<ApiResponse<InstructorProfileResponse>> UpdateProfileAndGetResponseAsync(
+     InstructorProfile profile, Guid adminId, string successMessage)
+    {
+        profile.UpdatedAt = DateTime.UtcNow;
+        profile.UpdatedBy = adminId;
+
+        await unitOfWork.SaveChangesAsync();
+
+        // Query lại profile với User
+        var updatedProfile = await unitOfWork.InstructorProfileRepository.GetByIdAsync(profile.Id);
+        if (updatedProfile != null)
+        {
+            // Load User navigation property
+            var user = await unitOfWork.UserRepository.GetByIdAsync(updatedProfile.UserId);
+            if (user != null)
+            {
+                updatedProfile.User = user;
+            }
+        }
+
+        if (updatedProfile == null || updatedProfile.User == null)
+        {
+            logger.LogError("Failed to retrieve updated profile {ProfileId} with User", profile.Id);
+            return ApiResponse<InstructorProfileResponse>.FailureResponse(
+                "Đã xảy ra lỗi khi lấy thông tin đơn đăng ký.");
+        }
+
+        var response = updatedProfile.ToInstructorProfileResponse();
+        return ApiResponse<InstructorProfileResponse>.SuccessResponse(response, successMessage);
+    }
+    /// <summary>
+    /// End Helpers
+    /// </summary>
+
     public async Task<ApiResponse<InstructorProfileResponse>> SubmitInstructorApplicationAsync(CreateInstructorProfileRequest request, Guid userId)
     {
         try
@@ -185,90 +237,46 @@ public class InstructorService(
         }
     }
 
-    public Task<ApiResponse<InstructorProfileResponse>> GetInstructorProfileByIdAsync(Guid profileId)
+    public async Task<ApiResponse<List<InstructorProfileResponse>>> GetPendingApplicationsAsync()
     {
-        throw new NotImplementedException();
-    }
-
-    public Task<ApiResponse<InstructorProfileResponse>> GetMyInstructorProfileAsync(Guid userId)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<ApiResponse<List<InstructorProfileResponse>>> GetPendingApplicationsAsync()
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<ApiResponse<List<InstructorProfileResponse>>> GetTopInstructorsByRatingAsync(int count)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<ApiResponse<List<InstructorProfileResponse>>> GetVerifiedInstructorsAsync(int pageNumber, int pageSize)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<ApiResponse<List<InstructorProfileResponse>>> SearchInstructorsAsync(string? searchTerm, List<string>? expertiseAreas, int pageNumber, int pageSize)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<ApiResponse<InstructorProfileResponse>> UpdateInstructorProfileAsync(Guid userId, UpdateInstructorProfileRequest request)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<ApiResponse<bool>> UpdateInstructorStatisticsAsync(Guid instructorId, UpdateInstructorStatisticsRequest request)
-    {
-        throw new NotImplementedException();
-    }
-
-    //Helpers
-    private async Task<(bool IsValid, string? ErrorMessage, InstructorProfile? Profile)> ValidateProfileForReviewAsync(Guid profileId)
-    {
-        var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(
-            p => p.Id == profileId && p.DeletedAt == null);
-
-        if (profile == null)
-            return (false, "Đơn đăng ký giảng viên không tồn tại.", null);
-
-        if (profile.VerificationStatus != VerificationStatus.Pending)
-            return (false, "Chỉ có thể xử lý đơn đăng ký đang chờ duyệt.", null);
-
-        return (true, null, profile);
-    }
-
-    private async Task<ApiResponse<InstructorProfileResponse>> UpdateProfileAndGetResponseAsync(
-     InstructorProfile profile, Guid adminId, string successMessage)
-    {
-        profile.UpdatedAt = DateTime.UtcNow;
-        profile.UpdatedBy = adminId;
-
-        await unitOfWork.SaveChangesAsync();
-
-        // Query lại profile với User
-        var updatedProfile = await unitOfWork.InstructorProfileRepository.GetByIdAsync(profile.Id);
-        if (updatedProfile != null)
+        try
         {
-            // Load User navigation property
-            var user = await unitOfWork.UserRepository.GetByIdAsync(updatedProfile.UserId);
-            if (user != null)
+            var pendingProfiles = await unitOfWork.InstructorProfileRepository.GetAllAsync(p =>
+                p.VerificationStatus == VerificationStatus.Pending);
+
+            if (pendingProfiles == null || !pendingProfiles.Any())
             {
-                updatedProfile.User = user;
+                logger.LogInformation("No pending instructor applications found");
+                return ApiResponse<List<InstructorProfileResponse>>.SuccessResponse(
+                    new List<InstructorProfileResponse>(),
+                    "Không có đơn đăng ký giảng viên nào đang chờ duyệt.");
             }
-        }
+            var responses = new List<InstructorProfileResponse>();
+            foreach (var profile in pendingProfiles)
+            {
+                var user = await unitOfWork.UserRepository.GetByIdAsync(profile.UserId);
+                if (user != null)
+                {
+                    profile.User = user;
+                    responses.Add(profile.ToInstructorProfileResponse());
+                }
+                else
+                {
+                    logger.LogWarning("User {UserId} not found for pending profile {ProfileId}",
+                        profile.UserId, profile.Id);
+                }
+            }
 
-        if (updatedProfile == null || updatedProfile.User == null)
+            logger.LogInformation("Retrieved {Count} pending instructor applications", responses.Count);
+            return ApiResponse<List<InstructorProfileResponse>>.SuccessResponse(
+                responses,
+                "Lấy danh sách đơn đăng ký giảng viên thành công.");
+        }
+        catch (Exception ex)
         {
-            logger.LogError("Failed to retrieve updated profile {ProfileId} with User", profile.Id);
-            return ApiResponse<InstructorProfileResponse>.FailureResponse(
-                "Đã xảy ra lỗi khi lấy thông tin đơn đăng ký.");
+            logger.LogError(ex, "Error retrieving pending instructor applications");
+            return ApiResponse<List<InstructorProfileResponse>>.FailureResponse(
+                "Đã xảy ra lỗi khi lấy danh sách đơn đăng ký giảng viên.");
         }
-
-        var response = updatedProfile.ToInstructorProfileResponse();
-        return ApiResponse<InstructorProfileResponse>.SuccessResponse(response, successMessage);
     }
-
 }
