@@ -2,7 +2,7 @@ using System;
 
 namespace Beyond8.Integration.Application.Dtos.Ai;
 
-public class CreateInstructorProfileRequest
+public class ProfileReviewRequest
 {
     public string Bio { get; set; } = string.Empty;
     public string Headline { get; set; } = string.Empty;
@@ -12,8 +12,6 @@ public class CreateInstructorProfileRequest
     public List<EducationInfo> Education { get; set; } = [];
 
     public List<WorkInfo> WorkExperience { get; set; } = [];
-
-    public List<IdentityInfo> IdentityDocuments { get; set; } = [];
 
     public List<CertificateInfo> Certificates { get; set; } = [];
 }
@@ -32,12 +30,6 @@ public class WorkInfo
     public string Role { get; set; } = string.Empty;
     public string From { get; set; } = string.Empty;
     public string To { get; set; } = string.Empty;
-}
-
-public class IdentityInfo
-{
-    public string FrontImg { get; set; } = string.Empty;
-    public string BackImg { get; set; } = string.Empty;
 }
 
 public class CertificateInfo

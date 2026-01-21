@@ -184,5 +184,7 @@ public static class InstructorProfileMappings
             instructorProfile.Certificates = request.Certificates.Any()
                 ? JsonSerializer.Serialize(request.Certificates)
                 : null;
+
+        instructorProfile.VerificationStatus = VerificationStatus.RequestUpdate;
     }
 }

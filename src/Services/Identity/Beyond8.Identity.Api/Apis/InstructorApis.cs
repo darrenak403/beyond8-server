@@ -24,81 +24,81 @@ namespace Beyond8.Identity.Api.Apis
 
         public static RouteGroupBuilder MapInstructorRoutes(this RouteGroupBuilder group)
         {
-            group.MapPost("/apply", SubmitInstructorApplicationAsync)
-                 .WithName("ApplyAsInstructor")
-                 .WithDescription("Gửi đơn đăng ký trở thành giảng viên")
-                 .RequireAuthorization()
-                 .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status200OK)
-                 .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status400BadRequest)
-                 .Produces(StatusCodes.Status401Unauthorized);
+            group.MapPost("/apply", SubmitInstructorProfileAsync)
+                .WithName("ApplyAsInstructor")
+                .WithDescription("Gửi đơn đăng ký trở thành giảng viên")
+                .RequireAuthorization()
+                .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
 
-            group.MapPost("/{profileId}/approve", ApproveInstructorApplicationAsync)
-                 .WithName("ApproveApplication")
-                 .WithDescription("Duyệt/Phê duyệt đơn đăng ký giảng viên (Admin, Staff only)")
+            group.MapPost("/{id:Guid}/approve", ApproveInstructorProfileAsync)
+                .WithName("ApproveApplication")
+                .WithDescription("Duyệt/Phê duyệt đơn đăng ký giảng viên (Admin, Staff only)")
                 .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
-                 .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status200OK)
-                 .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status400BadRequest)
-                 .Produces(StatusCodes.Status401Unauthorized)
-                 .Produces(StatusCodes.Status403Forbidden);
+                .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized)
+                .Produces(StatusCodes.Status403Forbidden);
 
-            group.MapPost("/{profileId}/reject", NotApproveInstructorApplicationAsync)
-                 .WithName("RejectApplication")
-                 .WithDescription("Từ chối hoặc yêu cầu cập nhật đơn đăng ký giảng viên (Admin only)")
+            group.MapPost("/{id:Guid}/not-approve", NotApproveInstructorProfileAsync)
+                .WithName("NotApproveInstructorProfile")
+                .WithDescription("Từ chối hoặc yêu cầu cập nhật hồ sơ giảng viên (Admin only)")
                 .RequireAuthorization(x => x.RequireRole(Role.Admin))
-                 .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status200OK)
-                 .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status400BadRequest)
-                 .Produces(StatusCodes.Status401Unauthorized)
-                 .Produces(StatusCodes.Status403Forbidden);
+                .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized)
+                .Produces(StatusCodes.Status403Forbidden);
 
-            group.MapGet("/by-status", GetInstructorProfilesByStatusAsync)
-            .WithName("ListProfilesByStatus")
-            .WithDescription("Lấy danh sách hồ sơ theo trạng thái xác minh (Admin, Staff only)")
-            .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
-            .Produces<ApiResponse<List<InstructorProfileResponse>>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<List<InstructorProfileResponse>>>(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status403Forbidden);
+            group.MapGet("/admin", GetInstructorProfilesForAdminAsync)
+                .WithName("GetInstructorProfilesByStatusForAdmin")
+                .WithDescription("Lấy danh sách hồ sơ theo trạng thái xác minh (Admin, Staff only)")
+                .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
+                .Produces<ApiResponse<List<InstructorProfileResponse>>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<List<InstructorProfileResponse>>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized)
+                .Produces(StatusCodes.Status403Forbidden);
 
             group.MapGet("/me", GetMyInstructorProfileAsync)
-            .WithName("GetMyInstructorProfile")
-            .WithDescription("Lấy hồ sơ giảng viên của riêng tôi (Require Authorization)")
-            .RequireAuthorization()
-            .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status404NotFound)
-            .Produces(StatusCodes.Status401Unauthorized);
+                .WithName("GetMyInstructorProfile")
+                .WithDescription("Lấy hồ sơ giảng viên của riêng tôi (Require Authorization)")
+                .RequireAuthorization()
+                .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status404NotFound)
+                .Produces(StatusCodes.Status401Unauthorized);
 
             group.MapPut("/me", UpdateInstructorProfileAsync)
-            .WithName("UpdateMyInstructorProfile")
-            .WithDescription("Cập nhật hồ sơ giảng viên của riêng tôi (Require Authorization)")
-            .RequireAuthorization()
-            .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized);
+                .WithName("UpdateMyInstructorProfile")
+                .WithDescription("Cập nhật hồ sơ giảng viên của riêng tôi (Require Authorization)")
+                .RequireAuthorization()
+                .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
 
-            group.MapGet("/{profileId}", GetInstructorProfileByIdAsync)
-            .WithName("GetProfileById")
-            .WithDescription("Lấy thông tin chi tiết hồ sơ giảng viên theo ID (Public)")
-            .AllowAnonymous()
-            .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status404NotFound);
+            group.MapGet("/{id:Guid}", GetInstructorProfileByIdAsync)
+                .WithName("GetInstructorProfileById")
+                .WithDescription("Lấy thông tin chi tiết hồ sơ giảng viên theo ID (Public)")
+                .AllowAnonymous()
+                .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status404NotFound);
 
-            group.MapGet("/{profileId}/admin", GetInstructorProfileByIdForAdminAsync)
-            .WithName("GetProfileByIdForAdmin")
-            .WithDescription("Lấy thông tin chi tiết hồ sơ giảng viên theo ID dành cho Admin (Admin, Staff only)")
-            .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
-            .Produces<ApiResponse<InstructorProfileAdminResponse>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<InstructorProfileAdminResponse>>(StatusCodes.Status404NotFound)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status403Forbidden);
+            group.MapGet("/{id:Guid}/admin", GetInstructorProfileByIdForAdminAsync)
+                .WithName("GetInstructorProfileByIdForAdmin")
+                .WithDescription("Lấy thông tin chi tiết hồ sơ giảng viên theo ID dành cho Admin (Admin, Staff only)")
+                .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
+                .Produces<ApiResponse<InstructorProfileAdminResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<InstructorProfileAdminResponse>>(StatusCodes.Status404NotFound)
+                .Produces(StatusCodes.Status401Unauthorized)
+                .Produces(StatusCodes.Status403Forbidden);
 
             return group;
         }
 
         private static async Task<IResult> GetInstructorProfileByIdForAdminAsync(
-            [FromRoute] Guid profileId,
+            [FromRoute] Guid id,
             [FromServices] IInstructorService instructorService)
         {
-            var response = await instructorService.GetInstructorProfileByIdForAdminAsync(profileId);
+            var response = await instructorService.GetInstructorProfileByIdForAdminAsync(id);
             return response.IsSuccess
                             ? Results.Ok(response)
                             : Results.NotFound(response);
@@ -131,32 +131,26 @@ namespace Beyond8.Identity.Api.Apis
         }
 
         private static async Task<IResult> GetInstructorProfileByIdAsync(
-            [FromRoute] Guid profileId,
+            [FromRoute] Guid id,
             [FromServices] IInstructorService instructorService)
         {
-            var response = await instructorService.GetInstructorProfileByIdAsync(profileId);
+            var response = await instructorService.GetInstructorProfileByIdAsync(id);
             return response.IsSuccess
                             ? Results.Ok(response)
                             : Results.NotFound(response);
         }
 
-        private static async Task<IResult> GetInstructorProfilesByStatusAsync(
+        private static async Task<IResult> GetInstructorProfilesForAdminAsync(
             [FromServices] IInstructorService instructorService,
-            [FromQuery] VerificationStatus status,
-            [FromQuery] int pageNumber = 1,
-            [FromQuery] int pageSize = 10)
+            [AsParameters] PaginationStatusRequest pagination)
         {
-            if (pageNumber < 1 || pageSize < 1 || pageSize > 100)
-                return Results.BadRequest(ApiResponse<List<InstructorProfileResponse>>.FailureResponse(
-                    "Số trang phải >= 1, kích thước trang phải từ 1-100."));
-
-            var response = await instructorService.GetInstructorProfilesByStatusAsync(status, pageNumber, pageSize);
+            var response = await instructorService.GetInstructorProfilesAsync(pagination);
             return response.IsSuccess
                             ? Results.Ok(response)
                             : Results.BadRequest(response);
         }
 
-        private static async Task<IResult> SubmitInstructorApplicationAsync(
+        private static async Task<IResult> SubmitInstructorProfileAsync(
             [FromBody] CreateInstructorProfileRequest request,
             [FromServices] IInstructorService instructorService,
             [FromServices] ICurrentUserService currentUserService,
@@ -165,37 +159,36 @@ namespace Beyond8.Identity.Api.Apis
             if (!request.ValidateRequest(validator, out var validationResult))
                 return Results.BadRequest(validationResult);
 
-            var response = await instructorService.SubmitInstructorApplicationAsync(request, currentUserService.UserId);
+            var response = await instructorService.SubmitInstructorProfileAsync(request, currentUserService.UserId);
 
             return response.IsSuccess
                     ? Results.Ok(response)
                     : Results.BadRequest(response);
-
         }
 
-        private static async Task<IResult> ApproveInstructorApplicationAsync(
-        [FromRoute] Guid profileId,
-        [FromServices] ICurrentUserService currentUserService,
-        [FromServices] IInstructorService instructorService)
+        private static async Task<IResult> ApproveInstructorProfileAsync(
+            [FromRoute] Guid id,
+            [FromServices] ICurrentUserService currentUserService,
+            [FromServices] IInstructorService instructorService)
         {
-            var response = await instructorService.ApproveInstructorApplicationAsync(profileId, currentUserService.UserId);
+            var response = await instructorService.ApproveInstructorProfileAsync(id, currentUserService.UserId);
 
             return response.IsSuccess
                     ? Results.Ok(response)
                     : Results.BadRequest(response);
         }
 
-        private static async Task<IResult> NotApproveInstructorApplicationAsync(
-        [FromRoute] Guid profileId,
-        [FromServices] ICurrentUserService currentUserService,
-        [FromServices] IInstructorService instructorService,
-        [FromBody] NotApproveInstructorApplicationRequest request,
-        [FromServices] IValidator<NotApproveInstructorApplicationRequest> validator)
+        private static async Task<IResult> NotApproveInstructorProfileAsync(
+            [FromRoute] Guid id,
+            [FromServices] ICurrentUserService currentUserService,
+            [FromServices] IInstructorService instructorService,
+            [FromBody] NotApproveInstructorProfileRequest request,
+            [FromServices] IValidator<NotApproveInstructorProfileRequest> validator)
         {
             if (!request.ValidateRequest(validator, out var validationResult))
                 return Results.BadRequest(validationResult);
 
-            var response = await instructorService.NotApproveInstructorApplicationAsync(profileId, request, currentUserService.UserId);
+            var response = await instructorService.NotApproveInstructorProfileAsync(id, request, currentUserService.UserId);
 
             return response.IsSuccess
                     ? Results.Ok(response)

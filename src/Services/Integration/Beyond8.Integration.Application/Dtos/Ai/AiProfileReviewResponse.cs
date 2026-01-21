@@ -4,12 +4,12 @@ using System.Text.Json.Serialization;
 
 namespace Beyond8.Integration.Application.Dtos.Ai;
 
-public class AiInstructorApplicationReviewResponse
+public class AiProfileReviewResponse
 {
     private List<SectionDetail> _details = [];
 
     public bool IsAccepted { get; set; }
-    public int TotalScore { get; set; }
+    public double TotalScore { get; set; }
     public string? FeedbackSummary { get; set; }
     public List<SectionDetail> Details { get => _details; set => _details = value ?? []; }
     public string? AdditionalFeedback { get; set; }
@@ -24,7 +24,7 @@ public class SectionDetail
 
     [JsonConverter(typeof(SectionStatusJsonConverter))]
     public SectionStatus Status { get; set; }
-    public int Score { get; set; }
+    public double Score { get; set; }
     public List<string> Issues { get => _issues; set => _issues = value ?? []; }
     public List<string> Suggestions { get => _suggestions; set => _suggestions = value ?? []; }
 }

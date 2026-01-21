@@ -5,5 +5,5 @@ namespace Beyond8.Integration.Application.Services.Interfaces;
 
 public interface IAiService
 {
-    Task<ApiResponse<AiInstructorApplicationReviewResponse>> InstructorApplicationReviewAsync(CreateInstructorProfileRequest request, Guid userId);
+    Task<ApiResponse<AiProfileReviewResponse>> InstructorProfileReviewAsync(ProfileReviewRequest request, Guid userId);
 }

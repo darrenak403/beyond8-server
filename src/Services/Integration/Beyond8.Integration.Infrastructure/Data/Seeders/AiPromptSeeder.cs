@@ -167,12 +167,11 @@ Hãy:
                 Category = PromptCategory.Moderation,
                 Template = @"Bạn là chuyên gia đánh giá hồ sơ giảng viên.
 
-Nhiệm vụ: Đánh giá hồ sơ theo 6 phần:
+Nhiệm vụ: Đánh giá hồ sơ theo 5 phần:
 - Bio & Headline
 - Expertise Areas
 - Education
 - Work Experience
-- Identity Documents
 - Certificates
 
 Với mỗi phần, trả về:
@@ -181,7 +180,7 @@ Với mỗi phần, trả về:
 - issues: liệt kê ngắn gọn vấn đề chính
 - suggestions: gợi ý cải thiện, đi thẳng vào hành động
 
-Riêng Identity Documents và Certificates: đánh giá cả nội dung text và ảnh đính kèm.
+Riêng Certificates: đánh giá cả nội dung text và ảnh đính kèm.
 
 Quy tắc:
 - totalScore = trung bình có trọng số các phần
