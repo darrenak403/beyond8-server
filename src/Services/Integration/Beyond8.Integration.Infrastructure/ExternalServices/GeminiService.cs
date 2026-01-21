@@ -29,24 +29,35 @@ public class GeminiService(
         string? model = null,
         int? maxTokens = null,
         decimal? temperature = null,
-        decimal? topP = null)
+        decimal? topP = null,
+        IReadOnlyList<GeminiImagePart>? inlineImages = null)
     {
         var stopwatch = Stopwatch.StartNew();
 
         try
         {
             var selectedModel = model ?? _config.DefaultModel;
+            var parts = new List<object> { new { text = prompt } };
+            if (inlineImages?.Count > 0)
+            {
+                foreach (var img in inlineImages)
+                {
+                    parts.Add(new
+                    {
+                        inlineData = new
+                        {
+                            mimeType = img.MimeType,
+                            data = Convert.ToBase64String(img.Data)
+                        }
+                    });
+                }
+            }
+
             var requestBody = new
             {
                 contents = new[]
                 {
-                    new
-                    {
-                        parts = new[]
-                        {
-                            new { text = prompt }
-                        }
-                    }
+                    new { parts }
                 },
                 generationConfig = new
                 {

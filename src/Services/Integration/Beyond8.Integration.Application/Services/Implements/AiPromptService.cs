@@ -77,6 +77,22 @@ public class AiPromptService(
         }
     }
 
+    public async Task<ApiResponse<AiPromptResponse>> GetPromptByNameAsync(string name)
+    {
+        try
+        {
+            var entity = await unitOfWork.AiPromptRepository.GetActiveByNameAsync(name);
+            if (entity == null)
+                return ApiResponse<AiPromptResponse>.FailureResponse("Không tìm thấy prompt AI.");
+            return ApiResponse<AiPromptResponse>.SuccessResponse(entity.ToResponse(), "Lấy prompt AI thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting AI prompt by name {Name}", name);
+            return ApiResponse<AiPromptResponse>.FailureResponse("Đã xảy ra lỗi khi lấy prompt AI.");
+        }
+    }
+
     public async Task<ApiResponse<AiPromptResponse>> UpdatePromptAsync(Guid id, UpdateAiPromptRequest request, Guid userId)
     {
         try

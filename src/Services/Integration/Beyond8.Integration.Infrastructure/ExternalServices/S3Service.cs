@@ -105,6 +105,34 @@ public class S3Service(IOptions<S3Settings> s3Settings, ILogger<S3Service> logge
         }
     }
 
+    public async Task<(byte[]? Data, string? ContentType)> GetObjectAsync(string fileKey, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(fileKey)) return (null, null);
+
+        try
+        {
+            var request = new GetObjectRequest { BucketName = _s3Settings.BucketName, Key = fileKey };
+            using var response = await _s3Client.GetObjectAsync(request, cancellationToken);
+            await using var ms = new MemoryStream();
+            await response.ResponseStream.CopyToAsync(ms, cancellationToken);
+            var data = ms.ToArray();
+            var contentType = response.Headers?.ContentType?.Trim();
+            if (string.IsNullOrWhiteSpace(contentType))
+                contentType = InferMimeFromKey(fileKey);
+            return (data, contentType ?? "application/octet-stream");
+        }
+        catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            _logger.LogDebug("S3 key not found: {FileKey}", fileKey);
+            return (null, null);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error getting S3 object: {FileKey}", fileKey);
+            return (null, null);
+        }
+    }
+
     public string GetFilePath(string fileKey)
     {
         if (!string.IsNullOrWhiteSpace(_s3Settings.CloudFrontUrl))
@@ -117,27 +145,25 @@ public class S3Service(IOptions<S3Settings> s3Settings, ILogger<S3Service> logge
 
     public string ExtractKeyFromUrl(string url)
     {
-        if (string.IsNullOrWhiteSpace(url))
-        {
-            return string.Empty;
-        }
+        if (string.IsNullOrWhiteSpace(url)) return string.Empty;
 
         try
         {
             var uri = new Uri(url);
 
-            // Handle CloudFront URL
-            if (!string.IsNullOrWhiteSpace(_s3Settings.CloudFrontUrl) &&
-                url.StartsWith(_s3Settings.CloudFrontUrl, StringComparison.OrdinalIgnoreCase))
+            // CloudFront: so sánh host (CloudFrontUrl có thể là "d30z0qh7rhzgt8.cloudfront.net" hoặc full URL)
+            var cfHost = _s3Settings.CloudFrontUrl;
+            if (!string.IsNullOrWhiteSpace(cfHost) && cfHost.Contains("://", StringComparison.Ordinal))
             {
-                return uri.AbsolutePath.TrimStart('/');
+                if (Uri.TryCreate(cfHost, UriKind.Absolute, out var cu))
+                    cfHost = cu.Host;
             }
+            if (!string.IsNullOrWhiteSpace(cfHost) && uri.Host.Equals(cfHost, StringComparison.OrdinalIgnoreCase))
+                return uri.AbsolutePath.TrimStart('/');
 
-            // Handle S3 URL
+            // S3 URL (bucket.s3.region.amazonaws.com hoặc s3.region.amazonaws.com)
             if (uri.Host.Contains("s3", StringComparison.OrdinalIgnoreCase))
-            {
                 return uri.AbsolutePath.TrimStart('/');
-            }
 
             return string.Empty;
         }
@@ -167,5 +193,23 @@ public class S3Service(IOptions<S3Settings> s3Settings, ILogger<S3Service> logge
         var invalidChars = Path.GetInvalidFileNameChars();
         var sanitized = string.Join("_", fileName.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries));
         return sanitized;
+    }
+
+    private static readonly Dictionary<string, string> KeyExtensionMime = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [".jpg"] = "image/jpeg",
+        [".jpeg"] = "image/jpeg",
+        [".png"] = "image/png",
+        [".webp"] = "image/webp",
+        [".gif"] = "image/gif",
+        [".pdf"] = "application/pdf"
+    };
+
+    private static string? InferMimeFromKey(string fileKey)
+    {
+        var last = fileKey.AsSpan().LastIndexOf('.');
+        if (last < 0) return null;
+        var ext = fileKey.AsSpan(last..).ToString();
+        return KeyExtensionMime.TryGetValue(ext, out var m) ? m : null;
     }
 }
