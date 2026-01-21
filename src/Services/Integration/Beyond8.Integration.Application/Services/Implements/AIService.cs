@@ -96,7 +96,7 @@ public class AiService(
         sb.AppendLine("\n## Identity Documents");
         if (r.IdentityDocuments?.Count > 0)
             foreach (var id in r.IdentityDocuments)
-                sb.AppendLine($"- {id.Type}: {id.Number}, cấp ngày {id.IssuedDate}");
+                sb.AppendLine("- Giấy tờ định danh (ảnh đính kèm)");
         else
             sb.AppendLine("(trống)");
 
@@ -110,8 +110,8 @@ public class AiService(
         var imageItems = new List<(string Descriptor, string Url)>();
         foreach (var id in r.IdentityDocuments ?? [])
         {
-            if (!string.IsNullOrWhiteSpace(id.FrontImg)) imageItems.Add(($"CCCD {id.Type} mặt trước", id.FrontImg));
-            if (!string.IsNullOrWhiteSpace(id.BackImg)) imageItems.Add(($"CCCD {id.Type} mặt sau", id.BackImg));
+            if (!string.IsNullOrWhiteSpace(id.FrontImg)) imageItems.Add(("CCCD mặt trước", id.FrontImg));
+            if (!string.IsNullOrWhiteSpace(id.BackImg)) imageItems.Add(("CCCD mặt sau", id.BackImg));
         }
         foreach (var c in r.Certificates ?? [])
             if (!string.IsNullOrWhiteSpace(c.Url)) imageItems.Add(($"Chứng chỉ {c.Name}", c.Url));
