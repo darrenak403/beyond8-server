@@ -1,6 +1,7 @@
 using System;
 using Beyond8.Common.Utilities;
 using Beyond8.Identity.Application.Dtos.Instructors;
+using Beyond8.Identity.Domain.Enums;
 
 namespace Beyond8.Identity.Application.Services.Interfaces;
 
@@ -13,14 +14,11 @@ public interface IInstructorService
         Guid profileId, Guid adminId);
     Task<ApiResponse<InstructorProfileResponse>> NotApproveInstructorApplicationAsync(
         Guid profileId, NotApproveInstructorApplicationRequest request, Guid adminId);
-    Task<ApiResponse<List<InstructorProfileResponse>>> GetPendingApplicationsAsync();
-
-    // Quản lý hồ sơ
+    Task<ApiResponse<List<InstructorProfileResponse>>> GetInstructorProfilesByStatusAsync(
+        VerificationStatus status, int pageNumber = 1, int pageSize = 10);
     Task<ApiResponse<InstructorProfileResponse>> GetMyInstructorProfileAsync(Guid userId);
     Task<ApiResponse<InstructorProfileResponse>> GetInstructorProfileByIdAsync(Guid profileId);
     Task<ApiResponse<InstructorProfileAdminResponse>> GetInstructorProfileByIdForAdminAsync(Guid profileId);
-    Task<ApiResponse<List<InstructorProfileResponse>>> GetVerifiedInstructorsAsync(
-        int pageNumber, int pageSize);
     Task<ApiResponse<InstructorProfileResponse>> UpdateInstructorProfileAsync(
         Guid userId, UpdateInstructorProfileRequest request);
 

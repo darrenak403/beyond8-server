@@ -202,22 +202,38 @@ public class InstructorService(
         }
     }
 
-    public async Task<ApiResponse<List<InstructorProfileResponse>>> GetPendingApplicationsAsync()
+    public async Task<ApiResponse<List<InstructorProfileResponse>>> GetInstructorProfilesByStatusAsync(
+        VerificationStatus status, int pageNumber = 1, int pageSize = 10)
     {
         try
         {
-            var pendingProfiles = await unitOfWork.InstructorProfileRepository.GetAllAsync(p =>
-                p.VerificationStatus == VerificationStatus.Pending);
+            var profiles = await unitOfWork.InstructorProfileRepository.GetAllAsync(p =>
+                p.VerificationStatus == status);
 
-            if (pendingProfiles == null || !pendingProfiles.Any())
+            if (profiles == null || !profiles.Any())
             {
-                logger.LogInformation("No pending instructor applications found");
+                var message = status switch
+                {
+                    VerificationStatus.Pending => "Không có đơn đăng ký giảng viên nào đang chờ duyệt.",
+                    VerificationStatus.Verified => "Không có giảng viên đã được xác minh.",
+                    VerificationStatus.Rejected => "Không có đơn đăng ký giảng viên nào bị từ chối.",
+                    VerificationStatus.RequestUpdate => "Không có đơn đăng ký yêu cầu cập nhật.",
+                    _ => "Không có hồ sơ giảng viên nào."
+                };
+                logger.LogInformation("No instructor profiles found with status {Status}", status);
                 return ApiResponse<List<InstructorProfileResponse>>.SuccessResponse(
                     new List<InstructorProfileResponse>(),
-                    "Không có đơn đăng ký giảng viên nào đang chờ duyệt.");
+                    message);
             }
+
+            // Apply pagination if needed (except for pending, which typically doesn't need pagination)
+            var pagedProfiles = profiles
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
             var responses = new List<InstructorProfileResponse>();
-            foreach (var profile in pendingProfiles)
+            foreach (var profile in pagedProfiles)
             {
                 var user = await unitOfWork.UserRepository.GetByIdAsync(profile.UserId);
                 if (user != null)
@@ -227,22 +243,46 @@ public class InstructorService(
                 }
                 else
                 {
-                    logger.LogWarning("User {UserId} not found for pending profile {ProfileId}",
-                        profile.UserId, profile.Id);
+                    logger.LogWarning("User {UserId} not found for profile {ProfileId} with status {Status}",
+                        profile.UserId, profile.Id, status);
                 }
             }
 
-            logger.LogInformation("Retrieved {Count} pending instructor applications", responses.Count);
-            return ApiResponse<List<InstructorProfileResponse>>.SuccessResponse(
+            var successMessage = status switch
+            {
+                VerificationStatus.Pending => "Lấy danh sách đơn đăng ký giảng viên đang chờ duyệt thành công.",
+                VerificationStatus.Verified => "Lấy danh sách giảng viên được xác minh thành công.",
+                VerificationStatus.Rejected => "Lấy danh sách đơn từ chối thành công.",
+                VerificationStatus.RequestUpdate => "Lấy danh sách đơn yêu cầu cập nhật thành công.",
+                _ => "Lấy danh sách hồ sơ giảng viên thành công."
+            };
+
+            logger.LogInformation("Retrieved {Count} instructor profiles with status {Status} for page {PageNumber}",
+                responses.Count, status, pageNumber);
+            
+            return ApiResponse<List<InstructorProfileResponse>>.SuccessPagedResponse(
                 responses,
-                "Lấy danh sách đơn đăng ký giảng viên đang chờ duyệt thành công.");
+                profiles.Count,
+                pageNumber,
+                pageSize,
+                successMessage);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error retrieving pending instructor applications");
+            logger.LogError(ex, "Error retrieving instructor profiles with status {Status}", status);
             return ApiResponse<List<InstructorProfileResponse>>.FailureResponse(
-                "Đã xảy ra lỗi khi lấy danh sách đơn đăng ký giảng viên đang chờ duyệt.");
+                "Đã xảy ra lỗi khi lấy danh sách hồ sơ giảng viên.");
         }
+    }
+
+    public async Task<ApiResponse<List<InstructorProfileResponse>>> GetPendingApplicationsAsync()
+    {
+        return await GetInstructorProfilesByStatusAsync(VerificationStatus.Pending);
+    }
+
+    public async Task<ApiResponse<List<InstructorProfileResponse>>> GetVerifiedInstructorsAsync(int pageNumber, int pageSize)
+    {
+        return await GetInstructorProfilesByStatusAsync(VerificationStatus.Verified, pageNumber, pageSize);
     }
 
     public async Task<ApiResponse<InstructorProfileResponse>> GetMyInstructorProfileAsync(Guid userId)
@@ -370,55 +410,5 @@ public class InstructorService(
         }
     }
 
-    public async Task<ApiResponse<List<InstructorProfileResponse>>> GetVerifiedInstructorsAsync(int pageNumber, int pageSize)
-    {
-        try
-        {
-            var verifiedProfiles = await unitOfWork.InstructorProfileRepository.GetAllAsync(p =>
-                p.VerificationStatus == VerificationStatus.Verified);
 
-            if (verifiedProfiles == null || !verifiedProfiles.Any())
-            {
-                logger.LogInformation("No verified instructors found");
-                return ApiResponse<List<InstructorProfileResponse>>.SuccessResponse(
-                    new List<InstructorProfileResponse>(),
-                    "Không có giảng viên đã được xác minh.");
-            }
-
-            var pagedProfiles = verifiedProfiles
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .ToList();
-
-            var responses = new List<InstructorProfileResponse>();
-            foreach (var profile in pagedProfiles)
-            {
-                var user = await unitOfWork.UserRepository.GetByIdAsync(profile.UserId);
-                if (user != null)
-                {
-                    profile.User = user;
-                    responses.Add(profile.ToInstructorProfileResponse(user));
-                }
-                else
-                {
-                    logger.LogWarning("User {UserId} not found for verified profile {ProfileId}",
-                        profile.UserId, profile.Id);
-                }
-            }
-
-            logger.LogInformation("Retrieved {Count} verified instructors for page {PageNumber}", responses.Count, pageNumber);
-            return ApiResponse<List<InstructorProfileResponse>>.SuccessPagedResponse(
-                    responses,
-                    verifiedProfiles.Count,
-                    pageNumber,
-                    pageSize,
-                    "Lấy danh sách giảng viên được xác minh thành công.");
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error retrieving verified instructors");
-            return ApiResponse<List<InstructorProfileResponse>>.FailureResponse(
-                "Đã xảy ra lỗi khi lấy danh sách giảng viên đã được xác minh.");
-        }
-    }
 }
