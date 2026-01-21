@@ -31,12 +31,10 @@ namespace Beyond8.Identity.Api.Apis
                  .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status400BadRequest)
                  .Produces(StatusCodes.Status401Unauthorized);
 
-
-            // Thêm admin authorization
             group.MapPost("/{profileId}/approve", ApproveInstructorApplicationAsync)
                  .WithName("ApproveInstructorApplication")
-                 .WithDescription("Duyệt đơn đăng ký giảng viên (Admin only)")
-                .RequireAuthorization(x => x.RequireRole(Role.Admin))
+                 .WithDescription("Duyệt đơn đăng ký giảng viên (Admin, Staff only)")
+                .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
                  .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status200OK)
                  .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status400BadRequest)
                  .Produces(StatusCodes.Status401Unauthorized)
@@ -44,8 +42,8 @@ namespace Beyond8.Identity.Api.Apis
 
             group.MapPost("/{profileId}/reject", RejectInstructorApplicationAsync)
                  .WithName("RejectInstructorApplication")
-                 .WithDescription("Từ chối đơn đăng ký giảng viên (Admin only)")
-                .RequireAuthorization(x => x.RequireRole(Role.Admin))
+                 .WithDescription("Từ chối đơn đăng ký giảng viên (Admin, Staff only)")
+                .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
                  .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status200OK)
                  .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status400BadRequest)
                  .Produces(StatusCodes.Status401Unauthorized)
