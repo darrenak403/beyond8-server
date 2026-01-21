@@ -184,7 +184,7 @@ Riêng Certificates: đánh giá cả nội dung text và ảnh đính kèm.
 
 Quy tắc:
 - totalScore = trung bình có trọng số các phần
-- isAccepted = true chỉ khi totalScore ≥ 70 và KHÔNG có phần nào status = ""Invalid""
+- isAccepted = true chỉ khi totalScore ≥ 50
 
 Chỉ trả về MỘT JSON object (không markdown, không text thừa):
 
