@@ -158,40 +158,38 @@ Hãy:
 
     private static List<AiPrompt> GetModerationPrompts()
     {
-        // TODO: Add moderation prompts
-        // Examples: Review instructor applications, moderate forum posts
         return new List<AiPrompt>
         {
             new AiPrompt
             {
                 Name = "Instructor Application Review",
-                Description = "Review and assess instructor application submissions",
+                Description = "Đánh giá hồ sơ ứng tuyển giảng viên (có ảnh CCCD, chứng chỉ). Trả về JSON.",
                 Category = PromptCategory.Moderation,
-                Template = @"Bạn là người đánh giá hồ sơ giảng viên. Hãy xem xét đơn đăng ký sau:
+                Template = @"Bạn là chuyên gia đánh giá hồ sơ ứng tuyển giảng viên. Nhiệm vụ: đánh giá hồ sơ dưới đây theo các phần: Bio & Headline, Expertise Areas, Education, Work Experience, Identity Documents (kèm ảnh CCCD mặt trước/sau nếu có), Certificates (kèm ảnh/chứng chỉ nếu có).
 
-Thông tin ứng viên:
-Tên: {applicantName}
-Kinh nghiệm: {experience}
-Trình độ: {education}
-Chứng chỉ: {certifications}
+Với mỗi phần, chấm Status: ""Valid"" (đạt), ""Warning"" (cần cải thiện), ""Invalid"" (không đạt); Score 0-100; liệt kê Issues (các vấn đề) và Suggestions (gợi ý cải thiện). Phần Identity Documents và Certificates: kiểm tra cả nội dung text và ảnh đính kèm (rõ ràng, đầy đủ, hợp lệ).
 
-Mô tả bản thân:
-{description}
+Quy tắc: IsAccepted = true chỉ khi TotalScore >= 70 và không có phần nào Status = ""Invalid"". TotalScore là trung bình có trọng số (ưu tiên Education, Certificates, Work Experience, Identity Documents).
 
-Môn học đăng ký dạy:
-{subjects}
+Trả về ĐÚNG MỘT đối tượng JSON (không markdown, không text thừa) với cấu trúc:
+{
+  ""isAccepted"": boolean,
+  ""totalScore"": number (0-100),
+  ""feedbackSummary"": ""string tóm tắt đánh giá"",
+  ""details"": [
+    { ""sectionName"": ""string"", ""status"": ""Valid""|""Warning""|""Invalid"", ""score"": number, ""issues"": [""string""], ""suggestions"": [""string""] }
+  ],
+  ""additionalFeedback"": ""string (tùy chọn)""
+}
 
-Hãy đánh giá:
-1. Điểm mạnh của ứng viên
-2. Điểm cần lưu ý
-3. Đề xuất: Chấp nhận / Yêu cầu bổ sung / Từ chối
-4. Lý do cụ thể cho đề xuất
-5. Câu hỏi cần làm rõ thêm (nếu có)",
-                SystemPrompt = "Bạn là chuyên gia tuyển dụng giảng viên, đánh giá công bằng và khách quan.",
-                Version = "1.0",
+--- HỒ SƠ ỨNG TUYỂN ---
+
+{ApplicationText}",
+                SystemPrompt = "Bạn là chuyên gia tuyển dụng giảng viên, đánh giá công bằng, khách quan. Phân tích cả nội dung text và ảnh đính kèm (CCCD, chứng chỉ).",
+                Version = "1.0.0",
                 IsActive = true,
-                Variables = @"{""applicantName"": ""tên ứng viên"", ""experience"": ""kinh nghiệm"", ""education"": ""trình độ học vấn"", ""certifications"": ""chứng chỉ"", ""description"": ""mô tả bản thân"", ""subjects"": ""môn học""}",
-                MaxTokens = 2500,
+                Variables = @"{""ApplicationText"": ""nội dung hồ sơ (text + mô tả thứ tự ảnh đính kèm)""}",
+                MaxTokens = 4096,
                 Temperature = 0.6m,
                 TopP = 0.9m,
                 Tags = "moderation,instructor,application-review"

@@ -7,13 +7,6 @@ public class UpdateAiPromptRequestValidator : AbstractValidator<UpdateAiPromptRe
 {
     public UpdateAiPromptRequestValidator()
     {
-        When(x => x.Name != null, () =>
-        {
-            RuleFor(x => x.Name)
-                .NotEmpty().WithMessage("Tên prompt không được để trống")
-                .MaximumLength(200).WithMessage("Tên prompt không được vượt quá 200 ký tự");
-        });
-
         When(x => x.Description != null, () =>
         {
             RuleFor(x => x.Description)

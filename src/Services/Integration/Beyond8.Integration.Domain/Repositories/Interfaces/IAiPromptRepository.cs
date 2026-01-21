@@ -5,5 +5,5 @@ namespace Beyond8.Integration.Domain.Repositories.Interfaces;
 
 public interface IAiPromptRepository : IGenericRepository<AiPrompt>
 {
-
+    Task<AiPrompt?> GetActiveByNameAsync(string name);
 }

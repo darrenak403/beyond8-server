@@ -114,8 +114,10 @@ public static class Bootstrapper
         builder.Services.AddScoped<IAiUsageService, AiUsageService>();
         builder.Services.AddScoped<IAiPromptService, AiPromptService>();
         builder.Services.AddScoped<IGeminiService, GeminiService>();
+        builder.Services.AddScoped<IUrlContentDownloader, UrlContentDownloader>();
         builder.Services.AddScoped<IEmailService, EmailService>();
         builder.Services.AddScoped<IVnptEkycService, VnptEkycService>();
+        builder.Services.AddScoped<IAiService, AiService>();
 
         // Register validators
         builder.Services.AddValidatorsFromAssemblyContaining<UploadFileRequest>();
@@ -137,6 +139,7 @@ public static class Bootstrapper
         app.UseHttpsRedirection();
 
         app.MapMediaFileApi();
+        app.MapAiApi();
         app.MapAiUsageApi();
         app.MapAiPromptApi();
         app.MapVnptEkycApi();
