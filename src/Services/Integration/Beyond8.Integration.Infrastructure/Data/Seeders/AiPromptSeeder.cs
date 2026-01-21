@@ -163,32 +163,54 @@ Hãy:
             new AiPrompt
             {
                 Name = "Instructor Application Review",
-                Description = "Đánh giá hồ sơ ứng tuyển giảng viên (có ảnh CCCD, chứng chỉ). Trả về JSON.",
+                Description = "Đánh giá hồ sơ ứng tuyển giảng viên. Trả về JSON.",
                 Category = PromptCategory.Moderation,
-                Template = @"Bạn là chuyên gia đánh giá hồ sơ ứng tuyển giảng viên. Nhiệm vụ: đánh giá hồ sơ dưới đây theo các phần: Bio & Headline, Expertise Areas, Education, Work Experience, Identity Documents (kèm ảnh CCCD mặt trước/sau nếu có), Certificates (kèm ảnh/chứng chỉ nếu có).
+                Template = @"Bạn là chuyên gia đánh giá hồ sơ giảng viên.
 
-Với mỗi phần, chấm Status: ""Valid"" (đạt), ""Warning"" (cần cải thiện), ""Invalid"" (không đạt); Score 0-100; liệt kê Issues (các vấn đề) và Suggestions (gợi ý cải thiện). Phần Identity Documents và Certificates: kiểm tra cả nội dung text và ảnh đính kèm (rõ ràng, đầy đủ, hợp lệ).
+Nhiệm vụ: Đánh giá hồ sơ theo 6 phần:
+- Bio & Headline
+- Expertise Areas
+- Education
+- Work Experience
+- Identity Documents
+- Certificates
 
-Quy tắc: IsAccepted = true chỉ khi TotalScore >= 70 và không có phần nào Status = ""Invalid"". TotalScore là trung bình có trọng số (ưu tiên Education, Certificates, Work Experience, Identity Documents).
+Với mỗi phần, trả về:
+- status: ""Valid"" | ""Warning"" | ""Invalid""
+- score: 0–100
+- issues: liệt kê ngắn gọn vấn đề chính
+- suggestions: gợi ý cải thiện, đi thẳng vào hành động
 
-Trả về ĐÚNG MỘT đối tượng JSON (không markdown, không text thừa) với cấu trúc:
+Riêng Identity Documents và Certificates: đánh giá cả nội dung text và ảnh đính kèm.
+
+Quy tắc:
+- totalScore = trung bình có trọng số các phần
+- isAccepted = true chỉ khi totalScore ≥ 70 và KHÔNG có phần nào status = ""Invalid""
+
+Chỉ trả về MỘT JSON object (không markdown, không text thừa):
+
 {
   ""isAccepted"": boolean,
-  ""totalScore"": number (0-100),
-  ""feedbackSummary"": ""string tóm tắt đánh giá"",
+  ""totalScore"": number,
+  ""feedbackSummary"": ""tóm tắt ngắn gọn, thân thiện, tiếng Việt"",
   ""details"": [
-    { ""sectionName"": ""string"", ""status"": ""Valid""|""Warning""|""Invalid"", ""score"": number, ""issues"": [""string""], ""suggestions"": [""string""] }
+    {
+      ""sectionName"": string,
+      ""status"": ""Valid"" | ""Warning"" | ""Invalid"",
+      ""score"": number,
+      ""issues"": [string],
+      ""suggestions"": [string]
+    }
   ],
-  ""additionalFeedback"": ""string (tùy chọn)""
+  ""additionalFeedback"": ""lời khuyên tổng thể, tiếng Việt""
 }
 
---- HỒ SƠ ỨNG TUYỂN ---
-
+--- HỒ SƠ ---
 {ApplicationText}",
-                SystemPrompt = "Bạn là chuyên gia tuyển dụng giảng viên, đánh giá công bằng, khách quan. Phân tích cả nội dung text và ảnh đính kèm (CCCD, chứng chỉ).",
+                SystemPrompt = "Bạn là chuyên gia tuyển dụng giảng viên, đánh giá công bằng, khách quan.",
                 Version = "1.0.0",
                 IsActive = true,
-                Variables = @"{""ApplicationText"": ""nội dung hồ sơ (text + mô tả thứ tự ảnh đính kèm)""}",
+                Variables = @"{""ApplicationText"": ""nội dung hồ sơ""}",
                 MaxTokens = 4096,
                 Temperature = 0.6m,
                 TopP = 0.9m,

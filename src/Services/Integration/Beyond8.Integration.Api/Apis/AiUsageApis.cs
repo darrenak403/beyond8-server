@@ -20,7 +20,7 @@ public static class AiUsageApis
 
     private static RouteGroupBuilder MapAiUsageRoutes(this RouteGroupBuilder group)
     {
-        group.MapGet("/my-usage", GetMyUsage)
+        group.MapGet("/me", GetMyUsage)
             .WithName("GetMyUsage")
             .WithDescription("Lấy lịch sử sử dụng AI của người dùng hiện tại")
             .Produces<ApiResponse<List<AiUsageResponse>>>(StatusCodes.Status200OK)

@@ -6,7 +6,7 @@ public class GeminiConfiguration
 
     public string ApiKey { get; set; } = string.Empty;
     public string ApiEndpoint { get; set; } = "https://generativelanguage.googleapis.com/v1beta";
-    public string DefaultModel { get; set; } = "gemini-1.5-flash";
+    public string DefaultModel { get; set; } = "gemini-2.0-flash";
     public int MaxRetries { get; set; } = 3;
     public int TimeoutSeconds { get; set; } = 30;
     public int RequestsPerMinute { get; set; } = 60;

@@ -42,8 +42,10 @@ public static class ExternalServiceRegistrationExtensions
 
         var integrationService = builder.AddProject<Projects.Beyond8_Integration_Api>("Integration-Service")
             .WithReference(integrationDb)
+            .WithReference(redis)
             .WithReference(rabbitMq)
             .WaitFor(postgres)
+            .WaitFor(redis)
             .WaitFor(rabbitMq);
 
         var apiGateway = builder.AddYarp("api-gateway")
