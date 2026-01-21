@@ -116,6 +116,7 @@ public static class Bootstrapper
         builder.Services.AddScoped<IGeminiService, GeminiService>();
         builder.Services.AddScoped<IEmailService, EmailService>();
         builder.Services.AddScoped<IVnptEkycService, VnptEkycService>();
+        builder.Services.AddScoped<IAIService, AIService>();
 
         // Register validators
         builder.Services.AddValidatorsFromAssemblyContaining<UploadFileRequest>();
