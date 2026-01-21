@@ -11,8 +11,8 @@ public interface IInstructorService
         CreateInstructorProfileRequest request, Guid userId);
     Task<ApiResponse<InstructorProfileResponse>> ApproveInstructorApplicationAsync(
         Guid profileId, Guid adminId);
-    Task<ApiResponse<InstructorProfileResponse>> RejectInstructorApplicationAsync(
-        Guid profileId, RejectInstructorApplicationRequest request, Guid adminId);
+    Task<ApiResponse<InstructorProfileResponse>> NotApproveInstructorApplicationAsync(
+        Guid profileId, NotApproveInstructorApplicationRequest request, Guid adminId);
     Task<ApiResponse<List<InstructorProfileResponse>>> GetPendingApplicationsAsync();
 
     // Quản lý hồ sơ
@@ -27,4 +27,7 @@ public interface IInstructorService
     // Analytics (Luồng 5)
     // Task<ApiResponse<bool>> UpdateInstructorStatisticsAsync(
     //     Guid instructorId, UpdateInstructorStatisticsRequest request);
+    Task<ApiResponse<List<InstructorProfileResponse>>> SearchInstructorsAsync(
+        string? searchTerm, List<string>? expertiseAreas, int pageNumber, int pageSize);
+    Task<ApiResponse<List<InstructorProfileResponse>>> GetTopInstructorsByRatingAsync(int count);
 }

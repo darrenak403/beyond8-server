@@ -14,6 +14,15 @@ public class UpdateUserRequestValidator : AbstractValidator<UpdateUserRequest>
                 .MaximumLength(100).WithMessage("Họ tên không được vượt quá 100 ký tự");
         });
 
+        When(x => x.DateOfBirth.HasValue, () =>
+        {
+            RuleFor(x => x.DateOfBirth!.Value.Date)
+                .LessThanOrEqualTo(DateTime.Now.Date)
+                .WithMessage("Ngày sinh không được là ngày trong tương lai")
+                .GreaterThan(DateTime.Now.AddYears(-120).Date)
+                .WithMessage("Ngày sinh không hợp lệ");
+        });
+
         When(x => !string.IsNullOrEmpty(x.PhoneNumber), () =>
         {
             RuleFor(x => x.PhoneNumber)

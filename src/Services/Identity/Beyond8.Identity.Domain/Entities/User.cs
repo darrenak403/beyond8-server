@@ -19,6 +19,8 @@ namespace Beyond8.Identity.Domain.Entities
         [MaxLength(100)]
         public string FullName { get; set; } = null!;
 
+        public DateTime? DateOfBirth { get; set; }
+
         [MaxLength(500)]
         public string? AvatarUrl { get; set; }
 

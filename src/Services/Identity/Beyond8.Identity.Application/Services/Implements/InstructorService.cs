@@ -1,3 +1,4 @@
+using Beyond8.Common.Events.Identity;
 using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
 using Beyond8.Identity.Application.Dtos.Instructors;
@@ -6,6 +7,7 @@ using Beyond8.Identity.Application.Services.Interfaces;
 using Beyond8.Identity.Domain.Entities;
 using Beyond8.Identity.Domain.Enums;
 using Beyond8.Identity.Domain.Repositories.Interfaces;
+using MassTransit;
 using Microsoft.Extensions.Logging;
 
 namespace Beyond8.Identity.Application.Services.Implements;
@@ -13,7 +15,7 @@ namespace Beyond8.Identity.Application.Services.Implements;
 public class InstructorService(
     ILogger<InstructorService> logger,
     IUnitOfWork unitOfWork,
-    ICurrentUserService currentUserService
+    IPublishEndpoint publishEndpoint
 ) : IInstructorService
 {
 
@@ -79,10 +81,7 @@ public class InstructorService(
                 return ApiResponse<InstructorProfileResponse>.FailureResponse("Người dùng không tồn tại.");
             }
 
-            var existingProfile = await unitOfWork.InstructorProfileRepository.FindOneAsync(
-                p => p.UserId == userId && p.DeletedAt == null
-            );
-
+            var existingProfile = await unitOfWork.InstructorProfileRepository.FindOneAsync(p => p.UserId == userId);
             if (existingProfile != null)
             {
                 logger.LogWarning("User {UserId} already has an instructor application with status {Status}",
@@ -105,6 +104,8 @@ public class InstructorService(
             {
                 UserId = userId,
                 VerificationStatus = VerificationStatus.Pending,
+                CreatedBy = userId,
+                CreatedAt = DateTime.UtcNow
             };
 
             instructorProfile.ToCreateInstructorProfileRequest(request);
@@ -112,33 +113,7 @@ public class InstructorService(
             await unitOfWork.InstructorProfileRepository.AddAsync(instructorProfile);
             await unitOfWork.SaveChangesAsync();
 
-            logger.LogInformation("Instructor application submitted successfully for user {UserId} with profile {ProfileId}",
-                userId, instructorProfile.Id);
-
-            // Query lại profile với User
-            var savedProfile = await unitOfWork.InstructorProfileRepository.GetByIdAsync(instructorProfile.Id);
-            if (savedProfile != null)
-            {
-                var profileUser = await unitOfWork.UserRepository.GetByIdAsync(savedProfile.UserId);
-                if (profileUser != null)
-                {
-                    savedProfile.User = profileUser;
-                }
-            }
-
-            if (savedProfile == null || savedProfile.User == null)
-            {
-                logger.LogError("Failed to retrieve saved instructor profile {ProfileId} for user {UserId}",
-                    instructorProfile.Id, userId);
-                return ApiResponse<InstructorProfileResponse>.FailureResponse(
-                    "Đã xảy ra lỗi khi lưu đơn đăng ký.");
-            }
-
-            var response = savedProfile.ToInstructorProfileResponse();
-            return ApiResponse<InstructorProfileResponse>.SuccessResponse(
-                response,
-                "Đơn đăng ký giảng viên đã được gửi thành công. Chúng tôi sẽ xem xét và phản hồi sớm nhất."
-            );
+            return ApiResponse<InstructorProfileResponse>.SuccessResponse(instructorProfile.ToInstructorProfileResponse(user), "Đã gửi đơn đăng ký giảng viên thành công. Chúng tôi sẽ xem xét và phản hồi sớm nhất.");
         }
         catch (Exception ex)
         {
@@ -151,40 +126,37 @@ public class InstructorService(
     {
         try
         {
-            var (isValid, errorMessage, profile) = await ValidateProfileForReviewAsync(profileId);
+            var (isValid, errorMessage, profile, user) = await ValidateProfileForReviewAsync(profileId);
             if (!isValid)
             {
                 logger.LogWarning("Cannot approve profile {ProfileId}: {Reason}", profileId, errorMessage);
                 return ApiResponse<InstructorProfileResponse>.FailureResponse(errorMessage!);
             }
 
-            // 2. Load user
-            var user = await unitOfWork.UserRepository.GetByIdAsync(profile!.UserId);
-            if (user == null)
-            {
-                logger.LogError("User {UserId} not found for profile {ProfileId}", profile.UserId, profileId);
-                return ApiResponse<InstructorProfileResponse>.FailureResponse("Người dùng không tồn tại.");
-            }
+            logger.LogInformation("Adding instructor role to user {UserId}", user!.Id);
+            user!.Roles.Add(UserRole.Instructor);
 
-            // 3. Update profile
-            profile.VerificationStatus = VerificationStatus.Verified;
+            logger.LogInformation("Approving instructor application for profile {ProfileId} by admin {AdminId}", profileId, adminId);
+            profile!.VerificationStatus = VerificationStatus.Verified;
             profile.VerifiedAt = DateTime.UtcNow;
             profile.VerifiedBy = adminId;
 
-            // 4. Update user role
-            if (!user.Roles.Contains(UserRole.Instructor))
-            {
-                user.Roles.Add(UserRole.Instructor);
-                user.UpdatedAt = DateTime.UtcNow;
-                user.UpdatedBy = adminId;
-            }
+            await unitOfWork.UserRepository.UpdateAsync(user.Id, user);
+            await unitOfWork.InstructorProfileRepository.UpdateAsync(profile.Id, profile);
+            await unitOfWork.SaveChangesAsync();
 
-            logger.LogInformation("Approving instructor application for profile {ProfileId} by admin {AdminId}",
-                profileId, adminId);
+            // Publish event for approval email
+            var profileUrl = $"https://beyond8.dev/instructor/{user.Id}"; // TODO: Update with actual profile URL
+            var approvalEvent = new InstructorApprovalEmailEvent(
+                user.Email,
+                user.FullName,
+                profileUrl,
+                DateTime.UtcNow
+            );
+            await publishEndpoint.Publish(approvalEvent);
 
-            // 5. Save and return response
-            return await UpdateProfileAndGetResponseAsync(
-                profile, adminId, "Đơn đăng ký giảng viên đã được duyệt thành công.");
+            return ApiResponse<InstructorProfileResponse>.SuccessResponse(profile.ToInstructorProfileResponse(user), "Đơn đăng ký giảng viên đã được duyệt thành công.");
+
         }
         catch (Exception ex)
         {
@@ -195,43 +167,55 @@ public class InstructorService(
         }
     }
 
-    public async Task<ApiResponse<InstructorProfileResponse>> RejectInstructorApplicationAsync(Guid profileId, RejectInstructorApplicationRequest request, Guid adminId)
+    public async Task<ApiResponse<InstructorProfileResponse>> NotApproveInstructorApplicationAsync(Guid profileId, NotApproveInstructorApplicationRequest request, Guid adminId)
     {
         try
         {
-            // 1. Validate rejection reason
-            if (string.IsNullOrWhiteSpace(request.RejectionReason))
-            {
-                logger.LogWarning("Rejection reason is required for profile {ProfileId}", profileId);
-                return ApiResponse<InstructorProfileResponse>.FailureResponse(
-                    "Lý do từ chối không được để trống.");
-            }
-
-            // 2. Validate profile
-            var (isValid, errorMessage, profile) = await ValidateProfileForReviewAsync(profileId);
+            var (isValid, errorMessage, profile, user) = await ValidateProfileForReviewAsync(profileId);
             if (!isValid)
             {
                 logger.LogWarning("Cannot reject profile {ProfileId}: {Reason}", profileId, errorMessage);
                 return ApiResponse<InstructorProfileResponse>.FailureResponse(errorMessage!);
             }
 
-            // 3. Update profile
+            logger.LogInformation("Not approving instructor application for profile {ProfileId} by admin {AdminId} with reason: {Reason}", profileId, adminId, request.NotApproveReason);
+
             profile!.VerificationStatus = request.VerificationStatus;
-            profile.VerificationNotes = request.RejectionReason;
+            profile.VerificationNotes = request.NotApproveReason;
 
-            logger.LogInformation("Rejecting instructor application for profile {ProfileId} by admin {AdminId} with reason: {Reason}",
-                profileId, adminId, request.RejectionReason);
+            await unitOfWork.InstructorProfileRepository.UpdateAsync(profile.Id, profile);
+            await unitOfWork.SaveChangesAsync();
 
-            // 4. Save and return response
-            return await UpdateProfileAndGetResponseAsync(
-                profile, adminId, "Đơn đăng ký giảng viên đã được từ chối.");
+            // Publish appropriate event based on verification status
+            if (profile.VerificationStatus == VerificationStatus.Rejected)
+            {
+                var rejectionEvent = new InstructorRejectionEmailEvent(
+                    user!.Email,
+                    user.FullName,
+                    request.NotApproveReason,
+                    DateTime.UtcNow
+                );
+                await publishEndpoint.Publish(rejectionEvent);
+            }
+            else if (profile.VerificationStatus == VerificationStatus.RequestUpdate)
+            {
+                var updateRequestEvent = new InstructorUpdateRequestEmailEvent(
+                    user!.Email,
+                    user.FullName,
+                    request.NotApproveReason,
+                    DateTime.UtcNow
+                );
+                await publishEndpoint.Publish(updateRequestEvent);
+            }
+
+            return ApiResponse<InstructorProfileResponse>.SuccessResponse(profile.ToInstructorProfileResponse(user!), "Đơn đăng ký giảng viên đã được không phê duyệt.");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error rejecting instructor application {ProfileId} by admin {AdminId}",
+            logger.LogError(ex, "Error not approving instructor application {ProfileId} by admin {AdminId}",
                 profileId, adminId);
             return ApiResponse<InstructorProfileResponse>.FailureResponse(
-                "Đã xảy ra lỗi khi từ chối đơn đăng ký giảng viên.");
+                "Đã xảy ra lỗi khi không phê duyệt đơn đăng ký giảng viên.");
         }
     }
 
@@ -333,4 +317,56 @@ public class InstructorService(
     {
         throw new NotImplementedException();
     }
+
+    public Task<ApiResponse<bool>> UpdateInstructorStatisticsAsync(Guid instructorId, UpdateInstructorStatisticsRequest request)
+    {
+        throw new NotImplementedException();
+    }
+
+    //Helpers
+    private async Task<(bool IsValid, string? ErrorMessage, InstructorProfile? Profile)> ValidateProfileForReviewAsync(Guid profileId)
+    {
+        var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(
+            p => p.Id == profileId && p.DeletedAt == null);
+
+        if (profile == null)
+            return (false, "Đơn đăng ký giảng viên không tồn tại.", null);
+
+        if (profile.VerificationStatus != VerificationStatus.Pending)
+            return (false, "Chỉ có thể xử lý đơn đăng ký đang chờ duyệt.", null);
+
+        return (true, null, profile);
+    }
+
+    private async Task<ApiResponse<InstructorProfileResponse>> UpdateProfileAndGetResponseAsync(
+     InstructorProfile profile, Guid adminId, string successMessage)
+    {
+        profile.UpdatedAt = DateTime.UtcNow;
+        profile.UpdatedBy = adminId;
+
+        await unitOfWork.SaveChangesAsync();
+
+        // Query lại profile với User
+        var updatedProfile = await unitOfWork.InstructorProfileRepository.GetByIdAsync(profile.Id);
+        if (updatedProfile != null)
+        {
+            // Load User navigation property
+            var user = await unitOfWork.UserRepository.GetByIdAsync(updatedProfile.UserId);
+            if (user != null)
+            {
+                updatedProfile.User = user;
+            }
+        }
+
+        if (updatedProfile == null || updatedProfile.User == null)
+        {
+            logger.LogError("Failed to retrieve updated profile {ProfileId} with User", profile.Id);
+            return ApiResponse<InstructorProfileResponse>.FailureResponse(
+                "Đã xảy ra lỗi khi lấy thông tin đơn đăng ký.");
+        }
+
+        var response = updatedProfile.ToInstructorProfileResponse();
+        return ApiResponse<InstructorProfileResponse>.SuccessResponse(response, successMessage);
+    }
+
 }

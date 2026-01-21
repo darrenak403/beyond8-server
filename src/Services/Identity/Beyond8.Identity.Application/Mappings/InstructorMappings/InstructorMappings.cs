@@ -1,20 +1,20 @@
 using System.Text.Json;
 using Beyond8.Identity.Application.Dtos.Instructors;
-using Beyond8.Identity.Application.Dtos.Users;
 using Beyond8.Identity.Application.Mappings.AuthMappings;
 using Beyond8.Identity.Domain.Entities;
+using Beyond8.Identity.Domain.Enums;
 using Beyond8.Identity.Domain.JSONFields;
 
 namespace Beyond8.Identity.Application.Mappings;
 
 public static class InstructorProfileMappings
 {
-    public static InstructorProfileResponse ToInstructorProfileResponse(this InstructorProfile instructorProfile)
+    public static InstructorProfileResponse ToInstructorProfileResponse(this InstructorProfile instructorProfile, User user)
     {
         return new InstructorProfileResponse
         {
             Id = instructorProfile.Id,
-            User = instructorProfile.User.ToUserSimpleResponse(),
+            User = user.ToUserSimpleResponse(),
             Bio = instructorProfile.Bio,
             Headline = instructorProfile.Headline,
             ExpertiseAreas = string.IsNullOrEmpty(instructorProfile.ExpertiseAreas)
@@ -79,47 +79,35 @@ public static class InstructorProfileMappings
         };
     }
 
-    public static InstructorProfileSimpleResponse ToInstructorProfileSimpleResponse(this InstructorProfile instructorProfile)
+    public static InstructorProfile ToInstructorProfileEntity(this CreateInstructorProfileRequest request, Guid userId)
     {
-        return new InstructorProfileSimpleResponse
+        return new InstructorProfile
         {
-            Id = instructorProfile.Id,
-            User = instructorProfile.User.ToUserSimpleResponse(),
-            Headline = instructorProfile.Headline,
-            ExpertiseAreas = string.IsNullOrEmpty(instructorProfile.ExpertiseAreas)
-                ? null
-                : JsonSerializer.Deserialize<List<string>>(instructorProfile.ExpertiseAreas),
-            TotalStudents = instructorProfile.TotalStudents,
-            TotalCourses = instructorProfile.TotalCourses,
-            AvgRating = instructorProfile.AvgRating,
-            VerificationStatus = instructorProfile.VerificationStatus
+            UserId = userId,
+            Bio = request.Bio,
+            Headline = request.Headline,
+            ExpertiseAreas = request.ExpertiseAreas.Any()
+                ? JsonSerializer.Serialize(request.ExpertiseAreas)
+                : null,
+            Education = request.Education.Any()
+                ? JsonSerializer.Serialize(request.Education)
+                : null,
+            WorkExperience = request.WorkExperience?.Any() == true
+                ? JsonSerializer.Serialize(request.WorkExperience)
+                : null,
+            SocialLinks = request.SocialLinks != null
+                ? JsonSerializer.Serialize(request.SocialLinks)
+                : null,
+            BankInfo = request.BankInfo,
+            TaxId = request.TaxId,
+            IdentityDocuments = request.IdentityDocuments.Any()
+                ? JsonSerializer.Serialize(request.IdentityDocuments)
+                : null,
+            Certificates = request.Certificates?.Any() == true
+                ? JsonSerializer.Serialize(request.Certificates)
+                : null,
+            VerificationStatus = VerificationStatus.Pending
         };
-    }
-
-    public static void ToCreateInstructorProfileRequest(this InstructorProfile instructorProfile, CreateInstructorProfileRequest request)
-    {
-        instructorProfile.Bio = request.Bio;
-        instructorProfile.Headline = request.Headline;
-        instructorProfile.ExpertiseAreas = request.ExpertiseAreas.Any()
-            ? JsonSerializer.Serialize(request.ExpertiseAreas)
-            : null;
-        instructorProfile.Education = request.Education.Any()
-            ? JsonSerializer.Serialize(request.Education)
-            : null;
-        instructorProfile.WorkExperience = request.WorkExperience?.Any() == true
-            ? JsonSerializer.Serialize(request.WorkExperience)
-            : null;
-        instructorProfile.SocialLinks = request.SocialLinks != null
-            ? JsonSerializer.Serialize(request.SocialLinks)
-            : null;
-        instructorProfile.BankInfo = request.BankInfo;
-        instructorProfile.TaxId = request.TaxId;
-        instructorProfile.IdentityDocuments = request.IdentityDocuments.Any()
-            ? JsonSerializer.Serialize(request.IdentityDocuments)
-            : null;
-        instructorProfile.Certificates = request.Certificates?.Any() == true
-            ? JsonSerializer.Serialize(request.Certificates)
-            : null;
     }
 
     public static void ToUpdateInstructorProfileRequest(this InstructorProfile instructorProfile, UpdateInstructorProfileRequest request)

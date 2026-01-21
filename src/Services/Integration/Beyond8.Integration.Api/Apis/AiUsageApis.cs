@@ -23,18 +23,17 @@ public static class AiUsageApis
         group.MapGet("/my-usage", GetMyUsage)
             .WithName("GetMyUsage")
             .WithDescription("Lấy lịch sử sử dụng AI của người dùng hiện tại")
-            .RequireAuthorization()
             .Produces<ApiResponse<List<AiUsageResponse>>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<List<AiUsageResponse>>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
-        // group.MapGet("/all", GetAllUsage)
-        //     .WithName("GetAllUsage")
-        //     .WithDescription("Lấy tất cả records sử dụng AI (Admin only)")
-        //     .RequireAuthorization(r => r.RequireRole("Admin"))
-        //     .Produces<ApiResponse<List<AiUsageResponse>>>(StatusCodes.Status200OK)
-        //     .Produces<ApiResponse<List<AiUsageResponse>>>(StatusCodes.Status400BadRequest)
-        //     .Produces(StatusCodes.Status401Unauthorized);
+        group.MapGet("/all", GetAllUsage)
+            .WithName("GetAllUsage")
+            .WithDescription("Lấy tất cả records sử dụng AI (Admin only)")
+            .RequireAuthorization(r => r.RequireRole("Admin"))
+            .Produces<ApiResponse<List<AiUsageResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<List<AiUsageResponse>>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
 
         group.MapGet("/user/{userId:guid}", GetUsageByUser)
             .WithName("GetUsageByUser")
@@ -44,21 +43,21 @@ public static class AiUsageApis
             .Produces<ApiResponse<List<AiUsageResponse>>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
-        // group.MapGet("/statistics", GetUsageStatistics)
-        //     .WithName("GetUsageStatistics")
-        //     .WithDescription("Lấy thống kê tổng quan sử dụng AI (Admin only)")
-        //     .RequireAuthorization(r => r.RequireRole("Admin"))
-        //     .Produces<ApiResponse<AiUsageStatisticsResponse>>(StatusCodes.Status200OK)
-        //     .Produces<ApiResponse<AiUsageStatisticsResponse>>(StatusCodes.Status400BadRequest)
-        //     .Produces(StatusCodes.Status401Unauthorized);
+        group.MapGet("/statistics", GetUsageStatistics)
+            .WithName("GetUsageStatistics")
+            .WithDescription("Lấy thống kê tổng quan sử dụng AI (Admin only)")
+            .RequireAuthorization(r => r.RequireRole("Admin"))
+            .Produces<ApiResponse<AiUsageStatisticsResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<AiUsageStatisticsResponse>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
 
-        // group.MapGet("/by-date-range", GetUsageByDateRange)
-        //     .WithName("GetUsageByDateRange")
-        //     .WithDescription("Lấy lịch sử sử dụng AI trong khoảng thời gian (Admin only)")
-        //     .RequireAuthorization("AdminOnly")
-        //     .Produces<ApiResponse<List<AiUsageResponse>>>(StatusCodes.Status200OK)
-        //     .Produces<ApiResponse<List<AiUsageResponse>>>(StatusCodes.Status400BadRequest)
-        //     .Produces(StatusCodes.Status401Unauthorized);
+        group.MapGet("/by-date-range", GetUsageByDateRange)
+            .WithName("GetUsageByDateRange")
+            .WithDescription("Lấy lịch sử sử dụng AI trong khoảng thời gian (Admin only)")
+            .RequireAuthorization(r => r.RequireRole("Admin"))
+            .Produces<ApiResponse<List<AiUsageResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<List<AiUsageResponse>>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
 
         return group;
     }
@@ -73,14 +72,14 @@ public static class AiUsageApis
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
-    // private static async Task<IResult> GetAllUsage(
-    //     [FromServices] IAiUsageService usageService,
-    //     [AsParameters] PaginationRequest paginationRequest)
-    // {
-    //     var result = await usageService.GetAllUsageAsync(paginationRequest);
+    private static async Task<IResult> GetAllUsage(
+        [FromServices] IAiUsageService usageService,
+        [AsParameters] PaginationRequest paginationRequest)
+    {
+        var result = await usageService.GetAllUsageAsync(paginationRequest);
 
-    //     return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
-    // }
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
 
     private static async Task<IResult> GetUsageByUser(
         [FromRoute] Guid userId,
@@ -92,24 +91,21 @@ public static class AiUsageApis
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
-    // private static async Task<IResult> GetUsageStatistics(
-    //     [FromServices] IAiUsageService usageService,
-    //     [AsParameters] PaginationRequest paginationRequest)
-    // {
-    //     var result = await usageService.GetUsageStatisticsAsync(paginationRequest);
+    private static async Task<IResult> GetUsageStatistics(
+        [FromServices] IAiUsageService usageService)
+    {
+        var result = await usageService.GetUsageStatisticsAsync();
 
-    //     return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
-    // }
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
 
-    // private static async Task<IResult> GetUsageByDateRange(
-    //     [FromServices] IAiUsageService usageService,
-    //     [FromQuery] DateTime startDate,
-    //     [FromQuery] DateTime endDate,
-    //     [AsParameters] PaginationRequest paginationRequest)
-    // {
-    //     var result = await usageService.GetUsageByDateRangeAsync(startDate, endDate, pageNumber, pageSize);
+    private static async Task<IResult> GetUsageByDateRange(
+        [FromServices] IAiUsageService usageService,
+        [AsParameters] DateRangePaginationRequest request)
+    {
+        var result = await usageService.GetUsageByDateRangeAsync(request);
 
-    //     return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
-    // }
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
 }
 
