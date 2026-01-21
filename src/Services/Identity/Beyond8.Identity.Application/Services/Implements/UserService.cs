@@ -33,16 +33,20 @@ public class UserService(
         }
     }
 
-    public async Task<ApiResponse<List<UserResponse>>> GetAllUsersAsync(PaginationRequest request)
+    public async Task<ApiResponse<List<UserResponse>>> GetAllUsersAsync(PaginationUserRequest request)
     {
         try
         {
-            var users = await unitOfWork.UserRepository.GetPagedAsync(
-                pageNumber: request.PageNumber,
-                pageSize: request.PageSize,
-                filter: null,
-                orderBy: query => query.OrderBy(u => u.CreatedAt)
-            );
+            var users = await unitOfWork.UserRepository.SearchUsersPagedAsync(
+                request.PageNumber,
+                request.PageSize,
+                request.Email,
+                request.FullName,
+                request.PhoneNumber,
+                request.IsEmailVerified,
+                request.Role,
+                request.IsDescending.HasValue ? request.IsDescending.Value : true);
+
             var userResponses = users.Items.Select(u => u.ToUserResponse()).ToList();
 
             logger.LogInformation("Retrieved {Count} users on page {PageNumber}", userResponses.Count, request.PageNumber);

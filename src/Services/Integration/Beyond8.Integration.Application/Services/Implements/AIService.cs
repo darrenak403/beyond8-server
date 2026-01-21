@@ -25,15 +25,15 @@ public class AiService(
         Converters = { new JsonStringEnumConverter() }
     };
 
-    public async Task<ApiResponse<AiInstructorApplicationReviewResponse>> InstructorApplicationReviewAsync(
-        CreateInstructorProfileRequest request,
+    public async Task<ApiResponse<AiProfileReviewResponse>> InstructorProfileReviewAsync(
+        ProfileReviewRequest request,
         Guid userId)
     {
         try
         {
             var promptRes = await aiPromptService.GetPromptByNameAsync(InstructorReviewPromptName);
             if (!promptRes.IsSuccess || promptRes.Data == null)
-                return ApiResponse<AiInstructorApplicationReviewResponse>.FailureResponse(
+                return ApiResponse<AiProfileReviewResponse>.FailureResponse(
                     promptRes.Message ?? "Không tìm thấy prompt đánh giá hồ sơ.");
 
             var t = promptRes.Data;
@@ -44,7 +44,7 @@ public class AiService(
 
             var geminiResult = await geminiService.GenerateContentAsync(
                 fullPrompt,
-                AiOperation.InstructorApplicationReview,
+                AiOperation.ProfileReview,
                 userId,
                 promptId: t.Id,
                 maxTokens: t.MaxTokens,
@@ -53,26 +53,26 @@ public class AiService(
                 inlineImages: imageParts.Count > 0 ? imageParts : null);
 
             if (!geminiResult.IsSuccess || geminiResult.Data == null)
-                return ApiResponse<AiInstructorApplicationReviewResponse>.FailureResponse(
+                return ApiResponse<AiProfileReviewResponse>.FailureResponse(
                     geminiResult.Message ?? "Đã xảy ra lỗi khi đánh giá hồ sơ.");
 
             var parsed = TryParseReviewResponse(geminiResult.Data.Content, userId);
             if (parsed == null)
-                return ApiResponse<AiInstructorApplicationReviewResponse>.FailureResponse(
+                return ApiResponse<AiProfileReviewResponse>.FailureResponse(
                     "Không thể phân tích kết quả đánh giá từ AI. Vui lòng thử lại.");
 
-            return ApiResponse<AiInstructorApplicationReviewResponse>.SuccessResponse(
+            return ApiResponse<AiProfileReviewResponse>.SuccessResponse(
                 parsed, "Đánh giá hồ sơ giảng viên thành công.");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error in InstructorApplicationReview for user {UserId}", userId);
-            return ApiResponse<AiInstructorApplicationReviewResponse>.FailureResponse(
+            return ApiResponse<AiProfileReviewResponse>.FailureResponse(
                 "Đã xảy ra lỗi khi đánh giá hồ sơ giảng viên.");
         }
     }
 
-    private async Task<(string ApplicationText, List<GeminiImagePart> ImageParts)> BuildApplicationTextAndImagesAsync(CreateInstructorProfileRequest r)
+    private async Task<(string ApplicationText, List<GeminiImagePart> ImageParts)> BuildApplicationTextAndImagesAsync(ProfileReviewRequest r)
     {
         var sb = new System.Text.StringBuilder();
         sb.AppendLine("## Bio\n" + (string.IsNullOrWhiteSpace(r.Bio) ? "(trống)" : r.Bio));
@@ -93,13 +93,6 @@ public class AiService(
         else
             sb.AppendLine("(trống)");
 
-        sb.AppendLine("\n## Identity Documents");
-        if (r.IdentityDocuments?.Count > 0)
-            foreach (var id in r.IdentityDocuments)
-                sb.AppendLine("- Giấy tờ định danh (ảnh đính kèm)");
-        else
-            sb.AppendLine("(trống)");
-
         sb.AppendLine("\n## Certificates");
         if (r.Certificates?.Count > 0)
             foreach (var c in r.Certificates)
@@ -108,11 +101,6 @@ public class AiService(
             sb.AppendLine("(trống)");
 
         var imageItems = new List<(string Descriptor, string Url)>();
-        foreach (var id in r.IdentityDocuments ?? [])
-        {
-            if (!string.IsNullOrWhiteSpace(id.FrontImg)) imageItems.Add(("CCCD mặt trước", id.FrontImg));
-            if (!string.IsNullOrWhiteSpace(id.BackImg)) imageItems.Add(("CCCD mặt sau", id.BackImg));
-        }
         foreach (var c in r.Certificates ?? [])
             if (!string.IsNullOrWhiteSpace(c.Url)) imageItems.Add(($"Chứng chỉ {c.Name}", c.Url));
 
@@ -133,12 +121,12 @@ public class AiService(
         else
             sb.AppendLine("Không có ảnh nào tải được.");
 
+        logger.LogInformation("Application text: {ApplicationText}", sb.ToString());
+        logger.LogInformation("Image parts: {ImageParts}", imageParts.Count);
+
         return (sb.ToString(), imageParts);
     }
 
-    /// <summary>
-    /// Ưu tiên tải từ S3 theo key (key trực tiếp hoặc rút từ URL CloudFront/S3); nếu không có key hoặc S3 lỗi thì tải qua HTTP.
-    /// </summary>
     private async Task<(byte[]? Data, string? MimeType)> DownloadImageAsync(string urlOrKey)
     {
         if (string.IsNullOrWhiteSpace(urlOrKey)) return (null, null);
@@ -162,7 +150,7 @@ public class AiService(
         return (data2, ct ?? "image/jpeg");
     }
 
-    private AiInstructorApplicationReviewResponse? TryParseReviewResponse(string content, Guid userId)
+    private AiProfileReviewResponse? TryParseReviewResponse(string content, Guid userId)
     {
         var json = ExtractJson(content);
         if (string.IsNullOrWhiteSpace(json))
@@ -174,7 +162,7 @@ public class AiService(
 
         try
         {
-            return JsonSerializer.Deserialize<AiInstructorApplicationReviewResponse>(json, JsonOptions);
+            return JsonSerializer.Deserialize<AiProfileReviewResponse>(json, JsonOptions);
         }
         catch (JsonException ex)
         {

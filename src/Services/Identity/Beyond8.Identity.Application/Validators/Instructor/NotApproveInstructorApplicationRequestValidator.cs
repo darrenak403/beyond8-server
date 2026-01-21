@@ -4,9 +4,9 @@ using FluentValidation;
 
 namespace Beyond8.Identity.Application.Validators.Instructor;
 
-public class NotApproveInstructorApplicationRequestValidator : AbstractValidator<NotApproveInstructorApplicationRequest>
+public class NotApproveInstructorProfileRequestValidator : AbstractValidator<NotApproveInstructorProfileRequest>
 {
-    public NotApproveInstructorApplicationRequestValidator()
+    public NotApproveInstructorProfileRequestValidator()
     {
         RuleFor(x => x.NotApproveReason)
             .NotEmpty().WithMessage("Lý do không phê duyệt không được để trống")

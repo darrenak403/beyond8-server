@@ -21,21 +21,22 @@ public static class AiApis
 
     private static RouteGroupBuilder MapAiRoutes(this RouteGroupBuilder group)
     {
-        group.MapPost("/instructor-application-review", InstructorApplicationReview)
-            .WithName("InstructorApplicationReview")
-            .WithDescription("Review instructor application")
-            .Produces<ApiResponse<AiInstructorApplicationReviewResponse>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<AiInstructorApplicationReviewResponse>>(StatusCodes.Status400BadRequest);
+        group.MapPost("/profile-review", InstructorProfileReview)
+            .WithName("InstructorProfileReview")
+            .WithDescription("Review instructor profile by AI (Require Authorization)")
+            .RequireAuthorization()
+            .Produces<ApiResponse<AiProfileReviewResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<AiProfileReviewResponse>>(StatusCodes.Status400BadRequest);
 
         return group;
     }
 
-    private static async Task<IResult> InstructorApplicationReview(
-        [FromBody] CreateInstructorProfileRequest request,
+    private static async Task<IResult> InstructorProfileReview(
+        [FromBody] ProfileReviewRequest request,
         [FromServices] IAiService aiService,
         [FromServices] ICurrentUserService currentUserService)
     {
-        var result = await aiService.InstructorApplicationReviewAsync(request, currentUserService.UserId);
+        var result = await aiService.InstructorProfileReviewAsync(request, currentUserService.UserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 }

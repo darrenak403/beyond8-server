@@ -1,3 +1,4 @@
+using Beyond8.Identity.Domain.Entities;
 using Beyond8.Identity.Domain.JSONFields;
 
 public class UpdateInstructorProfileRequest

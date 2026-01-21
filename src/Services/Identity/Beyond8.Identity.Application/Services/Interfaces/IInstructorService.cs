@@ -1,28 +1,25 @@
 using System;
 using Beyond8.Common.Utilities;
 using Beyond8.Identity.Application.Dtos.Instructors;
+using Beyond8.Identity.Domain.Enums;
 
 namespace Beyond8.Identity.Application.Services.Interfaces;
 
 public interface IInstructorService
 {
-    // LUỒNG 1: Đăng ký giảng viên
-    Task<ApiResponse<InstructorProfileResponse>> SubmitInstructorApplicationAsync(
-        CreateInstructorProfileRequest request, Guid userId);
-    Task<ApiResponse<InstructorProfileResponse>> ApproveInstructorApplicationAsync(
-        Guid profileId, Guid adminId);
-    Task<ApiResponse<InstructorProfileResponse>> NotApproveInstructorApplicationAsync(
-        Guid profileId, NotApproveInstructorApplicationRequest request, Guid adminId);
-    Task<ApiResponse<List<InstructorProfileResponse>>> GetPendingApplicationsAsync();
+    Task<ApiResponse<InstructorProfileResponse>> SubmitInstructorProfileAsync(CreateInstructorProfileRequest request, Guid userId);
 
-    // Quản lý hồ sơ
+    Task<ApiResponse<InstructorProfileResponse>> ApproveInstructorProfileAsync(Guid id, Guid adminId);
+
+    Task<ApiResponse<InstructorProfileResponse>> NotApproveInstructorProfileAsync(Guid id, NotApproveInstructorProfileRequest request, Guid adminId);
+
+    Task<ApiResponse<List<InstructorProfileResponse>>> GetInstructorProfilesAsync(PaginationStatusRequest pagination);
+
     Task<ApiResponse<InstructorProfileResponse>> GetMyInstructorProfileAsync(Guid userId);
-    Task<ApiResponse<InstructorProfileResponse>> GetInstructorProfileByIdAsync(Guid profileId);
-    Task<ApiResponse<InstructorProfileResponse>> UpdateInstructorProfileAsync(
-        Guid userId, UpdateInstructorProfileRequest request);
-    Task<ApiResponse<List<InstructorProfileResponse>>> GetVerifiedInstructorsAsync(
-        int pageNumber, int pageSize);
-    Task<ApiResponse<List<InstructorProfileResponse>>> SearchInstructorsAsync(
-        string? searchTerm, List<string>? expertiseAreas, int pageNumber, int pageSize);
-    Task<ApiResponse<List<InstructorProfileResponse>>> GetTopInstructorsByRatingAsync(int count);
+
+    Task<ApiResponse<InstructorProfileResponse>> GetInstructorProfileByIdAsync(Guid id);
+
+    Task<ApiResponse<InstructorProfileAdminResponse>> GetInstructorProfileByIdForAdminAsync(Guid id);
+
+    Task<ApiResponse<InstructorProfileResponse>> UpdateInstructorProfileAsync(Guid userId, UpdateInstructorProfileRequest request);
 }
