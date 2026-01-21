@@ -114,18 +114,6 @@ public class CreateInstructorProfileRequestValidator : AbstractValidator<CreateI
             {
                 document.ChildRules(child =>
                 {
-                    child.RuleFor(d => d.Type)
-                        .NotEmpty().WithMessage("Loại giấy tờ không được để trống")
-                        .MaximumLength(50).WithMessage("Loại giấy tờ không được vượt quá 50 ký tự");
-
-                    child.RuleFor(d => d.Number)
-                        .NotEmpty().WithMessage("Số giấy tờ không được để trống")
-                        .MaximumLength(50).WithMessage("Số giấy tờ không được vượt quá 50 ký tự");
-
-                    child.RuleFor(d => d.IssuedDate)
-                        .NotEmpty().WithMessage("Ngày cấp không được để trống")
-                        .MaximumLength(50).WithMessage("Ngày cấp không được vượt quá 50 ký tự");
-
                     child.RuleFor(d => d.FrontImg)
                         .NotEmpty().WithMessage("Ảnh mặt trước không được để trống")
                         .Must(uri => Uri.TryCreate(uri, UriKind.Absolute, out _))

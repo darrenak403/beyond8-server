@@ -22,50 +22,39 @@ public class InstructorService(
     /// <summary>
     /// Start Helpers
     /// </summary>
-    private async Task<(bool IsValid, string? ErrorMessage, InstructorProfile? Profile)> ValidateProfileForReviewAsync(Guid profileId)
+    private async Task<(bool IsValid, string? ErrorMessage, InstructorProfile? Profile, User? User)> ValidateProfileForReviewAsync(Guid profileId)
     {
         var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(
             p => p.Id == profileId && p.DeletedAt == null);
 
         if (profile == null)
-            return (false, "Đơn đăng ký giảng viên không tồn tại.", null);
+            return (false, "Đơn đăng ký giảng viên không tồn tại.", null, null);
 
         if (profile.VerificationStatus != VerificationStatus.Pending)
-            return (false, "Chỉ có thể xử lý đơn đăng ký đang chờ duyệt.", null);
+            return (false, "Chỉ có thể xử lý đơn đăng ký đang chờ duyệt.", null, null);
 
-        return (true, null, profile);
+        var user = await unitOfWork.UserRepository.GetByIdAsync(profile.UserId);
+        if (user == null)
+            return (false, "Người dùng không tồn tại.", null, null);
+
+        return (true, null, profile, user);
     }
 
-    private async Task<ApiResponse<InstructorProfileResponse>> UpdateProfileAndGetResponseAsync(
-     InstructorProfile profile, Guid adminId, string successMessage)
+    private async Task<(bool IsSuccess, string? ErrorMessage, InstructorProfile? Profile, User? User)>
+    GetProfileWithUserAsync(Guid profileId)
     {
-        profile.UpdatedAt = DateTime.UtcNow;
-        profile.UpdatedBy = adminId;
+        var profile = await unitOfWork.InstructorProfileRepository.GetByIdAsync(profileId);
+        if (profile == null)
+            return (false, "Hồ sơ giảng viên không tồn tại.", null, null);
 
-        await unitOfWork.SaveChangesAsync();
+        var user = await unitOfWork.UserRepository.GetByIdAsync(profile.UserId);
+        if (user == null)
+            return (false, "Người dùng không tồn tại.", null, null);
 
-        // Query lại profile với User
-        var updatedProfile = await unitOfWork.InstructorProfileRepository.GetByIdAsync(profile.Id);
-        if (updatedProfile != null)
-        {
-            // Load User navigation property
-            var user = await unitOfWork.UserRepository.GetByIdAsync(updatedProfile.UserId);
-            if (user != null)
-            {
-                updatedProfile.User = user;
-            }
-        }
-
-        if (updatedProfile == null || updatedProfile.User == null)
-        {
-            logger.LogError("Failed to retrieve updated profile {ProfileId} with User", profile.Id);
-            return ApiResponse<InstructorProfileResponse>.FailureResponse(
-                "Đã xảy ra lỗi khi lấy thông tin đơn đăng ký.");
-        }
-
-        var response = updatedProfile.ToInstructorProfileResponse();
-        return ApiResponse<InstructorProfileResponse>.SuccessResponse(response, successMessage);
+        profile.User = user;
+        return (true, null, profile, user);
     }
+
     /// <summary>
     /// End Helpers
     /// </summary>
@@ -100,15 +89,9 @@ public class InstructorService(
                 };
             }
 
-            var instructorProfile = new InstructorProfile
-            {
-                UserId = userId,
-                VerificationStatus = VerificationStatus.Pending,
-                CreatedBy = userId,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            instructorProfile.ToCreateInstructorProfileRequest(request);
+            var instructorProfile = request.ToInstructorProfileEntity(userId);
+            instructorProfile.CreatedBy = userId;
+            instructorProfile.CreatedAt = DateTime.UtcNow;
 
             await unitOfWork.InstructorProfileRepository.AddAsync(instructorProfile);
             await unitOfWork.SaveChangesAsync();
@@ -240,7 +223,7 @@ public class InstructorService(
                 if (user != null)
                 {
                     profile.User = user;
-                    responses.Add(profile.ToInstructorProfileResponse());
+                    responses.Add(profile.ToInstructorProfileResponse(user));
                 }
                 else
                 {
@@ -272,7 +255,7 @@ public class InstructorService(
             {
                 logger.LogWarning("Instructor profile not found for user {UserId}", userId);
                 return ApiResponse<InstructorProfileResponse>.FailureResponse(
-                    "Bạn chưa có hồ sơ giảng viên.");
+                    "Hồ sơ giảng viên của bạn không tồn tại.");
             }
 
             var user = await unitOfWork.UserRepository.GetByIdAsync(userId);
@@ -285,7 +268,7 @@ public class InstructorService(
 
             profile.User = user;
 
-            var response = profile.ToInstructorProfileResponse();
+            var response = profile.ToInstructorProfileResponse(user);
             return ApiResponse<InstructorProfileResponse>.SuccessResponse(
                 response,
                 "Lấy hồ sơ giảng viên của bạn thành công.");
@@ -298,75 +281,144 @@ public class InstructorService(
         }
     }
 
-    public Task<ApiResponse<InstructorProfileResponse>> GetInstructorProfileByIdAsync(Guid profileId)
+    public async Task<ApiResponse<InstructorProfileResponse>> UpdateInstructorProfileAsync(Guid userId, UpdateInstructorProfileRequest request)
     {
-        throw new NotImplementedException();
-    }
-
-    public Task<ApiResponse<InstructorProfileResponse>> GetInstructorProfileByIdForAdminAsync(Guid profileId)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<ApiResponse<List<InstructorProfileResponse>>> GetVerifiedInstructorsAsync(int pageNumber, int pageSize)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<ApiResponse<InstructorProfileResponse>> UpdateInstructorProfileAsync(Guid userId, UpdateInstructorProfileRequest request)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<ApiResponse<bool>> UpdateInstructorStatisticsAsync(Guid instructorId, UpdateInstructorStatisticsRequest request)
-    {
-        throw new NotImplementedException();
-    }
-
-    //Helpers
-    private async Task<(bool IsValid, string? ErrorMessage, InstructorProfile? Profile)> ValidateProfileForReviewAsync(Guid profileId)
-    {
-        var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(
-            p => p.Id == profileId && p.DeletedAt == null);
-
-        if (profile == null)
-            return (false, "Đơn đăng ký giảng viên không tồn tại.", null);
-
-        if (profile.VerificationStatus != VerificationStatus.Pending)
-            return (false, "Chỉ có thể xử lý đơn đăng ký đang chờ duyệt.", null);
-
-        return (true, null, profile);
-    }
-
-    private async Task<ApiResponse<InstructorProfileResponse>> UpdateProfileAndGetResponseAsync(
-     InstructorProfile profile, Guid adminId, string successMessage)
-    {
-        profile.UpdatedAt = DateTime.UtcNow;
-        profile.UpdatedBy = adminId;
-
-        await unitOfWork.SaveChangesAsync();
-
-        // Query lại profile với User
-        var updatedProfile = await unitOfWork.InstructorProfileRepository.GetByIdAsync(profile.Id);
-        if (updatedProfile != null)
+        try
         {
-            // Load User navigation property
-            var user = await unitOfWork.UserRepository.GetByIdAsync(updatedProfile.UserId);
-            if (user != null)
+            var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(p => p.UserId == userId);
+
+            if (profile == null)
             {
-                updatedProfile.User = user;
+                logger.LogWarning("Instructor profile not found for user {UserId}", userId);
+                return ApiResponse<InstructorProfileResponse>.FailureResponse(
+                    "Hồ sơ giảng viên của bạn không tồn tại.");
             }
-        }
+            profile.ToUpdateInstructorProfileRequest(request);
 
-        if (updatedProfile == null || updatedProfile.User == null)
+            await unitOfWork.InstructorProfileRepository.UpdateAsync(profile.Id, profile);
+            await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation("Updated instructor profile for user {UserId}", userId);
+
+            var user = await unitOfWork.UserRepository.GetByIdAsync(profile.UserId);
+            profile.User = user!;
+
+            var response = profile.ToInstructorProfileResponse(user!);
+            return ApiResponse<InstructorProfileResponse>.SuccessResponse(
+                response,
+                "Cập nhật hồ sơ giảng viên thành công.");
+
+        }
+        catch (Exception ex)
         {
-            logger.LogError("Failed to retrieve updated profile {ProfileId} with User", profile.Id);
+            logger.LogError(ex, "Error updating instructor profile for user {UserId}", userId);
             return ApiResponse<InstructorProfileResponse>.FailureResponse(
-                "Đã xảy ra lỗi khi lấy thông tin đơn đăng ký.");
+                "Đã xảy ra lỗi khi cập nhật hồ sơ giảng viên.");
         }
+    }
+    public async Task<ApiResponse<InstructorProfileResponse>> GetInstructorProfileByIdAsync(Guid profileId)
+    {
+        try
+        {
+            var (isSuccess, errorMessage, profile, user) = await GetProfileWithUserAsync(profileId);
+            if (!isSuccess)
+            {
+                logger.LogWarning("Instructor profile {ProfileId} not found", profileId);
+                return ApiResponse<InstructorProfileResponse>.FailureResponse(errorMessage!);
+            }
 
-        var response = updatedProfile.ToInstructorProfileResponse();
-        return ApiResponse<InstructorProfileResponse>.SuccessResponse(response, successMessage);
+            var response = profile!.ToInstructorProfileResponse(user!);
+            return ApiResponse<InstructorProfileResponse>.SuccessResponse(
+                response,
+                "Lấy hồ sơ giảng viên thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error retrieving instructor profile {ProfileId}", profileId);
+            return ApiResponse<InstructorProfileResponse>.FailureResponse(
+                "Đã xảy ra lỗi khi lấy hồ sơ giảng viên.");
+        }
     }
 
+    public async Task<ApiResponse<InstructorProfileAdminResponse>> GetInstructorProfileByIdForAdminAsync(Guid profileId)
+    {
+        try
+        {
+            var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(
+                p => p.Id == profileId && p.DeletedAt == null);
+
+            if (profile == null)
+            {
+                logger.LogInformation("Instructor profile {ProfileId} not found for admin", profileId);
+                return ApiResponse<InstructorProfileAdminResponse>.FailureResponse(
+                    "Hồ sơ giảng viên không tồn tại.");
+            }
+
+            var user = await unitOfWork.UserRepository.GetByIdAsync(profile.UserId);
+            profile.User = user!;
+
+            var response = profile.ToInstructorProfileAdminResponse(user!);
+            return ApiResponse<InstructorProfileAdminResponse>.SuccessResponse(
+                response,
+                "Lấy hồ sơ giảng viên thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error retrieving instructor profile {ProfileId} for admin", profileId);
+            return ApiResponse<InstructorProfileAdminResponse>.FailureResponse(
+                "Đã xảy ra lỗi khi lấy hồ sơ giảng viên cho quản trị viên.");
+        }
+    }
+
+    public async Task<ApiResponse<List<InstructorProfileResponse>>> GetVerifiedInstructorsAsync(int pageNumber, int pageSize)
+    {
+        try
+        {
+            var verifiedProfiles = await unitOfWork.InstructorProfileRepository.GetAllAsync(p =>
+                p.VerificationStatus == VerificationStatus.Verified);
+
+            if (verifiedProfiles == null || !verifiedProfiles.Any())
+            {
+                logger.LogInformation("No verified instructors found");
+                return ApiResponse<List<InstructorProfileResponse>>.SuccessResponse(
+                    new List<InstructorProfileResponse>(),
+                    "Không có giảng viên đã được xác minh.");
+            }
+
+            var pagedProfiles = verifiedProfiles
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            var responses = new List<InstructorProfileResponse>();
+            foreach (var profile in pagedProfiles)
+            {
+                var user = await unitOfWork.UserRepository.GetByIdAsync(profile.UserId);
+                if (user != null)
+                {
+                    profile.User = user;
+                    responses.Add(profile.ToInstructorProfileResponse(user));
+                }
+                else
+                {
+                    logger.LogWarning("User {UserId} not found for verified profile {ProfileId}",
+                        profile.UserId, profile.Id);
+                }
+            }
+
+            logger.LogInformation("Retrieved {Count} verified instructors for page {PageNumber}", responses.Count, pageNumber);
+            return ApiResponse<List<InstructorProfileResponse>>.SuccessPagedResponse(
+                    responses,
+                    verifiedProfiles.Count,
+                    pageNumber,
+                    pageSize,
+                    "Lấy danh sách giảng viên được xác minh thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error retrieving verified instructors");
+            return ApiResponse<List<InstructorProfileResponse>>.FailureResponse(
+                "Đã xảy ra lỗi khi lấy danh sách giảng viên đã được xác minh.");
+        }
+    }
 }

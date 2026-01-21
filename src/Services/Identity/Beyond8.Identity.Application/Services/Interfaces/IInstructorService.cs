@@ -18,7 +18,7 @@ public interface IInstructorService
     // Quản lý hồ sơ
     Task<ApiResponse<InstructorProfileResponse>> GetMyInstructorProfileAsync(Guid userId);
     Task<ApiResponse<InstructorProfileResponse>> GetInstructorProfileByIdAsync(Guid profileId);
-    Task<ApiResponse<InstructorProfileResponse>> GetInstructorProfileByIdForAdminAsync(Guid profileId);
+    Task<ApiResponse<InstructorProfileAdminResponse>> GetInstructorProfileByIdForAdminAsync(Guid profileId);
     Task<ApiResponse<List<InstructorProfileResponse>>> GetVerifiedInstructorsAsync(
         int pageNumber, int pageSize);
     Task<ApiResponse<InstructorProfileResponse>> UpdateInstructorProfileAsync(
@@ -27,7 +27,7 @@ public interface IInstructorService
     // Analytics (Luồng 5)
     // Task<ApiResponse<bool>> UpdateInstructorStatisticsAsync(
     //     Guid instructorId, UpdateInstructorStatisticsRequest request);
-    Task<ApiResponse<List<InstructorProfileResponse>>> SearchInstructorsAsync(
-        string? searchTerm, List<string>? expertiseAreas, int pageNumber, int pageSize);
-    Task<ApiResponse<List<InstructorProfileResponse>>> GetTopInstructorsByRatingAsync(int count);
+    //     Task<ApiResponse<List<InstructorProfileResponse>>> SearchInstructorsAsync(
+    //         string? searchTerm, List<string>? expertiseAreas, int pageNumber, int pageSize);
+    //     Task<ApiResponse<List<InstructorProfileResponse>>> GetTopInstructorsByRatingAsync(int count);
 }
