@@ -384,4 +384,52 @@ public class InstructorService(
             return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi kiểm tra xem bạn đã gửi đơn đăng ký giảng viên chưa.");
         }
     }
+
+    public async Task<ApiResponse<bool>> DeleteInstructorProfileAsync(Guid profileId, Guid adminId)
+    {
+        try
+        {
+            var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(p => p.Id == profileId);
+            if (profile == null)
+            {
+                logger.LogInformation("Instructor profile {ProfileId} not found for deletion by admin {AdminId}", profileId, adminId);
+                return ApiResponse<bool>.FailureResponse(
+                    "Hồ sơ giảng viên không tồn tại.");
+            }
+
+            var user = await unitOfWork.UserRepository.GetByIdAsync(profile.UserId);
+            if (user == null)
+            {
+                logger.LogError("User {UserId} not found for instructor profile {ProfileId}",
+                    profile.UserId, profileId);
+                return ApiResponse<bool>.FailureResponse("Người dùng không tồn tại.");
+            }
+
+            logger.LogInformation("Deleting instructor profile {ProfileId} by admin {AdminId}", profileId, adminId);
+
+            profile.VerificationStatus = VerificationStatus.Hidden;
+
+            if (user.Roles.Contains(UserRole.Instructor))
+            {
+                logger.LogInformation("Removing instructor role from user {UserId}", user.Id);
+                user.Roles.Remove(UserRole.Instructor);
+                await unitOfWork.UserRepository.UpdateAsync(user.Id, user);
+            }
+
+            await unitOfWork.InstructorProfileRepository.UpdateAsync(profileId, profile);
+            await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation("Successfully deleted instructor profile {ProfileId} by admin {AdminId}", profileId, adminId);
+
+            return ApiResponse<bool>.SuccessResponse(true, "Xóa hồ sơ giảng viên thành công.");
+
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error deleting instructor profile {ProfileId} by admin {AdminId}",
+                profileId, adminId);
+            return ApiResponse<bool>.FailureResponse(
+                "Đã xảy ra lỗi khi xóa hồ sơ giảng viên.");
+        }
+    }
 }

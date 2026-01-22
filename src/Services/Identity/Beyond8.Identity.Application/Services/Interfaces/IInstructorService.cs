@@ -24,4 +24,6 @@ public interface IInstructorService
     Task<ApiResponse<List<InstructorProfileAdminResponse>>> GetInstructorProfilesForAdminAsync(PaginationInstructorRequest pagination);
 
     Task<ApiResponse<bool>> CheckApplyInstructorProfileAsync(Guid userId);
+
+    Task<ApiResponse<bool>> DeleteInstructorProfileAsync(Guid profileId, Guid adminId);
 }

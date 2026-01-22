@@ -97,7 +97,27 @@ namespace Beyond8.Identity.Api.Apis
                 .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status404NotFound);
 
+            group.MapDelete("/{id:Guid}", DeleteInstructorProfileAsync)
+            .WithName("DeleteInstructorProfile")
+            .WithDescription("Xóa/Ẩn hồ sơ giảng viên (Admin, Staff only)")
+            .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
+
             return group;
+        }
+
+        private static async Task<IResult> DeleteInstructorProfileAsync(
+            [FromRoute] Guid id,
+            [FromServices] ICurrentUserService currentUserService,
+            [FromServices] IInstructorService instructorService)
+        {
+            var response = await instructorService.DeleteInstructorProfileAsync(id, currentUserService.UserId);
+            return response.IsSuccess
+                    ? Results.Ok(response)
+                    : Results.BadRequest(response);
         }
 
         private static async Task<IResult> CheckApplyInstructorProfileAsync(

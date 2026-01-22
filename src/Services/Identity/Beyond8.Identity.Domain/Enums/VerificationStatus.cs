@@ -4,5 +4,6 @@ public enum VerificationStatus
 {
     Pending = 0,
     Verified = 1,
-    RequestUpdate = 2
+    RequestUpdate = 2,
+    Hidden = 3
 }
