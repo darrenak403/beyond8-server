@@ -8,11 +8,18 @@ namespace Beyond8.Identity.Domain.Repositories.Interfaces
         /// <summary>
         /// Tìm kiếm giảng viên (query phức tạp với Include, jsonb)
         /// </summary>
-        Task<(List<InstructorProfile> Profiles, int TotalCount)> SearchInstructorsAsync(
-            string? searchTerm,
-            List<string>? expertiseAreas,
+        Task<(List<InstructorProfile> Items, int TotalCount)> SearchInstructorsPagedAsync(
             int pageNumber,
-            int pageSize);
+            int pageSize,
+            string? email,
+            string? fullName,
+            string? phoneNumber,
+            string? bio,
+            string? headLine,
+            string? expertiseArea,
+            string? schoolName,
+            string? companyName,
+            bool? isDescending);
 
         /// <summary>
         /// Lấy danh sách giảng viên đã phê duyệt (có Include User)
