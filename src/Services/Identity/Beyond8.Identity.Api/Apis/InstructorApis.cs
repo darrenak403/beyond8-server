@@ -142,9 +142,9 @@ namespace Beyond8.Identity.Api.Apis
 
         private static async Task<IResult> GetInstructorProfilesForAdminAsync(
             [FromServices] IInstructorService instructorService,
-            [AsParameters] PaginationStatusRequest pagination)
+            [AsParameters] PaginationInstructorRequest paginationRequest)
         {
-            var response = await instructorService.GetInstructorProfilesAsync(pagination);
+            var response = await instructorService.GetInstructorProfilesAsync(paginationRequest);
             return response.IsSuccess
                             ? Results.Ok(response)
                             : Results.BadRequest(response);

@@ -13,7 +13,7 @@ public interface IInstructorService
 
     Task<ApiResponse<InstructorProfileResponse>> NotApproveInstructorProfileAsync(Guid id, NotApproveInstructorProfileRequest request, Guid adminId);
 
-    Task<ApiResponse<List<InstructorProfileResponse>>> GetInstructorProfilesAsync(PaginationStatusRequest pagination);
+    Task<ApiResponse<List<InstructorProfileAdminResponse>>> GetInstructorProfilesAsync(PaginationInstructorRequest pagination);
 
     Task<ApiResponse<InstructorProfileResponse>> GetMyInstructorProfileAsync(Guid userId);
 

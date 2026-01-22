@@ -194,56 +194,40 @@ public class InstructorService(
         }
     }
 
-    public async Task<ApiResponse<List<InstructorProfileResponse>>> GetInstructorProfilesAsync(PaginationStatusRequest pagination)
+    public async Task<ApiResponse<List<InstructorProfileAdminResponse>>> GetInstructorProfilesAsync(PaginationInstructorRequest paginationRequest)
     {
         try
         {
-            VerificationStatus? status = pagination.Status switch
-            {
-                VerificationStatusRequest.Pending => VerificationStatus.Pending,
-                VerificationStatusRequest.Verified => VerificationStatus.Verified,
-                VerificationStatusRequest.Rejected => VerificationStatus.Rejected,
-                VerificationStatusRequest.RequestUpdate => VerificationStatus.RequestUpdate,
-                _ => null
-            };
+            var profile = await unitOfWork.InstructorProfileRepository.SearchInstructorsPagedAsync(
+               paginationRequest.PageNumber,
+               paginationRequest.PageSize,
+               paginationRequest.Email,
+               paginationRequest.FullName,
+               paginationRequest.PhoneNumber,
+               paginationRequest.Bio,
+               paginationRequest.HeadLine,
+               paginationRequest.ExpertiseAreas,
+               paginationRequest.SchoolName,
+               paginationRequest.CompanyName,
+               paginationRequest.IsDescending.HasValue ? paginationRequest.IsDescending.Value : true);
 
-            var profiles = await unitOfWork.InstructorProfileRepository.GetPagedAsync(
-                pageNumber: pagination.PageNumber,
-                pageSize: pagination.PageSize,
-                filter: p => status == null || p.VerificationStatus == status,
-                orderBy: query => query.OrderBy(p => p.CreatedAt),
-                includes: query => query.Include(p => p.User)
-            );
-
-            if (!profiles.Items.Any() || profiles.TotalCount == 0)
-            {
-                logger.LogInformation("No instructor profiles found with status {Status}", status);
-                return ApiResponse<List<InstructorProfileResponse>>.SuccessPagedResponse(
-                    new List<InstructorProfileResponse>(),
-                    profiles.TotalCount,
-                    pagination.PageNumber,
-                    pagination.PageSize,
-                    "Không có hồ sơ giảng viên nào.");
-            }
-
-            var responses = profiles.Items
-                .Select(p => p.ToInstructorProfileResponse(p.User!))
+            var profileResponses = profile.Items
+                .Select(p => p.ToInstructorProfileAdminResponse(p.User!))
                 .ToList();
 
-            logger.LogInformation("Retrieved {Count} instructor profiles with status {Status} for page {PageNumber}",
-                responses.Count, status, pagination.PageNumber);
+            logger.LogInformation("Retrieved {Count} instructor profiles for admin", profileResponses.Count);
 
-            return ApiResponse<List<InstructorProfileResponse>>.SuccessPagedResponse(
-                responses,
-                profiles.TotalCount,
-                pagination.PageNumber,
-                pagination.PageSize,
+            return ApiResponse<List<InstructorProfileAdminResponse>>.SuccessPagedResponse(
+                profileResponses,
+                profile.TotalCount,
+                paginationRequest.PageNumber,
+                paginationRequest.PageSize,
                 "Lấy danh sách hồ sơ giảng viên thành công.");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error retrieving instructor profiles");
-            return ApiResponse<List<InstructorProfileResponse>>.FailureResponse(
+            return ApiResponse<List<InstructorProfileAdminResponse>>.FailureResponse(
                 "Đã xảy ra lỗi khi lấy danh sách hồ sơ giảng viên.");
         }
     }
