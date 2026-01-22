@@ -50,4 +50,19 @@ public static class NotificationMappings
             IsRead = false
         };
     }
+
+    public static Notification InstructorApplicationSubmittedEventToNotification(this InstructorApplicationSubmittedEvent @event, NotificationTarget target, NotificationStatus status)
+    {
+        return new Notification
+        {
+            Title = "Đơn đăng ký giảng viên mới",
+            Message = $"Giảng viên {@event.InstructorName} ({@event.Email}) đã gửi đơn đăng ký giảng viên mới.",
+            UserId = Guid.Empty, // Empty for group notifications (AllAdmin/AllStaff)
+            Target = target,
+            Status = status,
+            Channels = [NotificationChannel.App],
+            ReadAt = null,
+            IsRead = false
+        };
+    }
 }

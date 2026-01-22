@@ -99,8 +99,12 @@ public static class Bootstrapper
         // Register repositories
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-        builder.Services.AddSignalR();
+        builder.Services.AddSignalR(options =>
+        {
+            options.EnableDetailedErrors = builder.Environment.IsDevelopment();
+        });
         builder.Services.AddScoped<INotificationService, SignalRNotificationService>();
+        builder.Services.AddScoped<INotificationHistoryService, NotificationHistoryService>();
 
         // Configure MassTransit with RabbitMQ and register consumers
         builder.AddMassTransitWithRabbitMq(config =>
@@ -142,13 +146,15 @@ public static class Bootstrapper
 
         app.UseHttpsRedirection();
 
-        app.MapHub<AppHub>("/hubs/app");
+        app.MapHub<AppHub>("/hubs/app")
+            .RequireCors("SignalRPolicy");
 
         app.MapMediaFileApi();
         app.MapAiApi();
         app.MapAiUsageApi();
         app.MapAiPromptApi();
         app.MapVnptEkycApi();
+        app.MapNotificationApi();
 
         return app;
     }
