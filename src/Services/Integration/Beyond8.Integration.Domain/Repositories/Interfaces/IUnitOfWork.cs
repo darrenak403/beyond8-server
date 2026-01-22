@@ -8,4 +8,5 @@ public interface IUnitOfWork : IBaseUnitOfWork
     IMediaFileRepository MediaFileRepository { get; }
     IAiUsageRepository AiUsageRepository { get; }
     IAiPromptRepository AiPromptRepository { get; }
+    INotificationRepository NotificationRepository { get; }
 }

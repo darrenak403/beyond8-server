@@ -2,10 +2,10 @@ using System;
 
 namespace Beyond8.Common.Events.Identity;
 
-public record InstructorApprovalEmailEvent(
+public record InstructorApplicationSubmittedEvent(
     Guid UserId,
-    string ToEmail,
+    Guid ProfileId,
     string InstructorName,
-    string ProfileUrl,
+    string Email,
     DateTime Timestamp
 );

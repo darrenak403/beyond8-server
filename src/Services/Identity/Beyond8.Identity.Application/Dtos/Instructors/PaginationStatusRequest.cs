@@ -13,6 +13,5 @@ public enum VerificationStatusRequest
     All = 0,
     Pending = 1,
     Verified = 2,
-    Rejected = 3,
-    RequestUpdate = 4
+    RequestUpdate = 3
 }
