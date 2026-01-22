@@ -72,6 +72,21 @@ public static class JwtExtensions
         options.RequireHttpsMetadata = false;
         options.TokenValidationParameters = CreateTokenValidationParameters(jwtOptions);
         options.Events = CreateJwtBearerEvents();
+
+        // Configure SignalR to read token from query string
+        options.Events.OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+
+            // If the request is for SignalR hub, read token from query string
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+            {
+                context.Token = accessToken;
+            }
+
+            return Task.CompletedTask;
+        };
     }
 
     private static TokenValidationParameters CreateTokenValidationParameters(JwtBearerConfigurationOptions jwtOptions)

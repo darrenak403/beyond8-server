@@ -26,6 +26,19 @@ public static class CommonExtensions
                                    .AllowAnyHeader()
                                    .AllowCredentials();
                         });
+
+                        options.AddPolicy("SignalRPolicy", builder =>
+                        {
+                            builder.WithOrigins(
+                                       "http://localhost:3000",
+                                       "http://localhost:5173",
+                                       "http://api-gateway.beyond8.dev",
+                                       "https://api-gateway.beyond8.dev"
+                                   )
+                                   .AllowAnyMethod()
+                                   .AllowAnyHeader()
+                                   .AllowCredentials();
+                        });
                     });
 
         builder.Services.AddRateLimiter(options =>

@@ -1,8 +1,10 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Beyond8.Integration.Infrastructure.Hubs;
 
+[Authorize]
 public class AppHub : Hub
 {
     public override async Task OnConnectedAsync()

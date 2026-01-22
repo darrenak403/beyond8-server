@@ -1,6 +1,9 @@
 using Beyond8.Common.Events.Identity;
 using Beyond8.Common.Utilities;
+using Beyond8.Integration.Application.Mappings.NotificationMappings;
 using Beyond8.Integration.Application.Services.Interfaces;
+using Beyond8.Integration.Domain.Enums;
+using Beyond8.Integration.Domain.Repositories.Interfaces;
 using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -9,6 +12,7 @@ namespace Beyond8.Integration.Application.Consumers.Identity;
 
 public class InstructorApplicationSubmittedConsumer(
     INotificationService notificationService,
+    IUnitOfWork unitOfWork,
     ILogger<InstructorApplicationSubmittedConsumer> logger,
     IConfiguration configuration
 ) : IConsumer<InstructorApplicationSubmittedEvent>
@@ -37,6 +41,23 @@ public class InstructorApplicationSubmittedConsumer(
             await notificationService.SendToGroupAsync($"{Role.Staff}Group", "InstructorApplicationSubmitted", data);
 
             logger.LogInformation("Successfully sent instructor application submitted SignalR notification to Admin and Staff");
+
+            // Save notifications to database for Admin and Staff
+            try
+            {
+                var adminNotification = message.InstructorApplicationSubmittedEventToNotification(NotificationTarget.AllAdmin, NotificationStatus.Delivered);
+                var staffNotification = message.InstructorApplicationSubmittedEventToNotification(NotificationTarget.AllStaff, NotificationStatus.Delivered);
+
+                await unitOfWork.NotificationRepository.AddAsync(adminNotification);
+                await unitOfWork.NotificationRepository.AddAsync(staffNotification);
+                await unitOfWork.SaveChangesAsync();
+
+                logger.LogInformation("Successfully saved instructor application submitted notifications to database");
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to save notification for instructor application submitted event, but SignalR notification was sent successfully");
+            }
         }
         catch (Exception ex)
         {
