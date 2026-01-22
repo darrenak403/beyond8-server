@@ -14,6 +14,7 @@ public class InstructorProfileResponse
     public List<EducationInfo>? Education { get; set; }
     public List<WorkInfo>? WorkExperience { get; set; }
     public SocialInfo? SocialLinks { get; set; }
+    public List<CertificateInfo>? Certificates { get; set; }
     public List<string>? TeachingLanguages { get; set; }
     public string? IntroVideoUrl { get; set; }
     public int TotalStudents { get; set; }

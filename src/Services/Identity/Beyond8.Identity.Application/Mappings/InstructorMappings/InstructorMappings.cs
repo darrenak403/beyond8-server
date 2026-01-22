@@ -29,6 +29,9 @@ public static class InstructorProfileMappings
             SocialLinks = string.IsNullOrEmpty(instructorProfile.SocialLinks)
                 ? null
                 : JsonSerializer.Deserialize<SocialInfo>(instructorProfile.SocialLinks),
+            Certificates = string.IsNullOrEmpty(instructorProfile.Certificates)
+                ? null
+                : JsonSerializer.Deserialize<List<CertificateInfo>>(instructorProfile.Certificates),
             TeachingLanguages = instructorProfile.TeachingLanguages,
             IntroVideoUrl = instructorProfile.IntroVideoUrl,
             TotalStudents = instructorProfile.TotalStudents,
@@ -76,9 +79,6 @@ public static class InstructorProfileMappings
             IdentityDocuments = string.IsNullOrEmpty(instructorProfile.IdentityDocuments)
                 ? null
                 : JsonSerializer.Deserialize<List<IdentityInfo>>(instructorProfile.IdentityDocuments),
-            Certificates = string.IsNullOrEmpty(instructorProfile.Certificates)
-                ? null
-                : JsonSerializer.Deserialize<List<CertificateInfo>>(instructorProfile.Certificates),
             VerificationNotes = instructorProfile.VerificationNotes,
             VerifiedBy = instructorProfile.VerifiedBy
         };

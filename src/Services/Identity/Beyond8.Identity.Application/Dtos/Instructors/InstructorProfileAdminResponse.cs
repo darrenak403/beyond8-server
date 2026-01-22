@@ -8,7 +8,6 @@ public class InstructorProfileAdminResponse : InstructorProfileResponse
     public BankInfo? BankInfo { get; set; }
     public string? TaxId { get; set; }
     public List<IdentityInfo>? IdentityDocuments { get; set; }
-    public List<CertificateInfo>? Certificates { get; set; }
     public string? VerificationNotes { get; set; }
     public Guid? VerifiedBy { get; set; }
 }
