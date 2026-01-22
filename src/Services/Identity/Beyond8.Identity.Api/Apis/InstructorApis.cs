@@ -3,9 +3,7 @@ using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
 using Beyond8.Identity.Application.Dtos.Instructors;
 using Beyond8.Identity.Application.Services.Interfaces;
-using Beyond8.Identity.Domain.Enums;
 using FluentValidation;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Beyond8.Identity.Api.Apis
@@ -40,6 +38,14 @@ namespace Beyond8.Identity.Api.Apis
                 .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized)
                 .Produces(StatusCodes.Status403Forbidden);
+
+            group.MapGet("/check-apply", CheckApplyInstructorProfileAsync)
+                .WithName("CheckApplyInstructorProfile")
+                .WithDescription("Kiểm tra xem người dùng đã gửi đơn đăng ký trở thành giảng viên chưa")
+                .RequireAuthorization()
+                .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
 
             group.MapPost("/{id:Guid}/not-approve", NotApproveInstructorProfileAsync)
                 .WithName("NotApproveInstructorProfile")
@@ -100,6 +106,16 @@ namespace Beyond8.Identity.Api.Apis
                 .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status404NotFound);
 
             return group;
+        }
+
+        private static async Task<IResult> CheckApplyInstructorProfileAsync(
+            [FromServices] ICurrentUserService currentUserService,
+            [FromServices] IInstructorService instructorService)
+        {
+            var response = await instructorService.CheckApplyInstructorProfileAsync(currentUserService.UserId);
+            return response.IsSuccess
+                            ? Results.Ok(response)
+                            : Results.BadRequest(response);
         }
 
         private static async Task<IResult> GetMyInstructorProfileHistoryAsync(

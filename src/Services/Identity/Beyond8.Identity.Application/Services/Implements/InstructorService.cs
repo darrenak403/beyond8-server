@@ -387,4 +387,26 @@ public class InstructorService(
             return ApiResponse<List<InstructorProfileResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy lịch sử hồ sơ giảng viên.");
         }
     }
+
+    public async Task<ApiResponse<bool>> CheckApplyInstructorProfileAsync(Guid userId)
+    {
+        try
+        {
+            var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(p => p.UserId == userId);
+            if (profile == null)
+            {
+                return ApiResponse<bool>.SuccessResponse(false, "Bạn chưa gửi đơn đăng ký giảng viên.");
+            }
+            if (profile.VerificationStatus != VerificationStatus.Rejected)
+            {
+                return ApiResponse<bool>.SuccessResponse(false, "Bạn chưa gửi đơn đăng ký giảng viên.");
+            }
+            return ApiResponse<bool>.SuccessResponse(true, "Bạn đã gửi đơn đăng ký giảng viên thành công. Chúng tôi sẽ xem xét và phản hồi sớm nhất.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error checking if user {UserId} has applied for instructor profile", userId);
+            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi kiểm tra xem bạn đã gửi đơn đăng ký giảng viên chưa.");
+        }
+    }
 }
