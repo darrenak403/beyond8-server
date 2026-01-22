@@ -11,5 +11,4 @@ public class InstructorProfileAdminResponse : InstructorProfileResponse
     public List<CertificateInfo>? Certificates { get; set; }
     public string? VerificationNotes { get; set; }
     public Guid? VerifiedBy { get; set; }
-    public string? VerifiedByName { get; set; }
 }

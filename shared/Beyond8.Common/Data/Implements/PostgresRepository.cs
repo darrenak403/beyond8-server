@@ -33,22 +33,22 @@ public class PostgresRepository<T>(DbContext context) : IGenericRepository<T> wh
 
     public async Task<T?> FindOneAsync(Expression<Func<T, bool>> expression)
     {
-        return await _dbSet.FirstOrDefaultAsync(expression);
+        return await _dbSet.AsNoTracking().FirstOrDefaultAsync(expression);
     }
 
     public async Task<IReadOnlyCollection<T>> GetAllAsync()
     {
-        return await _dbSet.ToListAsync();
+        return await _dbSet.AsNoTracking().ToListAsync();
     }
 
     public async Task<IReadOnlyCollection<T>> GetAllAsync(Expression<Func<T, bool>> expression)
     {
-        return await _dbSet.Where(expression).ToListAsync();
+        return await _dbSet.Where(expression).AsNoTracking().ToListAsync();
     }
 
     public async Task<T?> GetByIdAsync(Guid id, Expression<Func<T, bool>> expression)
     {
-        return await _dbSet.Where(expression).FirstOrDefaultAsync(e => e.Id == id);
+        return await _dbSet.Where(expression).AsNoTracking().FirstOrDefaultAsync(e => e.Id == id);
     }
 
     public async Task<T?> GetByIdAsync(Guid id)
@@ -103,6 +103,7 @@ public class PostgresRepository<T>(DbContext context) : IGenericRepository<T> wh
         var items = await query
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
+            .AsNoTracking()
             .ToListAsync();
 
         return (items, totalCount);

@@ -1,5 +1,4 @@
 using Beyond8.Common.Events.Identity;
-using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
 using Beyond8.Identity.Application.Dtos.Instructors;
 using Beyond8.Identity.Application.Mappings;
@@ -8,7 +7,6 @@ using Beyond8.Identity.Domain.Entities;
 using Beyond8.Identity.Domain.Enums;
 using Beyond8.Identity.Domain.Repositories.Interfaces;
 using MassTransit;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Beyond8.Identity.Application.Services.Implements;
@@ -194,22 +192,22 @@ public class InstructorService(
         }
     }
 
-    public async Task<ApiResponse<List<InstructorProfileAdminResponse>>> GetInstructorProfilesAsync(PaginationInstructorRequest paginationRequest)
+    public async Task<ApiResponse<List<InstructorProfileAdminResponse>>> GetInstructorProfilesForAdminAsync(PaginationInstructorRequest pagination)
     {
         try
         {
             var profile = await unitOfWork.InstructorProfileRepository.SearchInstructorsPagedAsync(
-               paginationRequest.PageNumber,
-               paginationRequest.PageSize,
-               paginationRequest.Email,
-               paginationRequest.FullName,
-               paginationRequest.PhoneNumber,
-               paginationRequest.Bio,
-               paginationRequest.HeadLine,
-               paginationRequest.ExpertiseAreas,
-               paginationRequest.SchoolName,
-               paginationRequest.CompanyName,
-               paginationRequest.IsDescending.HasValue ? paginationRequest.IsDescending.Value : true);
+                pagination.PageNumber,
+                pagination.PageSize,
+                pagination.Email,
+                pagination.FullName,
+                pagination.PhoneNumber,
+                pagination.Bio,
+                pagination.HeadLine,
+                pagination.ExpertiseAreas,
+                pagination.SchoolName,
+                pagination.CompanyName,
+                pagination.IsDescending.HasValue ? pagination.IsDescending.Value : true);
 
             var profileResponses = profile.Items
                 .Select(p => p.ToInstructorProfileAdminResponse(p.User!))
@@ -220,8 +218,8 @@ public class InstructorService(
             return ApiResponse<List<InstructorProfileAdminResponse>>.SuccessPagedResponse(
                 profileResponses,
                 profile.TotalCount,
-                paginationRequest.PageNumber,
-                paginationRequest.PageSize,
+                pagination.PageNumber,
+                pagination.PageSize,
                 "Lấy danh sách hồ sơ giảng viên thành công.");
         }
         catch (Exception ex)
@@ -371,6 +369,22 @@ public class InstructorService(
             logger.LogError(ex, "Error retrieving instructor profile {ProfileId} for admin", profileId);
             return ApiResponse<InstructorProfileAdminResponse>.FailureResponse(
                 "Đã xảy ra lỗi khi lấy hồ sơ giảng viên cho quản trị viên.");
+        }
+    }
+
+    public async Task<ApiResponse<List<InstructorProfileResponse>>> GetMyInstructorProfileHistoryAsync(Guid userId)
+    {
+        try
+        {
+            var profiles = await unitOfWork.InstructorProfileRepository.GetAllAsync(p => p.UserId == userId);
+
+            var responses = profiles.Select(p => p.ToInstructorProfileResponse(p.User!)).ToList();
+            return ApiResponse<List<InstructorProfileResponse>>.SuccessResponse(responses, "Lấy lịch sử hồ sơ giảng viên thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error retrieving instructor profile history for user {UserId}", userId);
+            return ApiResponse<List<InstructorProfileResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy lịch sử hồ sơ giảng viên.");
         }
     }
 }
