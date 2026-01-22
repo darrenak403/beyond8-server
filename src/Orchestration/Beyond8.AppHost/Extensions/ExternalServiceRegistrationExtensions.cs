@@ -64,6 +64,10 @@ public static class ExternalServiceRegistrationExtensions
                 config.AddRoute("/api/v1/vnpt-ekyc/{**catch-all}", integrationCluster);
                 config.AddRoute("/api/v1/ai-usage/{**catch-all}", integrationCluster);
                 config.AddRoute("/api/v1/ai-prompts/{**catch-all}", integrationCluster);
+                config.AddRoute("/api/v1/notifications/{**catch-all}", integrationCluster);
+                
+                // SignalR hub route
+                config.AddRoute("/hubs/{**catch-all}", integrationCluster);
             });
 
         var scalarDocs = builder.AddScalarApiReference("api-docs")

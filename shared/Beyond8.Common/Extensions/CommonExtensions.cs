@@ -33,12 +33,16 @@ public static class CommonExtensions
                                        "http://localhost:3000",
                                        "http://localhost:5173",
                                        "http://api-gateway.beyond8.dev",
-                                       "https://api-gateway.beyond8.dev"
+                                       "https://api-gateway.beyond8.dev",
+                                       "http://api-gateway-beyond8.dev.localhost:8080"
                                    )
                                    .AllowAnyMethod()
                                    .AllowAnyHeader()
                                    .AllowCredentials();
                         });
+
+                        // Use same policy for both API and SignalR to avoid CORS issues
+                        options.DefaultPolicyName = "AllowDevelopmentClients";
                     });
 
         builder.Services.AddRateLimiter(options =>
