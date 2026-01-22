@@ -228,7 +228,7 @@ public class InstructorService(
     {
         try
         {
-            var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(p => p.UserId == userId && p.VerificationStatus == VerificationStatus.Verified);
+            var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(p => p.UserId == userId);
 
             if (profile == null)
             {
@@ -364,22 +364,6 @@ public class InstructorService(
             logger.LogError(ex, "Error retrieving instructor profile {ProfileId} for admin", profileId);
             return ApiResponse<InstructorProfileAdminResponse>.FailureResponse(
                 "Đã xảy ra lỗi khi lấy hồ sơ giảng viên cho quản trị viên.");
-        }
-    }
-
-    public async Task<ApiResponse<List<InstructorProfileResponse>>> GetMyInstructorProfileHistoryAsync(Guid userId)
-    {
-        try
-        {
-            var profiles = await unitOfWork.InstructorProfileRepository.GetAllAsync(p => p.UserId == userId);
-
-            var responses = profiles.Select(p => p.ToInstructorProfileResponse(p.User!)).ToList();
-            return ApiResponse<List<InstructorProfileResponse>>.SuccessResponse(responses, "Lấy lịch sử hồ sơ giảng viên thành công.");
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error retrieving instructor profile history for user {UserId}", userId);
-            return ApiResponse<List<InstructorProfileResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy lịch sử hồ sơ giảng viên.");
         }
     }
 
