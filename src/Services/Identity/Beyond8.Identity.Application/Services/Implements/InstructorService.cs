@@ -1,5 +1,4 @@
 using Beyond8.Common.Events.Identity;
-using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
 using Beyond8.Identity.Application.Dtos.Instructors;
 using Beyond8.Identity.Application.Mappings;
@@ -82,8 +81,8 @@ public class InstructorService(
             }
 
             var instructorProfile = request.ToInstructorProfileEntity(userId);
-            instructorProfile.VerifiedBy = userId;
-            instructorProfile.VerifiedAt = DateTime.UtcNow;
+            // instructorProfile.VerifiedBy = userId;
+            // instructorProfile.VerifiedAt = DateTime.UtcNow;
 
             await unitOfWork.InstructorProfileRepository.AddAsync(instructorProfile);
             await unitOfWork.SaveChangesAsync();
@@ -193,45 +192,32 @@ public class InstructorService(
         }
     }
 
-    public async Task<ApiResponse<List<InstructorProfileResponse>>> GetInstructorProfilesAsync(PaginationStatusRequest pagination)
+    public async Task<ApiResponse<List<InstructorProfileAdminResponse>>> GetInstructorProfilesForAdminAsync(PaginationInstructorRequest pagination)
     {
         try
         {
-            VerificationStatus? status = pagination.Status switch
-            {
-                VerificationStatusRequest.Pending => VerificationStatus.Pending,
-                VerificationStatusRequest.Verified => VerificationStatus.Verified,
-                VerificationStatusRequest.Rejected => VerificationStatus.Rejected,
-                VerificationStatusRequest.RequestUpdate => VerificationStatus.RequestUpdate,
-                _ => null
-            };
+            var profile = await unitOfWork.InstructorProfileRepository.SearchInstructorsPagedAsync(
+                pagination.PageNumber,
+                pagination.PageSize,
+                pagination.Email,
+                pagination.FullName,
+                pagination.PhoneNumber,
+                pagination.Bio,
+                pagination.HeadLine,
+                pagination.ExpertiseAreas,
+                pagination.SchoolName,
+                pagination.CompanyName,
+                pagination.IsDescending.HasValue ? pagination.IsDescending.Value : true);
 
-            var profiles = await unitOfWork.InstructorProfileRepository.GetPagedAsync(
-                pageNumber: pagination.PageNumber,
-                pageSize: pagination.PageSize,
-                filter: p => status == null || p.VerificationStatus == status,
-                orderBy: query => query.OrderBy(p => p.CreatedAt)
-            );
+            var profileResponses = profile.Items
+                .Select(p => p.ToInstructorProfileAdminResponse(p.User!))
+                .ToList();
 
-            if (!profiles.Items.Any() || profiles.TotalCount == 0)
-            {
-                logger.LogInformation("No instructor profiles found with status {Status}", status);
-                return ApiResponse<List<InstructorProfileResponse>>.SuccessPagedResponse(
-                    new List<InstructorProfileResponse>(),
-                    profiles.TotalCount,
-                    pagination.PageNumber,
-                    pagination.PageSize,
-                    "Không có hồ sơ giảng viên nào.");
-            }
+            logger.LogInformation("Retrieved {Count} instructor profiles for admin", profileResponses.Count);
 
-            var responses = profiles.Items.Select(p => p.ToInstructorProfileResponse(p.User)).ToList();
-
-            logger.LogInformation("Retrieved {Count} instructor profiles with status {Status} for page {PageNumber}",
-                responses.Count, status, pagination.PageNumber);
-
-            return ApiResponse<List<InstructorProfileResponse>>.SuccessPagedResponse(
-                responses,
-                profiles.TotalCount,
+            return ApiResponse<List<InstructorProfileAdminResponse>>.SuccessPagedResponse(
+                profileResponses,
+                profile.TotalCount,
                 pagination.PageNumber,
                 pagination.PageSize,
                 "Lấy danh sách hồ sơ giảng viên thành công.");
@@ -239,7 +225,7 @@ public class InstructorService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error retrieving instructor profiles");
-            return ApiResponse<List<InstructorProfileResponse>>.FailureResponse(
+            return ApiResponse<List<InstructorProfileAdminResponse>>.FailureResponse(
                 "Đã xảy ra lỗi khi lấy danh sách hồ sơ giảng viên.");
         }
     }
@@ -291,7 +277,7 @@ public class InstructorService(
                     "Hồ sơ giảng viên của bạn không tồn tại.");
             }
 
-            if (profile.VerificationStatus != VerificationStatus.Verified || profile.VerificationStatus != VerificationStatus.RequestUpdate)
+            if (profile.VerificationStatus != VerificationStatus.Verified && profile.VerificationStatus != VerificationStatus.RequestUpdate)
             {
                 return ApiResponse<InstructorProfileResponse>.FailureResponse(
                     "Bạn chỉ có thể cập nhật hồ sơ giảng viên khi đã được duyệt hoặc đang được yêu cầu cập nhật.");
@@ -383,6 +369,44 @@ public class InstructorService(
             logger.LogError(ex, "Error retrieving instructor profile {ProfileId} for admin", profileId);
             return ApiResponse<InstructorProfileAdminResponse>.FailureResponse(
                 "Đã xảy ra lỗi khi lấy hồ sơ giảng viên cho quản trị viên.");
+        }
+    }
+
+    public async Task<ApiResponse<List<InstructorProfileResponse>>> GetMyInstructorProfileHistoryAsync(Guid userId)
+    {
+        try
+        {
+            var profiles = await unitOfWork.InstructorProfileRepository.GetAllAsync(p => p.UserId == userId);
+
+            var responses = profiles.Select(p => p.ToInstructorProfileResponse(p.User!)).ToList();
+            return ApiResponse<List<InstructorProfileResponse>>.SuccessResponse(responses, "Lấy lịch sử hồ sơ giảng viên thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error retrieving instructor profile history for user {UserId}", userId);
+            return ApiResponse<List<InstructorProfileResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy lịch sử hồ sơ giảng viên.");
+        }
+    }
+
+    public async Task<ApiResponse<bool>> CheckApplyInstructorProfileAsync(Guid userId)
+    {
+        try
+        {
+            var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(p => p.UserId == userId);
+            if (profile == null)
+            {
+                return ApiResponse<bool>.SuccessResponse(false, "Bạn chưa gửi đơn đăng ký giảng viên.");
+            }
+            if (profile.VerificationStatus != VerificationStatus.Rejected)
+            {
+                return ApiResponse<bool>.SuccessResponse(false, "Bạn chưa gửi đơn đăng ký giảng viên.");
+            }
+            return ApiResponse<bool>.SuccessResponse(true, "Bạn đã gửi đơn đăng ký giảng viên thành công. Chúng tôi sẽ xem xét và phản hồi sớm nhất.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error checking if user {UserId} has applied for instructor profile", userId);
+            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi kiểm tra xem bạn đã gửi đơn đăng ký giảng viên chưa.");
         }
     }
 }

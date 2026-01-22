@@ -51,6 +51,51 @@ public class UpdateInstructorProfileRequestValidator : AbstractValidator<UpdateI
                     ValidateSocialLinks(value, context);
                 }
             });
+
+        // BankInfo validation (optional)
+        When(x => x.BankInfo != null, () =>
+        {
+            RuleFor(x => x.BankInfo)
+                .ChildRules(bank =>
+                {
+                    bank.RuleFor(b => b!.BankName)
+                        .NotEmpty().WithMessage("Tên ngân hàng không được để trống")
+                        .MaximumLength(200).WithMessage("Tên ngân hàng không được vượt quá 200 ký tự");
+
+                    bank.RuleFor(b => b!.AccountNumber)
+                        .NotEmpty().WithMessage("Số tài khoản không được để trống")
+                        .MaximumLength(50).WithMessage("Số tài khoản không được vượt quá 50 ký tự")
+                        .Matches(@"^[0-9]+$").WithMessage("Số tài khoản chỉ được chứa số");
+
+                    bank.RuleFor(b => b!.AccountHolderName)
+                        .NotEmpty().WithMessage("Tên chủ tài khoản không được để trống")
+                        .MaximumLength(200).WithMessage("Tên chủ tài khoản không được vượt quá 200 ký tự");
+                });
+        });
+
+        // TeachingLanguages validation (optional)
+        When(x => x.TeachingLanguages != null, () =>
+        {
+            RuleFor(x => x.TeachingLanguages)
+                .Must(x => x!.Count > 0).WithMessage("Phải có ít nhất một ngôn ngữ giảng dạy")
+                .ForEach(language =>
+                {
+                    language.NotEmpty().WithMessage("Ngôn ngữ giảng dạy không được để trống")
+                         .MaximumLength(20).WithMessage("Mã ngôn ngữ không được vượt quá 20 ký tự");
+                });
+        });
+
+        // IntroVideoUrl validation (optional)
+        RuleFor(x => x.IntroVideoUrl)
+            .Must(uri => string.IsNullOrEmpty(uri) || IsValidUrl(uri))
+            .WithMessage("URL video giới thiệu phải hợp lệ")
+            .MaximumLength(500).WithMessage("URL video giới thiệu không được vượt quá 500 ký tự");
+
+        // TaxId validation (optional)
+        RuleFor(x => x.TaxId)
+            .MaximumLength(20).WithMessage("Mã số thuế không được vượt quá 20 ký tự")
+            .When(x => !string.IsNullOrEmpty(x.TaxId))
+            .Matches(@"^[0-9\-]+$").WithMessage("Mã số thuế chỉ được chứa số và dấu gạch ngang");
     }
 
     /// <summary>

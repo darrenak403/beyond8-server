@@ -7,8 +7,8 @@ public class ClassifyRequest
     [JsonPropertyName("img")]
     public string Img { get; set; } = string.Empty;
 
-    [JsonPropertyName("card_type")]
-    public int CardType { get; set; }
+    [JsonPropertyName("is_front")]
+    public bool IsFront { get; set; } = true;
 }
 
 public class ClassifyCorrectRequest

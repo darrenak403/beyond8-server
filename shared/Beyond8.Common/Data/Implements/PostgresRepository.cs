@@ -33,22 +33,22 @@ public class PostgresRepository<T>(DbContext context) : IGenericRepository<T> wh
 
     public async Task<T?> FindOneAsync(Expression<Func<T, bool>> expression)
     {
-        return await _dbSet.FirstOrDefaultAsync(expression);
+        return await _dbSet.AsNoTracking().FirstOrDefaultAsync(expression);
     }
 
     public async Task<IReadOnlyCollection<T>> GetAllAsync()
     {
-        return await _dbSet.ToListAsync();
+        return await _dbSet.AsNoTracking().ToListAsync();
     }
 
     public async Task<IReadOnlyCollection<T>> GetAllAsync(Expression<Func<T, bool>> expression)
     {
-        return await _dbSet.Where(expression).ToListAsync();
+        return await _dbSet.Where(expression).AsNoTracking().ToListAsync();
     }
 
     public async Task<T?> GetByIdAsync(Guid id, Expression<Func<T, bool>> expression)
     {
-        return await _dbSet.Where(expression).FirstOrDefaultAsync(e => e.Id == id);
+        return await _dbSet.Where(expression).AsNoTracking().FirstOrDefaultAsync(e => e.Id == id);
     }
 
     public async Task<T?> GetByIdAsync(Guid id)
@@ -78,9 +78,15 @@ public class PostgresRepository<T>(DbContext context) : IGenericRepository<T> wh
         int pageNumber,
         int pageSize,
         Expression<Func<T, bool>>? filter = null,
-        Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = null)
+        Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = null,
+        Func<IQueryable<T>, IQueryable<T>>? includes = null)
     {
         IQueryable<T> query = _dbSet;
+
+        if (includes != null)
+        {
+            query = includes(query);
+        }
 
         if (filter != null)
         {
@@ -97,6 +103,7 @@ public class PostgresRepository<T>(DbContext context) : IGenericRepository<T> wh
         var items = await query
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
+            .AsNoTracking()
             .ToListAsync();
 
         return (items, totalCount);

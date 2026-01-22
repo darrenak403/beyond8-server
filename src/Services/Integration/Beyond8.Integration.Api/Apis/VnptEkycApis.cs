@@ -31,10 +31,10 @@ public static class VnptEkycApis
 
         group.MapPost("/classify", ClassifyAsync)
             .WithName("ClassifyIdCard")
-            .WithDescription("Phân loại ảnh CMND/CCCD/Hộ chiếu và trích xuất thông tin (cần xác thực làm việc trên máy chính)")
+            .WithDescription("Phân loại ảnh CMND/CCCD/Hộ chiếu và trích xuất thông tin. Mặt trước: loại giấy tờ và số giấy tờ. Mặt sau: ngày hết hạn (cần xác thực làm việc trên máy chính)")
             .RequireAuthorization()
-            .Produces<ApiResponse<IdObject>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<IdObject>>(StatusCodes.Status400BadRequest);
+            .Produces<ApiResponse<ClassifyWithOcrResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<ClassifyWithOcrResponse>>(StatusCodes.Status400BadRequest);
 
         return group;
     }

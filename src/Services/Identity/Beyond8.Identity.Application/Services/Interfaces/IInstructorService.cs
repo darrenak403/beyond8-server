@@ -13,13 +13,16 @@ public interface IInstructorService
 
     Task<ApiResponse<InstructorProfileResponse>> NotApproveInstructorProfileAsync(Guid id, NotApproveInstructorProfileRequest request, Guid adminId);
 
-    Task<ApiResponse<List<InstructorProfileResponse>>> GetInstructorProfilesAsync(PaginationStatusRequest pagination);
-
     Task<ApiResponse<InstructorProfileResponse>> GetMyInstructorProfileAsync(Guid userId);
 
     Task<ApiResponse<InstructorProfileResponse>> GetInstructorProfileByIdAsync(Guid id);
 
+    Task<ApiResponse<InstructorProfileResponse>> UpdateInstructorProfileAsync(Guid userId, UpdateInstructorProfileRequest request);
+
+    Task<ApiResponse<List<InstructorProfileResponse>>> GetMyInstructorProfileHistoryAsync(Guid userId);
+
     Task<ApiResponse<InstructorProfileAdminResponse>> GetInstructorProfileByIdForAdminAsync(Guid id);
 
-    Task<ApiResponse<InstructorProfileResponse>> UpdateInstructorProfileAsync(Guid userId, UpdateInstructorProfileRequest request);
+    Task<ApiResponse<List<InstructorProfileAdminResponse>>> GetInstructorProfilesForAdminAsync(PaginationInstructorRequest pagination);
+    Task<ApiResponse<bool>> CheckApplyInstructorProfileAsync(Guid userId);
 }

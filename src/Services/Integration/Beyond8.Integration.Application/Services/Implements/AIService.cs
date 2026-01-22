@@ -82,14 +82,22 @@ public class AiService(
         sb.AppendLine("\n## Education");
         if (r.Education?.Count > 0)
             foreach (var e in r.Education)
-                sb.AppendLine($"- {e.School}, {e.Degree} ({e.Start}-{e.End})");
+            {
+                var fieldOfStudy = string.IsNullOrWhiteSpace(e.FieldOfStudy) ? "" : $", {e.FieldOfStudy}";
+                sb.AppendLine($"- {e.School}, {e.Degree}{fieldOfStudy} ({e.Start}-{e.End})");
+            }
         else
             sb.AppendLine("(trống)");
 
         sb.AppendLine("\n## Work Experience");
         if (r.WorkExperience?.Count > 0)
             foreach (var w in r.WorkExperience)
-                sb.AppendLine($"- {w.Company}, {w.Role} ({w.From} - {w.To})");
+            {
+                var toDate = w.IsCurrentJob ? "Hiện tại" : w.To == DateTime.MinValue ? "N/A" : w.To.ToString("yyyy-MM");
+                var fromDate = w.From == DateTime.MinValue ? "N/A" : w.From.ToString("yyyy-MM");
+                var description = string.IsNullOrWhiteSpace(w.Description) ? "" : $"\n  Mô tả: {w.Description}";
+                sb.AppendLine($"- {w.Company}, {w.Role} ({fromDate} - {toDate}){description}");
+            }
         else
             sb.AppendLine("(trống)");
 
@@ -99,6 +107,9 @@ public class AiService(
                 sb.AppendLine($"- {c.Name} ({c.Issuer}, {c.Year})");
         else
             sb.AppendLine("(trống)");
+
+        sb.AppendLine("\n## Teaching Languages");
+        sb.AppendLine(r.TeachingLanguages?.Count > 0 ? string.Join(", ", r.TeachingLanguages) : "(trống)");
 
         var imageItems = new List<(string Descriptor, string Url)>();
         foreach (var c in r.Certificates ?? [])
