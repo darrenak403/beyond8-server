@@ -154,7 +154,7 @@ public class InstructorService(
             var (isValid, errorMessage, profile, user) = await ValidateProfileForReviewAsync(id);
             if (!isValid)
             {
-                logger.LogWarning("Cannot reject profile {ProfileId}: {Reason}", id, errorMessage);
+                logger.LogWarning("Cannot not approve profile {ProfileId}: {Reason}", id, errorMessage);
                 return ApiResponse<InstructorProfileResponse>.FailureResponse(errorMessage!);
             }
 
@@ -166,28 +166,14 @@ public class InstructorService(
             await unitOfWork.InstructorProfileRepository.UpdateAsync(id, profile);
             await unitOfWork.SaveChangesAsync();
 
-            if (profile.VerificationStatus == VerificationStatus.Rejected)
-            {
-                var rejectionEvent = new InstructorRejectionEmailEvent(
-                    user!.Id,
-                    user.Email,
-                    user.FullName,
-                    request.NotApproveReason,
-                    DateTime.UtcNow
-                );
-                await publishEndpoint.Publish(rejectionEvent);
-            }
-            else
-            {
-                var updateRequestEvent = new InstructorUpdateRequestEmailEvent(
-                    user!.Id,
-                    user.Email,
-                    user.FullName,
-                    request.NotApproveReason,
-                    DateTime.UtcNow
-                );
-                await publishEndpoint.Publish(updateRequestEvent);
-            }
+            var updateRequestEvent = new InstructorUpdateRequestEmailEvent(
+                user!.Id,
+                user.Email,
+                user.FullName,
+                request.NotApproveReason,
+                DateTime.UtcNow
+            );
+            await publishEndpoint.Publish(updateRequestEvent);
 
             return ApiResponse<InstructorProfileResponse>.SuccessResponse(profile.ToInstructorProfileResponse(user!), "Đơn đăng ký giảng viên đã được không phê duyệt.");
         }
@@ -403,10 +389,6 @@ public class InstructorService(
         {
             var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(p => p.UserId == userId);
             if (profile == null)
-            {
-                return ApiResponse<bool>.SuccessResponse(false, "Bạn chưa gửi đơn đăng ký giảng viên.");
-            }
-            if (profile.VerificationStatus != VerificationStatus.Rejected)
             {
                 return ApiResponse<bool>.SuccessResponse(false, "Bạn chưa gửi đơn đăng ký giảng viên.");
             }

@@ -10,6 +10,7 @@ public class IntegrationDbContext(DbContextOptions<IntegrationDbContext> options
     public DbSet<MediaFile> MediaFiles { get; set; } = null!;
     public DbSet<AiUsage> AiUsages { get; set; } = null!;
     public DbSet<AiPrompt> AiPrompts { get; set; } = null!;
+    public DbSet<Notification> Notifications { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -29,6 +30,11 @@ public class IntegrationDbContext(DbContextOptions<IntegrationDbContext> options
         });
 
         modelBuilder.Entity<AiPrompt>(entity =>
+        {
+            entity.HasQueryFilter(e => e.DeletedAt == null);
+        });
+
+        modelBuilder.Entity<Notification>(entity =>
         {
             entity.HasQueryFilter(e => e.DeletedAt == null);
         });

@@ -19,9 +19,7 @@ using Beyond8.Integration.Infrastructure.ExternalServices.Email;
 using Beyond8.Integration.Infrastructure.ExternalServices.Hubs.SingalR;
 using Beyond8.Integration.Infrastructure.Hubs;
 using Beyond8.Integration.Infrastructure.Repositories.Implements;
-using Microsoft.AspNetCore.SignalR;
 using FluentValidation;
-using MassTransit;
 using Microsoft.Extensions.Options;
 using Resend;
 
@@ -111,7 +109,6 @@ public static class Bootstrapper
             config.AddConsumer<OtpEmailConsumer>();
             config.AddConsumer<InstructorApplicationSubmittedConsumer>();
             config.AddConsumer<InstructorApprovalEmailConsumer>();
-            config.AddConsumer<InstructorRejectionEmailConsumer>();
             config.AddConsumer<InstructorUpdateRequestEmailConsumer>();
         });
 

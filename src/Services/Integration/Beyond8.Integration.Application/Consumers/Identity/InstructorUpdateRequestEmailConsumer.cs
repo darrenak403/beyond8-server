@@ -29,11 +29,33 @@ public class InstructorUpdateRequestEmailConsumer(
             );
 
             if (success)
+            {
                 logger.LogInformation("Successfully sent instructor update request email to {Email}", message.ToEmail);
-
-            var status = success ? NotificationStatus.Delivered : NotificationStatus.Failed;
-            await unitOfWork.NotificationRepository.AddAsync(message.InstructorUpdateRequestEmailEventToNotification(status));
-            await unitOfWork.SaveChangesAsync();
+                
+                try
+                {
+                    await unitOfWork.NotificationRepository.AddAsync(message.InstructorUpdateRequestEmailEventToNotification(NotificationStatus.Delivered));
+                    await unitOfWork.SaveChangesAsync();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Failed to save notification for instructor update request email to {Email}, but email was sent successfully", message.ToEmail);
+                }
+            }
+            else
+            {
+                logger.LogError("Failed to send instructor update request email to {Email}", message.ToEmail);
+                
+                try
+                {
+                    await unitOfWork.NotificationRepository.AddAsync(message.InstructorUpdateRequestEmailEventToNotification(NotificationStatus.Failed));
+                    await unitOfWork.SaveChangesAsync();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Failed to save notification for instructor update request email to {Email}", message.ToEmail);
+                }
+            }
         }
         catch (Exception ex)
         {

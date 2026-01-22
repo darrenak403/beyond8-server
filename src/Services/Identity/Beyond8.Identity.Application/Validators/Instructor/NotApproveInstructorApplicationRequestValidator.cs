@@ -16,7 +16,7 @@ public class NotApproveInstructorProfileRequestValidator : AbstractValidator<Not
 
         RuleFor(x => x.VerificationStatus)
             .IsInEnum().WithMessage("Trạng thái không hợp lệ")
-            .Must(status => status == VerificationStatus.RequestUpdate || status == VerificationStatus.Rejected)
-            .WithMessage("Trạng thái phải là RequestUpdate hoặc Rejected");
+            .Must(status => status == VerificationStatus.RequestUpdate)
+            .WithMessage("Trạng thái phải là RequestUpdate");
     }
 }

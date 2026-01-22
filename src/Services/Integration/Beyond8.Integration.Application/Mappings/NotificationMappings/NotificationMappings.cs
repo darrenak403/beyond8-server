@@ -1,4 +1,3 @@
-using System;
 using Beyond8.Common.Events.Identity;
 using Beyond8.Integration.Domain.Entities;
 using Beyond8.Integration.Domain.Enums;
@@ -28,21 +27,6 @@ public static class NotificationMappings
         {
             Title = "Đơn giảng viên được duyệt",
             Message = $"Chúc mừng! Đơn đăng ký giảng viên của bạn đã được duyệt. Xem hồ sơ: {@event.ProfileUrl}",
-            UserId = @event.UserId,
-            Target = NotificationTarget.User,
-            Status = status,
-            Channels = [NotificationChannel.Email],
-            ReadAt = null,
-            IsRead = false
-        };
-    }
-
-    public static Notification InstructorRejectionEmailEventToNotification(this InstructorRejectionEmailEvent @event, NotificationStatus status)
-    {
-        return new Notification
-        {
-            Title = "Đơn giảng viên bị từ chối",
-            Message = $"Đơn đăng ký giảng viên của bạn đã bị từ chối. Lý do: {@event.Reason}",
             UserId = @event.UserId,
             Target = NotificationTarget.User,
             Status = status,

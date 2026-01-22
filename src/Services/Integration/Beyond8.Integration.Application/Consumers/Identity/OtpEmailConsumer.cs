@@ -33,15 +33,33 @@ public class OtpEmailConsumer(
 
             if (success)
             {
-                await unitOfWork.NotificationRepository.AddAsync(message.OtpEmailEventToNotification(NotificationStatus.Delivered));
                 logger.LogInformation("Successfully sent OTP email to {Email}", message.ToEmail);
+
+                try
+                {
+                    await unitOfWork.NotificationRepository.AddAsync(message.OtpEmailEventToNotification(NotificationStatus.Delivered));
+                    await unitOfWork.SaveChangesAsync();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Failed to save notification for OTP email to {Email}, but email was sent successfully", message.ToEmail);
+                }
             }
             else
             {
-                await unitOfWork.NotificationRepository.AddAsync(message.OtpEmailEventToNotification(NotificationStatus.Failed));
                 logger.LogError("Failed to send OTP email to {Email}", message.ToEmail);
+
+                try
+                {
+                    await unitOfWork.NotificationRepository.AddAsync(message.OtpEmailEventToNotification(NotificationStatus.Failed));
+                    await unitOfWork.SaveChangesAsync();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Failed to save notification for OTP email to {Email}", message.ToEmail);
+                }
             }
-            await unitOfWork.SaveChangesAsync();
+
             logger.LogInformation("OTP email event for {Email} with purpose {Purpose} consumed successfully",
                 message.ToEmail, message.Purpose);
         }
