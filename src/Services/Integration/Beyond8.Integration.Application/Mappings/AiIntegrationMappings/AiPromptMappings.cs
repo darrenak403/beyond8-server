@@ -6,7 +6,7 @@ namespace Beyond8.Integration.Application.Mappings.AiIntegrationMappings;
 
 public static class AiPromptMappings
 {
-    public static AiPrompt ToEntity(this CreateAiPromptRequest request, Guid userId)
+    public static AiPrompt ToEntity(this CreateAiPromptRequest request, Guid userId, string initialVersion)
     {
         return new AiPrompt
         {
@@ -14,7 +14,7 @@ public static class AiPromptMappings
             Description = request.Description,
             Category = request.Category,
             Template = request.Template,
-            Version = request.Version,
+            Version = request.Version ?? initialVersion,
             IsActive = true,
             Variables = request.Variables != null ? JsonSerializer.Serialize(request.Variables) : null,
             DefaultParameters = request.DefaultParameters != null ? JsonSerializer.Serialize(request.DefaultParameters) : null,
@@ -22,14 +22,12 @@ public static class AiPromptMappings
             MaxTokens = request.MaxTokens,
             Temperature = request.Temperature,
             TopP = request.TopP,
-            Tags = request.Tags != null ? string.Join(", ", request.Tags) : null,
-            CreatedBy = userId
+            Tags = request.Tags != null ? string.Join(", ", request.Tags) : null
         };
     }
 
     public static void UpdateFromRequest(this AiPrompt entity, UpdateAiPromptRequest request, Guid userId)
     {
-        if (request.Name != null) entity.Name = request.Name;
         if (request.Description != null) entity.Description = request.Description;
         if (request.Category != null) entity.Category = request.Category.Value;
         if (request.Template != null) entity.Template = request.Template;
@@ -42,6 +40,37 @@ public static class AiPromptMappings
         if (request.IsActive != null) entity.IsActive = request.IsActive.Value;
         if (request.Tags != null) entity.Tags = string.Join(", ", request.Tags);
         entity.UpdatedBy = userId;
+    }
+
+    /// <summary>Chỉ gán các trường metadata (Description, Category, Tags, IsActive, UpdatedBy).</summary>
+    public static void ApplyMetadataOnly(this AiPrompt entity, UpdateAiPromptRequest request, Guid userId)
+    {
+        if (request.Description != null) entity.Description = request.Description;
+        if (request.Category != null) entity.Category = request.Category.Value;
+        if (request.Tags != null) entity.Tags = string.Join(", ", request.Tags);
+        if (request.IsActive != null) entity.IsActive = request.IsActive.Value;
+        entity.UpdatedBy = userId;
+    }
+
+    /// <summary>Merge request lên current (request ưu tiên khi có giá trị), tạo entity mới với Version và IsActive.</summary>
+    public static AiPrompt ToNewVersionEntity(this AiPrompt current, UpdateAiPromptRequest request, string nextVersion)
+    {
+        return new AiPrompt
+        {
+            Name = current.Name,
+            Category = request.Category ?? current.Category,
+            Version = nextVersion,
+            IsActive = true,
+            Template = request.Template ?? current.Template,
+            SystemPrompt = request.SystemPrompt ?? current.SystemPrompt,
+            Description = request.Description ?? current.Description,
+            Variables = request.Variables != null ? JsonSerializer.Serialize(request.Variables) : current.Variables,
+            DefaultParameters = request.DefaultParameters != null ? JsonSerializer.Serialize(request.DefaultParameters) : current.DefaultParameters,
+            MaxTokens = request.MaxTokens ?? current.MaxTokens,
+            Temperature = request.Temperature ?? current.Temperature,
+            TopP = request.TopP ?? current.TopP,
+            Tags = request.Tags != null ? string.Join(", ", request.Tags) : current.Tags,
+        };
     }
 
     public static AiPromptResponse ToResponse(this AiPrompt entity)

@@ -37,6 +37,15 @@ public static class CommonExtensions
                 options.QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
                 options.QueueLimit = 0;
             });
+
+            options.AddTokenBucketLimiter(policyName: "AiFixedLimit", options =>
+            {
+                options.TokenLimit = 10;
+                options.ReplenishmentPeriod = TimeSpan.FromSeconds(60);
+                options.TokensPerPeriod = 10;
+                options.QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
+                options.QueueLimit = 0;
+            });
         });
 
         builder.Services.Configure<RateLimiterOptions>(options =>

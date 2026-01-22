@@ -7,8 +7,9 @@ namespace Beyond8.Integration.Application.Services.Interfaces;
 public interface IGeminiService
 {
     /// <summary>
-    /// Generate content using Gemini AI with a specific prompt
+    /// Generate content using Gemini AI with a specific prompt. Hỗ trợ ảnh/PDF inline (multimodal).
     /// </summary>
+    /// <param name="inlineImages">Ảnh/PDF gửi kèm (base64). Thứ tự khớp với mô tả trong prompt.</param>
     Task<ApiResponse<GeminiResponse>> GenerateContentAsync(
         string prompt,
         AiOperation operation,
@@ -17,7 +18,8 @@ public interface IGeminiService
         string? model = null,
         int? maxTokens = null,
         decimal? temperature = null,
-        decimal? topP = null);
+        decimal? topP = null,
+        IReadOnlyList<GeminiImagePart>? inlineImages = null);
 
     /// <summary>
     /// Generate content using a stored prompt template

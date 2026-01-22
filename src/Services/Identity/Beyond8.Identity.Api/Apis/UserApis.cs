@@ -1,6 +1,7 @@
 using Beyond8.Common.Extensions;
 using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
+using Beyond8.Identity.Application.Dtos.Instructors;
 using Beyond8.Identity.Application.Dtos.Users;
 using Beyond8.Identity.Application.Services.Interfaces;
 using FluentValidation;
@@ -124,7 +125,6 @@ namespace Beyond8.Identity.Api.Apis
                 : Results.NotFound(response);
         }
 
-
         private static async Task<IResult> UploadUserAvatarAsync(
             [FromServices] ICurrentUserService currentUserService,
             [FromBody] UpdateFileUrlRequest request,
@@ -176,7 +176,7 @@ namespace Beyond8.Identity.Api.Apis
 
         private static async Task<IResult> GetAllUsersAsync(
             [FromServices] IUserService userService,
-            [AsParameters] PaginationRequest paginationRequest)
+            [AsParameters] PaginationUserRequest paginationRequest)
         {
             var response = await userService.GetAllUsersAsync(paginationRequest);
 

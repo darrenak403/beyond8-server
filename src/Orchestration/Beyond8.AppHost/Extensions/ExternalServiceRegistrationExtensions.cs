@@ -42,8 +42,10 @@ public static class ExternalServiceRegistrationExtensions
 
         var integrationService = builder.AddProject<Projects.Beyond8_Integration_Api>("Integration-Service")
             .WithReference(integrationDb)
+            .WithReference(redis)
             .WithReference(rabbitMq)
             .WaitFor(postgres)
+            .WaitFor(redis)
             .WaitFor(rabbitMq);
 
         var apiGateway = builder.AddYarp("api-gateway")
@@ -54,10 +56,14 @@ public static class ExternalServiceRegistrationExtensions
                 var identityCluster = config.AddProjectCluster(identityService);
                 config.AddRoute("/api/v1/auth/{**catch-all}", identityCluster);
                 config.AddRoute("/api/v1/users/{**catch-all}", identityCluster);
+                config.AddRoute("/api/v1/instructors/{**catch-all}", identityCluster);
 
                 var integrationCluster = config.AddProjectCluster(integrationService);
                 config.AddRoute("/api/v1/media/{**catch-all}", integrationCluster);
                 config.AddRoute("/api/v1/ai/{**catch-all}", integrationCluster);
+                config.AddRoute("/api/v1/vnpt-ekyc/{**catch-all}", integrationCluster);
+                config.AddRoute("/api/v1/ai-usage/{**catch-all}", integrationCluster);
+                config.AddRoute("/api/v1/ai-prompts/{**catch-all}", integrationCluster);
             });
 
         var scalarDocs = builder.AddScalarApiReference("api-docs")

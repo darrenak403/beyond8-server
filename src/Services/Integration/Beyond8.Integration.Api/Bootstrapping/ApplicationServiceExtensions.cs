@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using Amazon;
 using Amazon.S3;
 using Beyond8.Common.Extensions;
@@ -6,6 +7,7 @@ using Beyond8.Integration.Api.Apis;
 using Beyond8.Integration.Application.Consumers.Identity;
 using Beyond8.Integration.Application.Dtos.AiIntegration;
 using Beyond8.Integration.Application.Dtos.MediaFiles;
+using Beyond8.Integration.Application.Dtos.VnptEkyc;
 using Beyond8.Integration.Application.Services.Implements;
 using Beyond8.Integration.Application.Services.Interfaces;
 using Beyond8.Integration.Domain.Repositories.Interfaces;
@@ -14,7 +16,10 @@ using Beyond8.Integration.Infrastructure.Configurations;
 using Beyond8.Integration.Infrastructure.Data;
 using Beyond8.Integration.Infrastructure.ExternalServices;
 using Beyond8.Integration.Infrastructure.ExternalServices.Email;
+using Beyond8.Integration.Infrastructure.ExternalServices.Hubs.SingalR;
+using Beyond8.Integration.Infrastructure.Hubs;
 using Beyond8.Integration.Infrastructure.Repositories.Implements;
+using Microsoft.AspNetCore.SignalR;
 using FluentValidation;
 using MassTransit;
 using Microsoft.Extensions.Options;
@@ -53,6 +58,7 @@ public static class Bootstrapper
         builder.Services.AddHttpClient();
         builder.Services.Configure<GeminiConfiguration>(builder.Configuration.GetSection(GeminiConfiguration.SectionName));
 
+        // Register Resend configuration
         builder.Services.Configure<ResendConfiguration>(
             builder.Configuration.GetSection(ResendConfiguration.SectionName));
 
@@ -65,14 +71,45 @@ public static class Bootstrapper
             return ResendClient.Create(options.ApiKey.Trim());
         });
 
+        // Register VnptEkyc configuration
+        builder.Services.Configure<VnptEkycSettings>(builder.Configuration.GetSection(VnptEkycSettings.SectionName));
+
+        builder.Services.AddHttpClient("VnptEkycClient", (serviceProvider, client) =>
+        {
+            var options = serviceProvider.GetRequiredService<IOptions<VnptEkycSettings>>().Value;
+
+            client.BaseAddress = new Uri(options.BaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+
+            if (!string.IsNullOrEmpty(options.AccessToken))
+            {
+                client.DefaultRequestHeaders.Authorization =
+                    new AuthenticationHeaderValue("Bearer", options.AccessToken);
+            }
+
+            if (!string.IsNullOrEmpty(options.TokenId))
+            {
+                client.DefaultRequestHeaders.Add("Token-id", options.TokenId);
+            }
+
+            if (!string.IsNullOrEmpty(options.TokenKey))
+            {
+                client.DefaultRequestHeaders.Add("Token-key", options.TokenKey);
+            }
+        });
+
         // Register repositories
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+        builder.Services.AddSignalR();
+        builder.Services.AddScoped<INotificationService, SignalRNotificationService>();
 
         // Configure MassTransit with RabbitMQ and register consumers
         builder.AddMassTransitWithRabbitMq(config =>
         {
             // Register consumers from Identity events
             config.AddConsumer<OtpEmailConsumer>();
+            config.AddConsumer<InstructorApplicationSubmittedConsumer>();
             config.AddConsumer<InstructorApprovalEmailConsumer>();
             config.AddConsumer<InstructorRejectionEmailConsumer>();
             config.AddConsumer<InstructorUpdateRequestEmailConsumer>();
@@ -84,11 +121,15 @@ public static class Bootstrapper
         builder.Services.AddScoped<IAiUsageService, AiUsageService>();
         builder.Services.AddScoped<IAiPromptService, AiPromptService>();
         builder.Services.AddScoped<IGeminiService, GeminiService>();
+        builder.Services.AddScoped<IUrlContentDownloader, UrlContentDownloader>();
         builder.Services.AddScoped<IEmailService, EmailService>();
+        builder.Services.AddScoped<IVnptEkycService, VnptEkycService>();
+        builder.Services.AddScoped<IAiService, AiService>();
 
         // Register validators
         builder.Services.AddValidatorsFromAssemblyContaining<UploadFileRequest>();
         builder.Services.AddValidatorsFromAssemblyContaining<AiUsageRequest>();
+        builder.Services.AddValidatorsFromAssemblyContaining<LivenessRequest>();
 
         return builder;
     }
@@ -104,9 +145,13 @@ public static class Bootstrapper
 
         app.UseHttpsRedirection();
 
+        app.MapHub<AppHub>("/hubs/app");
+
         app.MapMediaFileApi();
+        app.MapAiApi();
         app.MapAiUsageApi();
         app.MapAiPromptApi();
+        app.MapVnptEkycApi();
 
         return app;
     }

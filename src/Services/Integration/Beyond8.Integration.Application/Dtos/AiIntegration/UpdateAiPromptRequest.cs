@@ -4,7 +4,6 @@ namespace Beyond8.Integration.Application.Dtos.AiIntegration;
 
 public class UpdateAiPromptRequest
 {
-    public string? Name { get; set; }
     public string? Description { get; set; }
     public PromptCategory? Category { get; set; }
     public string? Template { get; set; }

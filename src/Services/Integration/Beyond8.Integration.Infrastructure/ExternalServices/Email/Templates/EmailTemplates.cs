@@ -30,7 +30,7 @@ public static class EmailTemplates
                         <td style='padding: 40px 30px;'>
                             <h2 style='color: #333333; margin: 0 0 20px 0; font-size: 24px;'>Mã xác thực OTP</h2>
                             <p style='color: #666666; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;'>
-                                Bạn đã yêu cầu mã OTP cho <strong>{purpose}</strong>. Vui lòng sử dụng mã bên dưới để hoàn tất:
+                                Bạn đã yêu cầu mã OTP cho <strong>{purpose}</strong> tại Beyond8. Vui lòng sử dụng mã bên dưới để hoàn tất:
                             </p>
 
                             <!-- OTP Code Box -->
