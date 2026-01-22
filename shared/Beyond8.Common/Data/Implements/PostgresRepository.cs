@@ -78,9 +78,15 @@ public class PostgresRepository<T>(DbContext context) : IGenericRepository<T> wh
         int pageNumber,
         int pageSize,
         Expression<Func<T, bool>>? filter = null,
-        Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = null)
+        Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = null,
+        Func<IQueryable<T>, IQueryable<T>>? includes = null)
     {
         IQueryable<T> query = _dbSet;
+
+        if (includes != null)
+        {
+            query = includes(query);
+        }
 
         if (filter != null)
         {

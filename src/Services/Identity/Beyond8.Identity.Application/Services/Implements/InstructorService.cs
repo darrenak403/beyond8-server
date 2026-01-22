@@ -8,6 +8,7 @@ using Beyond8.Identity.Domain.Entities;
 using Beyond8.Identity.Domain.Enums;
 using Beyond8.Identity.Domain.Repositories.Interfaces;
 using MassTransit;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Beyond8.Identity.Application.Services.Implements;
@@ -82,8 +83,8 @@ public class InstructorService(
             }
 
             var instructorProfile = request.ToInstructorProfileEntity(userId);
-            instructorProfile.VerifiedBy = userId;
-            instructorProfile.VerifiedAt = DateTime.UtcNow;
+            // instructorProfile.VerifiedBy = userId;
+            // instructorProfile.VerifiedAt = DateTime.UtcNow;
 
             await unitOfWork.InstructorProfileRepository.AddAsync(instructorProfile);
             await unitOfWork.SaveChangesAsync();
@@ -210,7 +211,8 @@ public class InstructorService(
                 pageNumber: pagination.PageNumber,
                 pageSize: pagination.PageSize,
                 filter: p => status == null || p.VerificationStatus == status,
-                orderBy: query => query.OrderBy(p => p.CreatedAt)
+                orderBy: query => query.OrderBy(p => p.CreatedAt),
+                includes: query => query.Include(p => p.User)
             );
 
             if (!profiles.Items.Any() || profiles.TotalCount == 0)
@@ -224,7 +226,9 @@ public class InstructorService(
                     "Không có hồ sơ giảng viên nào.");
             }
 
-            var responses = profiles.Items.Select(p => p.ToInstructorProfileResponse(p.User)).ToList();
+            var responses = profiles.Items
+                .Select(p => p.ToInstructorProfileResponse(p.User!))
+                .ToList();
 
             logger.LogInformation("Retrieved {Count} instructor profiles with status {Status} for page {PageNumber}",
                 responses.Count, status, pagination.PageNumber);
