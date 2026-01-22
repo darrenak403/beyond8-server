@@ -1,5 +1,6 @@
 using Beyond8.Common.Data.Implements;
 using Beyond8.Identity.Domain.Entities;
+using Beyond8.Identity.Domain.Enums;
 using Beyond8.Identity.Domain.Repositories.Interfaces;
 using Beyond8.Identity.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -33,7 +34,7 @@ public class InstructorProfileRepository(IdentityDbContext context) : PostgresRe
     {
         var query = AsQueryable()
             .Include(ip => ip.User)
-            .Where(ip => ip.DeletedAt == null);
+            .Where(ip => ip.DeletedAt == null && ip.VerificationStatus != VerificationStatus.Hidden);
 
         if (!string.IsNullOrWhiteSpace(email))
             query = query.Where(ip => ip.User!.Email.Contains(email));

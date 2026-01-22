@@ -57,7 +57,10 @@ public class InstructorService(
                 return ApiResponse<InstructorProfileResponse>.FailureResponse("Người dùng không tồn tại.");
             }
 
-            var existingProfile = await unitOfWork.InstructorProfileRepository.FindOneAsync(p => p.UserId == userId);
+            // Check existing profile (exclude Hidden profiles - user can re-apply if deleted)
+            var existingProfile = await unitOfWork.InstructorProfileRepository.FindOneAsync(
+                p => p.UserId == userId && p.VerificationStatus != VerificationStatus.Hidden);
+
             if (existingProfile != null)
             {
                 logger.LogWarning("User {UserId} already has an instructor application with status {Status}",
@@ -228,7 +231,9 @@ public class InstructorService(
     {
         try
         {
-            var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(p => p.UserId == userId);
+            // Exclude Hidden profiles - user should not see deleted profiles
+            var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(
+                p => p.UserId == userId && p.VerificationStatus != VerificationStatus.Hidden);
 
             if (profile == null)
             {
@@ -262,7 +267,9 @@ public class InstructorService(
     {
         try
         {
-            var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(p => p.UserId == userId);
+            // Exclude Hidden profiles - user cannot update deleted profiles
+            var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(
+                p => p.UserId == userId && p.VerificationStatus != VerificationStatus.Hidden);
 
             if (profile == null)
             {
@@ -318,12 +325,19 @@ public class InstructorService(
     {
         try
         {
-            var (isSuccess, errorMessage, profile, user) = await GetProfileWithUserAsync(profileId);
-            if (!isSuccess)
+            // Public endpoint - only show verified profiles, exclude Hidden
+            var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(
+                p => p.Id == profileId &&
+                     p.VerificationStatus == VerificationStatus.Verified);
+
+            if (profile == null)
             {
-                logger.LogWarning("Instructor profile {ProfileId} not found", profileId);
-                return ApiResponse<InstructorProfileResponse>.FailureResponse(errorMessage!);
+                logger.LogWarning("Instructor profile {ProfileId} not found or not verified", profileId);
+                return ApiResponse<InstructorProfileResponse>.FailureResponse(
+                    "Hồ sơ giảng viên không tồn tại hoặc chưa được duyệt.");
             }
+
+            var user = profile.User;
 
             var response = profile!.ToInstructorProfileResponse(user!);
             return ApiResponse<InstructorProfileResponse>.SuccessResponse(
@@ -342,11 +356,13 @@ public class InstructorService(
     {
         try
         {
-            var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(p => p.Id == profileId);
+            // Admin can view all profiles including Hidden (for reference)
+            var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(
+                p => p.Id == profileId);
 
             if (profile == null)
             {
-                logger.LogInformation("Instructor profile {ProfileId} not found for admin", profileId);
+                logger.LogWarning("Instructor profile {ProfileId} not found for admin", profileId);
                 return ApiResponse<InstructorProfileAdminResponse>.FailureResponse(
                     "Hồ sơ giảng viên không tồn tại.");
             }
@@ -371,7 +387,10 @@ public class InstructorService(
     {
         try
         {
-            var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(p => p.UserId == userId);
+            // Exclude Hidden profiles - treated as not applied
+            var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(
+                p => p.UserId == userId && p.VerificationStatus != VerificationStatus.Hidden);
+
             if (profile == null)
             {
                 return ApiResponse<bool>.SuccessResponse(false, "Bạn chưa gửi đơn đăng ký giảng viên.");
@@ -389,12 +408,23 @@ public class InstructorService(
     {
         try
         {
-            var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(p => p.Id == profileId);
+            // Get profile (including Hidden for validation)
+            var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(
+                p => p.Id == profileId && p.DeletedAt == null);
+
             if (profile == null)
             {
-                logger.LogInformation("Instructor profile {ProfileId} not found for deletion by admin {AdminId}", profileId, adminId);
+                logger.LogWarning("Instructor profile {ProfileId} not found for deletion by admin {AdminId}",
+                    profileId, adminId);
                 return ApiResponse<bool>.FailureResponse(
                     "Hồ sơ giảng viên không tồn tại.");
+            }
+
+            if (profile.VerificationStatus == VerificationStatus.Hidden)
+            {
+                logger.LogWarning("Instructor profile {ProfileId} already hidden, cannot delete again", profileId);
+                return ApiResponse<bool>.FailureResponse(
+                    "Hồ sơ giảng viên đã bị xóa trước đó.");
             }
 
             var user = await unitOfWork.UserRepository.GetByIdAsync(profile.UserId);
