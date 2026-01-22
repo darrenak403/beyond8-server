@@ -2,11 +2,6 @@ using System.Text.Json.Serialization;
 
 namespace Beyond8.Integration.Application.Dtos.VnptEkyc;
 
-/// <summary>
-/// Response cho classify kèm OCR
-/// Mặt trước: trả về loại giấy tờ và số giấy tờ
-/// Mặt sau: trả về ngày hết hạn
-/// </summary>
 public class ClassifyWithOcrResponse
 {
 
@@ -21,7 +16,4 @@ public class ClassifyWithOcrResponse
 
     [JsonPropertyName("issue_date")]
     public string? IssueDate { get; set; }
-
-    [JsonPropertyName("issue_place")]
-    public string? IssuePlace { get; set; }
 }

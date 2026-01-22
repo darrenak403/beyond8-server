@@ -14,12 +14,15 @@ public class ProfileReviewRequest
     public List<WorkInfo> WorkExperience { get; set; } = [];
 
     public List<CertificateInfo> Certificates { get; set; } = [];
+
+    public List<string> TeachingLanguages { get; set; } = [];
 }
 
 public class EducationInfo
 {
     public string School { get; set; } = string.Empty;
     public string Degree { get; set; } = string.Empty;
+    public string FieldOfStudy { get; set; } = string.Empty;
     public int Start { get; set; }
     public int End { get; set; }
 }
@@ -28,8 +31,10 @@ public class WorkInfo
 {
     public string Company { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
-    public string From { get; set; } = string.Empty;
-    public string To { get; set; } = string.Empty;
+    public DateTime From { get; set; } = DateTime.MinValue;
+    public DateTime To { get; set; } = DateTime.MinValue;
+    public bool IsCurrentJob { get; set; } = false;
+    public string? Description { get; set; }
 }
 
 public class CertificateInfo

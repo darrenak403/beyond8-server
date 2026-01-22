@@ -277,7 +277,7 @@ public class InstructorService(
                     "Hồ sơ giảng viên của bạn không tồn tại.");
             }
 
-            if (profile.VerificationStatus != VerificationStatus.Verified || profile.VerificationStatus != VerificationStatus.RequestUpdate)
+            if (profile.VerificationStatus != VerificationStatus.Verified && profile.VerificationStatus != VerificationStatus.RequestUpdate)
             {
                 return ApiResponse<InstructorProfileResponse>.FailureResponse(
                     "Bạn chỉ có thể cập nhật hồ sơ giảng viên khi đã được duyệt hoặc đang được yêu cầu cập nhật.");

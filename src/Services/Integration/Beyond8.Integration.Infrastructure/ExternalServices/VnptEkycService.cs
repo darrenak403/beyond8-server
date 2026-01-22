@@ -279,8 +279,7 @@ public class VnptEkycService(ILogger<VnptEkycService> logger, IHttpClientFactory
             {
                 // Mặt sau: trả về ngày hết hạn
                 result.IssueDate = ocrData.IssueDate;
-                result.IssuePlace = ocrData.IssuePlace;
-                _logger.LogInformation("VNPT eKYC OCR back success: IssueDate={IssueDate}, IssuePlace={IssuePlace}", ocrData.IssueDate, ocrData.IssuePlace);
+                _logger.LogInformation("VNPT eKYC OCR back success: IssueDate={IssueDate}", ocrData.IssueDate);
             }
 
             return ApiResponse<ClassifyWithOcrResponse>.SuccessResponse(result, "Phân loại và OCR thành công");
@@ -374,8 +373,8 @@ public class VnptEkycService(ILogger<VnptEkycService> logger, IHttpClientFactory
                 return ApiResponse<OcrResponse>.FailureResponse("Phản hồi OCR mặt sau không hợp lệ");
             }
 
-            _logger.LogInformation("VNPT eKYC OCR back success: IssueDate={IssueDate}, IssuePlace={IssuePlace}, ExpiryDate={ExpiryDate}",
-                result.Object.IssueDate, result.Object.IssuePlace, result.Object.ExpiryDate);
+            _logger.LogInformation("VNPT eKYC OCR back success: IssueDate={IssueDate}, ExpiryDate={ExpiryDate}",
+                result.Object.IssueDate, result.Object.ExpiryDate);
             return ApiResponse<OcrResponse>.SuccessResponse(result.Object, "OCR mặt sau thành công");
         }
         catch (Exception ex)

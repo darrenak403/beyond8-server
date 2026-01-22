@@ -6,73 +6,73 @@ namespace Beyond8.Integration.Infrastructure.Data.Seeders;
 
 public static class AiPromptSeeder
 {
-    public static async Task SeedAsync(IntegrationDbContext context)
+  public static async Task SeedAsync(IntegrationDbContext context)
+  {
+    if (await context.AiPrompts.AnyAsync())
     {
-        if (await context.AiPrompts.AnyAsync())
-        {
-            return; // Already seeded
-        }
-
-        var prompts = new List<AiPrompt>();
-
-        // Add prompts from each category
-        prompts.AddRange(GetCourseContentPrompts());
-        prompts.AddRange(GetAssessmentPrompts());
-        prompts.AddRange(GetFeedbackPrompts());
-        prompts.AddRange(GetContentAnalysisPrompts());
-        prompts.AddRange(GetTranslationPrompts());
-        prompts.AddRange(GetPersonalizationPrompts());
-        prompts.AddRange(GetModerationPrompts());
-
-        await context.AiPrompts.AddRangeAsync(prompts);
-        await context.SaveChangesAsync();
+      return; // Already seeded
     }
 
-    private static List<AiPrompt> GetCourseContentPrompts()
-    {
-        // TODO: Add course content prompts
-        // Examples: Generate lesson outlines, explain concepts, create examples
-        return new List<AiPrompt>();
-    }
+    var prompts = new List<AiPrompt>();
 
-    private static List<AiPrompt> GetAssessmentPrompts()
-    {
-        // TODO: Add assessment prompts
-        // Examples: Generate quiz questions, create rubrics, design assignments
-        return new List<AiPrompt>();
-    }
+    // Add prompts from each category
+    prompts.AddRange(GetCourseContentPrompts());
+    prompts.AddRange(GetAssessmentPrompts());
+    prompts.AddRange(GetFeedbackPrompts());
+    prompts.AddRange(GetContentAnalysisPrompts());
+    prompts.AddRange(GetTranslationPrompts());
+    prompts.AddRange(GetPersonalizationPrompts());
+    prompts.AddRange(GetModerationPrompts());
 
-    private static List<AiPrompt> GetFeedbackPrompts()
-    {
-        // TODO: Add feedback prompts
-        // Examples: Provide constructive feedback, grade with rubric, suggest improvements
-        return new List<AiPrompt>();
-    }
+    await context.AiPrompts.AddRangeAsync(prompts);
+    await context.SaveChangesAsync();
+  }
 
-    private static List<AiPrompt> GetContentAnalysisPrompts()
-    {
-        // TODO: Add content analysis prompts
-        // Examples: Summarize content, extract key concepts, analyze difficulty
-        return new List<AiPrompt>();
-    }
+  private static List<AiPrompt> GetCourseContentPrompts()
+  {
+    // TODO: Add course content prompts
+    // Examples: Generate lesson outlines, explain concepts, create examples
+    return new List<AiPrompt>();
+  }
 
-    private static List<AiPrompt> GetTranslationPrompts()
-    {
-        // TODO: Add translation prompts
-        // Examples: Translate educational content, localize terminology
-        return new List<AiPrompt>();
-    }
+  private static List<AiPrompt> GetAssessmentPrompts()
+  {
+    // TODO: Add assessment prompts
+    // Examples: Generate quiz questions, create rubrics, design assignments
+    return new List<AiPrompt>();
+  }
 
-    private static List<AiPrompt> GetPersonalizationPrompts()
-    {
-        // TODO: Add personalization prompts
-        // Examples: Adapt content to learning style, suggest learning path
-        return new List<AiPrompt>();
-    }
+  private static List<AiPrompt> GetFeedbackPrompts()
+  {
+    // TODO: Add feedback prompts
+    // Examples: Provide constructive feedback, grade with rubric, suggest improvements
+    return new List<AiPrompt>();
+  }
 
-    private static List<AiPrompt> GetModerationPrompts()
-    {
-        return new List<AiPrompt>
+  private static List<AiPrompt> GetContentAnalysisPrompts()
+  {
+    // TODO: Add content analysis prompts
+    // Examples: Summarize content, extract key concepts, analyze difficulty
+    return new List<AiPrompt>();
+  }
+
+  private static List<AiPrompt> GetTranslationPrompts()
+  {
+    // TODO: Add translation prompts
+    // Examples: Translate educational content, localize terminology
+    return new List<AiPrompt>();
+  }
+
+  private static List<AiPrompt> GetPersonalizationPrompts()
+  {
+    // TODO: Add personalization prompts
+    // Examples: Adapt content to learning style, suggest learning path
+    return new List<AiPrompt>();
+  }
+
+  private static List<AiPrompt> GetModerationPrompts()
+  {
+    return new List<AiPrompt>
         {
             new AiPrompt
             {
@@ -111,8 +111,13 @@ QUY TẮC CHẤM ĐIỂM (RUBRIC & TRỌNG SỐ):
 - [50-89]: Có tên chứng chỉ nhưng thiếu thông tin tổ chức/ngày tháng (Nếu có ảnh: Ảnh mờ/cắt góc).
 - [0-49]: Không có chứng chỉ.
 
+6. Teaching Languages (Trọng số: 5% - Bổ sung)
+- [90-100]: Có >= 2 ngôn ngữ giảng dạy, mã ngôn ngữ hợp lệ (ví dụ: vi-VN, en-US).
+- [50-89]: Có 1 ngôn ngữ hoặc mã ngôn ngữ không chuẩn.
+- [0-49]: Không có hoặc danh sách trống.
+
 CÔNG THỨC TÍNH & STATUS:
-1. totalScore = (Bio*0.1) + (Expertise*0.15) + (Education*0.2) + (WorkExperience*0.35) + (Certificates*0.2). Làm tròn về số nguyên gần nhất.
+1. totalScore = (Bio*0.1) + (Expertise*0.15) + (Education*0.2) + (WorkExperience*0.35) + (Certificates*0.2) + (TeachingLanguages*0.05). Làm tròn về số nguyên gần nhất.
 2. Status quy đổi từ Score của từng phần:
    - Score >= 80: ""Valid""
    - 50 <= Score < 80: ""Warning""
@@ -159,6 +164,13 @@ OUTPUT FORMAT (JSON Schema):
       ""score"": number,
       ""issues"": [],
       ""suggestions"": []
+    },
+    {
+      ""sectionName"": ""Teaching Languages"",
+      ""status"": ""Valid"" | ""Warning"" | ""Invalid"",
+      ""score"": number,
+      ""issues"": [],
+      ""suggestions"": []
     }
   ],
   ""additionalFeedback"": ""Lời khuyên tổng thể tiếng Việt""
@@ -167,7 +179,7 @@ OUTPUT FORMAT (JSON Schema):
 --- HỒ SƠ ĐẦU VÀO ---
 {ApplicationText}",
                 SystemPrompt = "Bạn là thuật toán kiểm duyệt (Moderation Algorithm) nghiêm ngặt. Nhiệm vụ của bạn là so khớp dữ liệu với Rubric đã định nghĩa để chấm điểm chính xác, không đưa ra ý kiến cá nhân.",
-                Version = "1.0.1",
+                Version = "1.0.2",
                 IsActive = true,
                 Variables = @"{""ApplicationText"": ""JSON string của ProfileReviewRequest""}",
                 MaxTokens = 4096,
@@ -176,5 +188,5 @@ OUTPUT FORMAT (JSON Schema):
                 Tags = "moderation,instructor,application-review"
             }
         };
-    }
+  }
 }

@@ -16,6 +16,13 @@ namespace Beyond8.Identity.Domain.Entities
 
         [MaxLength(200)]
         public string? Headline { get; set; }
+
+        public string? TaxId { get; set; }
+
+        public List<string> TeachingLanguages { get; set; } = ["vi-VN"];
+
+        public string? IntroVideoUrl { get; set; }
+
         [Column(TypeName = "jsonb")]
         public string? ExpertiseAreas { get; set; }
 
@@ -27,8 +34,8 @@ namespace Beyond8.Identity.Domain.Entities
 
         [Column(TypeName = "jsonb")]
         public string? SocialLinks { get; set; }
-        public string? BankInfo { get; set; }
-        public string? TaxId { get; set; }
+        [Column(TypeName = "jsonb")]
+        public string BankInfo { get; set; } = string.Empty;
 
         [Column(TypeName = "jsonb")]
         public string? IdentityDocuments { get; set; }
