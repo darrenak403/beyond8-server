@@ -10,5 +10,5 @@ public interface IVnptEkycService
     Task<UploadResponse> UploadAsync(IFormFile file);
     Task<LivenessResponse> CheckLivenessAsync(LivenessRequest request);
     Task<ApiResponse<LivenessResponse>> UploadAndCheckLivenessAsync(IFormFile file);
-    Task<ApiResponse<IdObject>> ClassifyAsync(ClassifyRequest request);
+    Task<ApiResponse<ClassifyWithOcrResponse>> ClassifyAsync(ClassifyRequest request);
 }

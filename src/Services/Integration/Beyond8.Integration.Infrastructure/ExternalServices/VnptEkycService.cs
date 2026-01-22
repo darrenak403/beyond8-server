@@ -16,6 +16,8 @@ public class VnptEkycService(ILogger<VnptEkycService> logger, IHttpClientFactory
     private const string UploadEndpoint = "file-service/v1/addFile";
     private const string LivenessCheckEndpoint = "ai/v1/card/liveness";
     private const string ClassifyEndpoint = "ai/v1/classify/id";
+    private const string OcrFrontEndpoint = "ai/v1/ocr/id/front";
+    private const string OcrBackEndpoint = "ai/v1/ocr/id/back";
     private const string HttpClientName = "VnptEkycClient";
 
     private readonly VnptEkycSettings _settings = options.Value;
@@ -181,13 +183,11 @@ public class VnptEkycService(ILogger<VnptEkycService> logger, IHttpClientFactory
         }
     }
 
-
-
-    public async Task<ApiResponse<IdObject>> ClassifyAsync(ClassifyRequest request)
+    public async Task<ApiResponse<ClassifyWithOcrResponse>> ClassifyAsync(ClassifyRequest request)
     {
         try
         {
-            _logger.LogInformation("Starting VNPT eKYC classification: CardType={CardType}", request.CardType);
+            _logger.LogInformation("Starting VNPT eKYC classification: IsFront={IsFront}", request.IsFront);
 
             var httpClient = CreateHttpClient();
 
@@ -214,12 +214,12 @@ public class VnptEkycService(ILogger<VnptEkycService> logger, IHttpClientFactory
                     _logger.LogError("VNPT eKYC failed. Code: {Code}, Msg: {Msg}, Errors: {Errors}",
                         errorResult?.StatusCode, errorResult?.Message, string.Join(", ", errorResult?.Errors ?? new List<string>()));
 
-                    return ApiResponse<IdObject>.FailureResponse($"Lỗi từ VNPT: {errorMsg}");
+                    return ApiResponse<ClassifyWithOcrResponse>.FailureResponse($"Lỗi từ VNPT: {errorMsg}");
                 }
                 catch
                 {
                     _logger.LogError("VNPT eKYC failed with status {StatusCode}: {Content}", response.StatusCode, jsonContent);
-                    return ApiResponse<IdObject>.FailureResponse($"Lỗi HTTP {response.StatusCode}");
+                    return ApiResponse<ClassifyWithOcrResponse>.FailureResponse($"Lỗi HTTP {response.StatusCode}");
                 }
             }
 
@@ -228,28 +228,160 @@ public class VnptEkycService(ILogger<VnptEkycService> logger, IHttpClientFactory
             if (successResult?.Object == null)
             {
                 _logger.LogError("VNPT eKYC returned 200 but body is invalid or null: {Content}", jsonContent);
-                return ApiResponse<IdObject>.FailureResponse("Phản hồi từ VNPT không hợp lệ");
+                return ApiResponse<ClassifyWithOcrResponse>.FailureResponse("Phản hồi từ VNPT không hợp lệ");
             }
 
+            var cardType = request.IsFront ? 2 : 3;
 
-            if (successResult.Object.Type != request.CardType)
+            if (successResult.Object.Type != cardType)
             {
                 _logger.LogWarning("Card type mismatch. Request: {Req}, VNPT Response: {ResType} ({ResName})",
-                   request.CardType, successResult.Object.Type, successResult.Object.Name);
+                   cardType, successResult.Object.Type, successResult.Object.Name);
 
-                return ApiResponse<IdObject>.FailureResponse("Loại giấy tờ không đúng với yêu cầu");
+                return ApiResponse<ClassifyWithOcrResponse>.FailureResponse("Loại giấy tờ không đúng với yêu cầu");
             }
 
             _logger.LogInformation("VNPT eKYC classification success: Type={Type}, Name={Name}",
                 successResult.Object.Type, successResult.Object.Name);
 
-            // Trả về IdObject chuẩn của bạn
-            return ApiResponse<IdObject>.SuccessResponse(successResult.Object, "Phân loại thành công");
+            // Gọi OCR endpoint tương ứng với type từ classify result
+            var ocrResult = request.IsFront
+                ? await OcrFrontAsync(request.Img, successResult.Object.Type)
+                : await OcrBackAsync(request.Img, successResult.Object.Type);
+
+            if (!ocrResult.IsSuccess)
+            {
+                _logger.LogWarning("OCR failed but classification succeeded: {Error}", ocrResult.Message);
+                return ApiResponse<ClassifyWithOcrResponse>.SuccessResponse(
+                    new ClassifyWithOcrResponse
+                    {
+                        TypeName = successResult.Object.Type == 2 ? "mặt trước" : "mặt sau",
+                        CardName = "Căn cước công dân"
+                    },
+                    "Phân loại thành công nhưng OCR thất bại");
+            }
+
+            var ocrData = ocrResult.Data!;
+            var result = new ClassifyWithOcrResponse
+            {
+                TypeName = successResult.Object.Type == 2 ? "mặt trước" : "mặt sau",
+                CardName = "Căn cước công dân"
+            };
+
+            if (request.IsFront)
+            {
+                // Mặt trước: trả về loại giấy tờ và số giấy tờ
+                // Có thể có ở cả id_number hoặc id field
+                result.IdNumber = ocrData.IdNumber ?? ocrData.Id;
+                _logger.LogInformation("VNPT eKYC OCR front success: IdNumber={IdNumber}", result.IdNumber);
+            }
+            else
+            {
+                // Mặt sau: trả về ngày hết hạn
+                result.IssueDate = ocrData.IssueDate;
+                result.IssuePlace = ocrData.IssuePlace;
+                _logger.LogInformation("VNPT eKYC OCR back success: IssueDate={IssueDate}, IssuePlace={IssuePlace}", ocrData.IssueDate, ocrData.IssuePlace);
+            }
+
+            return ApiResponse<ClassifyWithOcrResponse>.SuccessResponse(result, "Phân loại và OCR thành công");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Exception during VNPT classification");
-            return ApiResponse<IdObject>.FailureResponse("Lỗi hệ thống khi xử lý phân loại");
+            return ApiResponse<ClassifyWithOcrResponse>.FailureResponse("Lỗi hệ thống khi xử lý phân loại");
+        }
+    }
+
+    private async Task<ApiResponse<OcrResponse>> OcrFrontAsync(string imgHash, int cardType)
+    {
+        try
+        {
+            _logger.LogInformation("Starting VNPT eKYC OCR front: ImgHash={ImgHash}, CardType={CardType}", imgHash, cardType);
+
+            var httpClient = CreateHttpClient();
+            httpClient.DefaultRequestHeaders.Remove("mac-address");
+            httpClient.DefaultRequestHeaders.Add("mac-address", "TEST1");
+
+            var payload = new OcrRequestFront
+            {
+                ImgFront = imgHash,
+                Type = cardType,
+                ValidatePostcode = null,
+                ClientSession = GenerateClientSession(),
+                Token = Guid.NewGuid().ToString("N")
+            };
+
+            var response = await httpClient.PostAsJsonAsync(OcrFrontEndpoint, payload);
+            var jsonContent = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("VNPT eKYC OCR front failed with status {StatusCode}: {Content}",
+                    response.StatusCode, jsonContent);
+                return ApiResponse<OcrResponse>.FailureResponse($"Lỗi OCR mặt trước: HTTP {response.StatusCode}");
+            }
+
+            var result = JsonSerializer.Deserialize<VnptEkycResponse<OcrResponse>>(jsonContent);
+
+            if (result?.Object == null)
+            {
+                _logger.LogError("VNPT eKYC OCR front returned 200 but body is invalid: {Content}", jsonContent);
+                return ApiResponse<OcrResponse>.FailureResponse("Phản hồi OCR mặt trước không hợp lệ");
+            }
+
+            return ApiResponse<OcrResponse>.SuccessResponse(result.Object, "OCR mặt trước thành công");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception during VNPT OCR front");
+            return ApiResponse<OcrResponse>.FailureResponse("Lỗi hệ thống khi OCR mặt trước");
+        }
+    }
+
+    private async Task<ApiResponse<OcrResponse>> OcrBackAsync(string imgHash, int cardType)
+    {
+        try
+        {
+            _logger.LogInformation("Starting VNPT eKYC OCR back: ImgHash={ImgHash}, CardType={CardType}", imgHash, cardType);
+
+            var httpClient = CreateHttpClient();
+            httpClient.DefaultRequestHeaders.Remove("mac-address");
+            httpClient.DefaultRequestHeaders.Add("mac-address", "TEST1");
+
+            var payload = new OcrRequestBack
+            {
+                ImgBack = imgHash,
+                Type = cardType,
+                ClientSession = GenerateClientSession(),
+                Token = Guid.NewGuid().ToString("N")
+            };
+
+            var response = await httpClient.PostAsJsonAsync(OcrBackEndpoint, payload);
+            var jsonContent = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("VNPT eKYC OCR back failed with status {StatusCode}: {Content}",
+                    response.StatusCode, jsonContent);
+                return ApiResponse<OcrResponse>.FailureResponse($"Lỗi OCR mặt sau: HTTP {response.StatusCode}");
+            }
+
+            var result = JsonSerializer.Deserialize<VnptEkycResponse<OcrResponse>>(jsonContent);
+
+            if (result?.Object == null)
+            {
+                _logger.LogError("VNPT eKYC OCR back returned 200 but body is invalid: {Content}", jsonContent);
+                return ApiResponse<OcrResponse>.FailureResponse("Phản hồi OCR mặt sau không hợp lệ");
+            }
+
+            _logger.LogInformation("VNPT eKYC OCR back success: IssueDate={IssueDate}, IssuePlace={IssuePlace}, ExpiryDate={ExpiryDate}",
+                result.Object.IssueDate, result.Object.IssuePlace, result.Object.ExpiryDate);
+            return ApiResponse<OcrResponse>.SuccessResponse(result.Object, "OCR mặt sau thành công");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception during VNPT OCR back");
+            return ApiResponse<OcrResponse>.FailureResponse("Lỗi hệ thống khi OCR mặt sau");
         }
     }
 

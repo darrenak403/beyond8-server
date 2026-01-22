@@ -59,6 +59,15 @@ namespace Beyond8.Identity.Api.Apis
                 .Produces(StatusCodes.Status401Unauthorized)
                 .Produces(StatusCodes.Status403Forbidden);
 
+            group.MapGet("/{id:Guid}/admin", GetInstructorProfileByIdForAdminAsync)
+                .WithName("GetInstructorProfileByIdForAdmin")
+                .WithDescription("Lấy thông tin chi tiết hồ sơ giảng viên theo ID dành cho Admin (Admin, Staff only)")
+                .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
+                .Produces<ApiResponse<InstructorProfileAdminResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<InstructorProfileAdminResponse>>(StatusCodes.Status404NotFound)
+                .Produces(StatusCodes.Status401Unauthorized)
+                .Produces(StatusCodes.Status403Forbidden);
+
             group.MapGet("/me", GetMyInstructorProfileAsync)
                 .WithName("GetMyInstructorProfile")
                 .WithDescription("Lấy hồ sơ giảng viên của riêng tôi (Require Authorization)")
@@ -81,15 +90,6 @@ namespace Beyond8.Identity.Api.Apis
                 .AllowAnonymous()
                 .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status404NotFound);
-
-            group.MapGet("/{id:Guid}/admin", GetInstructorProfileByIdForAdminAsync)
-                .WithName("GetInstructorProfileByIdForAdmin")
-                .WithDescription("Lấy thông tin chi tiết hồ sơ giảng viên theo ID dành cho Admin (Admin, Staff only)")
-                .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
-                .Produces<ApiResponse<InstructorProfileAdminResponse>>(StatusCodes.Status200OK)
-                .Produces<ApiResponse<InstructorProfileAdminResponse>>(StatusCodes.Status404NotFound)
-                .Produces(StatusCodes.Status401Unauthorized)
-                .Produces(StatusCodes.Status403Forbidden);
 
             return group;
         }

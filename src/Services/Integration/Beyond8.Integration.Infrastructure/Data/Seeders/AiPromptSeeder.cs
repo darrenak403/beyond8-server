@@ -39,100 +39,14 @@ public static class AiPromptSeeder
     {
         // TODO: Add assessment prompts
         // Examples: Generate quiz questions, create rubrics, design assignments
-        return new List<AiPrompt>
-        {
-            new AiPrompt
-            {
-                Name = "Quiz Generation from Curriculum",
-                Description = "Generate quiz questions based on provided curriculum content",
-                Category = PromptCategory.Assessment,
-                Template = @"Bạn là một giảng viên chuyên nghiệp. Hãy tạo {questionCount} câu hỏi trắc nghiệm dựa trên nội dung giáo trình sau:
-
-Nội dung giáo trình:
-{context}
-
-Yêu cầu:
-- Mỗi câu hỏi có 4 đáp án (A, B, C, D)
-- Đánh dấu rõ đáp án đúng
-- Câu hỏi phải bám sát nội dung
-- Độ khó: {difficulty}
-- Chủ đề: {topic}",
-                SystemPrompt = "Bạn là trợ lý AI chuyên tạo câu hỏi đánh giá chất lượng cao cho giáo dục.",
-                Version = "1.0",
-                IsActive = true,
-                Variables = @"{""questionCount"": ""số lượng câu hỏi"", ""context"": ""nội dung giáo trình"", ""difficulty"": ""Dễ/Trung bình/Khó"", ""topic"": ""chủ đề cụ thể""}",
-                MaxTokens = 4000,
-                Temperature = 0.7m,
-                TopP = 0.9m,
-                Tags = "quiz,assessment,education"
-            }
-        };
+        return new List<AiPrompt>();
     }
 
     private static List<AiPrompt> GetFeedbackPrompts()
     {
         // TODO: Add feedback prompts
         // Examples: Provide constructive feedback, grade with rubric, suggest improvements
-        return new List<AiPrompt>
-        {
-            new AiPrompt
-            {
-                Name = "Student Answer Review",
-                Description = "Review and provide feedback on student answers",
-                Category = PromptCategory.Feedback,
-                Template = @"Bạn là giảng viên đang chấm bài. Hãy đánh giá câu trả lời của học sinh dựa trên tiêu chí sau:
-
-Câu hỏi: {question}
-
-Đáp án mẫu:
-{modelAnswer}
-
-Câu trả lời của học sinh:
-{studentAnswer}
-
-Hãy cung cấp:
-1. Điểm số (trên thang điểm {maxScore})
-2. Những điểm làm tốt
-3. Những điểm cần cải thiện
-4. Gợi ý để hoàn thiện câu trả lời",
-                SystemPrompt = "Bạn là giảng viên giàu kinh nghiệm, cung cấp feedback mang tính xây dựng và khuyến khích học sinh.",
-                Version = "1.0",
-                IsActive = true,
-                Variables = @"{""question"": ""câu hỏi"", ""modelAnswer"": ""đáp án mẫu"", ""studentAnswer"": ""câu trả lời của học sinh"", ""maxScore"": ""điểm tối đa""}",
-                MaxTokens = 2000,
-                Temperature = 0.6m,
-                TopP = 0.9m,
-                Tags = "feedback,review,grading"
-            },
-            new AiPrompt
-            {
-                Name = "Rubric-Based Grading",
-                Description = "Grade student work based on detailed rubric criteria",
-                Category = PromptCategory.Feedback,
-                Template = @"Bạn là giảng viên chấm bài theo rubric. Hãy đánh giá bài làm của học sinh dựa trên rubric sau:
-
-Rubric:
-{rubric}
-
-Bài làm của học sinh:
-{submission}
-
-Hãy:
-1. Đánh giá từng tiêu chí trong rubric
-2. Cho điểm từng tiêu chí
-3. Tính tổng điểm
-4. Đưa ra nhận xét tổng quan
-5. Gợi ý cải thiện cụ thể",
-                SystemPrompt = "Bạn là giảng viên chấm bài công bằng, khách quan, theo đúng rubric đã cho.",
-                Version = "1.0",
-                IsActive = true,
-                Variables = @"{""rubric"": ""bảng tiêu chí đánh giá chi tiết"", ""submission"": ""bài làm của học sinh""}",
-                MaxTokens = 3000,
-                Temperature = 0.5m,
-                TopP = 0.9m,
-                Tags = "rubric,grading,assessment"
-            }
-        };
+        return new List<AiPrompt>();
     }
 
     private static List<AiPrompt> GetContentAnalysisPrompts()
@@ -163,56 +77,102 @@ Hãy:
             new AiPrompt
             {
                 Name = "Instructor Application Review",
-                Description = "Đánh giá hồ sơ ứng tuyển giảng viên. Trả về JSON.",
+                Description = "Đánh giá hồ sơ ứng tuyển giảng viên theo tiêu chí Valid/Warning/Invalid. Trả về JSON.",
                 Category = PromptCategory.Moderation,
-                Template = @"Bạn là chuyên gia đánh giá hồ sơ giảng viên.
+                Template = @"Bạn là hệ thống thuật toán chấm điểm hồ sơ giảng viên (Profile Grader) hoạt động theo cơ chế TẤT ĐỊNH (Deterministic).
 
-Nhiệm vụ: Đánh giá hồ sơ theo 5 phần:
-- Bio & Headline
-- Expertise Areas
-- Education
-- Work Experience
-- Certificates
+Nhiệm vụ: Phân tích dữ liệu đầu vào và trả về kết quả JSON duy nhất. KHÔNG trả về markdown, KHÔNG giải thích thêm.
 
-Với mỗi phần, trả về:
-- status: ""Valid"" | ""Warning"" | ""Invalid""
-- score: 0–100
-- issues: liệt kê ngắn gọn vấn đề chính
-- suggestions: gợi ý cải thiện, đi thẳng vào hành động
+QUY TẮC CHẤM ĐIỂM (RUBRIC & TRỌNG SỐ):
+Để đảm bảo kết quả nhất quán 100%, bạn PHẢI chấm điểm dựa trên các tiêu chí sau, không được dùng cảm tính:
 
-Riêng Certificates: đánh giá cả nội dung text và ảnh đính kèm.
+1. Bio & Headline (Trọng số: 10%)
+- [90-100]: Có Headline chuyên nghiệp + Bio > 50 từ, mô tả rõ phương pháp/tầm nhìn giảng dạy.
+- [50-89]: Có thông tin nhưng sơ sài, Bio ngắn (< 50 từ) hoặc viết chung chung.
+- [0-49]: Bỏ trống, quá ngắn hoặc nội dung vô nghĩa/spam.
 
-Quy tắc:
-- totalScore = trung bình có trọng số các phần
-- isAccepted = true chỉ khi totalScore ≥ 50
+2. Expertise Areas (Trọng số: 15%)
+- [90-100]: Liệt kê > 3 kỹ năng chuyên môn cụ thể, có phân cấp chính/phụ.
+- [50-89]: Liệt kê 1-3 kỹ năng hoặc chỉ ghi tên lĩnh vực chung (ví dụ: ""IT"", ""Marketing"").
+- [0-49]: Không có dữ liệu.
 
-Chỉ trả về MỘT JSON object (không markdown, không text thừa):
+3. Education (Trọng số: 20%)
+- [90-100]: Bằng Đại học/Cao đẳng trở lên + Ghi rõ Tên trường, Chuyên ngành và Năm tốt nghiệp.
+- [50-89]: Có tên trường nhưng thiếu chuyên ngành hoặc thiếu năm tháng.
+- [0-49]: Không có bằng cấp hoặc bằng cấp không liên quan đến giảng dạy.
 
+4. Work Experience (Trọng số: 35% - QUAN TRỌNG NHẤT)
+- [90-100]: > 2 năm kinh nghiệm + Mô tả chi tiết nhiệm vụ (bullet points) + Timeline logic, liên tục.
+- [50-89]: Có liệt kê nơi làm việc nhưng mô tả sơ sài, hoặc timeline bị đứt quãng/phi lý.
+- [0-49]: < 1 năm kinh nghiệm, hoặc chỉ ghi tên công ty mà không có mô tả.
+
+5. Certificates (Trọng số: 20%)
+- [90-100]: Có tên chứng chỉ uy tín + Tổ chức cấp + Ngày cấp (Nếu có ảnh đính kèm: Ảnh rõ nét, khớp text).
+- [50-89]: Có tên chứng chỉ nhưng thiếu thông tin tổ chức/ngày tháng (Nếu có ảnh: Ảnh mờ/cắt góc).
+- [0-49]: Không có chứng chỉ.
+
+CÔNG THỨC TÍNH & STATUS:
+1. totalScore = (Bio*0.1) + (Expertise*0.15) + (Education*0.2) + (WorkExperience*0.35) + (Certificates*0.2). Làm tròn về số nguyên gần nhất.
+2. Status quy đổi từ Score của từng phần:
+   - Score >= 80: ""Valid""
+   - 50 <= Score < 80: ""Warning""
+   - Score < 50: ""Invalid""
+3. isAccepted = true NẾU totalScore >= 50.
+
+OUTPUT FORMAT (JSON Schema):
 {
   ""isAccepted"": boolean,
   ""totalScore"": number,
-  ""feedbackSummary"": ""tóm tắt ngắn gọn, thân thiện, tiếng Việt"",
+  ""feedbackSummary"": ""Tóm tắt ngắn gọn < 30 từ, giọng văn khách quan, tiếng Việt"",
   ""details"": [
     {
-      ""sectionName"": string,
+      ""sectionName"": ""Bio & Headline"",
       ""status"": ""Valid"" | ""Warning"" | ""Invalid"",
       ""score"": number,
-      ""issues"": [string],
-      ""suggestions"": [string]
+      ""issues"": [""Liệt kê vấn đề ngắn gọn""],
+      ""suggestions"": [""Hành động cụ thể để sửa""]
+    },
+    {
+      ""sectionName"": ""Expertise Areas"",
+      ""status"": ""Valid"" | ""Warning"" | ""Invalid"",
+      ""score"": number,
+      ""issues"": [],
+      ""suggestions"": []
+    },
+    {
+      ""sectionName"": ""Education"",
+      ""status"": ""Valid"" | ""Warning"" | ""Invalid"",
+      ""score"": number,
+      ""issues"": [],
+      ""suggestions"": []
+    },
+    {
+      ""sectionName"": ""Work Experience"",
+      ""status"": ""Valid"" | ""Warning"" | ""Invalid"",
+      ""score"": number,
+      ""issues"": [],
+      ""suggestions"": []
+    },
+    {
+      ""sectionName"": ""Certificates"",
+      ""status"": ""Valid"" | ""Warning"" | ""Invalid"",
+      ""score"": number,
+      ""issues"": [],
+      ""suggestions"": []
     }
   ],
-  ""additionalFeedback"": ""lời khuyên tổng thể, tiếng Việt""
+  ""additionalFeedback"": ""Lời khuyên tổng thể tiếng Việt""
 }
 
---- HỒ SƠ ---
+--- HỒ SƠ ĐẦU VÀO ---
 {ApplicationText}",
-                SystemPrompt = "Bạn là chuyên gia tuyển dụng giảng viên, đánh giá công bằng, khách quan.",
-                Version = "1.0.0",
+                SystemPrompt = "Bạn là thuật toán kiểm duyệt (Moderation Algorithm) nghiêm ngặt. Nhiệm vụ của bạn là so khớp dữ liệu với Rubric đã định nghĩa để chấm điểm chính xác, không đưa ra ý kiến cá nhân.",
+                Version = "1.0.1",
                 IsActive = true,
-                Variables = @"{""ApplicationText"": ""nội dung hồ sơ""}",
+                Variables = @"{""ApplicationText"": ""JSON string của ProfileReviewRequest""}",
                 MaxTokens = 4096,
-                Temperature = 0.6m,
-                TopP = 0.9m,
+                Temperature = 0m,
+                TopP = 1.0m,
                 Tags = "moderation,instructor,application-review"
             }
         };
