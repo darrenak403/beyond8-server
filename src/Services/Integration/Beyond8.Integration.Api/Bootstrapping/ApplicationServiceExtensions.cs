@@ -16,7 +16,10 @@ using Beyond8.Integration.Infrastructure.Configurations;
 using Beyond8.Integration.Infrastructure.Data;
 using Beyond8.Integration.Infrastructure.ExternalServices;
 using Beyond8.Integration.Infrastructure.ExternalServices.Email;
+using Beyond8.Integration.Infrastructure.ExternalServices.Hubs.SingalR;
+using Beyond8.Integration.Infrastructure.Hubs;
 using Beyond8.Integration.Infrastructure.Repositories.Implements;
+using Microsoft.AspNetCore.SignalR;
 using FluentValidation;
 using MassTransit;
 using Microsoft.Extensions.Options;
@@ -98,11 +101,15 @@ public static class Bootstrapper
         // Register repositories
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
+        builder.Services.AddSignalR();
+        builder.Services.AddScoped<INotificationService, SignalRNotificationService>();
+
         // Configure MassTransit with RabbitMQ and register consumers
         builder.AddMassTransitWithRabbitMq(config =>
         {
             // Register consumers from Identity events
             config.AddConsumer<OtpEmailConsumer>();
+            config.AddConsumer<InstructorApplicationSubmittedConsumer>();
             config.AddConsumer<InstructorApprovalEmailConsumer>();
             config.AddConsumer<InstructorRejectionEmailConsumer>();
             config.AddConsumer<InstructorUpdateRequestEmailConsumer>();
@@ -137,6 +144,8 @@ public static class Bootstrapper
         }
 
         app.UseHttpsRedirection();
+
+        app.MapHub<AppHub>("/hubs/app");
 
         app.MapMediaFileApi();
         app.MapAiApi();

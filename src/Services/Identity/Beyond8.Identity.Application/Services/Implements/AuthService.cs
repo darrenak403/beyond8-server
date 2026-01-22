@@ -78,19 +78,19 @@ public class AuthService(
             logger.LogInformation("Sending OTP code to email: {Email} with OTP: {OtpCode}", request.Email, otpCode);
             await cacheService.SetAsync($"otp_register:{request.Email}", otpCode, TimeSpan.FromMinutes(5));
 
-            // Publish event for email service
+            var newUser = request.ToEntity(passwordHasher);
+            await unitOfWork.UserRepository.AddAsync(newUser);
+            await unitOfWork.SaveChangesAsync();
+
             var otpEvent = new OtpEmailEvent(
+                newUser.Id,
                 request.Email,
-                request.Email, // Use email as name since FullName not in RegisterRequest
+                newUser.FullName,
                 otpCode,
                 "Đăng ký tài khoản",
                 DateTime.UtcNow
             );
             await publishEndpoint.Publish(otpEvent);
-
-            var newUser = request.ToEntity(passwordHasher);
-            await unitOfWork.UserRepository.AddAsync(newUser);
-            await unitOfWork.SaveChangesAsync();
 
             logger.LogInformation("User registered successfully: {Email}", request.Email);
             return ApiResponse<UserSimpleResponse>.SuccessResponse(
@@ -234,9 +234,9 @@ public class AuthService(
             await cacheService.SetAsync(cacheKey, otpCode, TimeSpan.FromMinutes(5));
             await cacheService.SetAsync(lockKey, true, TimeSpan.FromSeconds(60));
 
-            // Publish event for email service
             var u = validation.ValidUser!;
             var otpEvent = new OtpEmailEvent(
+                u.Id,
                 request.Email,
                 u.FullName,
                 otpCode,
@@ -299,9 +299,9 @@ public class AuthService(
             await cacheService.SetAsync($"otp_register:{request.Email}", otpCode, TimeSpan.FromMinutes(5));
             await cacheService.SetAsync(lockKey, true, TimeSpan.FromSeconds(60));
 
-            // Publish event for email service
             var u = validation.ValidUser!;
             var otpEvent = new OtpEmailEvent(
+                u.Id,
                 request.Email,
                 u.FullName,
                 otpCode,
