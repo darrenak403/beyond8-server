@@ -34,6 +34,7 @@ namespace Beyond8.Identity.Domain.Entities
 
         [Column(TypeName = "jsonb")]
         public string? SocialLinks { get; set; }
+        
         [Column(TypeName = "jsonb")]
         public string BankInfo { get; set; } = string.Empty;
 
