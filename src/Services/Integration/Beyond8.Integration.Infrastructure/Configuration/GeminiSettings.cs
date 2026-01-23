@@ -1,6 +1,6 @@
 namespace Beyond8.Integration.Infrastructure.Configuration;
 
-public class GeminiConfiguration
+public class GeminiSettings
 {
     public const string SectionName = "Gemini";
 

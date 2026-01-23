@@ -1,7 +1,8 @@
-using System.Net;
 using System.Diagnostics;
-using System.Text;
-using System.Text.Json;
+using Amazon;
+using Amazon.BedrockRuntime;
+using Amazon.BedrockRuntime.Model;
+using Amazon.Runtime;
 using Beyond8.Common.Utilities;
 using Beyond8.Integration.Application.Dtos.AiIntegration;
 using Beyond8.Integration.Application.Services.Interfaces;
@@ -13,14 +14,13 @@ using Microsoft.Extensions.Options;
 
 namespace Beyond8.Integration.Infrastructure.ExternalServices;
 
-public class GeminiService(
-    IOptions<GeminiSettings> config,
-    IHttpClientFactory httpClientFactory,
+public class BedrockService(
+    IOptions<BedrockSettings> config,
     IAiUsageService aiUsageService,
     IUnitOfWork unitOfWork,
-    ILogger<GeminiService> logger) : IGenerativeAiService
+    ILogger<BedrockService> logger) : IGenerativeAiService
 {
-    private readonly GeminiSettings _config = config.Value;
+    private readonly BedrockSettings _config = config.Value;
 
     public async Task<ApiResponse<GenerativeAiResponse>> GenerateContentAsync(
         string prompt,
@@ -38,94 +38,130 @@ public class GeminiService(
         try
         {
             var selectedModel = model ?? _config.DefaultModel;
-            var parts = new List<object> { new { text = prompt } };
+            var credentials = new BasicAWSCredentials(_config.AccessKey, _config.SecretKey);
+            var region = RegionEndpoint.GetBySystemName(_config.Region);
+
+            using var client = new AmazonBedrockRuntimeClient(credentials, region);
+
+            // Build messages for Claude
+            var contentBlocks = new List<ContentBlock> { new() { Text = prompt } };
+
             if (inlineImages?.Count > 0)
             {
                 foreach (var img in inlineImages)
                 {
-                    parts.Add(new
+                    contentBlocks.Add(new ContentBlock
                     {
-                        inlineData = new
+                        Image = new ImageBlock
                         {
-                            mimeType = img.MimeType,
-                            data = Convert.ToBase64String(img.Data)
+                            Format = GetImageFormat(img.MimeType),
+                            Source = new ImageSource
+                            {
+                                Bytes = new MemoryStream(img.Data)
+                            }
                         }
                     });
                 }
             }
 
-            var requestBody = new
+            var request = new ConverseRequest
             {
-                contents = new[]
+                ModelId = selectedModel,
+                Messages = new List<Message>
                 {
-                    new { parts }
+                    new()
+                    {
+                        Role = ConversationRole.User,
+                        Content = contentBlocks
+                    }
                 },
-                generationConfig = new
+                InferenceConfig = new InferenceConfiguration
                 {
-                    maxOutputTokens = maxTokens ?? _config.DefaultParameters.MaxTokens,
-                    temperature = temperature ?? _config.DefaultParameters.Temperature,
-                    topP = topP ?? _config.DefaultParameters.TopP,
-                    topK = _config.DefaultParameters.TopK
+                    MaxTokens = maxTokens ?? _config.DefaultParameters.MaxTokens,
+                    Temperature = (float)(temperature ?? _config.DefaultParameters.Temperature),
+                    TopP = (float)(topP ?? _config.DefaultParameters.TopP)
                 }
             };
 
-            var httpClient = httpClientFactory.CreateClient();
-            httpClient.Timeout = TimeSpan.FromSeconds(_config.TimeoutSeconds);
-
-            var url = $"{_config.ApiEndpoint.TrimEnd('/')}/models/{selectedModel}:generateContent";
-            var jsonBody = JsonSerializer.Serialize(requestBody);
-
-            HttpResponseMessage? response = null;
-            var lastResponseContent = string.Empty;
+            ConverseResponse? response = null;
+            var lastErrorMessage = string.Empty;
 
             for (var attempt = 0; attempt <= _config.MaxRetries; attempt++)
             {
                 if (attempt > 0)
                 {
-                    var delayMs = GetRetryDelayMs(response!, attempt);
-                    logger.LogWarning("Gemini 429/503, retry {Attempt}/{Max} after {DelayMs}ms", attempt, _config.MaxRetries, delayMs);
+                    var delayMs = GetRetryDelayMs(attempt);
+                    logger.LogWarning("Bedrock throttled, retry {Attempt}/{Max} after {DelayMs}ms", attempt, _config.MaxRetries, delayMs);
                     await Task.Delay(delayMs);
                 }
 
-                using var request = new HttpRequestMessage(HttpMethod.Post, url);
-                request.Headers.TryAddWithoutValidation("X-goog-api-key", _config.ApiKey);
-                request.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
-
-                response = await httpClient.SendAsync(request);
-                lastResponseContent = await response.Content.ReadAsStringAsync();
-
-                if (response.IsSuccessStatusCode)
+                try
+                {
+                    response = await client.ConverseAsync(request);
                     break;
-
-                var isRetryable = response.StatusCode is HttpStatusCode.TooManyRequests or HttpStatusCode.ServiceUnavailable;
-                if (attempt >= _config.MaxRetries || !isRetryable)
+                }
+                catch (ThrottlingException ex)
+                {
+                    lastErrorMessage = $"Throttling: {ex.Message}";
+                    logger.LogWarning(ex, "Bedrock throttling on attempt {Attempt}", attempt);
+                    if (attempt >= _config.MaxRetries)
+                        break;
+                }
+                catch (ValidationException ex)
+                {
+                    lastErrorMessage = $"Validation error: {ex.Message}";
+                    logger.LogError(ex, "Bedrock validation error");
                     break;
+                }
+                catch (AccessDeniedException ex)
+                {
+                    lastErrorMessage = $"Access denied: {ex.Message}. Check AWS credentials and permissions.";
+                    logger.LogError(ex, "Bedrock access denied");
+                    break;
+                }
+                catch (ResourceNotFoundException ex)
+                {
+                    lastErrorMessage = $"Model not found: {ex.Message}. Model may not be available in region {_config.Region}.";
+                    logger.LogError(ex, "Bedrock model not found: {Model}", selectedModel);
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    lastErrorMessage = $"Unexpected error: {ex.GetType().Name} - {ex.Message}";
+                    logger.LogError(ex, "Bedrock unexpected error");
+                    break;
+                }
             }
 
             stopwatch.Stop();
 
-            if (response == null || !response.IsSuccessStatusCode)
+            if (response == null || response.Output?.Message?.Content == null || response.Output.Message.Content.Count == 0)
             {
-                logger.LogError("Gemini API error: {StatusCode} - {Content}", response?.StatusCode, lastResponseContent);
+                var errorMsg = response == null
+                    ? lastErrorMessage
+                    : $"Invalid response: StopReason={response.StopReason}, Output={response.Output != null}";
 
-                await TrackFailedUsageAsync(userId, selectedModel, operation, promptId, stopwatch.ElapsedMilliseconds, lastResponseContent);
+                logger.LogError("Bedrock API error: {Error}", errorMsg);
 
-                var userMessage = GetUserFriendlyMessage(response?.StatusCode);
-                return ApiResponse<GenerativeAiResponse>.FailureResponse(userMessage);
+                await TrackFailedUsageAsync(userId, selectedModel, operation, promptId, stopwatch.ElapsedMilliseconds, errorMsg);
+
+                return ApiResponse<GenerativeAiResponse>.FailureResponse($"Đã xảy ra lỗi khi gọi Bedrock API: {errorMsg}");
             }
 
-            var geminiResponse = ParseGeminiResponse(lastResponseContent, selectedModel, stopwatch.ElapsedMilliseconds);
+            logger.LogInformation("Bedrock response received with StopReason: {StopReason}", response.StopReason);
 
-            await TrackSuccessfulUsageAsync(userId, selectedModel, operation, promptId, geminiResponse, prompt);
+            var bedrockResponse = ParseBedrockResponse(response, selectedModel, stopwatch.ElapsedMilliseconds);
 
-            logger.LogInformation("Gemini content generated successfully for user {UserId} using model {Model}", userId, selectedModel);
+            await TrackSuccessfulUsageAsync(userId, selectedModel, operation, promptId, bedrockResponse, prompt);
 
-            return ApiResponse<GenerativeAiResponse>.SuccessResponse(geminiResponse, "Tạo nội dung AI thành công.");
+            logger.LogInformation("Bedrock content generated successfully for user {UserId} using model {Model}", userId, selectedModel);
+
+            return ApiResponse<GenerativeAiResponse>.SuccessResponse(bedrockResponse, "Tạo nội dung AI thành công.");
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            logger.LogError(ex, "Error generating content with Gemini for user {UserId}", userId);
+            logger.LogError(ex, "Error generating content with Bedrock for user {UserId}", userId);
 
             await TrackFailedUsageAsync(userId, model ?? _config.DefaultModel, operation, promptId, stopwatch.ElapsedMilliseconds, ex.Message);
 
@@ -192,41 +228,36 @@ public class GeminiService(
                 0.1m);
 
             return result.IsSuccess
-                ? ApiResponse<bool>.SuccessResponse(true, "Gemini service is healthy.")
-                : ApiResponse<bool>.FailureResponse("Gemini service health check failed.");
+                ? ApiResponse<bool>.SuccessResponse(true, "Bedrock service is healthy.")
+                : ApiResponse<bool>.FailureResponse("Bedrock service health check failed.");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error checking Gemini service health");
-            return ApiResponse<bool>.FailureResponse("Gemini service health check failed.");
+            logger.LogError(ex, "Error checking Bedrock service health");
+            return ApiResponse<bool>.FailureResponse("Bedrock service health check failed.");
         }
     }
 
-    private GenerativeAiResponse ParseGeminiResponse(string responseContent, string model, long responseTimeMs)
+    private GenerativeAiResponse ParseBedrockResponse(ConverseResponse response, string model, long responseTimeMs)
     {
-        var jsonDoc = JsonDocument.Parse(responseContent);
-        var root = jsonDoc.RootElement;
+        var content = response.Output.Message.Content
+            .Where(c => c.Text != null)
+            .Select(c => c.Text)
+            .FirstOrDefault() ?? string.Empty;
 
-        var content = root.GetProperty("candidates")[0]
-            .GetProperty("content")
-            .GetProperty("parts")[0]
-            .GetProperty("text")
-            .GetString() ?? string.Empty;
+        var inputTokens = response.Usage.InputTokens;
+        var outputTokens = response.Usage.OutputTokens;
+        var totalTokens = response.Usage.TotalTokens;
 
-        var usageMetadata = root.GetProperty("usageMetadata");
-        var promptTokenCount = usageMetadata.GetProperty("promptTokenCount").GetInt32();
-        var candidatesTokenCount = usageMetadata.GetProperty("candidatesTokenCount").GetInt32();
-        var totalTokenCount = usageMetadata.GetProperty("totalTokenCount").GetInt32();
-
-        var inputCost = (promptTokenCount / 1_000_000m) * _config.Pricing.InputCostPer1MTokens;
-        var outputCost = (candidatesTokenCount / 1_000_000m) * _config.Pricing.OutputCostPer1MTokens;
+        var inputCost = (inputTokens / 1_000_000m) * _config.Pricing.InputCostPer1MTokens;
+        var outputCost = (outputTokens / 1_000_000m) * _config.Pricing.OutputCostPer1MTokens;
 
         return new GenerativeAiResponse
         {
             Content = content,
-            InputTokens = promptTokenCount,
-            OutputTokens = candidatesTokenCount,
-            TotalTokens = totalTokenCount,
+            InputTokens = inputTokens,
+            OutputTokens = outputTokens,
+            TotalTokens = totalTokens,
             InputCost = inputCost,
             OutputCost = outputCost,
             TotalCost = inputCost + outputCost,
@@ -246,7 +277,7 @@ public class GeminiService(
         var usageRequest = new AiUsageRequest
         {
             UserId = userId,
-            Provider = AiProvider.Gemini,
+            Provider = AiProvider.Claude,
             Model = model,
             Operation = operation,
             InputTokens = response.InputTokens,
@@ -275,7 +306,7 @@ public class GeminiService(
         var usageRequest = new AiUsageRequest
         {
             UserId = userId,
-            Provider = AiProvider.Gemini,
+            Provider = AiProvider.Claude,
             Model = model,
             Operation = operation,
             InputTokens = 0,
@@ -303,35 +334,22 @@ public class GeminiService(
         return result;
     }
 
-    /// <summary>Chờ retry: ưu tiên Retry-After header, không thì exponential backoff (1s, 2s, 4s...), tối đa 60s.</summary>
-    private static int GetRetryDelayMs(HttpResponseMessage response, int attempt)
+    private static int GetRetryDelayMs(int attempt)
     {
-        if (response.Headers.RetryAfter?.Delta is { } delta)
-            return (int)Math.Min(delta.TotalMilliseconds, 60_000);
-
-        if (response.Headers.RetryAfter?.Date is { } date)
-        {
-            var ms = (date - DateTimeOffset.UtcNow).TotalMilliseconds;
-            if (ms > 0) return (int)Math.Min(ms, 60_000);
-        }
-
         var backoffMs = (int)(Math.Pow(2, attempt) * 1000);
         return Math.Min(backoffMs, 60_000);
     }
 
-    private static string GetUserFriendlyMessage(HttpStatusCode? statusCode)
+    private static string GetImageFormat(string mimeType)
     {
-        return statusCode switch
+        return mimeType.ToLower() switch
         {
-            HttpStatusCode.TooManyRequests => "Tạm thời quá tải. Vui lòng thử lại sau vài phút.",
-            HttpStatusCode.ServiceUnavailable => "Dịch vụ AI tạm thời bận. Vui lòng thử lại sau.",
-            HttpStatusCode.Unauthorized => "Lỗi xác thực API. Kiểm tra cấu hình Gemini.",
-            HttpStatusCode.BadRequest => "Yêu cầu không hợp lệ. Vui lòng kiểm tra dữ liệu gửi lên.",
-            HttpStatusCode.NotFound => "Model hoặc endpoint không tồn tại. Kiểm tra cấu hình.",
-            HttpStatusCode.RequestEntityTooLarge => "Nội dung gửi lên vượt quá giới hạn. Vui lòng rút gọn.",
-            _ => statusCode is { } s && (int)s >= 500
-                ? "Dịch vụ AI gặp sự cố. Vui lòng thử lại sau."
-                : "Đã xảy ra lỗi khi gọi API AI. Vui lòng thử lại."
+            "image/png" => "png",
+            "image/jpeg" => "jpeg",
+            "image/jpg" => "jpeg",
+            "image/gif" => "gif",
+            "image/webp" => "webp",
+            _ => "jpeg"
         };
     }
 }

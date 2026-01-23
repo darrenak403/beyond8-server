@@ -52,19 +52,20 @@ public static class Bootstrapper
             return new AmazonS3Client(s3Settings.AccessKey, s3Settings.SecretKey, config);
         });
 
-        // Register Gemini configuration
+        // Register AI provider configurations
         builder.Services.AddHttpClient();
-        builder.Services.Configure<GeminiConfiguration>(builder.Configuration.GetSection(GeminiConfiguration.SectionName));
+        builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection(GeminiSettings.SectionName));
+        builder.Services.Configure<BedrockSettings>(builder.Configuration.GetSection(BedrockSettings.SectionName));
 
         // Register Resend configuration
-        builder.Services.Configure<ResendConfiguration>(
-            builder.Configuration.GetSection(ResendConfiguration.SectionName));
+        builder.Services.Configure<ResendSettings>(
+        builder.Configuration.GetSection(ResendSettings.SectionName));
 
         builder.Services.AddSingleton<IResend>(sp =>
         {
-            var options = sp.GetRequiredService<IOptions<ResendConfiguration>>().Value;
+            var options = sp.GetRequiredService<IOptions<ResendSettings>>().Value;
             if (string.IsNullOrWhiteSpace(options.ApiKey))
-                throw new InvalidOperationException("ApiKey is missing in ResendConfiguration");
+                throw new InvalidOperationException("ApiKey is missing in ResendSettings");
 
             return ResendClient.Create(options.ApiKey.Trim());
         });
@@ -121,7 +122,18 @@ public static class Bootstrapper
         builder.Services.AddScoped<IMediaFileService, MediaFileService>();
         builder.Services.AddScoped<IAiUsageService, AiUsageService>();
         builder.Services.AddScoped<IAiPromptService, AiPromptService>();
-        builder.Services.AddScoped<IGeminiService, GeminiService>();
+
+        // Register AI provider based on configuration
+        var aiProvider = builder.Configuration.GetValue<string>("AiProvider") ?? "Gemini";
+        if (aiProvider.Equals("Bedrock", StringComparison.OrdinalIgnoreCase))
+        {
+            builder.Services.AddScoped<IGenerativeAiService, BedrockService>();
+        }
+        else
+        {
+            builder.Services.AddScoped<IGenerativeAiService, GeminiService>();
+        }
+
         builder.Services.AddScoped<IUrlContentDownloader, UrlContentDownloader>();
         builder.Services.AddScoped<IEmailService, EmailService>();
         builder.Services.AddScoped<IVnptEkycService, VnptEkycService>();

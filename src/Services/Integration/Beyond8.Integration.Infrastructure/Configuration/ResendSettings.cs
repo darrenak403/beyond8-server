@@ -1,6 +1,6 @@
 namespace Beyond8.Integration.Infrastructure.Configurations;
 
-public class ResendConfiguration
+public class ResendSettings
 {
     public const string SectionName = "Email:Resend";
 

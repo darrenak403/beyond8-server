@@ -9,11 +9,11 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices.Email;
 
 public class EmailService(
     ILogger<EmailService> logger,
-    IOptions<ResendConfiguration> resendOptions,
+    IOptions<ResendSettings> resendOptions,
     IResend resend
 ) : IEmailService
 {
-    private readonly ResendConfiguration _resendConfig = resendOptions.Value;
+    private readonly ResendSettings _resendConfig = resendOptions.Value;
     private readonly string _fromEmail = resendOptions.Value.FromEmail;
     private readonly string _fromName = resendOptions.Value.FromName;
 
