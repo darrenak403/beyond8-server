@@ -12,6 +12,7 @@ public interface IUserService
     Task<ApiResponse<List<UserResponse>>> GetAllUsersAsync(PaginationUserRequest request);
     Task<ApiResponse<UserResponse>> CreateUserAsync(CreateUserRequest request);
     Task<ApiResponse<UserResponse>> UpdateUserAsync(Guid id, UpdateUserRequest request);
+    Task<ApiResponse<UserResponse>> UpdateUserForAdminAsync(Guid id, UpdateUserForAdminRequest request);
     Task<ApiResponse<bool>> ToggleUserStatusAsync(Guid id);
     Task<ApiResponse<bool>> DeleteUserAsync(Guid id);
     Task<ApiResponse<string>> UploadUserAvatarAsync(Guid id, UpdateFileUrlRequest request);

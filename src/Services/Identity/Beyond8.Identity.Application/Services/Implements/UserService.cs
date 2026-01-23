@@ -26,7 +26,7 @@ public class UserService(
                 .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
                 .FirstOrDefaultAsync(u => u.Id == id);
-            
+
             if (user == null)
             {
                 logger.LogWarning("User not found with ID: {UserId}", id);
@@ -146,6 +146,43 @@ public class UserService(
         {
             logger.LogError(ex, "Error updating user with ID {UserId}", id);
             return ApiResponse<UserResponse>.FailureResponse("Đã xảy ra lỗi khi cập nhật tài khoản.");
+        }
+    }
+
+    public async Task<ApiResponse<UserResponse>> UpdateUserForAdminAsync(Guid id, UpdateUserForAdminRequest request)
+    {
+        try
+        {
+            var user = await unitOfWork.UserRepository.AsQueryable()
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == id);
+
+            if (user == null)
+            {
+                logger.LogWarning("User not found with ID: {UserId}", id);
+                return ApiResponse<UserResponse>.FailureResponse("Không tìm thấy tài khoản.");
+            }
+
+            if (user.Status == UserStatus.Inactive)
+            {
+                logger.LogWarning("User with ID: {UserId} is inactive", id);
+                return ApiResponse<UserResponse>.FailureResponse("Tài khoản không hoạt động.");
+            }
+
+            await UpdateUserRolesAsync(user, request.Roles);
+
+            await unitOfWork.UserRepository.UpdateAsync(user.Id, user);
+            await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation("User roles updated successfully for user with ID: {UserId} by admin/staff", id);
+
+            return ApiResponse<UserResponse>.SuccessResponse(user.ToUserResponse(), "Thêm vai trò tài khoản thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error updating user roles for user with ID {UserId}", id);
+            return ApiResponse<UserResponse>.FailureResponse("Đã xảy ra lỗi khi cập nhật vai trò tài khoản.");
         }
     }
 
@@ -284,4 +321,45 @@ public class UserService(
 
         return (true, null);
     }
+    /// <summary>
+    /// Updates user roles: revokes existing active roles and assigns new roles from request.
+    /// </summary>
+    private async Task UpdateUserRolesAsync(User user, List<string> roleCodes)
+    {
+        foreach (var userRole in user.UserRoles.Where(ur => ur.RevokedAt == null))
+        {
+            userRole.RevokedAt = DateTime.UtcNow;
+        }
+
+        if (roleCodes != null && roleCodes.Any())
+        {
+            foreach (var roleCode in roleCodes)
+            {
+                var role = await unitOfWork.RoleRepository.FindByCodeAsync(roleCode);
+                if (role != null)
+                {
+                    var existingUserRole = user.UserRoles.FirstOrDefault(ur => ur.RoleId == role.Id);
+                    if (existingUserRole == null)
+                    {
+                        user.UserRoles.Add(new UserRole
+                        {
+                            UserId = user.Id,
+                            RoleId = role.Id,
+                            AssignedAt = DateTime.UtcNow
+                        });
+                    }
+                    else
+                    {
+                        existingUserRole.RevokedAt = null;
+                        existingUserRole.AssignedAt = DateTime.UtcNow;
+                    }
+                }
+                else
+                {
+                    logger.LogWarning("Role with code {RoleCode} not found when updating user roles", roleCode);
+                }
+            }
+        }
+    }
+
 }

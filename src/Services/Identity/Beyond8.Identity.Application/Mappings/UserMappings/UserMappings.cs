@@ -96,5 +96,6 @@ public static class UserMappings
 
         if (!string.IsNullOrEmpty(request.Bio))
             user.Bio = request.Bio;
+
     }
 }
