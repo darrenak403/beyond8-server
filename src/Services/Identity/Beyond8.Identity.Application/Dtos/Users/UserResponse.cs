@@ -31,11 +31,5 @@ public class UserSimpleResponse
     public string Email { get; set; } = null!;
     public string FullName { get; set; } = null!;
     public DateTime? DateOfBirth { get; set; }
-    public string? PhoneNumber { get; set; }
-    public string? Specialization { get; set; }
-    public string? Address { get; set; }
-    public string? Bio { get; set; }
     public string? AvatarUrl { get; set; }
-    public string? CoverUrl { get; set; }
-
 }

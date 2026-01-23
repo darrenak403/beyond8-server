@@ -39,11 +39,7 @@ public static class UserMappings
             Email = user.Email,
             FullName = user.FullName,
             AvatarUrl = user.AvatarUrl,
-            CoverUrl = user.CoverUrl,
-            PhoneNumber = user.PhoneNumber,
-            Specialization = user.Specialization,
-            Address = user.Address,
-            Bio = user.Bio,
+            DateOfBirth = user.DateOfBirth
         };
     }
 
