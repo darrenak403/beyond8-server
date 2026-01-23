@@ -135,26 +135,28 @@ public class UserService(
         }
     }
 
-    public async Task<ApiResponse<bool>> UpdateUserStatusAsync(Guid id, UpdateUserStatusRequest request)
+    public async Task<ApiResponse<bool>> ToggleUserStatusAsync(Guid id)
     {
         try
         {
             var (isValid, error, user) = await ValidateUserByIdAsync(id);
             if (!isValid) return ApiResponse<bool>.FailureResponse(error!);
-
-            if (user!.Status == request.NewStatus)
-            {
-                logger.LogWarning("User with ID: {UserId} already has status {Status}", id, request.NewStatus);
-                return ApiResponse<bool>.FailureResponse("Tài khoản đã có trạng thái này.");
-            }
-
             var oldStatus = user!.Status;
-            user.Status = request.NewStatus;
-
+            switch (user.Status)
+            {
+                case UserStatus.Active:
+                    user.Status = UserStatus.Inactive;
+                    break;
+                case UserStatus.Inactive:
+                    user.Status = UserStatus.Active;
+                    break;
+                default:
+                    logger.LogWarning("Attempted to toggle user {UserId} with restricted status: {Status}", id, user.Status);
+                    return ApiResponse<bool>.FailureResponse($"Không thể thay đổi nhanh trạng thái từ '{user.Status}'. Vui lòng cập nhật thủ công.");
+            }
             await unitOfWork.UserRepository.UpdateAsync(user.Id, user);
             await unitOfWork.SaveChangesAsync();
-
-            logger.LogInformation("User status updated from {OldStatus} to {NewStatus} for user with ID: {UserId}", oldStatus, request.NewStatus, id);
+            logger.LogInformation("User status updated from {OldStatus} to {NewStatus} for user with ID: {UserId}", oldStatus, user.Status, id);
             return ApiResponse<bool>.SuccessResponse(true, "Cập nhật trạng thái tài khoản thành công.");
         }
         catch (Exception ex)

@@ -69,7 +69,7 @@ namespace Beyond8.Identity.Api.Apis
                 .Produces(StatusCodes.Status401Unauthorized)
                 .Produces(StatusCodes.Status403Forbidden);
 
-            group.MapPut("/{id:guid}/status", UpdateUserStatusAsync)
+            group.MapPut("/{id:guid}/toggle-status", ToggleUserStatusAsync)
                 .WithName("UpdateUserStatus")
                 .WithDescription("Cập nhật trạng thái người dùng theo ID")
                 .RequireAuthorization(x => x.RequireRole(Role.Admin))
@@ -227,16 +227,11 @@ namespace Beyond8.Identity.Api.Apis
                 : Results.NotFound(response);
         }
 
-        private static async Task<IResult> UpdateUserStatusAsync(
+        private static async Task<IResult> ToggleUserStatusAsync(
             [FromRoute] Guid id,
-            [FromBody] UpdateUserStatusRequest request,
-            [FromServices] IUserService userService,
-            [FromServices] IValidator<UpdateUserStatusRequest> validator)
+            [FromServices] IUserService userService)
         {
-            if (!request.ValidateRequest(validator, out var validationResult))
-                return validationResult!;
-
-            var response = await userService.UpdateUserStatusAsync(id, request);
+            var response = await userService.ToggleUserStatusAsync(id);
 
             return response.IsSuccess
                 ? Results.Ok(response)
