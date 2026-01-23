@@ -492,7 +492,7 @@ public class InstructorService(
 
             logger.LogInformation("Unhidden instructor profile {ProfileId} by user {UserId}", profileId, userId);
 
-            profile.VerificationStatus = VerificationStatus.RequestUpdate;
+            profile.VerificationStatus = VerificationStatus.Recovering;
 
             await unitOfWork.InstructorProfileRepository.UpdateAsync(profileId, profile);
             await unitOfWork.SaveChangesAsync();
