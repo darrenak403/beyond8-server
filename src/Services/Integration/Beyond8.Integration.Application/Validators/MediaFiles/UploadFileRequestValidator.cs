@@ -7,6 +7,7 @@ public class UploadFileRequestValidator : AbstractValidator<UploadFileRequest>
 {
     private static readonly string[] AllowedImageTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
     private static readonly string[] AllowedDocumentTypes = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
+    private static readonly string[] AllowedVideoTypes = ["video/mp4", "video/mov", "video/avi", "video/wmv", "video/flv", "video/mkv"];
 
     public UploadFileRequestValidator()
     {
@@ -61,6 +62,20 @@ public class UploadFileRequestValidator : AbstractValidator<UploadFileRequest>
 
         validator.RuleFor(x => x.Size)
             .LessThanOrEqualTo(10485760).WithMessage("Kích thước tài liệu không được vượt quá 10MB");
+
+        return validator;
+    }
+
+    public static UploadFileRequestValidator ForIntroVideo()
+    {
+        var validator = new UploadFileRequestValidator();
+
+        validator.RuleFor(x => x.ContentType)
+            .Must(ct => AllowedVideoTypes.Contains(ct.ToLower()))
+            .WithMessage("Video chỉ chấp nhận định dạng: mp4, mov, avi, wmv, flv, mkv, webm");
+
+        validator.RuleFor(x => x.Size)
+            .LessThanOrEqualTo(5242880).WithMessage("Kích thước video không được vượt quá 5MB");
 
         return validator;
     }

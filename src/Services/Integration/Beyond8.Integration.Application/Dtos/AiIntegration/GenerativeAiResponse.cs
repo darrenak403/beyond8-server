@@ -2,7 +2,7 @@ using System;
 
 namespace Beyond8.Integration.Application.Dtos.AiIntegration;
 
-public class GeminiResponse
+public class GenerativeAiResponse
 {
     public string Content { get; set; } = string.Empty;
     public int InputTokens { get; set; }

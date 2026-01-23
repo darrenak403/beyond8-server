@@ -28,7 +28,23 @@ public static class AiApis
             .Produces<ApiResponse<AiProfileReviewResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<AiProfileReviewResponse>>(StatusCodes.Status400BadRequest);
 
+        group.MapGet("/health", HealthCheck)
+            .WithName("HealthCheck")
+            .WithDescription("Check the health of the AI service")
+            .AllowAnonymous()
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
         return group;
+    }
+
+    private static async Task<IResult> HealthCheck(
+        [FromServices] IGenerativeAiService aiService
+    )
+    {
+        var result = await aiService.CheckHealthAsync();
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
     private static async Task<IResult> InstructorProfileReview(

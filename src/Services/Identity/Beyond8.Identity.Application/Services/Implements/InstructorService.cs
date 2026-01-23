@@ -92,7 +92,7 @@ public class InstructorService(
             await unitOfWork.InstructorProfileRepository.AddAsync(instructorProfile);
             await unitOfWork.SaveChangesAsync();
 
-            var submittedEvent = new InstructorApplicationSubmittedEvent(
+            var submittedEvent = new InstructorProfileSubmittedEvent(
                 user.Id,
                 instructorProfile.Id,
                 user.FullName,
@@ -159,7 +159,7 @@ public class InstructorService(
 
             // Publish event for approval email
             var frontendUrl = configuration.GetValue<string>("FrontendUrl") ?? "http://localhost:5173";
-            var profileUrl = $"{frontendUrl}/instructor/me";
+            var profileUrl = $"{frontendUrl}/mybeyond?tab=myprofile";
             var approvalEvent = new InstructorApprovalEmailEvent(
                 user.Id,
                 user.Email,
@@ -542,7 +542,7 @@ public class InstructorService(
 
             logger.LogInformation("Unhidden instructor profile {ProfileId} by user {UserId}", profileId, userId);
 
-            profile.VerificationStatus = VerificationStatus.RequestUpdate;
+            profile.VerificationStatus = VerificationStatus.Recovering;
 
             await unitOfWork.InstructorProfileRepository.UpdateAsync(profileId, profile);
             await unitOfWork.SaveChangesAsync();
