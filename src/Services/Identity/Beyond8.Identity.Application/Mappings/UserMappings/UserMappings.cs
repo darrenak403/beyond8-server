@@ -20,6 +20,9 @@ public static class UserMappings
             AvatarUrl = user.AvatarUrl,
             CoverUrl = user.CoverUrl,
             PhoneNumber = user.PhoneNumber,
+            Specialization = user.Specialization,
+            Address = user.Address,
+            Bio = user.Bio,
             Status = user.Status,
             IsEmailVerified = user.IsEmailVerified,
             LastLoginAt = user.LastLoginAt,
@@ -37,6 +40,10 @@ public static class UserMappings
             FullName = user.FullName,
             AvatarUrl = user.AvatarUrl,
             CoverUrl = user.CoverUrl,
+            PhoneNumber = user.PhoneNumber,
+            Specialization = user.Specialization,
+            Address = user.Address,
+            Bio = user.Bio,
         };
     }
 
@@ -52,6 +59,9 @@ public static class UserMappings
             AvatarUrl = request.AvatarUrl,
             CoverUrl = request.CoverUrl,
             PhoneNumber = request.PhoneNumber,
+            Specialization = request.Specialization,
+            Address = request.Address,
+            Bio = request.Bio,
             Timezone = request.Timezone,
             Locale = request.Locale,
             Roles = request.Roles ?? [UserRole.Student],
@@ -77,5 +87,14 @@ public static class UserMappings
 
         if (!string.IsNullOrEmpty(request.Locale))
             user.Locale = request.Locale;
+
+        if (!string.IsNullOrEmpty(request.Specialization))
+            user.Specialization = request.Specialization;
+
+        if (!string.IsNullOrEmpty(request.Address))
+            user.Address = request.Address;
+
+        if (!string.IsNullOrEmpty(request.Bio))
+            user.Bio = request.Bio;
     }
 }

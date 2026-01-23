@@ -9,6 +9,8 @@ public class PaginationUserRequest : PaginationRequest
     public string? Email { get; set; } = string.Empty;
     public string? FullName { get; set; } = string.Empty;
     public string? PhoneNumber { get; set; } = string.Empty;
+    public string? Specialization { get; set; } = string.Empty;
+    public string? Address { get; set; } = string.Empty;
     public bool? IsEmailVerified { get; set; }
     public UserRole? Role { get; set; }
 }

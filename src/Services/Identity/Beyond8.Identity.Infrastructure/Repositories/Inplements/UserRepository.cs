@@ -9,7 +9,7 @@ namespace Beyond8.Identity.Infrastructure.Repositories.Inplements;
 
 public class UserRepository(IdentityDbContext context) : PostgresRepository<User>(context), IUserRepository
 {
-    public async Task<(List<User> Items, int TotalCount)> SearchUsersPagedAsync(int pageNumber, int pageSize, string? email, string? fullName, string? phoneNumber, bool? isEmailVerified, UserRole? role, bool? isDescending)
+    public async Task<(List<User> Items, int TotalCount)> SearchUsersPagedAsync(int pageNumber, int pageSize, string? email, string? fullName, string? phoneNumber, string? specialization, string? address, bool? isEmailVerified, UserRole? role, bool? isDescending)
     {
         var query = AsQueryable();
 
@@ -24,6 +24,14 @@ public class UserRepository(IdentityDbContext context) : PostgresRepository<User
         if (!string.IsNullOrEmpty(phoneNumber))
         {
             query = query.Where(u => string.IsNullOrWhiteSpace(phoneNumber) || u.PhoneNumber!.Contains(phoneNumber));
+        }
+        if (!string.IsNullOrEmpty(specialization))
+        {
+            query = query.Where(u => u.Specialization != null && u.Specialization.Contains(specialization));
+        }
+        if (!string.IsNullOrEmpty(address))
+        {
+            query = query.Where(u => u.Address != null && u.Address.Contains(address));
         }
         if (isEmailVerified != null)
         {

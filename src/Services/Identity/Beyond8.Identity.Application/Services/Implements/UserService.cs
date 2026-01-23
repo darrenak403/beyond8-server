@@ -43,9 +43,11 @@ public class UserService(
                 request.Email,
                 request.FullName,
                 request.PhoneNumber,
+                request.Specialization,
+                request.Address,
                 request.IsEmailVerified,
                 request.Role,
-                request.IsDescending.HasValue ? request.IsDescending.Value : true);
+                request.IsDescending ?? true);
 
             var userResponses = users.Items.Select(u => u.ToUserResponse()).ToList();
 

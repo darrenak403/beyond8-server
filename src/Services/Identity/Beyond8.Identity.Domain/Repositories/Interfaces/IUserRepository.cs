@@ -13,6 +13,8 @@ namespace Beyond8.Identity.Domain.Repositories.Interfaces
             string? email,
             string? fullName,
             string? phoneNumber,
+            string? specialization,
+            string? address,
             bool? isEmailVerified,
             UserRole? role,
             bool? isDescending);
