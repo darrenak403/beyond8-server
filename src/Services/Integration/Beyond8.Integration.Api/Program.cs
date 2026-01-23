@@ -9,13 +9,12 @@ builder.AddApplicationServices();
 
 var app = builder.Build();
 
-await app.MigrateDbContextAsync<IntegrationDbContext>();
-
-using (var scope = app.Services.CreateScope())
+await app.MigrateDbContextAsync<IntegrationDbContext>(async (database, cancellationToken) =>
 {
+    using var scope = app.Services.CreateScope();
     var context = scope.ServiceProvider.GetRequiredService<IntegrationDbContext>();
     await AiPromptSeeder.SeedAsync(context);
-}
+});
 
 app.UseApplicationServices();
 

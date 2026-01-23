@@ -7,8 +7,10 @@ using Beyond8.Identity.Domain.Entities;
 using Beyond8.Identity.Domain.Enums;
 using Beyond8.Identity.Domain.Repositories.Interfaces;
 using MassTransit;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Linq;
 
 namespace Beyond8.Identity.Application.Services.Implements;
 
@@ -30,7 +32,10 @@ public class InstructorService(
         if (profile.VerificationStatus != VerificationStatus.Pending)
             return (false, "Chỉ có thể xử lý đơn đăng ký đang chờ duyệt.", null, null);
 
-        var user = await unitOfWork.UserRepository.GetByIdAsync(profile.UserId);
+        var user = await unitOfWork.UserRepository.AsQueryable()
+            .Include(u => u.UserRoles)
+            .ThenInclude(ur => ur.Role)
+            .FirstOrDefaultAsync(u => u.Id == profile.UserId);
         if (user == null)
             return (false, "Người dùng không tồn tại.", null, null);
 
@@ -50,7 +55,10 @@ public class InstructorService(
     {
         try
         {
-            var user = await unitOfWork.UserRepository.GetByIdAsync(userId);
+            var user = await unitOfWork.UserRepository.AsQueryable()
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == userId);
             if (user == null)
             {
                 logger.LogWarning("User with ID {UserId} not found when submitting instructor application", userId);
@@ -114,7 +122,31 @@ public class InstructorService(
             }
 
             logger.LogInformation("Adding instructor role to user {UserId}", user!.Id);
-            user!.Roles.Add(UserRole.Instructor);
+            
+            // Check if user already has instructor role
+            var instructorRole = await unitOfWork.RoleRepository.FindByCodeAsync("ROLE_INSTRUCTOR");
+            if (instructorRole == null)
+            {
+                logger.LogError("Instructor role not found in database");
+                return ApiResponse<InstructorProfileResponse>.FailureResponse("Hệ thống chưa được cấu hình đúng. Vui lòng liên hệ quản trị viên.");
+            }
+
+            var existingUserRole = user!.UserRoles.FirstOrDefault(ur => ur.RoleId == instructorRole.Id);
+            if (existingUserRole == null)
+            {
+                user.UserRoles.Add(new UserRole
+                {
+                    UserId = user.Id,
+                    RoleId = instructorRole.Id,
+                    AssignedAt = DateTime.UtcNow
+                });
+            }
+            else if (existingUserRole.RevokedAt != null)
+            {
+                // Re-activate revoked role
+                existingUserRole.RevokedAt = null;
+                existingUserRole.AssignedAt = DateTime.UtcNow;
+            }
 
             logger.LogInformation("Approving instructor application for profile {ProfileId} by admin {AdminId}", id, adminId);
             profile!.VerificationStatus = VerificationStatus.Verified;
@@ -242,7 +274,10 @@ public class InstructorService(
                     "Hồ sơ giảng viên của bạn không tồn tại.");
             }
 
-            var user = await unitOfWork.UserRepository.GetByIdAsync(profile.UserId);
+            var user = await unitOfWork.UserRepository.AsQueryable()
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == profile.UserId);
             if (user == null)
             {
                 logger.LogError("User {UserId} not found for instructor profile {ProfileId}", userId, profile.Id);
@@ -367,7 +402,10 @@ public class InstructorService(
                     "Hồ sơ giảng viên không tồn tại.");
             }
 
-            var user = await unitOfWork.UserRepository.GetByIdAsync(profile.UserId);
+            var user = await unitOfWork.UserRepository.AsQueryable()
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == profile.UserId);
             profile.User = user!;
 
             var response = profile.ToInstructorProfileAdminResponse(user!);
@@ -425,7 +463,10 @@ public class InstructorService(
                     "Hồ sơ giảng viên đã bị ẩn trước đó.");
             }
 
-            var user = await unitOfWork.UserRepository.GetByIdAsync(profile.UserId);
+            var user = await unitOfWork.UserRepository.AsQueryable()
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == profile.UserId);
             if (user == null)
             {
                 logger.LogError("User {UserId} not found for instructor profile {ProfileId}",
@@ -437,11 +478,17 @@ public class InstructorService(
 
             profile.VerificationStatus = VerificationStatus.Hidden;
 
-            if (user.Roles.Contains(UserRole.Instructor))
+            // Revoke instructor role instead of removing
+            var instructorRole = await unitOfWork.RoleRepository.FindByCodeAsync("ROLE_INSTRUCTOR");
+            if (instructorRole != null)
             {
-                logger.LogInformation("Removing instructor role from user {UserId}", user.Id);
-                user.Roles.Remove(UserRole.Instructor);
-                await unitOfWork.UserRepository.UpdateAsync(user.Id, user);
+                var userRole = user.UserRoles.FirstOrDefault(ur => ur.RoleId == instructorRole.Id && ur.RevokedAt == null);
+                if (userRole != null)
+                {
+                    logger.LogInformation("Revoking instructor role from user {UserId}", user.Id);
+                    userRole.RevokedAt = DateTime.UtcNow;
+                    await unitOfWork.UserRepository.UpdateAsync(user.Id, user);
+                }
             }
 
             await unitOfWork.InstructorProfileRepository.UpdateAsync(profileId, profile);
@@ -482,7 +529,10 @@ public class InstructorService(
                     "Hồ sơ giảng viên không ở trạng thái đã ẩn.");
             }
 
-            var user = await unitOfWork.UserRepository.GetByIdAsync(profile.UserId);
+            var user = await unitOfWork.UserRepository.AsQueryable()
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == profile.UserId);
             if (user == null)
             {
                 logger.LogError("User {UserId} not found for instructor profile {ProfileId}",

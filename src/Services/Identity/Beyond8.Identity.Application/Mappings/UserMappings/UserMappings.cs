@@ -1,3 +1,4 @@
+using System.Linq;
 using Beyond8.Identity.Application.Dtos.Tokens;
 using Beyond8.Identity.Application.Dtos.Users;
 using Beyond8.Identity.Domain.Entities;
@@ -14,7 +15,10 @@ public static class UserMappings
         {
             Id = user.Id,
             Email = user.Email,
-            Roles = user.Roles,
+            Roles = user.UserRoles
+                .Where(ur => ur.RevokedAt == null)
+                .Select(ur => ur.Role.Code)
+                .ToList(),
             FullName = user.FullName,
             DateOfBirth = user.DateOfBirth,
             AvatarUrl = user.AvatarUrl,
@@ -64,9 +68,9 @@ public static class UserMappings
             Bio = request.Bio,
             Timezone = request.Timezone,
             Locale = request.Locale,
-            Roles = request.Roles ?? [UserRole.Student],
+            UserRoles = new List<UserRole>(),
             Status = UserStatus.Active,
-            IsEmailVerified = false
+            IsEmailVerified = true
         };
 
         return user;

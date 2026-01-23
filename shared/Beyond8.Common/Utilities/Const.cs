@@ -11,8 +11,8 @@ public static class Const
 
 public static class Role
 {
-    public const string Student = "Student";
-    public const string Instructor = "Instructor";
-    public const string Staff = "Staff";
-    public const string Admin = "Admin";
+    public const string Student = "ROLE_STUDENT";
+    public const string Instructor = "ROLE_INSTRUCTOR";
+    public const string Staff = "ROLE_STAFF";
+    public const string Admin = "ROLE_ADMIN";
 }

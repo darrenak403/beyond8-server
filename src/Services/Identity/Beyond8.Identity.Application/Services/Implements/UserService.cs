@@ -7,6 +7,7 @@ using Beyond8.Identity.Domain.Entities;
 using Beyond8.Identity.Domain.Enums;
 using Beyond8.Identity.Domain.Repositories.Interfaces;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Beyond8.Identity.Application.Services.Implements;
@@ -21,10 +22,18 @@ public class UserService(
     {
         try
         {
-            var (isValid, error, user) = await ValidateUserByIdAsync(id);
-            if (!isValid) return ApiResponse<UserResponse>.FailureResponse(error!);
+            var user = await unitOfWork.UserRepository.AsQueryable()
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == id);
+            
+            if (user == null)
+            {
+                logger.LogWarning("User not found with ID: {UserId}", id);
+                return ApiResponse<UserResponse>.FailureResponse("Không tìm thấy tài khoản.");
+            }
 
-            return ApiResponse<UserResponse>.SuccessResponse(user!.ToUserResponse(), "Lấy thông tin tài khoản thành công.");
+            return ApiResponse<UserResponse>.SuccessResponse(user.ToUserResponse(), "Lấy thông tin tài khoản thành công.");
         }
         catch (Exception ex)
         {
@@ -77,12 +86,39 @@ public class UserService(
             var newUser = request.ToUserEntity();
             newUser.PasswordHash = passwordHasher.HashPassword(newUser, request.Password);
 
+            // Assign roles from request
+            if (request.Roles != null && request.Roles.Any())
+            {
+                foreach (var roleCode in request.Roles)
+                {
+                    var role = await unitOfWork.RoleRepository.FindByCodeAsync(roleCode);
+                    if (role != null)
+                    {
+                        newUser.UserRoles.Add(new UserRole
+                        {
+                            UserId = newUser.Id,
+                            RoleId = role.Id,
+                            AssignedAt = DateTime.UtcNow
+                        });
+                    }
+                    else
+                    {
+                        logger.LogWarning("Role with code {RoleCode} not found when creating user", roleCode);
+                    }
+                }
+            }
+
             await unitOfWork.UserRepository.AddAsync(newUser);
             await unitOfWork.SaveChangesAsync();
 
             logger.LogInformation("User created successfully with email {Email} and ID: {UserId}", request.Email, newUser.Id);
 
-            return ApiResponse<UserResponse>.SuccessResponse(newUser.ToUserResponse(), "Tạo tài khoản thành công.");
+            // Load user with roles for response
+            var userWithRoles = await unitOfWork.UserRepository.AsQueryable()
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == newUser.Id);
+            return ApiResponse<UserResponse>.SuccessResponse(userWithRoles!.ToUserResponse(), "Tạo tài khoản thành công.");
         }
         catch (Exception ex)
         {

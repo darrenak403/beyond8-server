@@ -1,5 +1,3 @@
-using Beyond8.Identity.Domain.Enums;
-
 namespace Beyond8.Identity.Application.Dtos.Users;
 
 public class CreateUserRequest
@@ -16,5 +14,5 @@ public class CreateUserRequest
     public string? Bio { get; set; } = null;
     public string Timezone { get; set; } = "Asia/Ho_Chi_Minh";
     public string Locale { get; set; } = "vi-VN";
-    public List<UserRole> Roles { get; set; } = [UserRole.Student];
+    public List<string> Roles { get; set; } = ["ROLE_STUDENT"];
 }

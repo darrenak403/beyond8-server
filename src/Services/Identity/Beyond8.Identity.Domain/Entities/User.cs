@@ -11,7 +11,7 @@ namespace Beyond8.Identity.Domain.Entities
         public string Email { get; set; } = null!;
         [Required]
         public string PasswordHash { get; set; } = null!;
-        public List<UserRole> Roles { get; set; } = [];
+        public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
         [Required]
         [MaxLength(100)]
         public string FullName { get; set; } = null!;
