@@ -31,5 +31,4 @@ public class UserSimpleResponse
     public string FullName { get; set; } = null!;
     public DateTime? DateOfBirth { get; set; }
     public string? AvatarUrl { get; set; }
-    public string? CoverUrl { get; set; }
 }
