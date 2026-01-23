@@ -84,7 +84,7 @@ public class InstructorService(
             await unitOfWork.InstructorProfileRepository.AddAsync(instructorProfile);
             await unitOfWork.SaveChangesAsync();
 
-            var submittedEvent = new InstructorApplicationSubmittedEvent(
+            var submittedEvent = new InstructorProfileSubmittedEvent(
                 user.Id,
                 instructorProfile.Id,
                 user.FullName,

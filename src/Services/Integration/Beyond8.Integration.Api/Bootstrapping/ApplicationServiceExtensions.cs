@@ -111,7 +111,7 @@ public static class Bootstrapper
         {
             // Register consumers from Identity events
             config.AddConsumer<OtpEmailConsumer>();
-            config.AddConsumer<InstructorApplicationSubmittedConsumer>();
+            config.AddConsumer<InstructorProfileSubmittedConsumer>();
             config.AddConsumer<InstructorApprovalEmailConsumer>();
             config.AddConsumer<InstructorUpdateRequestEmailConsumer>();
         });

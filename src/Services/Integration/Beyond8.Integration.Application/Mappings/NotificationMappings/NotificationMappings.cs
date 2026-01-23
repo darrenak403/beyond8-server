@@ -51,7 +51,7 @@ public static class NotificationMappings
         };
     }
 
-    public static Notification InstructorApplicationSubmittedEventToNotification(this InstructorApplicationSubmittedEvent @event, NotificationTarget target, NotificationStatus status)
+    public static Notification InstructorProfileSubmittedEventToNotification(this InstructorProfileSubmittedEvent @event, NotificationTarget target, NotificationStatus status)
     {
         return new Notification
         {

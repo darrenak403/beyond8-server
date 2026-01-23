@@ -93,7 +93,7 @@ public class AiService(
         if (r.WorkExperience?.Count > 0)
             foreach (var w in r.WorkExperience)
             {
-                var toDate = w.IsCurrentJob ? "Hiện tại" : w.To == DateTime.MinValue ? "N/A" : w.To.ToString("yyyy-MM");
+                var toDate = w.IsCurrentJob ? "Hiện tại" : w.To == null ? "N/A" : w.To.Value.ToString("yyyy-MM");
                 var fromDate = w.From == DateTime.MinValue ? "N/A" : w.From.ToString("yyyy-MM");
                 var description = string.IsNullOrWhiteSpace(w.Description) ? "" : $"\n  Mô tả: {w.Description}";
                 sb.AppendLine($"- {w.Company}, {w.Role} ({fromDate} - {toDate}){description}");

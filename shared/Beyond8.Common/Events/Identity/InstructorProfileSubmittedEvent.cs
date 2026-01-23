@@ -2,7 +2,7 @@ using System;
 
 namespace Beyond8.Common.Events.Identity;
 
-public record InstructorApplicationSubmittedEvent(
+public record InstructorProfileSubmittedEvent(
     Guid UserId,
     Guid ProfileId,
     string InstructorName,

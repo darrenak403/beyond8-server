@@ -10,14 +10,14 @@ using Microsoft.Extensions.Logging;
 
 namespace Beyond8.Integration.Application.Consumers.Identity;
 
-public class InstructorApplicationSubmittedConsumer(
+public class InstructorProfileSubmittedConsumer(
     INotificationService notificationService,
     IUnitOfWork unitOfWork,
-    ILogger<InstructorApplicationSubmittedConsumer> logger,
+    ILogger<InstructorProfileSubmittedConsumer> logger,
     IConfiguration configuration
-) : IConsumer<InstructorApplicationSubmittedEvent>
+) : IConsumer<InstructorProfileSubmittedEvent>
 {
-    public async Task Consume(ConsumeContext<InstructorApplicationSubmittedEvent> context)
+    public async Task Consume(ConsumeContext<InstructorProfileSubmittedEvent> context)
     {
         var message = context.Message;
 
@@ -45,8 +45,8 @@ public class InstructorApplicationSubmittedConsumer(
             // Save notifications to database for Admin and Staff
             try
             {
-                var adminNotification = message.InstructorApplicationSubmittedEventToNotification(NotificationTarget.AllAdmin, NotificationStatus.Delivered);
-                var staffNotification = message.InstructorApplicationSubmittedEventToNotification(NotificationTarget.AllStaff, NotificationStatus.Delivered);
+                var adminNotification = message.InstructorProfileSubmittedEventToNotification(NotificationTarget.AllAdmin, NotificationStatus.Delivered);
+                var staffNotification = message.InstructorProfileSubmittedEventToNotification(NotificationTarget.AllStaff, NotificationStatus.Delivered);
 
                 await unitOfWork.NotificationRepository.AddAsync(adminNotification);
                 await unitOfWork.NotificationRepository.AddAsync(staffNotification);
