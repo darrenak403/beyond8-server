@@ -51,15 +51,6 @@ namespace Beyond8.Identity.Api.Apis
                 .Produces(StatusCodes.Status401Unauthorized)
                 .Produces(StatusCodes.Status403Forbidden);
 
-            group.MapPut("/{id:guid}", UpdateUserAsync)
-                .WithName("UpdateUser")
-                .WithDescription("Cập nhật thông tin người dùng theo ID")
-                .RequireAuthorization(x => x.RequireRole(Role.Admin))
-                .Produces<ApiResponse<UserResponse>>(StatusCodes.Status200OK)
-                .Produces<ApiResponse<UserResponse>>(StatusCodes.Status400BadRequest)
-                .Produces(StatusCodes.Status401Unauthorized)
-                .Produces(StatusCodes.Status403Forbidden);
-
             group.MapPatch("/{id:guid}/roles", UpdateUserRolesAsync)
                 .WithName("UpdateUserRoles")
                 .WithDescription("Thêm vai trò mới cho người dùng (không xóa vai trò cũ, chỉ dành cho Admin và Staff)")
@@ -207,22 +198,6 @@ namespace Beyond8.Identity.Api.Apis
             return response.IsSuccess
                 ? Results.Created($"/api/v1/users/{response.Data?.Id}", response)
                 : Results.BadRequest(response);
-        }
-
-        private static async Task<IResult> UpdateUserAsync(
-            [FromRoute] Guid id,
-            [FromBody] UpdateUserRequest request,
-            [FromServices] IUserService userService,
-            [FromServices] IValidator<UpdateUserRequest> validator)
-        {
-            if (!request.ValidateRequest(validator, out var validationResult))
-                return validationResult!;
-
-            var response = await userService.UpdateUserAsync(id, request);
-
-            return response.IsSuccess
-                ? Results.Ok(response)
-                : Results.NotFound(response);
         }
 
         private static async Task<IResult> DeleteUserAsync(
