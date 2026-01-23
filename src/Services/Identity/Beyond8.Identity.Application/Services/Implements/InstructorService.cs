@@ -7,8 +7,10 @@ using Beyond8.Identity.Domain.Entities;
 using Beyond8.Identity.Domain.Enums;
 using Beyond8.Identity.Domain.Repositories.Interfaces;
 using MassTransit;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Linq;
 
 namespace Beyond8.Identity.Application.Services.Implements;
 
@@ -30,7 +32,10 @@ public class InstructorService(
         if (profile.VerificationStatus != VerificationStatus.Pending)
             return (false, "Chỉ có thể xử lý đơn đăng ký đang chờ duyệt.", null, null);
 
-        var user = await unitOfWork.UserRepository.GetByIdAsync(profile.UserId);
+        var user = await unitOfWork.UserRepository.AsQueryable()
+            .Include(u => u.UserRoles)
+            .ThenInclude(ur => ur.Role)
+            .FirstOrDefaultAsync(u => u.Id == profile.UserId);
         if (user == null)
             return (false, "Người dùng không tồn tại.", null, null);
 
@@ -50,7 +55,10 @@ public class InstructorService(
     {
         try
         {
-            var user = await unitOfWork.UserRepository.GetByIdAsync(userId);
+            var user = await unitOfWork.UserRepository.AsQueryable()
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == userId);
             if (user == null)
             {
                 logger.LogWarning("User with ID {UserId} not found when submitting instructor application", userId);
@@ -114,7 +122,31 @@ public class InstructorService(
             }
 
             logger.LogInformation("Adding instructor role to user {UserId}", user!.Id);
-            user!.Roles.Add(UserRole.Instructor);
+            
+            // Check if user already has instructor role
+            var instructorRole = await unitOfWork.RoleRepository.FindByCodeAsync("ROLE_INSTRUCTOR");
+            if (instructorRole == null)
+            {
+                logger.LogError("Instructor role not found in database");
+                return ApiResponse<InstructorProfileResponse>.FailureResponse("Hệ thống chưa được cấu hình đúng. Vui lòng liên hệ quản trị viên.");
+            }
+
+            var existingUserRole = user!.UserRoles.FirstOrDefault(ur => ur.RoleId == instructorRole.Id);
+            if (existingUserRole == null)
+            {
+                user.UserRoles.Add(new UserRole
+                {
+                    UserId = user.Id,
+                    RoleId = instructorRole.Id,
+                    AssignedAt = DateTime.UtcNow
+                });
+            }
+            else if (existingUserRole.RevokedAt != null)
+            {
+                // Re-activate revoked role
+                existingUserRole.RevokedAt = null;
+                existingUserRole.AssignedAt = DateTime.UtcNow;
+            }
 
             logger.LogInformation("Approving instructor application for profile {ProfileId} by admin {AdminId}", id, adminId);
             profile!.VerificationStatus = VerificationStatus.Verified;
@@ -203,6 +235,7 @@ public class InstructorService(
                 pagination.ExpertiseAreas,
                 pagination.SchoolName,
                 pagination.CompanyName,
+                pagination.VerificationStatus,
                 pagination.IsDescending.HasValue ? pagination.IsDescending.Value : true);
 
             var profileResponses = profile.Items
@@ -232,7 +265,7 @@ public class InstructorService(
         {
             // Exclude Hidden profiles - user should not see deleted profiles
             var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(
-                p => p.UserId == userId && p.VerificationStatus != VerificationStatus.Hidden);
+                p => p.UserId == userId);
 
             if (profile == null)
             {
@@ -241,7 +274,10 @@ public class InstructorService(
                     "Hồ sơ giảng viên của bạn không tồn tại.");
             }
 
-            var user = await unitOfWork.UserRepository.GetByIdAsync(profile.UserId);
+            var user = await unitOfWork.UserRepository.AsQueryable()
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == profile.UserId);
             if (user == null)
             {
                 logger.LogError("User {UserId} not found for instructor profile {ProfileId}", userId, profile.Id);
@@ -366,7 +402,10 @@ public class InstructorService(
                     "Hồ sơ giảng viên không tồn tại.");
             }
 
-            var user = await unitOfWork.UserRepository.GetByIdAsync(profile.UserId);
+            var user = await unitOfWork.UserRepository.AsQueryable()
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == profile.UserId);
             profile.User = user!;
 
             var response = profile.ToInstructorProfileAdminResponse(user!);
@@ -403,7 +442,7 @@ public class InstructorService(
         }
     }
 
-    public async Task<ApiResponse<bool>> DeleteInstructorProfileAsync(Guid profileId, Guid adminId)
+    public async Task<ApiResponse<bool>> HiddenInstructorProfileAsync(Guid profileId, Guid userId)
     {
         try
         {
@@ -411,8 +450,8 @@ public class InstructorService(
 
             if (profile == null)
             {
-                logger.LogWarning("Instructor profile {ProfileId} not found for deletion by admin {AdminId}",
-                    profileId, adminId);
+                logger.LogWarning("Instructor profile {ProfileId} not found for deletion by user {UserId}",
+                    profileId, userId);
                 return ApiResponse<bool>.FailureResponse(
                     "Hồ sơ giảng viên không tồn tại.");
             }
@@ -421,10 +460,13 @@ public class InstructorService(
             {
                 logger.LogWarning("Instructor profile {ProfileId} already hidden, cannot delete again", profileId);
                 return ApiResponse<bool>.FailureResponse(
-                    "Hồ sơ giảng viên đã bị xóa trước đó.");
+                    "Hồ sơ giảng viên đã bị ẩn trước đó.");
             }
 
-            var user = await unitOfWork.UserRepository.GetByIdAsync(profile.UserId);
+            var user = await unitOfWork.UserRepository.AsQueryable()
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == profile.UserId);
             if (user == null)
             {
                 logger.LogError("User {UserId} not found for instructor profile {ProfileId}",
@@ -432,31 +474,89 @@ public class InstructorService(
                 return ApiResponse<bool>.FailureResponse("Người dùng không tồn tại.");
             }
 
-            logger.LogInformation("Deleting instructor profile {ProfileId} by admin {AdminId}", profileId, adminId);
+            logger.LogInformation("Hidden instructor profile {ProfileId} by user {UserId}", profileId, userId);
 
             profile.VerificationStatus = VerificationStatus.Hidden;
 
-            if (user.Roles.Contains(UserRole.Instructor))
+            // Revoke instructor role instead of removing
+            var instructorRole = await unitOfWork.RoleRepository.FindByCodeAsync("ROLE_INSTRUCTOR");
+            if (instructorRole != null)
             {
-                logger.LogInformation("Removing instructor role from user {UserId}", user.Id);
-                user.Roles.Remove(UserRole.Instructor);
-                await unitOfWork.UserRepository.UpdateAsync(user.Id, user);
+                var userRole = user.UserRoles.FirstOrDefault(ur => ur.RoleId == instructorRole.Id && ur.RevokedAt == null);
+                if (userRole != null)
+                {
+                    logger.LogInformation("Revoking instructor role from user {UserId}", user.Id);
+                    userRole.RevokedAt = DateTime.UtcNow;
+                    await unitOfWork.UserRepository.UpdateAsync(user.Id, user);
+                }
             }
 
             await unitOfWork.InstructorProfileRepository.UpdateAsync(profileId, profile);
             await unitOfWork.SaveChangesAsync();
 
-            logger.LogInformation("Successfully deleted instructor profile {ProfileId} by admin {AdminId}", profileId, adminId);
+            logger.LogInformation("Successfully hidden instructor profile {ProfileId} by user {UserId}", profileId, userId);
 
-            return ApiResponse<bool>.SuccessResponse(true, "Xóa hồ sơ giảng viên thành công.");
+            return ApiResponse<bool>.SuccessResponse(true, "Ẩn hồ sơ giảng viên thành công.");
 
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error deleting instructor profile {ProfileId} by admin {AdminId}",
-                profileId, adminId);
+            logger.LogError(ex, "Error hiding instructor profile {ProfileId} by user {UserId}",
+                profileId, userId);
             return ApiResponse<bool>.FailureResponse(
-                "Đã xảy ra lỗi khi xóa hồ sơ giảng viên.");
+                "Đã xảy ra lỗi khi ẩn hồ sơ giảng viên.");
         }
     }
+
+
+    public async Task<ApiResponse<bool>> UnHiddenInstructorProfileAsync(Guid profileId, Guid userId)
+    {
+        try
+        {
+            var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(p => p.Id == profileId && p.VerificationStatus == VerificationStatus.Hidden);
+            if (profile == null)
+            {
+                logger.LogWarning("Instructor profile {ProfileId} not found or not hidden for un-hiding by user {UserId}",
+                    profileId, userId);
+                return ApiResponse<bool>.FailureResponse(
+                    "Hồ sơ giảng viên không tồn tại hoặc không ở trạng thái đã ẩn.");
+            }
+
+            if (profile.VerificationStatus != VerificationStatus.Hidden)
+            {
+                logger.LogWarning("Instructor profile {ProfileId} is not hidden, cannot un-hide", profileId);
+                return ApiResponse<bool>.FailureResponse(
+                    "Hồ sơ giảng viên không ở trạng thái đã ẩn.");
+            }
+
+            var user = await unitOfWork.UserRepository.AsQueryable()
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == profile.UserId);
+            if (user == null)
+            {
+                logger.LogError("User {UserId} not found for instructor profile {ProfileId}",
+                    profile.UserId, profileId);
+                return ApiResponse<bool>.FailureResponse("Người dùng không tồn tại.");
+            }
+
+            logger.LogInformation("Unhidden instructor profile {ProfileId} by user {UserId}", profileId, userId);
+
+            profile.VerificationStatus = VerificationStatus.RequestUpdate;
+
+            await unitOfWork.InstructorProfileRepository.UpdateAsync(profileId, profile);
+            await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation("Successfully un-hidden instructor profile {ProfileId} by user {UserId}", profileId, userId);
+            return ApiResponse<bool>.SuccessResponse(true, "Khôi phục hồ sơ giảng viên thành công. Hồ sơ hiện đang ở trạng thái yêu cầu cập nhật.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error un-hiding instructor profile {ProfileId} by user {UserId}",
+                profileId, userId);
+            return ApiResponse<bool>.FailureResponse(
+                "Đã xảy ra lỗi khi khôi phục hồ sơ giảng viên.");
+        }
+    }
+
 }

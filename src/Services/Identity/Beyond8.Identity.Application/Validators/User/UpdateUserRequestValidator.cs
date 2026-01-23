@@ -30,6 +30,24 @@ public class UpdateUserRequestValidator : AbstractValidator<UpdateUserRequest>
                 .Matches(@"^\+?[0-9\s\-\(\)]+$").WithMessage("Số điện thoại không hợp lệ");
         });
 
+        When(x => !string.IsNullOrEmpty(x.Specialization), () =>
+        {
+            RuleFor(x => x.Specialization)
+                .MaximumLength(100).WithMessage("Chuyên ngành không được vượt quá 100 ký tự");
+        });
+
+        When(x => !string.IsNullOrEmpty(x.Address), () =>
+        {
+            RuleFor(x => x.Address)
+                .MaximumLength(200).WithMessage("Địa chỉ không được vượt quá 200 ký tự");
+        });
+
+        When(x => !string.IsNullOrEmpty(x.Bio), () =>
+        {
+            RuleFor(x => x.Bio)
+                .MaximumLength(500).WithMessage("Tiểu sử không được vượt quá 500 ký tự");
+        });
+
         When(x => !string.IsNullOrEmpty(x.Timezone), () =>
         {
             RuleFor(x => x.Timezone)

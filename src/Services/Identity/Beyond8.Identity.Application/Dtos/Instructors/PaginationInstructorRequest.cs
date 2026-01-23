@@ -1,5 +1,6 @@
 using System;
 using Beyond8.Common.Utilities;
+using Beyond8.Identity.Domain.Enums;
 
 namespace Beyond8.Identity.Application.Dtos.Instructors;
 
@@ -14,6 +15,7 @@ public class PaginationInstructorRequest : PaginationRequest
     public string? SchoolName { get; set; }
     // Work Experience search
     public string? CompanyName { get; set; }
+    public VerificationStatus? VerificationStatus { get; set; }
 
     // public decimal? MinAvgRating { get; set; }
     // public decimal? MaxAvgRating { get; set; }

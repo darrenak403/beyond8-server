@@ -9,7 +9,9 @@ public class UnitOfWork(IdentityDbContext context) : BaseUnitOfWork<IdentityDbCo
 {
     private IUserRepository? _userRepository;
     private IInstructorProfileRepository? _instructorProfileRepository;
+    private IRoleRepository? _roleRepository;
 
     public IUserRepository UserRepository => _userRepository ??= new UserRepository(context);
     public IInstructorProfileRepository InstructorProfileRepository => _instructorProfileRepository ??= new InstructorProfileRepository(context);
+    public IRoleRepository RoleRepository => _roleRepository ??= new RoleRepository(context);
 }

@@ -1,7 +1,6 @@
 using System.Linq.Expressions;
 using Beyond8.Common.Data.Interfaces;
 using Beyond8.Identity.Domain.Entities;
-using Beyond8.Identity.Domain.Enums;
 
 namespace Beyond8.Identity.Domain.Repositories.Interfaces
 {
@@ -13,8 +12,10 @@ namespace Beyond8.Identity.Domain.Repositories.Interfaces
             string? email,
             string? fullName,
             string? phoneNumber,
+            string? specialization,
+            string? address,
             bool? isEmailVerified,
-            UserRole? role,
+            string? role,
             bool? isDescending);
     }
 }

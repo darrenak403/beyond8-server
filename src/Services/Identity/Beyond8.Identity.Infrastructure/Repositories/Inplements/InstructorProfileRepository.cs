@@ -30,6 +30,7 @@ public class InstructorProfileRepository(IdentityDbContext context) : PostgresRe
     string? expertiseArea,
     string? schoolName,
     string? companyName,
+    VerificationStatus? verificationStatus,
     bool? isDescending)
     {
         var query = AsQueryable()
@@ -59,6 +60,9 @@ public class InstructorProfileRepository(IdentityDbContext context) : PostgresRe
 
         if (!string.IsNullOrWhiteSpace(companyName))
             query = query.Where(ip => ip.WorkExperience != null && ip.WorkExperience.Contains(companyName));
+
+        if (verificationStatus.HasValue)
+            query = query.Where(ip => ip.VerificationStatus == verificationStatus.Value);
 
         if (isDescending == false)
             query = query.OrderBy(ip => ip.CreatedAt);

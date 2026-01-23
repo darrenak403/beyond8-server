@@ -97,10 +97,19 @@ namespace Beyond8.Identity.Api.Apis
                 .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status404NotFound);
 
-            group.MapDelete("/{id:Guid}", DeleteInstructorProfileAsync)
-                .WithName("DeleteInstructorProfile")
-                .WithDescription("Xóa/Ẩn hồ sơ giảng viên (Admin, Staff only)")
-                .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
+            group.MapDelete("/{id:Guid}/hidden", HiddenInstructorProfileAsync)
+                .WithName("HiddenInstructorProfile")
+                .WithDescription("Xóa/Ẩn hồ sơ giảng viên (Admin, Staff, Instructor only)")
+                .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff, Role.Instructor))
+                .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized)
+                .Produces(StatusCodes.Status403Forbidden);
+
+            group.MapPut("/{id:Guid}/unhidden", UnHiddenInstructorProfileAsync)
+                .WithName("UnHiddenInstructorProfile")
+                .WithDescription("Khôi phục/Hiện hồ sơ giảng viên (Instructor only)")
+                .RequireAuthorization(x => x.RequireRole(Role.Instructor))
                 .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized)
@@ -109,12 +118,23 @@ namespace Beyond8.Identity.Api.Apis
             return group;
         }
 
-        private static async Task<IResult> DeleteInstructorProfileAsync(
+        private static async Task<IResult> UnHiddenInstructorProfileAsync(
             [FromRoute] Guid id,
             [FromServices] ICurrentUserService currentUserService,
             [FromServices] IInstructorService instructorService)
         {
-            var response = await instructorService.DeleteInstructorProfileAsync(id, currentUserService.UserId);
+            var response = await instructorService.UnHiddenInstructorProfileAsync(id, currentUserService.UserId);
+            return response.IsSuccess
+                    ? Results.Ok(response)
+                    : Results.BadRequest(response);
+        }
+
+        private static async Task<IResult> HiddenInstructorProfileAsync(
+            [FromRoute] Guid id,
+            [FromServices] ICurrentUserService currentUserService,
+            [FromServices] IInstructorService instructorService)
+        {
+            var response = await instructorService.HiddenInstructorProfileAsync(id, currentUserService.UserId);
             return response.IsSuccess
                     ? Results.Ok(response)
                     : Results.BadRequest(response);

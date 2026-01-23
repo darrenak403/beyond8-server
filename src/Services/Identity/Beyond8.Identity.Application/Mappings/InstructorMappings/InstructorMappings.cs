@@ -83,7 +83,9 @@ public static class InstructorProfileMappings
                 ? null
                 : JsonSerializer.Deserialize<List<IdentityInfo>>(instructorProfile.IdentityDocuments),
             VerificationNotes = instructorProfile.VerificationNotes,
-            VerifiedBy = instructorProfile.VerifiedBy
+            VerifiedBy = instructorProfile.VerifiedBy,
+            CreatedAt = instructorProfile.CreatedAt,
+            UpdatedAt = instructorProfile.UpdatedAt
         };
     }
 
