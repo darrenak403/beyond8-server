@@ -57,7 +57,7 @@ public static class NotificationMappings
         {
             Title = "Đơn đăng ký giảng viên mới",
             Message = $"Giảng viên {@event.InstructorName} ({@event.Email}) đã gửi đơn đăng ký giảng viên mới.",
-            UserId = Guid.Empty, // Empty for group notifications (AllAdmin/AllStaff)
+            UserId = Guid.Empty,
             Target = target,
             Status = status,
             Channels = [NotificationChannel.App],
