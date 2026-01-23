@@ -403,7 +403,7 @@ public class InstructorService(
         }
     }
 
-    public async Task<ApiResponse<bool>> DeleteInstructorProfileAsync(Guid profileId, Guid adminId)
+    public async Task<ApiResponse<bool>> HiddenInstructorProfileAsync(Guid profileId, Guid userId)
     {
         try
         {
@@ -411,8 +411,8 @@ public class InstructorService(
 
             if (profile == null)
             {
-                logger.LogWarning("Instructor profile {ProfileId} not found for deletion by admin {AdminId}",
-                    profileId, adminId);
+                logger.LogWarning("Instructor profile {ProfileId} not found for deletion by user {UserId}",
+                    profileId, userId);
                 return ApiResponse<bool>.FailureResponse(
                     "Hồ sơ giảng viên không tồn tại.");
             }
@@ -421,7 +421,7 @@ public class InstructorService(
             {
                 logger.LogWarning("Instructor profile {ProfileId} already hidden, cannot delete again", profileId);
                 return ApiResponse<bool>.FailureResponse(
-                    "Hồ sơ giảng viên đã bị xóa trước đó.");
+                    "Hồ sơ giảng viên đã bị ẩn trước đó.");
             }
 
             var user = await unitOfWork.UserRepository.GetByIdAsync(profile.UserId);
@@ -432,7 +432,7 @@ public class InstructorService(
                 return ApiResponse<bool>.FailureResponse("Người dùng không tồn tại.");
             }
 
-            logger.LogInformation("Deleting instructor profile {ProfileId} by admin {AdminId}", profileId, adminId);
+            logger.LogInformation("Hidden instructor profile {ProfileId} by user {UserId}", profileId, userId);
 
             profile.VerificationStatus = VerificationStatus.Hidden;
 
@@ -446,17 +446,66 @@ public class InstructorService(
             await unitOfWork.InstructorProfileRepository.UpdateAsync(profileId, profile);
             await unitOfWork.SaveChangesAsync();
 
-            logger.LogInformation("Successfully deleted instructor profile {ProfileId} by admin {AdminId}", profileId, adminId);
+            logger.LogInformation("Successfully hidden instructor profile {ProfileId} by user {UserId}", profileId, userId);
 
-            return ApiResponse<bool>.SuccessResponse(true, "Xóa hồ sơ giảng viên thành công.");
+            return ApiResponse<bool>.SuccessResponse(true, "Ẩn hồ sơ giảng viên thành công.");
 
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error deleting instructor profile {ProfileId} by admin {AdminId}",
-                profileId, adminId);
+            logger.LogError(ex, "Error hiding instructor profile {ProfileId} by user {UserId}",
+                profileId, userId);
             return ApiResponse<bool>.FailureResponse(
-                "Đã xảy ra lỗi khi xóa hồ sơ giảng viên.");
+                "Đã xảy ra lỗi khi ẩn hồ sơ giảng viên.");
         }
     }
+
+
+    public async Task<ApiResponse<bool>> UnHiddenInstructorProfileAsync(Guid profileId, Guid userId)
+    {
+        try
+        {
+            var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(p => p.Id == profileId && p.VerificationStatus == VerificationStatus.Hidden);
+            if (profile == null)
+            {
+                logger.LogWarning("Instructor profile {ProfileId} not found or not hidden for un-hiding by user {UserId}",
+                    profileId, userId);
+                return ApiResponse<bool>.FailureResponse(
+                    "Hồ sơ giảng viên không tồn tại hoặc không ở trạng thái đã ẩn.");
+            }
+
+            if (profile.VerificationStatus != VerificationStatus.Hidden)
+            {
+                logger.LogWarning("Instructor profile {ProfileId} is not hidden, cannot un-hide", profileId);
+                return ApiResponse<bool>.FailureResponse(
+                    "Hồ sơ giảng viên không ở trạng thái đã ẩn.");
+            }
+
+            var user = await unitOfWork.UserRepository.GetByIdAsync(profile.UserId);
+            if (user == null)
+            {
+                logger.LogError("User {UserId} not found for instructor profile {ProfileId}",
+                    profile.UserId, profileId);
+                return ApiResponse<bool>.FailureResponse("Người dùng không tồn tại.");
+            }
+
+            logger.LogInformation("Unhidden instructor profile {ProfileId} by user {UserId}", profileId, userId);
+
+            profile.VerificationStatus = VerificationStatus.RequestUpdate;
+
+            await unitOfWork.InstructorProfileRepository.UpdateAsync(profileId, profile);
+            await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation("Successfully un-hidden instructor profile {ProfileId} by user {UserId}", profileId, userId);
+            return ApiResponse<bool>.SuccessResponse(true, "Khôi phục hồ sơ giảng viên thành công. Hồ sơ hiện đang ở trạng thái yêu cầu cập nhật.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error un-hiding instructor profile {ProfileId} by user {UserId}",
+                profileId, userId);
+            return ApiResponse<bool>.FailureResponse(
+                "Đã xảy ra lỗi khi khôi phục hồ sơ giảng viên.");
+        }
+    }
+
 }
