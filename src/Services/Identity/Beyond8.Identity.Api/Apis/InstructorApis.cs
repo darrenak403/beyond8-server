@@ -97,7 +97,7 @@ namespace Beyond8.Identity.Api.Apis
                 .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status404NotFound);
 
-            group.MapDelete("/{id:Guid}", HiddenInstructorProfileAsync)
+            group.MapDelete("/{id:Guid}/hidden", HiddenInstructorProfileAsync)
                 .WithName("HiddenInstructorProfile")
                 .WithDescription("Xóa/Ẩn hồ sơ giảng viên (Admin, Staff, Instructor only)")
                 .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff, Role.Instructor))
