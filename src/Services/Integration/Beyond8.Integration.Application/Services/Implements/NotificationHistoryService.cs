@@ -1,4 +1,3 @@
-using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
 using Beyond8.Integration.Application.Dtos.Notifications;
 using Beyond8.Integration.Application.Services.Interfaces;
@@ -10,7 +9,6 @@ namespace Beyond8.Integration.Application.Services.Implements;
 
 public class NotificationHistoryService(
     IUnitOfWork unitOfWork,
-    ICurrentUserService currentUserService,
     ILogger<NotificationHistoryService> logger
 ) : INotificationHistoryService
 {
