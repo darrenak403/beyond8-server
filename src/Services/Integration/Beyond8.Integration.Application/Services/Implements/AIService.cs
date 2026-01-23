@@ -12,7 +12,7 @@ namespace Beyond8.Integration.Application.Services.Implements;
 
 public class AiService(
     ILogger<AiService> logger,
-    IGeminiService geminiService,
+    IGenerativeAiService generativeAiService,
     IAiPromptService aiPromptService,
     IUrlContentDownloader urlContentDownloader,
     IStorageService storageService) : IAiService
@@ -42,7 +42,7 @@ public class AiService(
             var promptText = t.Template.Replace("{ApplicationText}", applicationText);
             var fullPrompt = string.IsNullOrEmpty(t.SystemPrompt) ? promptText : $"{t.SystemPrompt}\n\n{promptText}";
 
-            var geminiResult = await geminiService.GenerateContentAsync(
+            var geminiResult = await generativeAiService.GenerateContentAsync(
                 fullPrompt,
                 AiOperation.ProfileReview,
                 userId,
@@ -72,7 +72,7 @@ public class AiService(
         }
     }
 
-    private async Task<(string ApplicationText, List<GeminiImagePart> ImageParts)> BuildApplicationTextAndImagesAsync(ProfileReviewRequest r)
+    private async Task<(string ApplicationText, List<GenerativeAiImagePart> ImageParts)> BuildApplicationTextAndImagesAsync(ProfileReviewRequest r)
     {
         var sb = new System.Text.StringBuilder();
         sb.AppendLine("## Bio\n" + (string.IsNullOrWhiteSpace(r.Bio) ? "(trống)" : r.Bio));
@@ -93,7 +93,7 @@ public class AiService(
         if (r.WorkExperience?.Count > 0)
             foreach (var w in r.WorkExperience)
             {
-                var toDate = w.IsCurrentJob ? "Hiện tại" : w.To == DateTime.MinValue ? "N/A" : w.To.ToString("yyyy-MM");
+                var toDate = w.IsCurrentJob ? "Hiện tại" : w.To == null ? "N/A" : w.To.Value.ToString("yyyy-MM");
                 var fromDate = w.From == DateTime.MinValue ? "N/A" : w.From.ToString("yyyy-MM");
                 var description = string.IsNullOrWhiteSpace(w.Description) ? "" : $"\n  Mô tả: {w.Description}";
                 sb.AppendLine($"- {w.Company}, {w.Role} ({fromDate} - {toDate}){description}");
@@ -115,13 +115,13 @@ public class AiService(
         foreach (var c in r.Certificates ?? [])
             if (!string.IsNullOrWhiteSpace(c.Url)) imageItems.Add(($"Chứng chỉ {c.Name}", c.Url));
 
-        var imageParts = new List<GeminiImagePart>();
+        var imageParts = new List<GenerativeAiImagePart>();
         var succeededDescriptors = new List<string>();
         foreach (var (desc, urlOrKey) in imageItems)
         {
             var (data, mime) = await DownloadImageAsync(urlOrKey);
             if (data == null || data.Length == 0) continue;
-            imageParts.Add(new GeminiImagePart(data, mime ?? "image/jpeg"));
+            imageParts.Add(new GenerativeAiImagePart(data, mime ?? "image/jpeg"));
             succeededDescriptors.Add(desc);
         }
 

@@ -15,6 +15,7 @@ public static class MediaFileApis
     private const string CoverFolder = "user/covers";
     private const string InstructorProfileCertificatesFolder = "instructor/profile/certificates";
     private const string InstructorProfileIdentityCardsFolder = "instructor/profile/identity-cards";
+    private const string InstructorProfileVideosFolder = "instructor/profile/intro-videos";
 
     public static IEndpointRouteBuilder MapMediaFileApi(this IEndpointRouteBuilder builder)
     {
@@ -38,6 +39,13 @@ public static class MediaFileApis
         group.MapPost("/cover/presigned-url", GetCoverPresignUrlAsync)
             .WithName("GetCoverPresignedUrl")
             .WithDescription("Lấy presigned URL để upload cover")
+            .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
+        group.MapPost("/intro-video/presigned-url", GetIntroVideoPresignUrlAsync)
+            .WithName("GetIntroVideoPresignedUrl")
+            .WithDescription("Lấy presigned URL để upload video giới thiệu")
             .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
@@ -85,6 +93,25 @@ public static class MediaFileApis
             .Produces(StatusCodes.Status401Unauthorized);
 
         return group;
+    }
+
+    private static async Task<IResult> GetIntroVideoPresignUrlAsync(
+        [FromBody] UploadFileRequest request,
+        [FromServices] IMediaFileService mediaFileService,
+        [FromServices] ICurrentUserService currentUserService)
+    {
+        {
+            var validator = UploadFileRequestValidator.ForIntroVideo();
+            if (!request.ValidateRequest(validator, out var validationResult))
+                return validationResult!;
+
+            var result = await mediaFileService.InitiateUploadAsync(
+                currentUserService.UserId,
+                request,
+                InstructorProfileVideosFolder);
+
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
     }
 
     private static async Task<IResult> GetCoverPresignUrlAsync(

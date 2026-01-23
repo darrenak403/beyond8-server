@@ -3,7 +3,7 @@ using Beyond8.Identity.Domain.Enums;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
-namespace Beyond8.Identity.Infrastructure.Data.Seeds;
+namespace Beyond8.Identity.Infrastructure.Data.Seeders;
 
 public static class UserWithRoleSeedData
 {

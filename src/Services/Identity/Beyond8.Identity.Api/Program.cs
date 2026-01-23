@@ -1,7 +1,7 @@
 using Beyond8.Identity.Api.Bootstrapping;
 using Beyond8.DatabaseMigrationHelpers;
 using Beyond8.Identity.Infrastructure.Data;
-using Beyond8.Identity.Infrastructure.Data.Seeds;
+using Beyond8.Identity.Infrastructure.Data.Seeders;
 
 
 var builder = WebApplication.CreateBuilder(args);
