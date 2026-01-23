@@ -233,7 +233,7 @@ public class InstructorService(
         {
             // Exclude Hidden profiles - user should not see deleted profiles
             var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(
-                p => p.UserId == userId && p.VerificationStatus != VerificationStatus.Hidden);
+                p => p.UserId == userId);
 
             if (profile == null)
             {
