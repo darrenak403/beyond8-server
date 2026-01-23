@@ -1,7 +1,6 @@
 using System;
 using Beyond8.Identity.Application.Dtos.Auth;
 using Beyond8.Identity.Domain.Entities;
-using Beyond8.Identity.Domain.Enums;
 using Microsoft.AspNetCore.Identity;
 
 namespace Beyond8.Identity.Application.Mappings.AuthMappings;
@@ -16,7 +15,6 @@ public static class RegisterMappings
             PasswordHash = passwordHasher.HashPassword(new User(), request.Password),
             CreatedAt = DateTime.UtcNow,
             CreatedBy = Guid.Empty,
-            Roles = [UserRole.Student],
             FullName = request.Email.Split('@')[0],
             IsEmailVerified = false,
         };

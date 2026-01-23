@@ -1,6 +1,5 @@
 using System;
 using Beyond8.Common.Utilities;
-using Beyond8.Identity.Domain.Enums;
 
 namespace Beyond8.Identity.Application.Dtos.Users;
 
@@ -12,5 +11,5 @@ public class PaginationUserRequest : PaginationRequest
     public string? Specialization { get; set; } = string.Empty;
     public string? Address { get; set; } = string.Empty;
     public bool? IsEmailVerified { get; set; }
-    public UserRole? Role { get; set; }
+    public string? Role { get; set; }
 }

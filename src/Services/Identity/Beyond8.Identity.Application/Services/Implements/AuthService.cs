@@ -11,6 +11,7 @@ using Beyond8.Identity.Domain.Entities;
 using Beyond8.Identity.Domain.Enums;
 using Beyond8.Identity.Domain.Repositories.Interfaces;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Beyond8.Identity.Application.Services.Implements;
@@ -27,7 +28,10 @@ public class AuthService(
     {
         try
         {
-            var user = await unitOfWork.UserRepository.FindOneAsync(x => x.Email == request.Email);
+            var user = await unitOfWork.UserRepository.AsQueryable()
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(x => x.Email == request.Email);
             var validation = ValidateUserByEmail(user, request.Email);
             if (!validation.IsValid)
                 return ApiResponse<TokenResponse>.FailureResponse(validation.ErrorMessage!);
@@ -79,6 +83,22 @@ public class AuthService(
             await cacheService.SetAsync($"otp_register:{request.Email}", otpCode, TimeSpan.FromMinutes(5));
 
             var newUser = request.ToEntity(passwordHasher);
+            
+            // Assign default Student role
+            var studentRole = await unitOfWork.RoleRepository.FindByCodeAsync("ROLE_STUDENT");
+            if (studentRole == null)
+            {
+                logger.LogError("Student role not found in database");
+                return ApiResponse<UserSimpleResponse>.FailureResponse("Hệ thống chưa được cấu hình đúng. Vui lòng liên hệ quản trị viên.");
+            }
+            
+            newUser.UserRoles.Add(new UserRole
+            {
+                UserId = newUser.Id,
+                RoleId = studentRole.Id,
+                AssignedAt = DateTime.UtcNow
+            });
+            
             await unitOfWork.UserRepository.AddAsync(newUser);
             await unitOfWork.SaveChangesAsync();
 

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Beyond8.Identity.Application.Dtos.Tokens;
 using Beyond8.Identity.Domain.Entities;
 
@@ -13,7 +14,10 @@ public static class TokenMappings
             UserId = user.Id,
             Email = user.Email,
             UserName = user.FullName,
-            Roles = user.Roles,
+            Roles = user.UserRoles
+                .Where(ur => ur.RevokedAt == null)
+                .Select(ur => ur.Role.Code)
+                .ToList(),
         };
     }
 }
