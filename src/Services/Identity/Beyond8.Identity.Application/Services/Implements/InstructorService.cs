@@ -203,6 +203,7 @@ public class InstructorService(
                 pagination.ExpertiseAreas,
                 pagination.SchoolName,
                 pagination.CompanyName,
+                pagination.VerificationStatus,
                 pagination.IsDescending.HasValue ? pagination.IsDescending.Value : true);
 
             var profileResponses = profile.Items

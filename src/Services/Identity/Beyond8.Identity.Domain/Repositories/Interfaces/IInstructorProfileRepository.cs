@@ -1,5 +1,6 @@
 using Beyond8.Common.Data.Interfaces;
 using Beyond8.Identity.Domain.Entities;
+using Beyond8.Identity.Domain.Enums;
 
 namespace Beyond8.Identity.Domain.Repositories.Interfaces
 {
@@ -19,6 +20,7 @@ namespace Beyond8.Identity.Domain.Repositories.Interfaces
             string? expertiseArea,
             string? schoolName,
             string? companyName,
+            VerificationStatus? verificationStatus,
             bool? isDescending);
 
         /// <summary>
