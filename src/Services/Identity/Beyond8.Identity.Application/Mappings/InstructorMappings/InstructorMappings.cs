@@ -64,6 +64,9 @@ public static class InstructorProfileMappings
             SocialLinks = string.IsNullOrEmpty(instructorProfile.SocialLinks)
                 ? null
                 : JsonSerializer.Deserialize<SocialInfo>(instructorProfile.SocialLinks),
+            Certificates = string.IsNullOrEmpty(instructorProfile.Certificates)
+                ? null
+                : JsonSerializer.Deserialize<List<CertificateInfo>>(instructorProfile.Certificates),
             TeachingLanguages = instructorProfile.TeachingLanguages,
             IntroVideoUrl = instructorProfile.IntroVideoUrl,
             TotalStudents = instructorProfile.TotalStudents,

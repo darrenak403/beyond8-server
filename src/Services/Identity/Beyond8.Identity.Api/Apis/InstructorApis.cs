@@ -98,13 +98,13 @@ namespace Beyond8.Identity.Api.Apis
                 .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status404NotFound);
 
             group.MapDelete("/{id:Guid}", DeleteInstructorProfileAsync)
-            .WithName("DeleteInstructorProfile")
-            .WithDescription("Xóa/Ẩn hồ sơ giảng viên (Admin, Staff only)")
-            .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
-            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status403Forbidden);
+                .WithName("DeleteInstructorProfile")
+                .WithDescription("Xóa/Ẩn hồ sơ giảng viên (Admin, Staff only)")
+                .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
+                .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized)
+                .Produces(StatusCodes.Status403Forbidden);
 
             return group;
         }

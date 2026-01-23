@@ -57,7 +57,6 @@ public class InstructorService(
                 return ApiResponse<InstructorProfileResponse>.FailureResponse("Người dùng không tồn tại.");
             }
 
-            // Check existing profile (exclude Hidden profiles - user can re-apply if deleted)
             var existingProfile = await unitOfWork.InstructorProfileRepository.FindOneAsync(
                 p => p.UserId == userId && p.VerificationStatus != VerificationStatus.Hidden);
 
@@ -408,9 +407,7 @@ public class InstructorService(
     {
         try
         {
-            // Get profile (including Hidden for validation)
-            var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(
-                p => p.Id == profileId && p.DeletedAt == null);
+            var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(p => p.Id == profileId && p.VerificationStatus != VerificationStatus.Hidden);
 
             if (profile == null)
             {
