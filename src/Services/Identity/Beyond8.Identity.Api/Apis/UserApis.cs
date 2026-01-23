@@ -60,6 +60,15 @@ namespace Beyond8.Identity.Api.Apis
                 .Produces(StatusCodes.Status401Unauthorized)
                 .Produces(StatusCodes.Status403Forbidden);
 
+            group.MapPatch("/{id:guid}/roles", UpdateUserRolesAsync)
+                .WithName("UpdateUserRoles")
+                .WithDescription("Thêm vai trò mới cho người dùng (không xóa vai trò cũ, chỉ dành cho Admin và Staff)")
+                .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
+                .Produces<ApiResponse<UserResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<UserResponse>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized)
+                .Produces(StatusCodes.Status403Forbidden);
+
             group.MapDelete("/{id:guid}", DeleteUserAsync)
                 .WithName("DeleteUser")
                 .WithDescription("Xóa tài khoản người dùng theo ID")
@@ -69,7 +78,7 @@ namespace Beyond8.Identity.Api.Apis
                 .Produces(StatusCodes.Status401Unauthorized)
                 .Produces(StatusCodes.Status403Forbidden);
 
-            group.MapPut("/{id:guid}/status", UpdateUserStatusAsync)
+            group.MapPatch("/{id:guid}/toggle-status", ToggleUserStatusAsync)
                 .WithName("UpdateUserStatus")
                 .WithDescription("Cập nhật trạng thái người dùng theo ID")
                 .RequireAuthorization(x => x.RequireRole(Role.Admin))
@@ -227,16 +236,27 @@ namespace Beyond8.Identity.Api.Apis
                 : Results.NotFound(response);
         }
 
-        private static async Task<IResult> UpdateUserStatusAsync(
+        private static async Task<IResult> ToggleUserStatusAsync(
             [FromRoute] Guid id,
-            [FromBody] UpdateUserStatusRequest request,
+            [FromServices] IUserService userService)
+        {
+            var response = await userService.ToggleUserStatusAsync(id);
+
+            return response.IsSuccess
+                ? Results.Ok(response)
+                : Results.NotFound(response);
+        }
+
+        private static async Task<IResult> UpdateUserRolesAsync(
+            [FromRoute] Guid id,
+            [FromBody] UpdateUserForAdminRequest request,
             [FromServices] IUserService userService,
-            [FromServices] IValidator<UpdateUserStatusRequest> validator)
+            [FromServices] IValidator<UpdateUserForAdminRequest> validator)
         {
             if (!request.ValidateRequest(validator, out var validationResult))
                 return validationResult!;
 
-            var response = await userService.UpdateUserStatusAsync(id, request);
+            var response = await userService.UpdateUserForAdminAsync(id, request);
 
             return response.IsSuccess
                 ? Results.Ok(response)
