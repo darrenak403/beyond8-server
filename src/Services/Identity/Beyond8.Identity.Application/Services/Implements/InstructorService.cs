@@ -335,15 +335,6 @@ public class InstructorService(
                     "Người dùng không tồn tại.");
             }
 
-            var updateRequestEvent = new InstructorUpdateRequestEvent(
-                user!.Id,
-                user.Email,
-                user.FullName,
-                "Đơn đăng ký giảng viên đang được yêu cầu cập nhật. Vui lòng cập nhật hồ sơ của bạn.",
-                DateTime.UtcNow
-            );
-            await publishEndpoint.Publish(updateRequestEvent);
-
             var response = profile.ToInstructorProfileResponse(user!);
             return ApiResponse<InstructorProfileResponse>.SuccessResponse(
                 response,
