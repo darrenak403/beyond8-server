@@ -9,7 +9,7 @@ public class ApiResponse<T>
 
     public static ApiResponse<T> SuccessResponse(
         T data,
-        string message = "Success",
+        string message = "Thành công",
         object? metadata = null)
     {
         return new ApiResponse<T>
@@ -39,7 +39,7 @@ public class ApiResponse<T>
         int totalItems,
         int pageNumber,
         int pageSize,
-        string message = "Success")
+        string message = "Thành công")
     {
         var pagingMetadata = new PagingMetadata(totalItems, pageNumber, pageSize);
 
