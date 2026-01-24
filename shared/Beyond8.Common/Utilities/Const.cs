@@ -7,6 +7,7 @@ public static class Const
 
     public const string IdentityServiceDatabase = "identity-db";
     public const string IntegrationServiceDatabase = "integration-db";
+    public const string CatalogServiceDatabase = "catalog-db";
 }
 
 public static class Role
