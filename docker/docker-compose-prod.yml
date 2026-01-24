@@ -202,6 +202,8 @@ services:
     container_name: beyond8-adminer
     environment:
       ADMINER_DEFAULT_SERVER: postgres
+    ports:
+      - '8083:8080'
     depends_on:
       - postgres
     networks:
