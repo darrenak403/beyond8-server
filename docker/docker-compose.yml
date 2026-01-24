@@ -150,7 +150,7 @@ services:
     image: nginx:latest
     container_name: beyond8-gateway
     ports:
-      - "${GATEWAY_PORT:-80}:80"
+      - "${GATEWAY_PORT:-8080}:80"
     volumes:
       - ./data/gateway/etc/nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
