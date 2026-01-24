@@ -80,7 +80,8 @@ public class UserService(
     {
         try
         {
-            var (isEmailValid, emailError) = await ValidateEmailUniqueAsync(request.Email);
+            var normalizedEmail = request.Email.ToLower().Trim();
+            var (isEmailValid, emailError) = await ValidateEmailUniqueAsync(normalizedEmail);
             if (!isEmailValid) return ApiResponse<UserResponse>.FailureResponse(emailError!);
 
             var newUser = request.ToUserEntity();
@@ -111,7 +112,7 @@ public class UserService(
             await unitOfWork.UserRepository.AddAsync(newUser);
             await unitOfWork.SaveChangesAsync();
 
-            logger.LogInformation("User created successfully with email {Email} and ID: {UserId}", request.Email, newUser.Id);
+            logger.LogInformation("User created successfully with email {Email} and ID: {UserId}", normalizedEmail, newUser.Id);
 
             // Load user with roles for response
             var userWithRoles = await unitOfWork.UserRepository.AsQueryable()
