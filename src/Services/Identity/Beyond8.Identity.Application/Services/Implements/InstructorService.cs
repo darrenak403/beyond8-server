@@ -160,7 +160,7 @@ public class InstructorService(
             // Publish event for approval email
             var frontendUrl = configuration.GetValue<string>("FrontendUrl") ?? "http://localhost:5173";
             var profileUrl = $"{frontendUrl}/mybeyond?tab=myprofile";
-            var approvalEvent = new InstructorApprovalEmailEvent(
+            var approvalEvent = new InstructorApprovalEvent(
                 user.Id,
                 user.Email,
                 user.FullName,

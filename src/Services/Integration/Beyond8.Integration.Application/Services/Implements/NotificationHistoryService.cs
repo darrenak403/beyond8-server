@@ -62,24 +62,100 @@ public class NotificationHistoryService(
         }
     }
 
+    public async Task<ApiResponse<InstructorNotificationResponse>> GetInstructorNotificationsAsync(
+        Guid userId,
+        PaginationNotificationRequest pagination)
+    {
+        try
+        {
+            // User notifications (AllUser)
+            var userTargets = new List<NotificationTarget> { NotificationTarget.AllUser };
+            var userResult = await unitOfWork.NotificationRepository.GetNotificationsByUserAndRolesAsync(
+                userId,
+                userTargets,
+                pagination.PageNumber,
+                pagination.PageSize,
+                pagination.Status,
+                pagination.Channel,
+                pagination.IsRead);
+
+            // Instructor notifications (AllInstructor)
+            var instructorTargets = new List<NotificationTarget> { NotificationTarget.AllInstructor };
+            var instructorResult = await unitOfWork.NotificationRepository.GetNotificationsByUserAndRolesAsync(
+                userId,
+                instructorTargets,
+                pagination.PageNumber,
+                pagination.PageSize,
+                pagination.Status,
+                pagination.Channel,
+                pagination.IsRead);
+
+            var response = new InstructorNotificationResponse
+            {
+                UserNotifications = new NotificationSection
+                {
+                    Items = userResult.Items.Select(n => new NotificationResponse
+                    {
+                        Id = n.Id,
+                        Title = n.Title,
+                        Message = n.Message,
+                        UserId = n.UserId == Guid.Empty ? userId : n.UserId,
+                        Target = n.Target,
+                        Status = n.Status,
+                        Channels = n.Channels,
+                        ReadAt = n.ReadAt,
+                        IsRead = n.IsRead
+                    }).ToList(),
+                    TotalCount = userResult.TotalCount,
+                    PageNumber = pagination.PageNumber,
+                    PageSize = pagination.PageSize
+                },
+                InstructorNotifications = new NotificationSection
+                {
+                    Items = instructorResult.Items.Select(n => new NotificationResponse
+                    {
+                        Id = n.Id,
+                        Title = n.Title,
+                        Message = n.Message,
+                        UserId = n.UserId == Guid.Empty ? userId : n.UserId,
+                        Target = n.Target,
+                        Status = n.Status,
+                        Channels = n.Channels,
+                        ReadAt = n.ReadAt,
+                        IsRead = n.IsRead
+                    }).ToList(),
+                    TotalCount = instructorResult.TotalCount,
+                    PageNumber = pagination.PageNumber,
+                    PageSize = pagination.PageSize
+                }
+            };
+
+            logger.LogInformation("Retrieved {UserCount} user notifications and {InstructorCount} instructor notifications for user {UserId}",
+                response.UserNotifications.Items.Count, response.InstructorNotifications.Items.Count, userId);
+
+            return ApiResponse<InstructorNotificationResponse>.SuccessResponse(
+                response,
+                "Lấy danh sách thông báo thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error retrieving instructor notifications for user {UserId}", userId);
+            return ApiResponse<InstructorNotificationResponse>.FailureResponse(
+                "Đã xảy ra lỗi khi lấy danh sách thông báo.");
+        }
+    }
+
     private static List<NotificationTarget> GetAllowedTargets(List<string> userRoles)
     {
         var targets = new List<NotificationTarget> { NotificationTarget.AllUser };
 
         if (userRoles.Contains(Role.Admin))
         {
-            targets.AddRange([
-                NotificationTarget.AllAdmin,
-                NotificationTarget.AllStaff,
-                NotificationTarget.AllInstructor
-            ]);
+            targets.Add(NotificationTarget.AllAdmin);
         }
         else if (userRoles.Contains(Role.Staff))
         {
-            targets.AddRange([
-                NotificationTarget.AllStaff,
-                NotificationTarget.AllAdmin
-            ]);
+            targets.Add(NotificationTarget.AllStaff);
         }
         else if (userRoles.Contains(Role.Instructor))
         {

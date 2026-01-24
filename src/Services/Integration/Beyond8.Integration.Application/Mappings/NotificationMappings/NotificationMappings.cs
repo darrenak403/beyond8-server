@@ -21,7 +21,7 @@ public static class NotificationMappings
         };
     }
 
-    public static Notification InstructorApprovalEmailEventToNotification(this InstructorApprovalEmailEvent @event, NotificationStatus status)
+    public static Notification InstructorApprovalEventToNotification(this InstructorApprovalEvent @event, NotificationStatus status)
     {
         return new Notification
         {
@@ -65,4 +65,20 @@ public static class NotificationMappings
             IsRead = false
         };
     }
+
+    public static Notification ReLoginNotificationToNotification(this InstructorApprovalEvent @event, NotificationStatus status)
+    {
+        return new Notification
+        {
+            Title = "Yêu cầu đăng nhập lại",
+            Message = "Tài khoản của bạn đã được duyệt thành công. Vui lòng đăng xuất và đăng nhập lại để cập nhật quyền truy cập.",
+            UserId = @event.UserId,
+            Target = NotificationTarget.User,
+            Status = status,
+            Channels = [NotificationChannel.App],
+            ReadAt = null,
+            IsRead = false
+        };
+    }
 }
+
