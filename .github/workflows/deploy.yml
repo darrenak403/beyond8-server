@@ -1,16 +1,8 @@
-name: Build and Push Docker (Smart Cache)
+name: Build and Push Docker
 
 # Chạy khi git push code (branch main), pull request vào main, hoặc manual. KHÔNG chạy khi push tag.
 on:
   push:
-    branches: [ "main" ]
-    paths:
-      - 'src/**'
-      - 'shared/**'
-      - '.github/workflows/deploy.yml'
-      - 'docker/**'
-      - '*.sln'
-  pull_request:
     branches: [ "main" ]
     paths:
       - 'src/**'
