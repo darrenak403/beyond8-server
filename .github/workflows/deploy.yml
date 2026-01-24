@@ -41,16 +41,23 @@ jobs:
           filters: |
             identity:
               - 'src/Services/Identity/**'
-              - 'shared/**'       # Nếu sửa code dùng chung, build lại Identity
+              - 'shared/**'       
             integration:
               - 'src/Services/Integration/**'
-              - 'shared/**'       # Nếu sửa code dùng chung, build lại Integration
+              - 'shared/**'
             orchestration:
               - 'src/Orchestration/**'
             docker:
               - 'docker/**'
               - '**/Dockerfile'
               - '.dockerignore'
+
+      - name: Debug changes detection
+        run: |
+          echo "Identity changed: ${{ steps.changes.outputs.identity }}"
+          echo "Integration changed: ${{ steps.changes.outputs.integration }}"
+          echo "Docker changed: ${{ steps.changes.outputs.docker }}"
+          echo "Event: ${{ github.event_name }}"
 
       - name: Log in to Docker Hub
         if: steps.changes.outputs.identity == 'true' || steps.changes.outputs.integration == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
@@ -95,7 +102,7 @@ jobs:
             BUILDKIT_INLINE_CACHE=1
 
       - name: Extract metadata for Integration Service
-        if: steps.changes.outputs.integration == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.changes.outputs.integration == 'true' || steps.changes.outputs.docker == 'true' || steps.changes.outputs.identity == 'true' || github.event_name == 'workflow_dispatch'
         id: meta-integration
         uses: docker/metadata-action@v5
         with:
@@ -108,7 +115,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Integration Service
-        if: steps.changes.outputs.integration == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.changes.outputs.integration == 'true' || steps.changes.outputs.docker == 'true' || steps.changes.outputs.identity == 'true' || github.event_name == 'workflow_dispatch'
         uses: docker/build-push-action@v5
         with:
           context: .

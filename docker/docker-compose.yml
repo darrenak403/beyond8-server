@@ -30,6 +30,8 @@ x-integration-service-environment: &integration-service-environment
   AWS__S3__BucketName: ${AWS_BUCKET_NAME}
   AWS__S3__CloudFrontUrl: ${AWS_CLOUD_FRONT_URL}
 
+  AiProvider: ${AI_PROVIDER}
+
   AWS__Bedrock__AccessKey: ${AWS_ACCESS_KEY}
   AWS__Bedrock__SecretKey: ${AWS_SECRET_KEY}
   AWS__Bedrock__Region: ${AWS_REGION}
