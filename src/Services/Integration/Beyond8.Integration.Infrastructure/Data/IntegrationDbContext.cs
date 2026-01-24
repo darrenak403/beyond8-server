@@ -1,4 +1,3 @@
-using System;
 using Beyond8.Common.Data.Base;
 using Beyond8.Integration.Domain.Entities;
 using Microsoft.EntityFrameworkCore;

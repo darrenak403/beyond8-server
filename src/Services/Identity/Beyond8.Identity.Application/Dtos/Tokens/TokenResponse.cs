@@ -1,5 +1,3 @@
-using System;
-
 namespace Beyond8.Identity.Application.Dtos.Tokens;
 
 public class TokenResponse

@@ -1,9 +1,6 @@
-using System.Linq;
-using Beyond8.Identity.Application.Dtos.Tokens;
 using Beyond8.Identity.Application.Dtos.Users;
 using Beyond8.Identity.Domain.Entities;
 using Beyond8.Identity.Domain.Enums;
-using Microsoft.AspNetCore.Identity;
 
 namespace Beyond8.Identity.Application.Mappings.AuthMappings;
 

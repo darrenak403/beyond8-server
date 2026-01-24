@@ -10,7 +10,6 @@ using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using System.Linq;
 
 namespace Beyond8.Identity.Application.Services.Implements;
 
@@ -122,7 +121,7 @@ public class InstructorService(
             }
 
             logger.LogInformation("Adding instructor role to user {UserId}", user!.Id);
-            
+
             // Check if user already has instructor role
             var instructorRole = await unitOfWork.RoleRepository.FindByCodeAsync("ROLE_INSTRUCTOR");
             if (instructorRole == null)
@@ -200,7 +199,7 @@ public class InstructorService(
             await unitOfWork.InstructorProfileRepository.UpdateAsync(id, profile);
             await unitOfWork.SaveChangesAsync();
 
-            var updateRequestEvent = new InstructorUpdateRequestEmailEvent(
+            var updateRequestEvent = new InstructorUpdateRequestEvent(
                 user!.Id,
                 user.Email,
                 user.FullName,
@@ -334,7 +333,7 @@ public class InstructorService(
                     "Người dùng không tồn tại.");
             }
 
-            var updateRequestEvent = new InstructorUpdateRequestEmailEvent(
+            var updateRequestEvent = new InstructorUpdateRequestEvent(
                 user!.Id,
                 user.Email,
                 user.FullName,

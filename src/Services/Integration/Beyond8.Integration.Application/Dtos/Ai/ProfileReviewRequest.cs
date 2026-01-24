@@ -1,5 +1,3 @@
-using System;
-
 namespace Beyond8.Integration.Application.Dtos.Ai;
 
 public class ProfileReviewRequest

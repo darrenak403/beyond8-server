@@ -1,4 +1,3 @@
-using Beyond8.Identity.Domain.Entities;
 using Beyond8.Identity.Domain.JSONFields;
 
 namespace Beyond8.Identity.Application.Dtos.Instructors;

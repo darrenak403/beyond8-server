@@ -1,4 +1,3 @@
-using System;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Beyond8.Identity.Domain.Entities;

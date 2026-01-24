@@ -36,7 +36,7 @@ public static class NotificationMappings
         };
     }
 
-    public static Notification InstructorUpdateRequestEmailEventToNotification(this InstructorUpdateRequestEmailEvent @event, NotificationStatus status)
+    public static Notification InstructorUpdateRequestEventToNotification(this InstructorUpdateRequestEvent @event, NotificationStatus status)
     {
         return new Notification
         {

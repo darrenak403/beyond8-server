@@ -1,7 +1,6 @@
 using Beyond8.Common.Events.Identity;
 using Beyond8.Integration.Application.Mappings.NotificationMappings;
 using Beyond8.Integration.Application.Services.Interfaces;
-using Beyond8.Integration.Domain.Entities;
 using Beyond8.Integration.Domain.Enums;
 using Beyond8.Integration.Domain.Repositories.Interfaces;
 using MassTransit;
