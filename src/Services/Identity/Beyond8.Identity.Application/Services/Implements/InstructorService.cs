@@ -413,24 +413,28 @@ public class InstructorService(
         }
     }
 
-    public async Task<ApiResponse<bool>> CheckApplyInstructorProfileAsync(Guid userId)
+    public async Task<ApiResponse<CheckApplyInstructorResponse>> CheckApplyInstructorProfileAsync(Guid userId)
     {
         try
         {
             // Exclude Hidden profiles - treated as not applied
             var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(
-                p => p.UserId == userId && p.VerificationStatus != VerificationStatus.Hidden);
+                p => p.UserId == userId);
 
             if (profile == null)
             {
-                return ApiResponse<bool>.SuccessResponse(false, "Bạn chưa gửi đơn đăng ký giảng viên.");
+                return ApiResponse<CheckApplyInstructorResponse>.FailureResponse("Bạn chưa gửi đơn đăng ký giảng viên.");
             }
-            return ApiResponse<bool>.SuccessResponse(true, "Bạn đã gửi đơn đăng ký giảng viên thành công. Chúng tôi sẽ xem xét và phản hồi sớm nhất.");
+            return ApiResponse<CheckApplyInstructorResponse>.SuccessResponse(new CheckApplyInstructorResponse
+            {
+                IsApplied = true,
+                VerificationStatus = profile.VerificationStatus
+            }, "Bạn đã gửi đơn đăng ký giảng viên thành công. Chúng tôi sẽ xem xét và phản hồi sớm nhất.");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error checking if user {UserId} has applied for instructor profile", userId);
-            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi kiểm tra xem bạn đã gửi đơn đăng ký giảng viên chưa.");
+            return ApiResponse<CheckApplyInstructorResponse>.FailureResponse("Đã xảy ra lỗi khi kiểm tra xem bạn đã gửi đơn đăng ký giảng viên chưa.");
         }
     }
 
