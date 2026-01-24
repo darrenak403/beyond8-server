@@ -90,12 +90,6 @@ public class UpdateInstructorProfileRequestValidator : AbstractValidator<UpdateI
             .Must(uri => string.IsNullOrEmpty(uri) || IsValidUrl(uri))
             .WithMessage("URL video giới thiệu phải hợp lệ")
             .MaximumLength(500).WithMessage("URL video giới thiệu không được vượt quá 500 ký tự");
-
-        // TaxId validation (optional)
-        RuleFor(x => x.TaxId)
-            .MaximumLength(20).WithMessage("Mã số thuế không được vượt quá 20 ký tự")
-            .When(x => !string.IsNullOrEmpty(x.TaxId))
-            .Matches(@"^[0-9\-]+$").WithMessage("Mã số thuế chỉ được chứa số và dấu gạch ngang");
     }
 
     /// <summary>

@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Services\Catalog\Beyond8.Catalog.Api\Beyond8.Catalog.Api.csproj" />
     <ProjectReference Include="..\..\Services\Identity\Beyond8.Identity.Api\Beyond8.Identity.Api.csproj" />
     <ProjectReference Include="..\..\Services\Integration\Beyond8.Integration.Api\Beyond8.Integration.Api.csproj" />
   </ItemGroup>

@@ -151,19 +151,11 @@ public static class InstructorProfileMappings
         if (request.BankInfo != null)
             instructorProfile.BankInfo = JsonSerializer.Serialize(request.BankInfo);
 
-        if (request.TaxId != null)
-            instructorProfile.TaxId = request.TaxId;
-
         if (request.TeachingLanguages != null)
             instructorProfile.TeachingLanguages = request.TeachingLanguages;
 
         if (request.IntroVideoUrl != null)
             instructorProfile.IntroVideoUrl = request.IntroVideoUrl;
-
-        if (request.IdentityDocuments != null)
-            instructorProfile.IdentityDocuments = request.IdentityDocuments.Any()
-                ? JsonSerializer.Serialize(request.IdentityDocuments)
-                : null;
 
         if (request.Certificates != null)
             instructorProfile.Certificates = request.Certificates.Any()

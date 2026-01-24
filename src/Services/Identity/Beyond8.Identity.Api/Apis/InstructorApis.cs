@@ -3,6 +3,7 @@ using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
 using Beyond8.Identity.Application.Dtos.Instructors;
 using Beyond8.Identity.Application.Services.Interfaces;
+using Beyond8.Identity.Domain.Enums;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 
@@ -43,8 +44,8 @@ namespace Beyond8.Identity.Api.Apis
                 .WithName("CheckApplyInstructorProfile")
                 .WithDescription("Kiểm tra xem người dùng đã gửi đơn đăng ký trở thành giảng viên chưa")
                 .RequireAuthorization()
-                .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
-                .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+                .Produces<ApiResponse<CheckApplyInstructorResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<CheckApplyInstructorResponse>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
             group.MapPost("/{id:Guid}/not-approve", NotApproveInstructorProfileAsync)
