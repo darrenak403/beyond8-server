@@ -39,6 +39,14 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Beyond8.Integration.Applica
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Beyond8.Integration.Infrastructure", "src\Services\Integration\Beyond8.Integration.Infrastructure\Beyond8.Integration.Infrastructure.csproj", "{DA435E5D-997B-4CE1-803B-0BE59D321684}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docker", "docker", "{5F3F916C-0321-8A9F-8AC0-501F442D9F72}"
+	ProjectSection(SolutionItems) = preProject
+		docker-compose.yml = docker-compose.yml
+		.dockerignore = .dockerignore
+		.env = .env
+		.env.example = .env.example
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
