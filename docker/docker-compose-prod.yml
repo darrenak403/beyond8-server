@@ -197,16 +197,16 @@ services:
       - beyond8-network
     restart: unless-stopped
 
-adminer:
-  image: adminer:latest
-  container_name: beyond8-adminer
-  environment:
-    ADMINER_DEFAULT_SERVER: postgres # Tự động điền server là postgres
-  depends_on:
-    - postgres
-  networks:
-    - beyond8-network
-  restart: unless-stopped
+  adminer:
+    image: adminer:latest
+    container_name: beyond8-adminer
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    depends_on:
+      - postgres
+    networks:
+      - beyond8-network
+    restart: unless-stopped
 
 volumes:
   postgres_data:
