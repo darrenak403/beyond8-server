@@ -1,5 +1,4 @@
 using Beyond8.Identity.Application.Dtos.Instructors;
-using Beyond8.Identity.Domain.JSONFields;
 using FluentValidation;
 
 namespace Beyond8.Identity.Application.Validators.Instructor;

@@ -12,9 +12,9 @@ public class InstructorUpdateRequestEmailConsumer(
     IEmailService emailService,
     IUnitOfWork unitOfWork,
     ILogger<InstructorUpdateRequestEmailConsumer> logger
-) : IConsumer<InstructorUpdateRequestEmailEvent>
+) : IConsumer<InstructorUpdateRequestEvent>
 {
-    public async Task Consume(ConsumeContext<InstructorUpdateRequestEmailEvent> context)
+    public async Task Consume(ConsumeContext<InstructorUpdateRequestEvent> context)
     {
         var message = context.Message;
 
@@ -31,10 +31,10 @@ public class InstructorUpdateRequestEmailConsumer(
             if (success)
             {
                 logger.LogInformation("Successfully sent instructor update request email to {Email}", message.ToEmail);
-                
+
                 try
                 {
-                    await unitOfWork.NotificationRepository.AddAsync(message.InstructorUpdateRequestEmailEventToNotification(NotificationStatus.Delivered));
+                    await unitOfWork.NotificationRepository.AddAsync(message.InstructorUpdateRequestEventToNotification(NotificationStatus.Delivered));
                     await unitOfWork.SaveChangesAsync();
                 }
                 catch (Exception ex)
@@ -45,10 +45,10 @@ public class InstructorUpdateRequestEmailConsumer(
             else
             {
                 logger.LogError("Failed to send instructor update request email to {Email}", message.ToEmail);
-                
+
                 try
                 {
-                    await unitOfWork.NotificationRepository.AddAsync(message.InstructorUpdateRequestEmailEventToNotification(NotificationStatus.Failed));
+                    await unitOfWork.NotificationRepository.AddAsync(message.InstructorUpdateRequestEventToNotification(NotificationStatus.Failed));
                     await unitOfWork.SaveChangesAsync();
                 }
                 catch (Exception ex)

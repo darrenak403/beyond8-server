@@ -1,4 +1,3 @@
-using System;
 using Beyond8.Common.Data.Interfaces;
 using Beyond8.Integration.Domain.Entities;
 using Beyond8.Integration.Domain.Enums;

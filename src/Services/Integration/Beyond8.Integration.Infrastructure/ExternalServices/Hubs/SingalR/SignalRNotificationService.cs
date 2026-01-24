@@ -1,4 +1,3 @@
-using System;
 using Beyond8.Integration.Application.Services.Interfaces;
 using Beyond8.Integration.Infrastructure.Hubs;
 using Microsoft.AspNetCore.SignalR;

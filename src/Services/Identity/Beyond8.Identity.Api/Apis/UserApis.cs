@@ -1,11 +1,9 @@
 using Beyond8.Common.Extensions;
 using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
-using Beyond8.Identity.Application.Dtos.Instructors;
 using Beyond8.Identity.Application.Dtos.Users;
 using Beyond8.Identity.Application.Services.Interfaces;
 using FluentValidation;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Beyond8.Identity.Api.Apis

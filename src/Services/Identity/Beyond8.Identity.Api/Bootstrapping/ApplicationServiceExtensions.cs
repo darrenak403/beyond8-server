@@ -1,4 +1,3 @@
-using System;
 using Beyond8.Common.Extensions;
 using Beyond8.Common.Utilities;
 using Beyond8.Identity.Api.Apis;
@@ -10,6 +9,7 @@ using Beyond8.Identity.Domain.Repositories.Interfaces;
 using Beyond8.Identity.Infrastructure.Data;
 using FluentValidation;
 using Microsoft.AspNetCore.Identity;
+using Scalar.AspNetCore;
 
 namespace Beyond8.Identity.Api.Bootstrapping;
 
@@ -51,6 +51,7 @@ public static class Bootstrapper
         if (app.Environment.IsDevelopment())
         {
             app.MapOpenApi();
+            app.MapScalarApiReference();
         }
 
         app.UseHttpsRedirection();

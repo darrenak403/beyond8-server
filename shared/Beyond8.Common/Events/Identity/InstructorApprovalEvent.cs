@@ -1,8 +1,6 @@
-using System;
-
 namespace Beyond8.Common.Events.Identity;
 
-public record InstructorApprovalEmailEvent(
+public record InstructorApprovalEvent(
     Guid UserId,
     string ToEmail,
     string InstructorName,

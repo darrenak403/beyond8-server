@@ -9,4 +9,8 @@ public interface INotificationHistoryService
         Guid userId,
         List<string> userRoles,
         PaginationNotificationRequest pagination);
+
+    Task<ApiResponse<InstructorNotificationResponse>> GetInstructorNotificationsAsync(
+        Guid userId,
+        PaginationNotificationRequest pagination);
 }

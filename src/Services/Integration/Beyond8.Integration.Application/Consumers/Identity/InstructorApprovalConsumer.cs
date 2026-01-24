@@ -8,13 +8,14 @@ using Microsoft.Extensions.Logging;
 
 namespace Beyond8.Integration.Application.Consumers.Identity;
 
-public class InstructorApprovalEmailConsumer(
+public class InstructorApprovalConsumer(
     IEmailService emailService,
+    INotificationService notificationService,
     IUnitOfWork unitOfWork,
-    ILogger<InstructorApprovalEmailConsumer> logger
-) : IConsumer<InstructorApprovalEmailEvent>
+    ILogger<InstructorApprovalConsumer> logger
+) : IConsumer<InstructorApprovalEvent>
 {
-    public async Task Consume(ConsumeContext<InstructorApprovalEmailEvent> context)
+    public async Task Consume(ConsumeContext<InstructorApprovalEvent> context)
     {
         var message = context.Message;
 
@@ -34,8 +35,26 @@ public class InstructorApprovalEmailConsumer(
 
                 try
                 {
-                    await unitOfWork.NotificationRepository.AddAsync(message.InstructorApprovalEmailEventToNotification(NotificationStatus.Delivered));
+                    // Save email notification
+                    await unitOfWork.NotificationRepository.AddAsync(message.InstructorApprovalEventToNotification(NotificationStatus.Delivered));
+
+                    // Save re-login notification
+                    await unitOfWork.NotificationRepository.AddAsync(message.ReLoginNotificationToNotification(NotificationStatus.Delivered));
                     await unitOfWork.SaveChangesAsync();
+
+                    // Send real-time notification via SignalR
+                    var data = new
+                    {
+                        title = "Yêu cầu đăng nhập lại",
+                        message = "Tài khoản của bạn đã được duyệt thành công. Vui lòng đăng xuất và đăng nhập lại để cập nhật quyền truy cập.",
+                        requireReLogin = true
+                    };
+                    await notificationService.SendToUserAsync(
+                        message.UserId.ToString(),
+                        "RequireReLogin",
+                        data
+                    );
+                    logger.LogInformation("Successfully sent real-time re-login notification to user {UserId}", message.UserId);
                 }
                 catch (Exception ex)
                 {
@@ -48,7 +67,8 @@ public class InstructorApprovalEmailConsumer(
 
                 try
                 {
-                    await unitOfWork.NotificationRepository.AddAsync(message.InstructorApprovalEmailEventToNotification(NotificationStatus.Failed));
+                    await unitOfWork.NotificationRepository.AddAsync(message.InstructorApprovalEventToNotification(NotificationStatus.Failed));
+                    await unitOfWork.NotificationRepository.AddAsync(message.ReLoginNotificationToNotification(NotificationStatus.Failed));
                     await unitOfWork.SaveChangesAsync();
                 }
                 catch (Exception ex)

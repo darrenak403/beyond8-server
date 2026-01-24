@@ -1,5 +1,4 @@
 using Beyond8.Integration.Application.Dtos.AiIntegration;
-using Beyond8.Integration.Domain.Enums;
 using FluentValidation;
 
 namespace Beyond8.Integration.Application.Validators.AiIntegration;

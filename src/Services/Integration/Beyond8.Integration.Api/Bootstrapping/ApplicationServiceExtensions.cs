@@ -22,6 +22,7 @@ using Beyond8.Integration.Infrastructure.Repositories.Implements;
 using FluentValidation;
 using Microsoft.Extensions.Options;
 using Resend;
+using Scalar.AspNetCore;
 
 namespace Beyond8.Integration.Api.Bootstrapping;
 
@@ -113,7 +114,7 @@ public static class Bootstrapper
             // Register consumers from Identity events
             config.AddConsumer<OtpEmailConsumer>();
             config.AddConsumer<InstructorProfileSubmittedConsumer>();
-            config.AddConsumer<InstructorApprovalEmailConsumer>();
+            config.AddConsumer<InstructorApprovalConsumer>();
             config.AddConsumer<InstructorUpdateRequestEmailConsumer>();
         });
 
@@ -154,6 +155,7 @@ public static class Bootstrapper
         if (app.Environment.IsDevelopment())
         {
             app.MapOpenApi();
+            app.MapScalarApiReference();
         }
 
         app.UseHttpsRedirection();

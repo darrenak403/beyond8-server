@@ -1,5 +1,3 @@
-using System;
-
 namespace Beyond8.Integration.Infrastructure.Configuration;
 
 public class S3Settings
