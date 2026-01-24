@@ -31,6 +31,7 @@ public static class ExternalServiceRegistrationExtensions
 
         var identityDb = postgres.AddDatabase("identity-db", "Identities");
         var integrationDb = postgres.AddDatabase("integration-db", "Integrations");
+        var catalogDb = postgres.AddDatabase("catalog-db", "Catalogs");
 
         var identityService = builder.AddProject<Projects.Beyond8_Identity_Api>("Identity-Service")
             .WithReference(identityDb)
@@ -42,6 +43,14 @@ public static class ExternalServiceRegistrationExtensions
 
         var integrationService = builder.AddProject<Projects.Beyond8_Integration_Api>("Integration-Service")
             .WithReference(integrationDb)
+            .WithReference(redis)
+            .WithReference(rabbitMq)
+            .WaitFor(postgres)
+            .WaitFor(redis)
+            .WaitFor(rabbitMq);
+
+        var catalogService = builder.AddProject<Projects.Beyond8_Catalog_Api>("Catalog-Service")
+            .WithReference(catalogDb)
             .WithReference(redis)
             .WithReference(rabbitMq)
             .WaitFor(postgres)
@@ -65,7 +74,10 @@ public static class ExternalServiceRegistrationExtensions
                 config.AddRoute("/api/v1/ai-usage/{**catch-all}", integrationCluster);
                 config.AddRoute("/api/v1/ai-prompts/{**catch-all}", integrationCluster);
                 config.AddRoute("/api/v1/notifications/{**catch-all}", integrationCluster);
-                
+
+                var catalogCluster = config.AddProjectCluster(catalogService);
+                config.AddRoute("/api/v1/catalog/{**catch-all}", catalogCluster);
+
                 // SignalR hub route
                 config.AddRoute("/hubs/{**catch-all}", integrationCluster);
             });
@@ -77,7 +89,8 @@ public static class ExternalServiceRegistrationExtensions
                endpoint.Port = 8081;
            })
            .WithApiReference(identityService, options => options.AddPreferredSecuritySchemes("Bearer"))
-           .WithApiReference(integrationService, options => options.AddPreferredSecuritySchemes("Bearer"));
+           .WithApiReference(integrationService, options => options.AddPreferredSecuritySchemes("Bearer"))
+           .WithApiReference(catalogService, options => options.AddPreferredSecuritySchemes("Bearer"));
 
         return builder;
     }
