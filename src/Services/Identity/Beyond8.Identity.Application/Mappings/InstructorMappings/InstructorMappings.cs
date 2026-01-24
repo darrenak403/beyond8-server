@@ -29,6 +29,11 @@ public static class InstructorProfileMappings
             SocialLinks = string.IsNullOrEmpty(instructorProfile.SocialLinks)
                 ? null
                 : JsonSerializer.Deserialize<SocialInfo>(instructorProfile.SocialLinks),
+            Certificates = string.IsNullOrEmpty(instructorProfile.Certificates)
+                ? null
+                : JsonSerializer.Deserialize<List<CertificateInfo>>(instructorProfile.Certificates),
+            TeachingLanguages = instructorProfile.TeachingLanguages,
+            IntroVideoUrl = instructorProfile.IntroVideoUrl,
             TotalStudents = instructorProfile.TotalStudents,
             TotalCourses = instructorProfile.TotalCourses,
             AvgRating = instructorProfile.AvgRating,
@@ -39,12 +44,12 @@ public static class InstructorProfileMappings
         };
     }
 
-    public static InstructorProfileAdminResponse ToInstructorProfileAdminResponse(this InstructorProfile instructorProfile, string? verifiedByName = null)
+    public static InstructorProfileAdminResponse ToInstructorProfileAdminResponse(this InstructorProfile instructorProfile, User user)
     {
         return new InstructorProfileAdminResponse
         {
             Id = instructorProfile.Id,
-            User = instructorProfile.User.ToUserSimpleResponse(),
+            User = user.ToUserSimpleResponse(),
             Bio = instructorProfile.Bio,
             Headline = instructorProfile.Headline,
             ExpertiseAreas = string.IsNullOrEmpty(instructorProfile.ExpertiseAreas)
@@ -59,23 +64,28 @@ public static class InstructorProfileMappings
             SocialLinks = string.IsNullOrEmpty(instructorProfile.SocialLinks)
                 ? null
                 : JsonSerializer.Deserialize<SocialInfo>(instructorProfile.SocialLinks),
+            Certificates = string.IsNullOrEmpty(instructorProfile.Certificates)
+                ? null
+                : JsonSerializer.Deserialize<List<CertificateInfo>>(instructorProfile.Certificates),
+            TeachingLanguages = instructorProfile.TeachingLanguages,
+            IntroVideoUrl = instructorProfile.IntroVideoUrl,
             TotalStudents = instructorProfile.TotalStudents,
             TotalCourses = instructorProfile.TotalCourses,
             AvgRating = instructorProfile.AvgRating,
             VerificationStatus = instructorProfile.VerificationStatus,
             VerifiedAt = instructorProfile.VerifiedAt,
             // Admin-only fields
-            BankInfo = instructorProfile.BankInfo,
+            BankInfo = string.IsNullOrEmpty(instructorProfile.BankInfo)
+                ? null
+                : JsonSerializer.Deserialize<BankInfo>(instructorProfile.BankInfo),
             TaxId = instructorProfile.TaxId,
             IdentityDocuments = string.IsNullOrEmpty(instructorProfile.IdentityDocuments)
                 ? null
                 : JsonSerializer.Deserialize<List<IdentityInfo>>(instructorProfile.IdentityDocuments),
-            Certificates = string.IsNullOrEmpty(instructorProfile.Certificates)
-                ? null
-                : JsonSerializer.Deserialize<List<CertificateInfo>>(instructorProfile.Certificates),
             VerificationNotes = instructorProfile.VerificationNotes,
             VerifiedBy = instructorProfile.VerifiedBy,
-            VerifiedByName = verifiedByName
+            CreatedAt = instructorProfile.CreatedAt,
+            UpdatedAt = instructorProfile.UpdatedAt
         };
     }
 
@@ -98,8 +108,10 @@ public static class InstructorProfileMappings
             SocialLinks = request.SocialLinks != null
                 ? JsonSerializer.Serialize(request.SocialLinks)
                 : null,
-            BankInfo = request.BankInfo,
+            BankInfo = JsonSerializer.Serialize(request.BankInfo),
             TaxId = request.TaxId,
+            TeachingLanguages = request.TeachingLanguages,
+            IntroVideoUrl = request.IntroVideoUrl,
             IdentityDocuments = request.IdentityDocuments.Any()
                 ? JsonSerializer.Serialize(request.IdentityDocuments)
                 : null,
@@ -136,6 +148,18 @@ public static class InstructorProfileMappings
         if (request.SocialLinks != null)
             instructorProfile.SocialLinks = JsonSerializer.Serialize(request.SocialLinks);
 
+        if (request.BankInfo != null)
+            instructorProfile.BankInfo = JsonSerializer.Serialize(request.BankInfo);
+
+        if (request.TaxId != null)
+            instructorProfile.TaxId = request.TaxId;
+
+        if (request.TeachingLanguages != null)
+            instructorProfile.TeachingLanguages = request.TeachingLanguages;
+
+        if (request.IntroVideoUrl != null)
+            instructorProfile.IntroVideoUrl = request.IntroVideoUrl;
+
         if (request.IdentityDocuments != null)
             instructorProfile.IdentityDocuments = request.IdentityDocuments.Any()
                 ? JsonSerializer.Serialize(request.IdentityDocuments)
@@ -145,5 +169,7 @@ public static class InstructorProfileMappings
             instructorProfile.Certificates = request.Certificates.Any()
                 ? JsonSerializer.Serialize(request.Certificates)
                 : null;
+
+        instructorProfile.VerificationStatus = VerificationStatus.RequestUpdate;
     }
 }

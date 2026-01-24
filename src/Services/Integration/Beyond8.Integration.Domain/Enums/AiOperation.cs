@@ -2,7 +2,7 @@ namespace Beyond8.Integration.Domain.Enums;
 
 public enum AiOperation
 {
-    InstructorApplicationReview = 0,
+    ProfileReview = 0,
     QuizGeneration = 1,
     StudentAnswerReview = 2,
     StudentFeedbackGeneration = 3,

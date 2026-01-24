@@ -1,8 +1,6 @@
-using Beyond8.Identity.Application.Dtos.Tokens;
 using Beyond8.Identity.Application.Dtos.Users;
 using Beyond8.Identity.Domain.Entities;
 using Beyond8.Identity.Domain.Enums;
-using Microsoft.AspNetCore.Identity;
 
 namespace Beyond8.Identity.Application.Mappings.AuthMappings;
 
@@ -14,11 +12,18 @@ public static class UserMappings
         {
             Id = user.Id,
             Email = user.Email,
-            Roles = user.Roles,
+            Roles = user.UserRoles
+                .Where(ur => ur.RevokedAt == null)
+                .Select(ur => ur.Role.Code)
+                .ToList(),
             FullName = user.FullName,
+            DateOfBirth = user.DateOfBirth,
             AvatarUrl = user.AvatarUrl,
             CoverUrl = user.CoverUrl,
             PhoneNumber = user.PhoneNumber,
+            Specialization = user.Specialization,
+            Address = user.Address,
+            Bio = user.Bio,
             Status = user.Status,
             IsEmailVerified = user.IsEmailVerified,
             LastLoginAt = user.LastLoginAt,
@@ -35,7 +40,7 @@ public static class UserMappings
             Email = user.Email,
             FullName = user.FullName,
             AvatarUrl = user.AvatarUrl,
-            CoverUrl = user.CoverUrl,
+            DateOfBirth = user.DateOfBirth
         };
     }
 
@@ -45,14 +50,20 @@ public static class UserMappings
         {
             Email = request.Email,
             FullName = request.FullName,
+            DateOfBirth = request.DateOfBirth.HasValue
+                ? DateTime.SpecifyKind(request.DateOfBirth.Value.Date, DateTimeKind.Utc)
+                : null,
             AvatarUrl = request.AvatarUrl,
             CoverUrl = request.CoverUrl,
             PhoneNumber = request.PhoneNumber,
+            Specialization = request.Specialization,
+            Address = request.Address,
+            Bio = request.Bio,
             Timezone = request.Timezone,
             Locale = request.Locale,
-            Roles = request.Roles ?? [UserRole.Student],
+            UserRoles = new List<UserRole>(),
             Status = UserStatus.Active,
-            IsEmailVerified = false
+            IsEmailVerified = true
         };
 
         return user;
@@ -62,6 +73,9 @@ public static class UserMappings
         if (!string.IsNullOrEmpty(request.FullName))
             user.FullName = request.FullName;
 
+        if (request.DateOfBirth.HasValue)
+            user.DateOfBirth = DateTime.SpecifyKind(request.DateOfBirth.Value.Date, DateTimeKind.Utc);
+
         if (!string.IsNullOrEmpty(request.PhoneNumber))
             user.PhoneNumber = request.PhoneNumber;
 
@@ -70,5 +84,15 @@ public static class UserMappings
 
         if (!string.IsNullOrEmpty(request.Locale))
             user.Locale = request.Locale;
+
+        if (!string.IsNullOrEmpty(request.Specialization))
+            user.Specialization = request.Specialization;
+
+        if (!string.IsNullOrEmpty(request.Address))
+            user.Address = request.Address;
+
+        if (!string.IsNullOrEmpty(request.Bio))
+            user.Bio = request.Bio;
+
     }
 }

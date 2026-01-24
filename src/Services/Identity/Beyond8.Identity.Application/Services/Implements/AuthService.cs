@@ -11,6 +11,7 @@ using Beyond8.Identity.Domain.Entities;
 using Beyond8.Identity.Domain.Enums;
 using Beyond8.Identity.Domain.Repositories.Interfaces;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Beyond8.Identity.Application.Services.Implements;
@@ -27,7 +28,10 @@ public class AuthService(
     {
         try
         {
-            var user = await unitOfWork.UserRepository.FindOneAsync(x => x.Email == request.Email);
+            var user = await unitOfWork.UserRepository.AsQueryable()
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(x => x.Email == request.Email);
             var validation = ValidateUserByEmail(user, request.Email);
             if (!validation.IsValid)
                 return ApiResponse<TokenResponse>.FailureResponse(validation.ErrorMessage!);
@@ -78,19 +82,35 @@ public class AuthService(
             logger.LogInformation("Sending OTP code to email: {Email} with OTP: {OtpCode}", request.Email, otpCode);
             await cacheService.SetAsync($"otp_register:{request.Email}", otpCode, TimeSpan.FromMinutes(5));
 
-            // Publish event for email service
+            var newUser = request.ToEntity(passwordHasher);
+            
+            // Assign default Student role
+            var studentRole = await unitOfWork.RoleRepository.FindByCodeAsync("ROLE_STUDENT");
+            if (studentRole == null)
+            {
+                logger.LogError("Student role not found in database");
+                return ApiResponse<UserSimpleResponse>.FailureResponse("Hệ thống chưa được cấu hình đúng. Vui lòng liên hệ quản trị viên.");
+            }
+            
+            newUser.UserRoles.Add(new UserRole
+            {
+                UserId = newUser.Id,
+                RoleId = studentRole.Id,
+                AssignedAt = DateTime.UtcNow
+            });
+            
+            await unitOfWork.UserRepository.AddAsync(newUser);
+            await unitOfWork.SaveChangesAsync();
+
             var otpEvent = new OtpEmailEvent(
+                newUser.Id,
                 request.Email,
-                request.Email, // Use email as name since FullName not in RegisterRequest
+                newUser.FullName,
                 otpCode,
                 "Đăng ký tài khoản",
                 DateTime.UtcNow
             );
             await publishEndpoint.Publish(otpEvent);
-
-            var newUser = request.ToEntity(passwordHasher);
-            await unitOfWork.UserRepository.AddAsync(newUser);
-            await unitOfWork.SaveChangesAsync();
 
             logger.LogInformation("User registered successfully: {Email}", request.Email);
             return ApiResponse<UserSimpleResponse>.SuccessResponse(
@@ -234,9 +254,9 @@ public class AuthService(
             await cacheService.SetAsync(cacheKey, otpCode, TimeSpan.FromMinutes(5));
             await cacheService.SetAsync(lockKey, true, TimeSpan.FromSeconds(60));
 
-            // Publish event for email service
             var u = validation.ValidUser!;
             var otpEvent = new OtpEmailEvent(
+                u.Id,
                 request.Email,
                 u.FullName,
                 otpCode,
@@ -299,9 +319,9 @@ public class AuthService(
             await cacheService.SetAsync($"otp_register:{request.Email}", otpCode, TimeSpan.FromMinutes(5));
             await cacheService.SetAsync(lockKey, true, TimeSpan.FromSeconds(60));
 
-            // Publish event for email service
             var u = validation.ValidUser!;
             var otpEvent = new OtpEmailEvent(
+                u.Id,
                 request.Email,
                 u.FullName,
                 otpCode,

@@ -70,11 +70,16 @@ public class CreateInstructorProfileRequestValidator : AbstractValidator<CreateI
                             .MaximumLength(100).WithMessage("Chức vụ không được vượt quá 100 ký tự");
 
                         child.RuleFor(w => w.From)
-                            .NotEmpty().WithMessage("Thời gian bắt đầu không được để trống")
-                            .MaximumLength(50).WithMessage("Thời gian bắt đầu không được vượt quá 50 ký tự");
+                            .NotEqual(DateTime.MinValue).WithMessage("Thời gian bắt đầu không được để trống")
+                            .LessThanOrEqualTo(DateTime.UtcNow).WithMessage("Thời gian bắt đầu không được lớn hơn thời gian hiện tại");
 
                         child.RuleFor(w => w.To)
-                            .MaximumLength(50).WithMessage("Thời gian kết thúc không được vượt quá 50 ký tự");
+                            .Must((work, to) => to == DateTime.MinValue || to >= work.From)
+                            .WithMessage("Thời gian kết thúc phải sau hoặc bằng thời gian bắt đầu")
+                            .When(w => !w.IsCurrentJob)
+                            .Must((work, to) => to == DateTime.MinValue || to <= DateTime.UtcNow)
+                            .WithMessage("Thời gian kết thúc không được lớn hơn thời gian hiện tại")
+                            .When(w => !w.IsCurrentJob);
                     });
                 });
         });
@@ -97,8 +102,38 @@ public class CreateInstructorProfileRequestValidator : AbstractValidator<CreateI
 
         // BankInfo validation
         RuleFor(x => x.BankInfo)
-            .NotEmpty().WithMessage("Thông tin ngân hàng không được để trống")
-            .MaximumLength(500).WithMessage("Thông tin ngân hàng không được vượt quá 500 ký tự");
+            .NotNull().WithMessage("Thông tin ngân hàng không được để trống")
+            .ChildRules(bank =>
+            {
+                bank.RuleFor(b => b.BankName)
+                    .NotEmpty().WithMessage("Tên ngân hàng không được để trống")
+                    .MaximumLength(200).WithMessage("Tên ngân hàng không được vượt quá 200 ký tự");
+
+                bank.RuleFor(b => b.AccountNumber)
+                    .NotEmpty().WithMessage("Số tài khoản không được để trống")
+                    .MaximumLength(50).WithMessage("Số tài khoản không được vượt quá 50 ký tự")
+                    .Matches(@"^[0-9]+$").WithMessage("Số tài khoản chỉ được chứa số");
+
+                bank.RuleFor(b => b.AccountHolderName)
+                    .NotEmpty().WithMessage("Tên chủ tài khoản không được để trống")
+                    .MaximumLength(200).WithMessage("Tên chủ tài khoản không được vượt quá 200 ký tự");
+            });
+
+        // TeachingLanguages validation
+        RuleFor(x => x.TeachingLanguages)
+            .NotEmpty().WithMessage("Ngôn ngữ giảng dạy không được để trống")
+            .Must(x => x.Count > 0).WithMessage("Phải có ít nhất một ngôn ngữ giảng dạy")
+            .ForEach(language =>
+            {
+                language.NotEmpty().WithMessage("Ngôn ngữ giảng dạy không được để trống")
+                     .MaximumLength(20).WithMessage("Mã ngôn ngữ không được vượt quá 20 ký tự");
+            });
+
+        // IntroVideoUrl validation (optional)
+        RuleFor(x => x.IntroVideoUrl)
+            .Must(uri => string.IsNullOrEmpty(uri) || Uri.TryCreate(uri, UriKind.Absolute, out _))
+            .WithMessage("URL video giới thiệu phải hợp lệ")
+            .MaximumLength(500).WithMessage("URL video giới thiệu không được vượt quá 500 ký tự");
 
         // TaxId validation (optional)
         RuleFor(x => x.TaxId)
@@ -114,18 +149,6 @@ public class CreateInstructorProfileRequestValidator : AbstractValidator<CreateI
             {
                 document.ChildRules(child =>
                 {
-                    child.RuleFor(d => d.Type)
-                        .NotEmpty().WithMessage("Loại giấy tờ không được để trống")
-                        .MaximumLength(50).WithMessage("Loại giấy tờ không được vượt quá 50 ký tự");
-
-                    child.RuleFor(d => d.Number)
-                        .NotEmpty().WithMessage("Số giấy tờ không được để trống")
-                        .MaximumLength(50).WithMessage("Số giấy tờ không được vượt quá 50 ký tự");
-
-                    child.RuleFor(d => d.IssuedDate)
-                        .NotEmpty().WithMessage("Ngày cấp không được để trống")
-                        .MaximumLength(50).WithMessage("Ngày cấp không được vượt quá 50 ký tự");
-
                     child.RuleFor(d => d.FrontImg)
                         .NotEmpty().WithMessage("Ảnh mặt trước không được để trống")
                         .Must(uri => Uri.TryCreate(uri, UriKind.Absolute, out _))

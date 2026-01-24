@@ -4,9 +4,9 @@ using FluentValidation;
 
 namespace Beyond8.Identity.Application.Validators.Instructor;
 
-public class NotApproveInstructorApplicationRequestValidator : AbstractValidator<NotApproveInstructorApplicationRequest>
+public class NotApproveInstructorProfileRequestValidator : AbstractValidator<NotApproveInstructorProfileRequest>
 {
-    public NotApproveInstructorApplicationRequestValidator()
+    public NotApproveInstructorProfileRequestValidator()
     {
         RuleFor(x => x.NotApproveReason)
             .NotEmpty().WithMessage("Lý do không phê duyệt không được để trống")
@@ -16,7 +16,7 @@ public class NotApproveInstructorApplicationRequestValidator : AbstractValidator
 
         RuleFor(x => x.VerificationStatus)
             .IsInEnum().WithMessage("Trạng thái không hợp lệ")
-            .Must(status => status == VerificationStatus.RequestUpdate || status == VerificationStatus.Rejected)
-            .WithMessage("Trạng thái phải là RequestUpdate hoặc Rejected");
+            .Must(status => status == VerificationStatus.RequestUpdate)
+            .WithMessage("Trạng thái phải là RequestUpdate");
     }
 }

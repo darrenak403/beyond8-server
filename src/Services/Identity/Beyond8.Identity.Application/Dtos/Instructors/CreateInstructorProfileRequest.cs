@@ -10,8 +10,10 @@ public class CreateInstructorProfileRequest
     public List<EducationInfo> Education { get; set; } = [];
     public List<WorkInfo>? WorkExperience { get; set; }
     public SocialInfo? SocialLinks { get; set; }
-    public string BankInfo { get; set; } = string.Empty;
+    public BankInfo BankInfo { get; set; } = new();
     public string? TaxId { get; set; }
+    public List<string> TeachingLanguages { get; set; } = ["vi-VN"];
+    public string? IntroVideoUrl { get; set; }
     public List<IdentityInfo> IdentityDocuments { get; set; } = [];
     public List<CertificateInfo>? Certificates { get; set; }
 }

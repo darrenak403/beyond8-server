@@ -1,4 +1,3 @@
-using System;
 using Beyond8.Common.Utilities;
 using Beyond8.Integration.Application.Dtos.VnptEkyc;
 using Microsoft.AspNetCore.Http;
@@ -10,5 +9,5 @@ public interface IVnptEkycService
     Task<UploadResponse> UploadAsync(IFormFile file);
     Task<LivenessResponse> CheckLivenessAsync(LivenessRequest request);
     Task<ApiResponse<LivenessResponse>> UploadAndCheckLivenessAsync(IFormFile file);
-    Task<ApiResponse<IdObject>> ClassifyAsync(ClassifyRequest request);
+    Task<ApiResponse<ClassifyWithOcrResponse>> ClassifyAsync(ClassifyRequest request);
 }

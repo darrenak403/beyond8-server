@@ -16,11 +16,13 @@ using Beyond8.Integration.Infrastructure.Configurations;
 using Beyond8.Integration.Infrastructure.Data;
 using Beyond8.Integration.Infrastructure.ExternalServices;
 using Beyond8.Integration.Infrastructure.ExternalServices.Email;
+using Beyond8.Integration.Infrastructure.ExternalServices.Hubs.SingalR;
+using Beyond8.Integration.Infrastructure.Hubs;
 using Beyond8.Integration.Infrastructure.Repositories.Implements;
 using FluentValidation;
-using MassTransit;
 using Microsoft.Extensions.Options;
 using Resend;
+using Scalar.AspNetCore;
 
 namespace Beyond8.Integration.Api.Bootstrapping;
 
@@ -51,19 +53,20 @@ public static class Bootstrapper
             return new AmazonS3Client(s3Settings.AccessKey, s3Settings.SecretKey, config);
         });
 
-        // Register Gemini configuration
+        // Register AI provider configurations
         builder.Services.AddHttpClient();
-        builder.Services.Configure<GeminiConfiguration>(builder.Configuration.GetSection(GeminiConfiguration.SectionName));
+        builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection(GeminiSettings.SectionName));
+        builder.Services.Configure<BedrockSettings>(builder.Configuration.GetSection(BedrockSettings.SectionName));
 
         // Register Resend configuration
-        builder.Services.Configure<ResendConfiguration>(
-            builder.Configuration.GetSection(ResendConfiguration.SectionName));
+        builder.Services.Configure<ResendSettings>(
+        builder.Configuration.GetSection(ResendSettings.SectionName));
 
         builder.Services.AddSingleton<IResend>(sp =>
         {
-            var options = sp.GetRequiredService<IOptions<ResendConfiguration>>().Value;
+            var options = sp.GetRequiredService<IOptions<ResendSettings>>().Value;
             if (string.IsNullOrWhiteSpace(options.ApiKey))
-                throw new InvalidOperationException("ApiKey is missing in ResendConfiguration");
+                throw new InvalidOperationException("ApiKey is missing in ResendSettings");
 
             return ResendClient.Create(options.ApiKey.Trim());
         });
@@ -98,13 +101,20 @@ public static class Bootstrapper
         // Register repositories
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
+        builder.Services.AddSignalR(options =>
+        {
+            options.EnableDetailedErrors = builder.Environment.IsDevelopment();
+        });
+        builder.Services.AddScoped<INotificationService, SignalRNotificationService>();
+        builder.Services.AddScoped<INotificationHistoryService, NotificationHistoryService>();
+
         // Configure MassTransit with RabbitMQ and register consumers
         builder.AddMassTransitWithRabbitMq(config =>
         {
             // Register consumers from Identity events
             config.AddConsumer<OtpEmailConsumer>();
-            config.AddConsumer<InstructorApprovalEmailConsumer>();
-            config.AddConsumer<InstructorRejectionEmailConsumer>();
+            config.AddConsumer<InstructorProfileSubmittedConsumer>();
+            config.AddConsumer<InstructorApprovalConsumer>();
             config.AddConsumer<InstructorUpdateRequestEmailConsumer>();
         });
 
@@ -113,7 +123,18 @@ public static class Bootstrapper
         builder.Services.AddScoped<IMediaFileService, MediaFileService>();
         builder.Services.AddScoped<IAiUsageService, AiUsageService>();
         builder.Services.AddScoped<IAiPromptService, AiPromptService>();
-        builder.Services.AddScoped<IGeminiService, GeminiService>();
+
+        // Register AI provider based on configuration
+        var aiProvider = builder.Configuration.GetValue<string>("AiProvider") ?? "Gemini";
+        if (aiProvider.Equals("Bedrock", StringComparison.OrdinalIgnoreCase))
+        {
+            builder.Services.AddScoped<IGenerativeAiService, BedrockService>();
+        }
+        else
+        {
+            builder.Services.AddScoped<IGenerativeAiService, GeminiService>();
+        }
+
         builder.Services.AddScoped<IUrlContentDownloader, UrlContentDownloader>();
         builder.Services.AddScoped<IEmailService, EmailService>();
         builder.Services.AddScoped<IVnptEkycService, VnptEkycService>();
@@ -134,15 +155,20 @@ public static class Bootstrapper
         if (app.Environment.IsDevelopment())
         {
             app.MapOpenApi();
+            app.MapScalarApiReference();
         }
 
         app.UseHttpsRedirection();
+
+        app.MapHub<AppHub>("/hubs/app")
+            .RequireCors("SignalRPolicy");
 
         app.MapMediaFileApi();
         app.MapAiApi();
         app.MapAiUsageApi();
         app.MapAiPromptApi();
         app.MapVnptEkycApi();
+        app.MapNotificationApi();
 
         return app;
     }

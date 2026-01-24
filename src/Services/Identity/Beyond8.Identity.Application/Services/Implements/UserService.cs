@@ -7,6 +7,7 @@ using Beyond8.Identity.Domain.Entities;
 using Beyond8.Identity.Domain.Enums;
 using Beyond8.Identity.Domain.Repositories.Interfaces;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Beyond8.Identity.Application.Services.Implements;
@@ -21,10 +22,18 @@ public class UserService(
     {
         try
         {
-            var (isValid, error, user) = await ValidateUserByIdAsync(id);
-            if (!isValid) return ApiResponse<UserResponse>.FailureResponse(error!);
+            var user = await unitOfWork.UserRepository.AsQueryable()
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == id);
 
-            return ApiResponse<UserResponse>.SuccessResponse(user!.ToUserResponse(), "Lấy thông tin tài khoản thành công.");
+            if (user == null)
+            {
+                logger.LogWarning("User not found with ID: {UserId}", id);
+                return ApiResponse<UserResponse>.FailureResponse("Không tìm thấy tài khoản.");
+            }
+
+            return ApiResponse<UserResponse>.SuccessResponse(user.ToUserResponse(), "Lấy thông tin tài khoản thành công.");
         }
         catch (Exception ex)
         {
@@ -33,16 +42,22 @@ public class UserService(
         }
     }
 
-    public async Task<ApiResponse<List<UserResponse>>> GetAllUsersAsync(PaginationRequest request)
+    public async Task<ApiResponse<List<UserResponse>>> GetAllUsersAsync(PaginationUserRequest request)
     {
         try
         {
-            var users = await unitOfWork.UserRepository.GetPagedAsync(
-                pageNumber: request.PageNumber,
-                pageSize: request.PageSize,
-                filter: null,
-                orderBy: query => query.OrderBy(u => u.CreatedAt)
-            );
+            var users = await unitOfWork.UserRepository.SearchUsersPagedAsync(
+                request.PageNumber,
+                request.PageSize,
+                request.Email,
+                request.FullName,
+                request.PhoneNumber,
+                request.Specialization,
+                request.Address,
+                request.IsEmailVerified,
+                request.Role,
+                request.IsDescending ?? true);
+
             var userResponses = users.Items.Select(u => u.ToUserResponse()).ToList();
 
             logger.LogInformation("Retrieved {Count} users on page {PageNumber}", userResponses.Count, request.PageNumber);
@@ -71,12 +86,39 @@ public class UserService(
             var newUser = request.ToUserEntity();
             newUser.PasswordHash = passwordHasher.HashPassword(newUser, request.Password);
 
+            // Assign roles from request
+            if (request.Roles != null && request.Roles.Any())
+            {
+                foreach (var roleCode in request.Roles)
+                {
+                    var role = await unitOfWork.RoleRepository.FindByCodeAsync(roleCode);
+                    if (role != null)
+                    {
+                        newUser.UserRoles.Add(new UserRole
+                        {
+                            UserId = newUser.Id,
+                            RoleId = role.Id,
+                            AssignedAt = DateTime.UtcNow
+                        });
+                    }
+                    else
+                    {
+                        logger.LogWarning("Role with code {RoleCode} not found when creating user", roleCode);
+                    }
+                }
+            }
+
             await unitOfWork.UserRepository.AddAsync(newUser);
             await unitOfWork.SaveChangesAsync();
 
             logger.LogInformation("User created successfully with email {Email} and ID: {UserId}", request.Email, newUser.Id);
 
-            return ApiResponse<UserResponse>.SuccessResponse(newUser.ToUserResponse(), "Tạo tài khoản thành công.");
+            // Load user with roles for response
+            var userWithRoles = await unitOfWork.UserRepository.AsQueryable()
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == newUser.Id);
+            return ApiResponse<UserResponse>.SuccessResponse(userWithRoles!.ToUserResponse(), "Tạo tài khoản thành công.");
         }
         catch (Exception ex)
         {
@@ -107,6 +149,43 @@ public class UserService(
         }
     }
 
+    public async Task<ApiResponse<UserResponse>> UpdateUserForAdminAsync(Guid id, UpdateUserForAdminRequest request)
+    {
+        try
+        {
+            var user = await unitOfWork.UserRepository.AsQueryable()
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == id);
+
+            if (user == null)
+            {
+                logger.LogWarning("User not found with ID: {UserId}", id);
+                return ApiResponse<UserResponse>.FailureResponse("Không tìm thấy tài khoản.");
+            }
+
+            if (user.Status == UserStatus.Inactive)
+            {
+                logger.LogWarning("User with ID: {UserId} is inactive", id);
+                return ApiResponse<UserResponse>.FailureResponse("Tài khoản không hoạt động.");
+            }
+
+            await UpdateUserRolesAsync(user, request.Roles);
+
+            await unitOfWork.UserRepository.UpdateAsync(user.Id, user);
+            await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation("User roles updated successfully for user with ID: {UserId} by admin/staff", id);
+
+            return ApiResponse<UserResponse>.SuccessResponse(user.ToUserResponse(), "Thêm vai trò tài khoản thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error updating user roles for user with ID {UserId}", id);
+            return ApiResponse<UserResponse>.FailureResponse("Đã xảy ra lỗi khi cập nhật vai trò tài khoản.");
+        }
+    }
+
     public async Task<ApiResponse<bool>> DeleteUserAsync(Guid id)
     {
         try
@@ -129,26 +208,28 @@ public class UserService(
         }
     }
 
-    public async Task<ApiResponse<bool>> UpdateUserStatusAsync(Guid id, UpdateUserStatusRequest request)
+    public async Task<ApiResponse<bool>> ToggleUserStatusAsync(Guid id)
     {
         try
         {
             var (isValid, error, user) = await ValidateUserByIdAsync(id);
             if (!isValid) return ApiResponse<bool>.FailureResponse(error!);
-
-            if (user!.Status == request.NewStatus)
-            {
-                logger.LogWarning("User with ID: {UserId} already has status {Status}", id, request.NewStatus);
-                return ApiResponse<bool>.FailureResponse("Tài khoản đã có trạng thái này.");
-            }
-
             var oldStatus = user!.Status;
-            user.Status = request.NewStatus;
-
+            switch (user.Status)
+            {
+                case UserStatus.Active:
+                    user.Status = UserStatus.Inactive;
+                    break;
+                case UserStatus.Inactive:
+                    user.Status = UserStatus.Active;
+                    break;
+                default:
+                    logger.LogWarning("Attempted to toggle user {UserId} with restricted status: {Status}", id, user.Status);
+                    return ApiResponse<bool>.FailureResponse($"Không thể thay đổi nhanh trạng thái từ '{user.Status}'. Vui lòng cập nhật thủ công.");
+            }
             await unitOfWork.UserRepository.UpdateAsync(user.Id, user);
             await unitOfWork.SaveChangesAsync();
-
-            logger.LogInformation("User status updated from {OldStatus} to {NewStatus} for user with ID: {UserId}", oldStatus, request.NewStatus, id);
+            logger.LogInformation("User status updated from {OldStatus} to {NewStatus} for user with ID: {UserId}", oldStatus, user.Status, id);
             return ApiResponse<bool>.SuccessResponse(true, "Cập nhật trạng thái tài khoản thành công.");
         }
         catch (Exception ex)
@@ -240,4 +321,45 @@ public class UserService(
 
         return (true, null);
     }
+    /// <summary>
+    /// Updates user roles: revokes existing active roles and assigns new roles from request.
+    /// </summary>
+    private async Task UpdateUserRolesAsync(User user, List<string> roleCodes)
+    {
+        foreach (var userRole in user.UserRoles.Where(ur => ur.RevokedAt == null))
+        {
+            userRole.RevokedAt = DateTime.UtcNow;
+        }
+
+        if (roleCodes != null && roleCodes.Any())
+        {
+            foreach (var roleCode in roleCodes)
+            {
+                var role = await unitOfWork.RoleRepository.FindByCodeAsync(roleCode);
+                if (role != null)
+                {
+                    var existingUserRole = user.UserRoles.FirstOrDefault(ur => ur.RoleId == role.Id);
+                    if (existingUserRole == null)
+                    {
+                        user.UserRoles.Add(new UserRole
+                        {
+                            UserId = user.Id,
+                            RoleId = role.Id,
+                            AssignedAt = DateTime.UtcNow
+                        });
+                    }
+                    else
+                    {
+                        existingUserRole.RevokedAt = null;
+                        existingUserRole.AssignedAt = DateTime.UtcNow;
+                    }
+                }
+                else
+                {
+                    logger.LogWarning("Role with code {RoleCode} not found when updating user roles", roleCode);
+                }
+            }
+        }
+    }
+
 }

@@ -12,7 +12,7 @@ namespace Beyond8.Integration.Application.Services.Implements;
 
 public class AiService(
     ILogger<AiService> logger,
-    IGeminiService geminiService,
+    IGenerativeAiService generativeAiService,
     IAiPromptService aiPromptService,
     IUrlContentDownloader urlContentDownloader,
     IStorageService storageService) : IAiService
@@ -25,15 +25,15 @@ public class AiService(
         Converters = { new JsonStringEnumConverter() }
     };
 
-    public async Task<ApiResponse<AiInstructorApplicationReviewResponse>> InstructorApplicationReviewAsync(
-        CreateInstructorProfileRequest request,
+    public async Task<ApiResponse<AiProfileReviewResponse>> InstructorProfileReviewAsync(
+        ProfileReviewRequest request,
         Guid userId)
     {
         try
         {
             var promptRes = await aiPromptService.GetPromptByNameAsync(InstructorReviewPromptName);
             if (!promptRes.IsSuccess || promptRes.Data == null)
-                return ApiResponse<AiInstructorApplicationReviewResponse>.FailureResponse(
+                return ApiResponse<AiProfileReviewResponse>.FailureResponse(
                     promptRes.Message ?? "Không tìm thấy prompt đánh giá hồ sơ.");
 
             var t = promptRes.Data;
@@ -42,9 +42,9 @@ public class AiService(
             var promptText = t.Template.Replace("{ApplicationText}", applicationText);
             var fullPrompt = string.IsNullOrEmpty(t.SystemPrompt) ? promptText : $"{t.SystemPrompt}\n\n{promptText}";
 
-            var geminiResult = await geminiService.GenerateContentAsync(
+            var geminiResult = await generativeAiService.GenerateContentAsync(
                 fullPrompt,
-                AiOperation.InstructorApplicationReview,
+                AiOperation.ProfileReview,
                 userId,
                 promptId: t.Id,
                 maxTokens: t.MaxTokens,
@@ -53,29 +53,26 @@ public class AiService(
                 inlineImages: imageParts.Count > 0 ? imageParts : null);
 
             if (!geminiResult.IsSuccess || geminiResult.Data == null)
-                return ApiResponse<AiInstructorApplicationReviewResponse>.FailureResponse(
+                return ApiResponse<AiProfileReviewResponse>.FailureResponse(
                     geminiResult.Message ?? "Đã xảy ra lỗi khi đánh giá hồ sơ.");
 
-            var parsed = TryParseReviewResponse(geminiResult.Data.Content);
+            var parsed = TryParseReviewResponse(geminiResult.Data.Content, userId);
             if (parsed == null)
-            {
-                logger.LogWarning("Failed to parse Gemini review response for user {UserId}", userId);
-                return ApiResponse<AiInstructorApplicationReviewResponse>.FailureResponse(
+                return ApiResponse<AiProfileReviewResponse>.FailureResponse(
                     "Không thể phân tích kết quả đánh giá từ AI. Vui lòng thử lại.");
-            }
 
-            return ApiResponse<AiInstructorApplicationReviewResponse>.SuccessResponse(
+            return ApiResponse<AiProfileReviewResponse>.SuccessResponse(
                 parsed, "Đánh giá hồ sơ giảng viên thành công.");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error in InstructorApplicationReview for user {UserId}", userId);
-            return ApiResponse<AiInstructorApplicationReviewResponse>.FailureResponse(
+            return ApiResponse<AiProfileReviewResponse>.FailureResponse(
                 "Đã xảy ra lỗi khi đánh giá hồ sơ giảng viên.");
         }
     }
 
-    private async Task<(string ApplicationText, List<GeminiImagePart> ImageParts)> BuildApplicationTextAndImagesAsync(CreateInstructorProfileRequest r)
+    private async Task<(string ApplicationText, List<GenerativeAiImagePart> ImageParts)> BuildApplicationTextAndImagesAsync(ProfileReviewRequest r)
     {
         var sb = new System.Text.StringBuilder();
         sb.AppendLine("## Bio\n" + (string.IsNullOrWhiteSpace(r.Bio) ? "(trống)" : r.Bio));
@@ -85,28 +82,22 @@ public class AiService(
         sb.AppendLine("\n## Education");
         if (r.Education?.Count > 0)
             foreach (var e in r.Education)
-                sb.AppendLine($"- {e.School}, {e.Degree} ({e.Start}-{e.End})");
+            {
+                var fieldOfStudy = string.IsNullOrWhiteSpace(e.FieldOfStudy) ? "" : $", {e.FieldOfStudy}";
+                sb.AppendLine($"- {e.School}, {e.Degree}{fieldOfStudy} ({e.Start}-{e.End})");
+            }
         else
             sb.AppendLine("(trống)");
 
         sb.AppendLine("\n## Work Experience");
         if (r.WorkExperience?.Count > 0)
             foreach (var w in r.WorkExperience)
-                sb.AppendLine($"- {w.Company}, {w.Role} ({w.From} - {w.To})");
-        else
-            sb.AppendLine("(trống)");
-
-        if (r.SocialLinks != null)
-        {
-            sb.AppendLine("\n## Social Links");
-            var links = new[] { r.SocialLinks.Facebook, r.SocialLinks.LinkedIn, r.SocialLinks.Website }.Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
-            sb.AppendLine(links.Count > 0 ? string.Join(", ", links) : "(trống)");
-        }
-
-        sb.AppendLine("\n## Identity Documents");
-        if (r.IdentityDocuments?.Count > 0)
-            foreach (var id in r.IdentityDocuments)
-                sb.AppendLine($"- {id.Type}: {id.Number}, cấp ngày {id.IssuedDate}");
+            {
+                var toDate = w.IsCurrentJob ? "Hiện tại" : w.To == null ? "N/A" : w.To.Value.ToString("yyyy-MM");
+                var fromDate = w.From == DateTime.MinValue ? "N/A" : w.From.ToString("yyyy-MM");
+                var description = string.IsNullOrWhiteSpace(w.Description) ? "" : $"\n  Mô tả: {w.Description}";
+                sb.AppendLine($"- {w.Company}, {w.Role} ({fromDate} - {toDate}){description}");
+            }
         else
             sb.AppendLine("(trống)");
 
@@ -117,22 +108,20 @@ public class AiService(
         else
             sb.AppendLine("(trống)");
 
+        sb.AppendLine("\n## Teaching Languages");
+        sb.AppendLine(r.TeachingLanguages?.Count > 0 ? string.Join(", ", r.TeachingLanguages) : "(trống)");
+
         var imageItems = new List<(string Descriptor, string Url)>();
-        foreach (var id in r.IdentityDocuments ?? [])
-        {
-            if (!string.IsNullOrWhiteSpace(id.FrontImg)) imageItems.Add(($"CCCD {id.Type} mặt trước", id.FrontImg));
-            if (!string.IsNullOrWhiteSpace(id.BackImg)) imageItems.Add(($"CCCD {id.Type} mặt sau", id.BackImg));
-        }
         foreach (var c in r.Certificates ?? [])
             if (!string.IsNullOrWhiteSpace(c.Url)) imageItems.Add(($"Chứng chỉ {c.Name}", c.Url));
 
-        var imageParts = new List<GeminiImagePart>();
+        var imageParts = new List<GenerativeAiImagePart>();
         var succeededDescriptors = new List<string>();
         foreach (var (desc, urlOrKey) in imageItems)
         {
             var (data, mime) = await DownloadImageAsync(urlOrKey);
             if (data == null || data.Length == 0) continue;
-            imageParts.Add(new GeminiImagePart(data, mime ?? "image/jpeg"));
+            imageParts.Add(new GenerativeAiImagePart(data, mime ?? "image/jpeg"));
             succeededDescriptors.Add(desc);
         }
 
@@ -143,10 +132,12 @@ public class AiService(
         else
             sb.AppendLine("Không có ảnh nào tải được.");
 
+        logger.LogInformation("Application text: {ApplicationText}", sb.ToString());
+        logger.LogInformation("Image parts: {ImageParts}", imageParts.Count);
+
         return (sb.ToString(), imageParts);
     }
 
-    /// <summary>Ưu tiên tải từ S3 theo key (key trực tiếp hoặc rút từ URL CloudFront/S3); nếu không có key hoặc S3 lỗi thì tải qua HTTP.</summary>
     private async Task<(byte[]? Data, string? MimeType)> DownloadImageAsync(string urlOrKey)
     {
         if (string.IsNullOrWhiteSpace(urlOrKey)) return (null, null);
@@ -170,21 +161,29 @@ public class AiService(
         return (data2, ct ?? "image/jpeg");
     }
 
-    private static AiInstructorApplicationReviewResponse? TryParseReviewResponse(string content)
+    private AiProfileReviewResponse? TryParseReviewResponse(string content, Guid userId)
     {
         var json = ExtractJson(content);
-        if (string.IsNullOrWhiteSpace(json)) return null;
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            var raw = content?.Length > 800 ? content[..800] : content ?? "";
+            logger.LogWarning("Failed to parse Gemini review response for user {UserId}: no JSON found. Raw (first 800 chars): {Raw}", userId, raw);
+            return null;
+        }
 
         try
         {
-            return JsonSerializer.Deserialize<AiInstructorApplicationReviewResponse>(json, JsonOptions);
+            return JsonSerializer.Deserialize<AiProfileReviewResponse>(json, JsonOptions);
         }
-        catch
+        catch (JsonException ex)
         {
+            var raw = content?.Length > 800 ? content[..800] : content ?? "";
+            logger.LogWarning(ex, "Failed to parse Gemini review response for user {UserId}. Raw (first 800 chars): {Raw}", userId, raw);
             return null;
         }
     }
 
+    /// <summary>Trích JSON từ nội dung: ưu tiên block ```json...```; nếu không có thì tìm object {...} đầu tiên (đếm ngoặc, bỏ qua trong chuỗi).</summary>
     private static string? ExtractJson(string content)
     {
         if (string.IsNullOrWhiteSpace(content)) return null;
@@ -192,6 +191,31 @@ public class AiService(
         var match = Regex.Match(s, @"```(?:json)?\s*([\s\S]*?)\s*```", RegexOptions.IgnoreCase);
         if (match.Success)
             return match.Groups[1].Value.Trim();
-        return s;
+
+        var start = s.IndexOf('{');
+        if (start < 0) return null;
+
+        var inString = false;
+        var escape = false;
+        var depth = 1;
+        for (var j = start + 1; j < s.Length; j++)
+        {
+            var c = s[j];
+            if (escape) { escape = false; continue; }
+            if (inString)
+            {
+                if (c == '\\') { escape = true; continue; }
+                if (c == '"') { inString = false; continue; }
+                continue;
+            }
+            if (c == '"') { inString = true; continue; }
+            if (c == '{') { depth++; continue; }
+            if (c == '}')
+            {
+                depth--;
+                if (depth == 0) return s.Substring(start, j - start + 1);
+            }
+        }
+        return null;
     }
 }
