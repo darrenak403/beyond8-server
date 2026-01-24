@@ -28,8 +28,10 @@ public class InstructorService(
         if (profile == null)
             return (false, "Đơn đăng ký giảng viên không tồn tại.", null, null);
 
-        if (profile.VerificationStatus != VerificationStatus.Pending)
-            return (false, "Chỉ có thể xử lý đơn đăng ký đang chờ duyệt.", null, null);
+        if (profile.VerificationStatus != VerificationStatus.Pending &&
+            profile.VerificationStatus != VerificationStatus.RequestUpdate &&
+            profile.VerificationStatus != VerificationStatus.Recovering)
+            return (false, "Chỉ có thể xử lý đơn đăng ký đang chờ duyệt, yêu cầu cập nhật hoặc đang khôi phục.", null, null);
 
         var user = await unitOfWork.UserRepository.AsQueryable()
             .Include(u => u.UserRoles)
