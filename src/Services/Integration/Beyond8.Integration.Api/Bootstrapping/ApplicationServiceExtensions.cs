@@ -66,7 +66,7 @@ public static class Bootstrapper
         {
             var options = sp.GetRequiredService<IOptions<ResendSettings>>().Value;
             if (string.IsNullOrWhiteSpace(options.ApiKey))
-                throw new InvalidOperationException("ApiKey is missing in ResendSettings");
+                throw new InvalidOperationException("ApiKey is missing in Resend Settings");
 
             return ResendClient.Create(options.ApiKey.Trim());
         });
