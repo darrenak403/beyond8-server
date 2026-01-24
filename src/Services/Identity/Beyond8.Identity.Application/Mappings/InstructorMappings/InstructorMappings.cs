@@ -170,6 +170,6 @@ public static class InstructorProfileMappings
                 ? JsonSerializer.Serialize(request.Certificates)
                 : null;
 
-        instructorProfile.VerificationStatus = VerificationStatus.RequestUpdate;
+        instructorProfile.VerificationStatus = VerificationStatus.Pending;
     }
 }
