@@ -1,0 +1,122 @@
+name: Build and Push Docker (Smart Cache)
+
+# Chạy khi git push code (branch main), pull request vào main, hoặc manual. KHÔNG chạy khi push tag.
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'src/**'
+      - 'shared/**'
+      - '.github/workflows/deploy.yml'
+      - 'docker/**'
+      - '*.sln'
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'src/**'
+      - 'shared/**'
+      - '.github/workflows/deploy.yml'
+      - 'docker/**'
+      - '*.sln'
+  workflow_dispatch:
+
+jobs:
+  push_to_registry:
+    name: Build & Push Changed Services
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changes
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            identity:
+              - 'src/Services/Identity/**'
+              - 'shared/**'       # Nếu sửa code dùng chung, build lại Identity
+            integration:
+              - 'src/Services/Integration/**'
+              - 'shared/**'       # Nếu sửa code dùng chung, build lại Integration
+            orchestration:
+              - 'src/Orchestration/**'
+            docker:
+              - 'docker/**'
+              - '**/Dockerfile'
+              - '.dockerignore'
+
+      - name: Log in to Docker Hub
+        if: steps.changes.outputs.identity == 'true' || steps.changes.outputs.integration == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Set up Docker Buildx
+        if: steps.changes.outputs.identity == 'true' || steps.changes.outputs.integration == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:latest
+            network=host
+
+      - name: Extract metadata for Identity Service
+        if: steps.changes.outputs.identity == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        id: meta-identity
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/beyond8-identity-service
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Identity Service
+        if: steps.changes.outputs.identity == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: src/Services/Identity/Beyond8.Identity.Api/Dockerfile
+          push: true
+          tags: ${{ steps.meta-identity.outputs.tags }}
+          labels: ${{ steps.meta-identity.outputs.labels }}
+          cache-from: type=gha,scope=identity
+          cache-to: type=gha,mode=max,scope=identity
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
+      - name: Extract metadata for Integration Service
+        if: steps.changes.outputs.integration == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        id: meta-integration
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/beyond8-integration-service
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Integration Service
+        if: steps.changes.outputs.integration == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: src/Services/Integration/Beyond8.Integration.Api/Dockerfile
+          push: true
+          tags: ${{ steps.meta-integration.outputs.tags }}
+          labels: ${{ steps.meta-integration.outputs.labels }}
+          cache-from: type=gha,scope=integration
+          cache-to: type=gha,mode=max,scope=integration
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1

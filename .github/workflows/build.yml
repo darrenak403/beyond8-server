@@ -1,0 +1,53 @@
+name: Build Solution
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+    paths:
+      - 'src/**'
+      - 'shared/**'
+      - '*.sln'
+      - '.github/workflows/build.yml'
+  pull_request:
+    branches: [ "main", "dev" ]
+    paths:
+      - 'src/**'
+      - 'shared/**'
+      - '*.sln'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 10.0.x
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Cache build outputs
+      uses: actions/cache@v4
+      with:
+        path: |
+          **/bin
+          **/obj
+        key: ${{ runner.os }}-build-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-build-
+
+    - name: Restore Dependencies
+      run: dotnet restore beyond8-server.sln --verbosity minimal
+
+    - name: Build Solution
+      run: dotnet build beyond8-server.sln --no-restore --configuration Release --verbosity minimal
