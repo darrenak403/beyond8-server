@@ -1,5 +1,6 @@
 using Beyond8.Common.Utilities;
 using Beyond8.Identity.Application.Dtos.Instructors;
+using Beyond8.Identity.Domain.Enums;
 
 namespace Beyond8.Identity.Application.Services.Interfaces;
 
@@ -20,7 +21,7 @@ public interface IInstructorService
     Task<ApiResponse<InstructorProfileAdminResponse>> GetInstructorProfileByIdForAdminAsync(Guid id);
 
     Task<ApiResponse<List<InstructorProfileAdminResponse>>> GetInstructorProfilesForAdminAsync(PaginationInstructorRequest pagination);
-    Task<ApiResponse<bool>> CheckApplyInstructorProfileAsync(Guid userId);
+    Task<ApiResponse<CheckApplyInstructorResponse>> CheckApplyInstructorProfileAsync(Guid userId);
     Task<ApiResponse<bool>> HiddenInstructorProfileAsync(Guid profileId, Guid userId);
     Task<ApiResponse<bool>> UnHiddenInstructorProfileAsync(Guid profileId, Guid userId);
 
