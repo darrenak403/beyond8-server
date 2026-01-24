@@ -10,4 +10,8 @@ public interface IMediaFileService
     Task<ApiResponse<MediaFileDto>> GetFileByIdAsync(Guid userId, Guid fileId);
     Task<ApiResponse<bool>> DeleteFileAsync(Guid userId, Guid fileId);
     Task<ApiResponse<List<MediaFileDto>>> GetUserFilesByFolderAsync(Guid userId, string folder);
+
+    // New methods for Course Catalog service
+    Task<ApiResponse<MediaFileInfoDto>> GetFileInfoByCloudFrontUrlAsync(string cloudFrontUrl);
+    Task<ApiResponse<DownloadUrlDto>> GetDownloadUrlAsync(string cloudFrontUrl, bool inline = false);
 }
