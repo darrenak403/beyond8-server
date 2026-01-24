@@ -31,7 +31,10 @@ public static class CommonExtensions
                         {
                             builder.WithOrigins(
                                        "https://beyond8.io.vn",
-                                       "https://api.beyond8.io.vn"
+                                       "https://api.beyond8.io.vn",
+                                       "http://api.beyond8.io.vn",
+                                       "https://api-gateway.beyond8.dev",
+                                       "http://api-gateway.beyond8.dev"
                                    )
                                    .AllowAnyMethod()
                                    .AllowAnyHeader()
