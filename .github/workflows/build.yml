@@ -2,14 +2,14 @@ name: Build Solution
 
 on:
   push:
-    branches: [ "main", "develop" ]
+    branches: [ "main", "dev" ]
     paths:
       - 'src/**'
       - 'shared/**'
       - '*.sln'
       - '.github/workflows/build.yml'
   pull_request:
-    branches: [ "main", "develop" ]
+    branches: [ "main", "dev" ]
     paths:
       - 'src/**'
       - 'shared/**'
