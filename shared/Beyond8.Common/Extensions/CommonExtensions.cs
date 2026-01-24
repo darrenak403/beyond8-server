@@ -30,7 +30,8 @@ public static class CommonExtensions
                         options.AddPolicy("AllowProductionClients", builder =>
                         {
                             builder.WithOrigins(
-                                       "https://beyond8.io.vn"
+                                       "https://beyond8.io.vn",
+                                       "https://api.beyond8.io.vn"
                                    )
                                    .AllowAnyMethod()
                                    .AllowAnyHeader()
