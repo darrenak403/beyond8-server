@@ -25,25 +25,25 @@ public class UserRepository(IdentityDbContext context) : PostgresRepository<User
             .ThenInclude(ur => ur.Role);
 
         if (!string.IsNullOrEmpty(email))
-            query = query.Where(u => u.Email.Contains(email));
+            query = query.Where(u => u.Email.ToLower().Contains(email.ToLower()));
 
         if (!string.IsNullOrEmpty(fullName))
-            query = query.Where(u => u.FullName.Contains(fullName));
+            query = query.Where(u => u.FullName.ToLower().Contains(fullName.ToLower()));
 
         if (!string.IsNullOrEmpty(phoneNumber))
             query = query.Where(u => u.PhoneNumber != null && u.PhoneNumber.Contains(phoneNumber));
 
         if (!string.IsNullOrEmpty(specialization))
-            query = query.Where(u => u.Specialization != null && u.Specialization.Contains(specialization));
+            query = query.Where(u => u.Specialization != null && u.Specialization.ToLower().Contains(specialization.ToLower()));
 
         if (!string.IsNullOrEmpty(address))
-            query = query.Where(u => u.Address != null && u.Address.Contains(address));
+            query = query.Where(u => u.Address != null && u.Address.ToLower().Contains(address.ToLower()));
 
         if (isEmailVerified != null)
             query = query.Where(u => u.IsEmailVerified == isEmailVerified.Value);
 
         if (!string.IsNullOrEmpty(role))
-            query = query.Where(u => u.UserRoles.Any(ur => ur.Role.Code == role && ur.RevokedAt == null));
+            query = query.Where(u => u.UserRoles.Any(ur => ur.Role.Code.ToLower() == role.ToLower() && ur.RevokedAt == null));
 
         query = isDescending == true
             ? query.OrderByDescending(u => u.CreatedAt)
