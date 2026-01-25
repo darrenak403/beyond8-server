@@ -1,15 +1,9 @@
-using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Beyond8.Common.Data.Base;
-using Microsoft.EntityFrameworkCore;
 
 namespace Beyond8.Catalog.Domain.Entities;
 
-[Index(nameof(Slug))]
-[Index(nameof(ParentId))]
-[Index(nameof(Path))]
-[Index(nameof(Level))]
 public class Category : BaseEntity
 {
     public Guid? ParentId { get; set; }

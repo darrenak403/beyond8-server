@@ -61,6 +61,41 @@ public class S3Service(IOptions<S3Settings> s3Settings, ILogger<S3Service> logge
         }
     }
 
+    public string GeneratePresignedDownloadUrl(
+        string fileKey,
+        string fileName,
+        string disposition,
+        int expirationMinutes = 15)
+    {
+        try
+        {
+            var request = new GetPreSignedUrlRequest
+            {
+                BucketName = _s3Settings.BucketName,
+                Key = fileKey,
+                Verb = HttpVerb.GET,
+                Expires = DateTime.UtcNow.AddMinutes(expirationMinutes),
+                ResponseHeaderOverrides = new ResponseHeaderOverrides
+                {
+                    ContentDisposition = $"{disposition}; filename=\"{fileName}\""
+                }
+            };
+
+            var presignedUrl = _s3Client.GetPreSignedURL(request);
+            _logger.LogInformation(
+                "Generated presigned download URL with disposition for key: {FileKey}",
+                fileKey);
+            return presignedUrl;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Error generating presigned download URL for key: {FileKey}",
+                fileKey);
+            throw;
+        }
+    }
+
     public async Task<bool> FileExistsAsync(string fileKey)
     {
         try

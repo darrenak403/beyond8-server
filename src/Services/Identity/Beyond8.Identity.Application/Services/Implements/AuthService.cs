@@ -35,7 +35,7 @@ public class AuthService(
                 .FirstOrDefaultAsync(x => x.Email == normalizedEmail);
             var validation = ValidateUserByEmail(user, request.Email);
             if (!validation.IsValid)
-                return ApiResponse<TokenResponse>.FailureResponse(validation.ErrorMessage!);
+                return ApiResponse<TokenResponse>.FailureResponse(validation.ErrorMessage!, validation.Metadata);
             var u = validation.ValidUser!;
 
             var verifyPasswordResult = passwordHasher.VerifyHashedPassword(u, u.PasswordHash, request.Password);
@@ -456,7 +456,7 @@ public class AuthService(
     /// <summary>
     /// Validates user by Email. Returns (IsValid, ErrorMessage, ValidUser). Use for Login, ForgotPassword, ResendOtp, ResetPassword.
     /// </summary>
-    private (bool IsValid, string? ErrorMessage, User? ValidUser) ValidateUserByEmail(
+    private (bool IsValid, string? ErrorMessage, User? ValidUser, object? Metadata) ValidateUserByEmail(
         User? user,
         string email,
         bool requireActive = true,
@@ -465,19 +465,19 @@ public class AuthService(
         if (user == null)
         {
             logger.LogError("User with email {Email} not found", email);
-            return (false, "Người dùng không tồn tại.", null);
+            return (false, "Người dùng không tồn tại.", null, null);
         }
         if (requireEmailVerified && !user.IsEmailVerified)
         {
             logger.LogError("User with email {Email} is not verified", email);
-            return (false, "Tài khoản của bạn chưa được xác thực, vui lòng kiểm tra email để xác thực.", null);
+            return (false, "Tài khoản của bạn chưa được xác thực, vui lòng kiểm tra email để xác thực.", null, new { email_verified = user.IsEmailVerified });
         }
         if (requireActive && user.Status != UserStatus.Active)
         {
             logger.LogError("User with email {Email} has status {Status}", email, user.Status);
-            return (false, "Tài khoản của bạn không hoạt động, vui lòng liên hệ quản trị viên.", null);
+            return (false, "Tài khoản của bạn không hoạt động, vui lòng liên hệ quản trị viên.", null, null);
         }
-        return (true, null, user);
+        return (true, null, user, null);
     }
 
     /// <summary>
