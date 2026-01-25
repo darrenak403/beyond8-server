@@ -79,6 +79,7 @@ public static class CommonExtensions
 
     public static WebApplication UseCommonService(this WebApplication app)
     {
+
         // CORS must be called before other middleware
         if (app.Environment.IsDevelopment())
         {
