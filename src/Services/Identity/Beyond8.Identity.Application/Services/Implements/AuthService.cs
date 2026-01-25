@@ -28,10 +28,11 @@ public class AuthService(
     {
         try
         {
+            var normalizedEmail = request.Email.ToLower().Trim();
             var user = await unitOfWork.UserRepository.AsQueryable()
                 .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
-                .FirstOrDefaultAsync(x => x.Email == request.Email);
+                .FirstOrDefaultAsync(x => x.Email == normalizedEmail);
             var validation = ValidateUserByEmail(user, request.Email);
             if (!validation.IsValid)
                 return ApiResponse<TokenResponse>.FailureResponse(validation.ErrorMessage!, validation.Metadata);
@@ -71,7 +72,8 @@ public class AuthService(
     {
         try
         {
-            var existingUser = await unitOfWork.UserRepository.FindOneAsync(x => x.Email == request.Email);
+            var normalizedEmail = request.Email.ToLower().Trim();
+            var existingUser = await unitOfWork.UserRepository.FindOneAsync(x => x.Email == normalizedEmail);
             if (existingUser is not null)
             {
                 logger.LogError("User with email {Email} already exists", request.Email);
@@ -79,8 +81,8 @@ public class AuthService(
             }
 
             var otpCode = GetOtpCode();
-            logger.LogInformation("Sending OTP code to email: {Email} with OTP: {OtpCode}", request.Email, otpCode);
-            await cacheService.SetAsync($"otp_register:{request.Email}", otpCode, TimeSpan.FromMinutes(5));
+            logger.LogInformation("Sending OTP code to email: {Email} with OTP: {OtpCode}", normalizedEmail, otpCode);
+            await cacheService.SetAsync($"otp_register:{normalizedEmail}", otpCode, TimeSpan.FromMinutes(5));
 
             var newUser = request.ToEntity(passwordHasher);
 
@@ -104,7 +106,7 @@ public class AuthService(
 
             var otpEvent = new OtpEmailEvent(
                 newUser.Id,
-                request.Email,
+                normalizedEmail,
                 newUser.FullName,
                 otpCode,
                 "Đăng ký tài khoản",
@@ -112,7 +114,7 @@ public class AuthService(
             );
             await publishEndpoint.Publish(otpEvent);
 
-            logger.LogInformation("User registered successfully: {Email}", request.Email);
+            logger.LogInformation("User registered successfully: {Email}", normalizedEmail);
             return ApiResponse<UserSimpleResponse>.SuccessResponse(
                 newUser.ToUserSimpleResponse(),
                 "Đăng ký người dùng thành công, vui lòng kiểm tra email để xác thực OTP");
