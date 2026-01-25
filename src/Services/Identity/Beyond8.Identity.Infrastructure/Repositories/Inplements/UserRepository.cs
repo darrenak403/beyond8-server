@@ -25,25 +25,25 @@ public class UserRepository(IdentityDbContext context) : PostgresRepository<User
             .ThenInclude(ur => ur.Role);
 
         if (!string.IsNullOrEmpty(email))
-            query = query.Where(u => EF.Functions.ILike(u.Email, $"%{email}%"));
+            query = query.Where(u => u.Email.ToLower().Contains(email.ToLower()));
 
         if (!string.IsNullOrEmpty(fullName))
-            query = query.Where(u => EF.Functions.ILike(u.FullName, $"%{fullName}%"));
+            query = query.Where(u => u.FullName.ToLower().Contains(fullName.ToLower()));
 
         if (!string.IsNullOrEmpty(phoneNumber))
             query = query.Where(u => u.PhoneNumber != null && u.PhoneNumber.Contains(phoneNumber));
 
         if (!string.IsNullOrEmpty(specialization))
-            query = query.Where(u => u.Specialization != null && EF.Functions.ILike(u.Specialization, $"%{specialization}%"));
+            query = query.Where(u => u.Specialization != null && u.Specialization.ToLower().Contains(specialization.ToLower()));
 
         if (!string.IsNullOrEmpty(address))
-            query = query.Where(u => u.Address != null && EF.Functions.ILike(u.Address, $"%{address}%"));
+            query = query.Where(u => u.Address != null && u.Address.ToLower().Contains(address.ToLower()));
 
         if (isEmailVerified != null)
             query = query.Where(u => u.IsEmailVerified == isEmailVerified.Value);
 
         if (!string.IsNullOrEmpty(role))
-            query = query.Where(u => u.UserRoles.Any(ur => EF.Functions.ILike(ur.Role.Code, $"%{role}%") && ur.RevokedAt == null));
+            query = query.Where(u => u.UserRoles.Any(ur => ur.Role.Code.ToLower() == role.ToLower() && ur.RevokedAt == null));
 
         query = isDescending == true
             ? query.OrderByDescending(u => u.CreatedAt)
