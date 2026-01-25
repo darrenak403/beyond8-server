@@ -32,14 +32,8 @@ public static class CommonExtensions
                             builder.WithOrigins(
                                        "https://beyond8.io.vn",
                                        "https://www.beyond8.io.vn",
-                                       "http://beyond8.io.vn",
-                                       "http://www.beyond8.io.vn",
                                        "https://app.beyond8.io.vn",
-                                       "https://admin.beyond8.io.vn",
-                                       "https://api.beyond8.io.vn",
-                                       "http://api.beyond8.io.vn",
-                                       "https://api-gateway.beyond8.dev",
-                                       "http://api-gateway.beyond8.dev"
+                                       "https://admin.beyond8.io.vn"
                                    )
                                    .AllowAnyMethod()
                                    .AllowAnyHeader()
@@ -85,6 +79,7 @@ public static class CommonExtensions
 
     public static WebApplication UseCommonService(this WebApplication app)
     {
+        // CORS must be called before other middleware
         if (app.Environment.IsDevelopment())
         {
             app.UseCors("AllowDevelopmentClients");
@@ -93,9 +88,15 @@ public static class CommonExtensions
         {
             app.UseCors("AllowProductionClients");
         }
+
+        // Exception handling after CORS
         app.UseMiddleware<GlobalExceptionsMiddleware>();
+
+        // Authentication and Authorization
         app.UseAuthentication();
         app.UseAuthorization();
+
+        // Rate limiting last
         app.UseRateLimiter();
 
         return app;
