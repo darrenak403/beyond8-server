@@ -92,6 +92,21 @@ public static class MediaFileApis
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
+        // New endpoints for Course Catalog service
+        group.MapGet("/file-info", GetFileInfoByCloudFrontUrlAsync)
+            .WithName("GetFileInfoByCloudFrontUrl")
+            .WithDescription("Lấy thông tin file từ CloudFront URL")
+            .Produces<ApiResponse<MediaFileInfoDto>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<MediaFileInfoDto>>(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status401Unauthorized);
+
+        group.MapGet("/download", GetDownloadUrlAsync)
+            .WithName("GetDownloadUrl")
+            .WithDescription("Tạo presigned URL để download file")
+            .Produces<ApiResponse<DownloadUrlDto>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<DownloadUrlDto>>(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status401Unauthorized);
+
         return group;
     }
 
@@ -239,5 +254,36 @@ public static class MediaFileApis
             fileId);
 
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> GetFileInfoByCloudFrontUrlAsync(
+        [FromQuery] string cloudFrontUrl,
+        [FromServices] IMediaFileService mediaFileService)
+    {
+        if (string.IsNullOrWhiteSpace(cloudFrontUrl))
+        {
+            return Results.BadRequest(ApiResponse<MediaFileInfoDto>.FailureResponse(
+                "CloudFront URL là bắt buộc"));
+        }
+
+        var result = await mediaFileService.GetFileInfoByCloudFrontUrlAsync(cloudFrontUrl);
+
+        return result.IsSuccess ? Results.Ok(result) : Results.NotFound(result);
+    }
+
+    private static async Task<IResult> GetDownloadUrlAsync(
+        [FromQuery] string cloudFrontUrl,
+        [FromQuery] bool inline,
+        [FromServices] IMediaFileService mediaFileService)
+    {
+        if (string.IsNullOrWhiteSpace(cloudFrontUrl))
+        {
+            return Results.BadRequest(ApiResponse<DownloadUrlDto>.FailureResponse(
+                "CloudFront URL là bắt buộc"));
+        }
+
+        var result = await mediaFileService.GetDownloadUrlAsync(cloudFrontUrl, inline);
+
+        return result.IsSuccess ? Results.Ok(result) : Results.NotFound(result);
     }
 }

@@ -31,6 +31,11 @@ public static class CommonExtensions
                         {
                             builder.WithOrigins(
                                        "https://beyond8.io.vn",
+                                       "https://www.beyond8.io.vn",
+                                       "http://beyond8.io.vn",
+                                       "http://www.beyond8.io.vn",
+                                       "https://app.beyond8.io.vn",
+                                       "https://admin.beyond8.io.vn",
                                        "https://api.beyond8.io.vn",
                                        "http://api.beyond8.io.vn",
                                        "https://api-gateway.beyond8.dev",

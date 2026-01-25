@@ -181,6 +181,94 @@ public class MediaFileService(
         }
     }
 
+    public async Task<ApiResponse<MediaFileInfoDto>> GetFileInfoByCloudFrontUrlAsync(string cloudFrontUrl)
+    {
+        try
+        {
+            var s3Key = _storageService.ExtractKeyFromUrl(cloudFrontUrl);
+            var mediaFile = await _unitOfWork.MediaFileRepository.FindOneAsync(
+                f => f.FilePath == s3Key && f.Status == FileStatus.Uploaded);
+
+            if (mediaFile == null)
+            {
+                return ApiResponse<MediaFileInfoDto>.FailureResponse(
+                    "File không tồn tại với CloudFront URL được cung cấp");
+            }
+
+            var dto = new MediaFileInfoDto
+            {
+                FileId = mediaFile.Id,
+                UserId = mediaFile.UserId,
+                FileName = mediaFile.OriginalFileName,
+                FileExtension = mediaFile.Extension?.TrimStart('.') ?? string.Empty,
+                ContentType = mediaFile.ContentType,
+                Size = mediaFile.Size,
+                SizeFormatted = FormatFileSize(mediaFile.Size),
+                Folder = ExtractFolder(mediaFile.FilePath),
+                SubFolder = ExtractSubFolder(mediaFile.FilePath),
+                S3Key = mediaFile.FilePath,
+                CloudFrontUrl = _storageService.GetFilePath(mediaFile.FilePath),
+                Status = mediaFile.Status.ToString(),
+                UploadedAt = mediaFile.UpdatedAt,
+                CreatedAt = mediaFile.CreatedAt
+            };
+
+            return ApiResponse<MediaFileInfoDto>.SuccessResponse(
+                dto,
+                "Lấy thông tin file thành công");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting file info by CloudFront URL: {Url}", cloudFrontUrl);
+            return ApiResponse<MediaFileInfoDto>.FailureResponse(
+                "Không thể lấy thông tin file");
+        }
+    }
+
+    public async Task<ApiResponse<DownloadUrlDto>> GetDownloadUrlAsync(
+        string cloudFrontUrl,
+        bool inline = false)
+    {
+        try
+        {
+            var s3Key = _storageService.ExtractKeyFromUrl(cloudFrontUrl);
+            var mediaFile = await _unitOfWork.MediaFileRepository.FindOneAsync(
+                f => f.FilePath == s3Key && f.Status == FileStatus.Uploaded);
+
+            if (mediaFile == null)
+            {
+                return ApiResponse<DownloadUrlDto>.FailureResponse("File không tồn tại");
+            }
+
+            var disposition = inline ? "inline" : "attachment";
+            var presignedUrl = _storageService.GeneratePresignedDownloadUrl(
+                mediaFile.FilePath,
+                mediaFile.OriginalFileName,
+                disposition,
+                expirationMinutes: 15);
+
+            var expiresAt = DateTime.UtcNow.AddMinutes(15);
+
+            var dto = new DownloadUrlDto
+            {
+                DownloadUrl = presignedUrl,
+                FileName = mediaFile.OriginalFileName,
+                ExpiresAt = expiresAt,
+                ExpiresIn = "15 minutes"
+            };
+
+            return ApiResponse<DownloadUrlDto>.SuccessResponse(
+                dto,
+                "Tạo URL download thành công");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating download URL for: {Url}", cloudFrontUrl);
+            return ApiResponse<DownloadUrlDto>.FailureResponse(
+                "Không thể tạo URL download");
+        }
+    }
+
     private MediaFileDto MapToDto(MediaFile mediaFile)
     {
         return new MediaFileDto
@@ -198,5 +286,30 @@ public class MediaFileService(
             Metadata = mediaFile.Metadata,
             CreatedAt = mediaFile.CreatedAt
         };
+    }
+
+    private static string FormatFileSize(long bytes)
+    {
+        string[] sizes = ["B", "KB", "MB", "GB", "TB"];
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len /= 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+
+    private static string ExtractFolder(string filePath)
+    {
+        var parts = filePath.Split('/');
+        return parts.Length > 0 ? parts[0] : string.Empty;
+    }
+
+    private static string? ExtractSubFolder(string filePath)
+    {
+        var parts = filePath.Split('/');
+        return parts.Length > 2 ? parts[2] : null;
     }
 }
