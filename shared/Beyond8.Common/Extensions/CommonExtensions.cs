@@ -27,22 +27,19 @@ public static class CommonExtensions
                                    .AllowCredentials();
                         });
 
-                        options.AddPolicy("SignalRPolicy", builder =>
+                        options.AddPolicy("AllowProductionClients", builder =>
                         {
                             builder.WithOrigins(
-                                       "http://localhost:3000",
-                                       "http://localhost:5173",
-                                       "http://api-gateway.beyond8.dev",
+                                       "https://beyond8.io.vn",
+                                       "https://api.beyond8.io.vn",
+                                       "http://api.beyond8.io.vn",
                                        "https://api-gateway.beyond8.dev",
-                                       "http://api-gateway-beyond8.dev.localhost:8080"
+                                       "http://api-gateway.beyond8.dev"
                                    )
                                    .AllowAnyMethod()
                                    .AllowAnyHeader()
                                    .AllowCredentials();
                         });
-
-                        // Use same policy for both API and SignalR to avoid CORS issues
-                        options.DefaultPolicyName = "AllowDevelopmentClients";
                     });
 
         builder.Services.AddRateLimiter(options =>
@@ -83,7 +80,14 @@ public static class CommonExtensions
 
     public static WebApplication UseCommonService(this WebApplication app)
     {
-        app.UseCors("AllowDevelopmentClients");
+        if (app.Environment.IsDevelopment())
+        {
+            app.UseCors("AllowDevelopmentClients");
+        }
+        else
+        {
+            app.UseCors("AllowProductionClients");
+        }
         app.UseMiddleware<GlobalExceptionsMiddleware>();
         app.UseAuthentication();
         app.UseAuthorization();

@@ -48,7 +48,7 @@ public static class UserMappings
     {
         var user = new User
         {
-            Email = request.Email,
+            Email = request.Email.ToLower().Trim(),
             FullName = request.FullName,
             DateOfBirth = request.DateOfBirth.HasValue
                 ? DateTime.SpecifyKind(request.DateOfBirth.Value.Date, DateTimeKind.Utc)

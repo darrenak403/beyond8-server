@@ -161,7 +161,7 @@ public static class Bootstrapper
         app.UseHttpsRedirection();
 
         app.MapHub<AppHub>("/hubs/app")
-            .RequireCors("SignalRPolicy");
+            .RequireCors("AllowDevelopmentClients");
 
         app.MapMediaFileApi();
         app.MapAiApi();
