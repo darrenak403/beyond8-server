@@ -44,7 +44,7 @@ public static class DocumentExtensions
 
                 if (requiresAuth && !allowAnonymous)
                 {
-                    operation.Security ??= new List<OpenApiSecurityRequirement>();
+                    operation.Security ??= [];
                     operation.Security.Add(new OpenApiSecurityRequirement
                     {
                         { new OpenApiSecuritySchemeReference("Bearer"), new List<string>() }

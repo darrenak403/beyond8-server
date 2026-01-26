@@ -14,5 +14,5 @@ public class ClassifyErrorResponse
     public string StatusCode { get; set; } = string.Empty;
 
     [JsonPropertyName("errors")]
-    public List<string> Errors { get; set; } = new List<string>();
+    public List<string> Errors { get; set; } = [];
 }

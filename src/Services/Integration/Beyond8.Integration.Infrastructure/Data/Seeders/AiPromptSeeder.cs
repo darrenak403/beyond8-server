@@ -32,48 +32,48 @@ public static class AiPromptSeeder
   {
     // TODO: Add course content prompts
     // Examples: Generate lesson outlines, explain concepts, create examples
-    return new List<AiPrompt>();
+    return [];
   }
 
   private static List<AiPrompt> GetAssessmentPrompts()
   {
     // TODO: Add assessment prompts
     // Examples: Generate quiz questions, create rubrics, design assignments
-    return new List<AiPrompt>();
+    return [];
   }
 
   private static List<AiPrompt> GetFeedbackPrompts()
   {
     // TODO: Add feedback prompts
     // Examples: Provide constructive feedback, grade with rubric, suggest improvements
-    return new List<AiPrompt>();
+    return [];
   }
 
   private static List<AiPrompt> GetContentAnalysisPrompts()
   {
     // TODO: Add content analysis prompts
     // Examples: Summarize content, extract key concepts, analyze difficulty
-    return new List<AiPrompt>();
+    return [];
   }
 
   private static List<AiPrompt> GetTranslationPrompts()
   {
     // TODO: Add translation prompts
     // Examples: Translate educational content, localize terminology
-    return new List<AiPrompt>();
+    return [];
   }
 
   private static List<AiPrompt> GetPersonalizationPrompts()
   {
     // TODO: Add personalization prompts
     // Examples: Adapt content to learning style, suggest learning path
-    return new List<AiPrompt>();
+    return [];
   }
 
   private static List<AiPrompt> GetModerationPrompts()
   {
-    return new List<AiPrompt>
-        {
+    return
+        [
             new AiPrompt
             {
                 Name = "Instructor Application Review",
@@ -187,6 +187,6 @@ OUTPUT FORMAT (JSON Schema):
                 TopP = 1.0m,
                 Tags = "moderation,instructor,application-review"
             }
-        };
+        ];
   }
 }

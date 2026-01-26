@@ -95,7 +95,7 @@ public static class AiPromptMappings
             Temperature = entity.Temperature,
             TopP = entity.TopP,
             Tags = !string.IsNullOrEmpty(entity.Tags)
-                ? entity.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList()
+                ? [.. entity.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)]
                 : null,
             CreatedBy = entity.CreatedBy,
             UpdatedBy = entity.UpdatedBy,

@@ -8,7 +8,7 @@ public class InstructorNotificationResponse
 
 public class NotificationSection
 {
-    public List<NotificationResponse> Items { get; set; } = new();
+    public List<NotificationResponse> Items { get; set; } = [];
     public int TotalCount { get; set; }
     public int PageNumber { get; set; }
     public int PageSize { get; set; }

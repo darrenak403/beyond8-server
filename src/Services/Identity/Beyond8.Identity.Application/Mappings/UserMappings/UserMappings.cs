@@ -12,10 +12,9 @@ public static class UserMappings
         {
             Id = user.Id,
             Email = user.Email,
-            Roles = user.UserRoles
+            Roles = [.. user.UserRoles
                 .Where(ur => ur.RevokedAt == null)
-                .Select(ur => ur.Role.Code)
-                .ToList(),
+                .Select(ur => ur.Role.Code)],
             FullName = user.FullName,
             DateOfBirth = user.DateOfBirth,
             AvatarUrl = user.AvatarUrl,
@@ -61,7 +60,7 @@ public static class UserMappings
             Bio = request.Bio,
             Timezone = request.Timezone,
             Locale = request.Locale,
-            UserRoles = new List<UserRole>(),
+            UserRoles = [],
             Status = UserStatus.Active,
             IsEmailVerified = true
         };

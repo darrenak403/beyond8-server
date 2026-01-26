@@ -10,10 +10,7 @@ public class Course : BaseEntity
 {
     public Guid InstructorId { get; set; }
 
-    public InstructorVerificationStatus InstructorStatus { get; set; }
-        = InstructorVerificationStatus.Verified;
-
-    public DateTime? InstructorStatusUpdatedAt { get; set; }
+    public InstructorVerificationStatus InstructorStatus { get; set; } = InstructorVerificationStatus.Verified;
 
     // Category
     public Guid CategoryId { get; set; }

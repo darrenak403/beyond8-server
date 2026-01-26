@@ -34,9 +34,9 @@ public class CategoryService(ILogger<CategoryService> logger, IUnitOfWork unitOf
                     return ApiResponse<CategorySimpleResponse>.FailureResponse("Danh mục cha không tồn tại.");
                 }
 
-                if (parentCategory.Level >= 2)
+                if (parentCategory.Level >= 1)
                 {
-                    return ApiResponse<CategorySimpleResponse>.FailureResponse("Hệ thống chỉ hỗ trợ tối đa 3 cấp danh mục (Level 0-2).");
+                    return ApiResponse<CategorySimpleResponse>.FailureResponse("Hệ thống chỉ hỗ trợ tối đa 2 cấp danh mục cấp 1 và cấp 2.");
                 }
             }
 
@@ -62,14 +62,14 @@ public class CategoryService(ILogger<CategoryService> logger, IUnitOfWork unitOf
                         .OrderBy(x => x.Level)
                         .ToListAsync();
 
-            if (!allEntities.Any())
-                return ApiResponse<List<CategoryTreeDto>>.SuccessResponse(new List<CategoryTreeDto>(), "Không có danh mục nào.");
+            if (allEntities.Count == 0)
+                return ApiResponse<List<CategoryTreeDto>>.SuccessResponse([], "Không có danh mục nào.");
 
             var lookup = allEntities.ToLookup(x => x.ParentId);
 
             foreach (var cat in allEntities)
             {
-                cat.SubCategories = lookup[cat.Id].ToList();
+                cat.SubCategories = [.. lookup[cat.Id]];
             }
 
             var rootNodes = allEntities
