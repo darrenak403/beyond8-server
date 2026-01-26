@@ -212,8 +212,10 @@ public class S3Service(IOptions<S3Settings> s3Settings, ILogger<S3Service> logge
     public string BuildFileKey(string folder, Guid userId, string fileName, string? subFolder = null)
     {
         var sanitizedFileName = SanitizeFileName(fileName);
-        var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
-        var uniqueFileName = $"{timestamp}_{sanitizedFileName}";
+
+        var uniqueId = Guid.NewGuid().ToString("N");
+
+        var uniqueFileName = $"{uniqueId}_{sanitizedFileName}";
 
         if (!string.IsNullOrWhiteSpace(subFolder))
         {
@@ -222,6 +224,7 @@ public class S3Service(IOptions<S3Settings> s3Settings, ILogger<S3Service> logge
 
         return $"{folder}/{userId}/{uniqueFileName}";
     }
+
 
     private static string SanitizeFileName(string fileName)
     {
