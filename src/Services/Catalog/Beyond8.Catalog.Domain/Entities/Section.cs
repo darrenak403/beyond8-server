@@ -17,7 +17,7 @@ public class Section : BaseEntity
     [MaxLength(1000)]
     public string? Description { get; set; }
 
-    public int OrderIndex { get; set; }  // 1-based
+    public int OrderIndex { get; set; }
 
     public bool IsPublished { get; set; } = true;
 

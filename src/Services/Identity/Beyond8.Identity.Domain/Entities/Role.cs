@@ -13,5 +13,5 @@ public class Role : BaseEntity
     public string Name { get; set; } = null!; // Student, Instructor, Staff, Admin
     [MaxLength(1000)]
     public string? Description { get; set; }
-    public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
+    public virtual ICollection<UserRole> UserRoles { get; set; } = [];
 }

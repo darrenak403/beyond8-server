@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Beyond8.Catalog.Domain.Entities;
+using Beyond8.Catalog.Domain.Enums; // Đảm bảo namespace này tồn tại chứa Enum CategoryType
 using Microsoft.EntityFrameworkCore;
 
 namespace Beyond8.Catalog.Infrastructure.Data.Seeders;
@@ -8,6 +11,7 @@ public static class CatalogSeedData
 {
     public static async Task SeedCategoriesAsync(CatalogDbContext context)
     {
+        // Kiểm tra xem đã có dữ liệu chưa
         if (await context.Categories.AnyAsync())
         {
             return;
@@ -16,7 +20,7 @@ public static class CatalogSeedData
         var categories = new List<Category>();
 
         // --- 1. LẬP TRÌNH ---
-        var devRoot = CreateCategory("Lập trình", "lap-trinh", "Các khóa học về tư duy và kỹ thuật phần mềm.");
+        var devRoot = CreateCategory("Lập trình", "lap-trinh", "Các khóa học về tư duy và kỹ thuật phần mềm.", CategoryType.Technology);
         categories.Add(devRoot);
         categories.AddRange(CreateSubCategories(devRoot, new[]
         {
@@ -25,7 +29,7 @@ public static class CatalogSeedData
         }));
 
         // --- 2. THIẾT KẾ ---
-        var designRoot = CreateCategory("Thiết kế", "thiet-ke", "Tư duy thẩm mỹ và công cụ sáng tạo.");
+        var designRoot = CreateCategory("Thiết kế", "thiet-ke", "Tư duy thẩm mỹ và công cụ sáng tạo.", CategoryType.Design);
         categories.Add(designRoot);
         categories.AddRange(CreateSubCategories(designRoot, new[]
         {
@@ -34,7 +38,7 @@ public static class CatalogSeedData
         }));
 
         // --- 3. NGÔN NGỮ ---
-        var langRoot = CreateCategory("Ngôn ngữ", "ngon-ngu", "Đào tạo ngoại ngữ các cấp độ.");
+        var langRoot = CreateCategory("Ngôn ngữ", "ngon-ngu", "Đào tạo ngoại ngữ các cấp độ.", CategoryType.Language);
         categories.Add(langRoot);
         categories.AddRange(CreateSubCategories(langRoot, new[]
         {
@@ -43,7 +47,7 @@ public static class CatalogSeedData
         }));
 
         // --- 4. KINH DOANH ---
-        var bizRoot = CreateCategory("Kinh doanh", "kinh-doanh", "Kiến thức quản trị và khởi nghiệp.");
+        var bizRoot = CreateCategory("Kinh doanh", "kinh-doanh", "Kiến thức quản trị và khởi nghiệp.", CategoryType.Business);
         categories.Add(bizRoot);
         categories.AddRange(CreateSubCategories(bizRoot, new[]
         {
@@ -52,7 +56,7 @@ public static class CatalogSeedData
         }));
 
         // --- 5. MARKETING ---
-        var mktRoot = CreateCategory("Marketing", "marketing", "Tiếp thị số và thương hiệu.");
+        var mktRoot = CreateCategory("Marketing", "marketing", "Tiếp thị số và thương hiệu.", CategoryType.Marketing);
         categories.Add(mktRoot);
         categories.AddRange(CreateSubCategories(mktRoot, new[]
         {
@@ -64,8 +68,11 @@ public static class CatalogSeedData
         await context.SaveChangesAsync();
     }
 
-
-    private static Category CreateCategory(string name, string slug, string description)
+    private static Category CreateCategory(
+        string name,
+        string slug,
+        string description,
+        CategoryType type = CategoryType.Other)
     {
         var id = Guid.NewGuid();
         return new Category
@@ -79,10 +86,14 @@ public static class CatalogSeedData
             Path = id.ToString(),
             IsActive = true,
             TotalCourses = 0,
+            IsRoot = true,
+            Type = type
         };
     }
 
-    private static IEnumerable<Category> CreateSubCategories(Category parent, (string Name, string Slug, string Desc)[] subs)
+    private static IEnumerable<Category> CreateSubCategories(
+        Category parent,
+        (string Name, string Slug, string Desc)[] subs)
     {
         var list = new List<Category>();
         foreach (var sub in subs)
@@ -99,6 +110,8 @@ public static class CatalogSeedData
                 Path = $"{parent.Path}/{id}",
                 IsActive = true,
                 TotalCourses = 0,
+                IsRoot = false,
+                Type = parent.Type
             });
         }
         return list;
