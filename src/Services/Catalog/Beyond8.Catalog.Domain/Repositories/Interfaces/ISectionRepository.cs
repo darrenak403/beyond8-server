@@ -1,4 +1,3 @@
-using System;
 using Beyond8.Common.Data.Interfaces;
 using Beyond8.Catalog.Domain.Entities;
 

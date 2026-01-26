@@ -29,6 +29,11 @@ public static class ExternalServiceRegistrationExtensions
             .WithManagementPlugin()
             .WithDataVolume();
 
+        var qdrant = builder.AddQdrant("qdrant")
+            .WithContainerName("Qdrant")
+            .WithImageTag("dev")
+            .WithDataVolume();
+
         var identityDb = postgres.AddDatabase("identity-db", "Identities");
         var integrationDb = postgres.AddDatabase("integration-db", "Integrations");
         var catalogDb = postgres.AddDatabase("catalog-db", "Catalogs");
@@ -45,9 +50,11 @@ public static class ExternalServiceRegistrationExtensions
             .WithReference(integrationDb)
             .WithReference(redis)
             .WithReference(rabbitMq)
+            .WithReference(qdrant)
             .WaitFor(postgres)
             .WaitFor(redis)
-            .WaitFor(rabbitMq);
+            .WaitFor(rabbitMq)
+            .WaitFor(qdrant);
 
         var catalogService = builder.AddProject<Projects.Beyond8_Catalog_Api>("Catalog-Service")
             .WithReference(catalogDb)

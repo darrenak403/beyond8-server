@@ -82,12 +82,12 @@ namespace Beyond8.Integration.Infrastructure.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_AiPrompts_Category_IsActive",
                 table: "AiPrompts",
-                columns: new[] { "Category", "IsActive" });
+                columns: ["Category", "IsActive"]);
 
             migrationBuilder.CreateIndex(
                 name: "IX_AiPrompts_Name_Version",
                 table: "AiPrompts",
-                columns: new[] { "Name", "Version" });
+                columns: ["Name", "Version"]);
 
             migrationBuilder.CreateIndex(
                 name: "IX_AiUsages_PromptId",
@@ -97,12 +97,12 @@ namespace Beyond8.Integration.Infrastructure.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_AiUsages_Provider_CreatedAt",
                 table: "AiUsages",
-                columns: new[] { "Provider", "CreatedAt" });
+                columns: ["Provider", "CreatedAt"]);
 
             migrationBuilder.CreateIndex(
                 name: "IX_AiUsages_UserId_CreatedAt",
                 table: "AiUsages",
-                columns: new[] { "UserId", "CreatedAt" });
+                columns: ["UserId", "CreatedAt"]);
         }
 
         /// <inheritdoc />

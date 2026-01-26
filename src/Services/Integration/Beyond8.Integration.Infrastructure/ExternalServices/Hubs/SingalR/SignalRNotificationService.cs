@@ -1,3 +1,4 @@
+using Beyond8.Integration.Application.Dtos.Notifications;
 using Beyond8.Integration.Application.Services.Interfaces;
 using Beyond8.Integration.Infrastructure.Hubs;
 using Microsoft.AspNetCore.SignalR;
@@ -13,17 +14,17 @@ public class SignalRNotificationService : INotificationService
 
     private readonly IHubContext<AppHub> _hubContext;
 
-    public Task SendToUserAsync(string userId, string method, object data)
+    public Task SendToUserAsync(string userId, string method, DataInfor data)
     {
         return _hubContext.Clients.User(userId).SendAsync(method, data);
     }
 
-    public Task SendToAllUserAsync(string method, object data)
+    public Task SendToAllUserAsync(string method, DataInfor data)
     {
         return _hubContext.Clients.All.SendAsync(method, data);
     }
 
-    public Task SendToGroupAsync(string groupName, string method, object data)
+    public Task SendToGroupAsync(string groupName, string method, DataInfor data)
     {
         return _hubContext.Clients.Group(groupName).SendAsync(method, data);
     }

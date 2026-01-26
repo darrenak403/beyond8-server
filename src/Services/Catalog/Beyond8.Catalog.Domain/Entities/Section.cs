@@ -1,4 +1,3 @@
-using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Beyond8.Common.Data.Base;
@@ -24,6 +23,9 @@ public class Section : BaseEntity
     // Statistics (denormalized)
     public int TotalLessons { get; set; } = 0;
     public int TotalDurationMinutes { get; set; } = 0;
+
+    // Section Assignment
+    public Guid? AssignmentId { get; set; }
 
     // Relationships
     public virtual ICollection<Lesson> Lessons { get; set; } = [];

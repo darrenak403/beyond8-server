@@ -1,5 +1,3 @@
-using System;
-
 namespace Beyond8.Catalog.Application.Dtos.Categories;
 
 public class UpdateCategoryRequest

@@ -7,12 +7,12 @@ namespace Beyond8.Identity.Application.Validators.User;
 public class UpdateUserForAdminRequestValidator : AbstractValidator<UpdateUserForAdminRequest>
 {
     private static readonly string[] ValidRoleCodes =
-    {
+    [
         Role.Student,
         Role.Instructor,
         Role.Staff,
         Role.Admin
-    };
+    ];
 
     public UpdateUserForAdminRequestValidator()
     {
