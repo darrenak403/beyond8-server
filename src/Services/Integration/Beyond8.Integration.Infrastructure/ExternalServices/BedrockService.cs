@@ -67,14 +67,14 @@ public class BedrockService(
             var request = new ConverseRequest
             {
                 ModelId = selectedModel,
-                Messages = new List<Message>
-                {
+                Messages =
+                [
                     new()
                     {
                         Role = ConversationRole.User,
                         Content = contentBlocks
                     }
-                },
+                ],
                 InferenceConfig = new InferenceConfiguration
                 {
                     MaxTokens = maxTokens ?? _config.DefaultParameters.MaxTokens,

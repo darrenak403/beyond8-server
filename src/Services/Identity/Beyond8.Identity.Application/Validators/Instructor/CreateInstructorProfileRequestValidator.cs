@@ -54,7 +54,7 @@ public class CreateInstructorProfileRequestValidator : AbstractValidator<CreateI
             });
 
         // WorkExperience validation (optional)
-        When(x => x.WorkExperience != null && x.WorkExperience.Any(), () =>
+        When(x => x.WorkExperience != null && x.WorkExperience.Count != 0, () =>
         {
             RuleFor(x => x.WorkExperience)
                 .ForEach(work =>
@@ -162,7 +162,7 @@ public class CreateInstructorProfileRequestValidator : AbstractValidator<CreateI
             });
 
         // Certificates validation (optional)
-        When(x => x.Certificates != null && x.Certificates.Any(), () =>
+        When(x => x.Certificates != null && x.Certificates.Count != 0, () =>
         {
             RuleFor(x => x.Certificates)
                 .ForEach(certificate =>

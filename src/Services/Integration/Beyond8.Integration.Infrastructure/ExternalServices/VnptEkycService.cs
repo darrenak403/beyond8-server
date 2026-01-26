@@ -211,7 +211,7 @@ public class VnptEkycService(ILogger<VnptEkycService> logger, IHttpClientFactory
                     var errorMsg = errorResult?.Errors?.FirstOrDefault() ?? errorResult?.Message ?? "Unknown Error";
 
                     _logger.LogError("VNPT eKYC failed. Code: {Code}, Msg: {Msg}, Errors: {Errors}",
-                        errorResult?.StatusCode, errorResult?.Message, string.Join(", ", errorResult?.Errors ?? new List<string>()));
+                        errorResult?.StatusCode, errorResult?.Message, string.Join(", ", errorResult?.Errors ?? []));
 
                     return ApiResponse<ClassifyWithOcrResponse>.FailureResponse($"Lỗi từ VNPT: {errorMsg}");
                 }

@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Beyond8.Catalog.Domain.Enums;
 using Beyond8.Common.Data.Base;
 
 namespace Beyond8.Catalog.Domain.Entities;
@@ -30,6 +31,10 @@ public class Category : BaseEntity
     public bool IsActive { get; set; } = true;
 
     public int TotalCourses { get; set; } = 0;
+
+    public bool IsRoot { get; set; } = false;
+
+    public CategoryType Type { get; set; } = CategoryType.Other;
 
     public virtual ICollection<Course> Courses { get; set; } = [];
 }

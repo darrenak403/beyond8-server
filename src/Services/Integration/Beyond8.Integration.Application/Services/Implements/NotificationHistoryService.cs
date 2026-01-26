@@ -94,7 +94,7 @@ public class NotificationHistoryService(
             {
                 UserNotifications = new NotificationSection
                 {
-                    Items = userResult.Items.Select(n => new NotificationResponse
+                    Items = [.. userResult.Items.Select(n => new NotificationResponse
                     {
                         Id = n.Id,
                         Title = n.Title,
@@ -105,14 +105,14 @@ public class NotificationHistoryService(
                         Channels = n.Channels,
                         ReadAt = n.ReadAt,
                         IsRead = n.IsRead
-                    }).ToList(),
+                    })],
                     TotalCount = userResult.TotalCount,
                     PageNumber = pagination.PageNumber,
                     PageSize = pagination.PageSize
                 },
                 InstructorNotifications = new NotificationSection
                 {
-                    Items = instructorResult.Items.Select(n => new NotificationResponse
+                    Items = [.. instructorResult.Items.Select(n => new NotificationResponse
                     {
                         Id = n.Id,
                         Title = n.Title,
@@ -123,7 +123,7 @@ public class NotificationHistoryService(
                         Channels = n.Channels,
                         ReadAt = n.ReadAt,
                         IsRead = n.IsRead
-                    }).ToList(),
+                    })],
                     TotalCount = instructorResult.TotalCount,
                     PageNumber = pagination.PageNumber,
                     PageSize = pagination.PageSize

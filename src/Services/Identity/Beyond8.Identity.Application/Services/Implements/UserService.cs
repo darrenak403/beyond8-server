@@ -88,7 +88,7 @@ public class UserService(
             newUser.PasswordHash = passwordHasher.HashPassword(newUser, request.Password);
 
             // Assign roles from request
-            if (request.Roles != null && request.Roles.Any())
+            if (request.Roles != null && request.Roles.Count != 0)
             {
                 foreach (var roleCode in request.Roles)
                 {
@@ -332,7 +332,7 @@ public class UserService(
             userRole.RevokedAt = DateTime.UtcNow;
         }
 
-        if (roleCodes != null && roleCodes.Any())
+        if (roleCodes != null && roleCodes.Count != 0)
         {
             foreach (var roleCode in roleCodes)
             {
