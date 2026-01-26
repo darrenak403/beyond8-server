@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using Beyond8.Catalog.Domain.Entities;
 using Beyond8.Catalog.Domain.Enums; // Đảm bảo namespace này tồn tại chứa Enum CategoryType
 using Microsoft.EntityFrameworkCore;

@@ -289,6 +289,48 @@ public class VectorEmbeddingService(
         }
     }
 
+    public async Task<ApiResponse<bool>> CheckHealthAsync()
+    {
+        try
+        {
+            // Check Qdrant connection
+            try
+            {
+                var collections = await qdrantClient.ListCollectionsAsync();
+                logger.LogDebug("Qdrant health check: Successfully listed {Count} collections", collections?.Count ?? 0);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Qdrant health check failed");
+                return ApiResponse<bool>.FailureResponse("Qdrant connection failed.");
+            }
+
+            // Check Hugging Face API
+            try
+            {
+                var testText = "health check";
+                var embeddingResult = await EmbedTextAsync(testText);
+                if (embeddingResult == null || embeddingResult.Vector.Length == 0)
+                {
+                    logger.LogWarning("Hugging Face health check: Failed to embed test text");
+                    return ApiResponse<bool>.FailureResponse("Hugging Face API embedding failed.");
+                }
+                logger.LogDebug("Hugging Face health check: Successfully embedded test text, vector dimension: {Dimension}", embeddingResult.Dimension);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Hugging Face health check failed");
+                return ApiResponse<bool>.FailureResponse("Hugging Face API connection failed.");
+            }
+
+            return ApiResponse<bool>.SuccessResponse(true, "Embedding service is healthy.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error checking embedding service health");
+            return ApiResponse<bool>.FailureResponse("Embedding service health check failed.");
+        }
+    }
 
     private async Task<bool> CourseCollectionExistsAsync(Guid courseId)
     {

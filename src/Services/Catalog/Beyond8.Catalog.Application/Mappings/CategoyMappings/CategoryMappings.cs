@@ -1,4 +1,3 @@
-using System;
 using Beyond8.Catalog.Application.Dtos.Categories;
 using Beyond8.Catalog.Domain.Entities;
 using Beyond8.Common.Utilities;

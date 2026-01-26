@@ -3,7 +3,6 @@ using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
 using Beyond8.Identity.Application.Dtos.Instructors;
 using Beyond8.Identity.Application.Services.Interfaces;
-using Beyond8.Identity.Domain.Enums;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 

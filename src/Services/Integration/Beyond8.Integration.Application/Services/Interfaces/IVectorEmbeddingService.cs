@@ -21,4 +21,9 @@ public interface IVectorEmbeddingService
     /// Search trong course với query text (tự động embed query)
     /// </summary>
     Task<List<VectorSearchResult>> SearchAsync(VectorSearchRequest request);
+
+    /// <summary>
+    /// Kiểm tra health của embedding service (Qdrant và Hugging Face)
+    /// </summary>
+    Task<ApiResponse<bool>> CheckHealthAsync();
 }

@@ -1,4 +1,3 @@
-using Beyond8.Common.Utilities;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Embedding;
 
 namespace Beyond8.Integration.Application.Services.Interfaces;

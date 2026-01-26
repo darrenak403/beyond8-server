@@ -1,14 +1,11 @@
 using System.Net.Http.Headers;
 using Amazon;
 using Amazon.S3;
-using Aspire.Qdrant.Client;
 using Beyond8.Common.Extensions;
 using Beyond8.Common.Utilities;
 using Beyond8.Integration.Api.Apis;
 using Beyond8.Integration.Application.Consumers.Identity;
-using Beyond8.Integration.Application.Dtos.AiIntegration;
 using Beyond8.Integration.Application.Dtos.MediaFiles;
-using Beyond8.Integration.Application.Dtos.VnptEkyc;
 using Beyond8.Integration.Application.Services.Implements;
 using Beyond8.Integration.Application.Services.Interfaces;
 using Beyond8.Integration.Domain.Repositories.Interfaces;
@@ -22,7 +19,6 @@ using Beyond8.Integration.Infrastructure.Hubs;
 using Beyond8.Integration.Infrastructure.Repositories.Implements;
 using FluentValidation;
 using Microsoft.Extensions.Options;
-using Qdrant.Client;
 using Resend;
 using Scalar.AspNetCore;
 
