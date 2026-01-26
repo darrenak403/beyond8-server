@@ -17,7 +17,7 @@ public class AiService(
     IUrlContentDownloader urlContentDownloader,
     IStorageService storageService) : IAiService
 {
-    private const string InstructorReviewPromptName = "Instructor Application Review";
+    private const string InstructorProfileReviewPromptName = "Instructor Profile Review";
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -31,15 +31,15 @@ public class AiService(
     {
         try
         {
-            var promptRes = await aiPromptService.GetPromptByNameAsync(InstructorReviewPromptName);
+            var promptRes = await aiPromptService.GetPromptByNameAsync(InstructorProfileReviewPromptName);
             if (!promptRes.IsSuccess || promptRes.Data == null)
                 return ApiResponse<AiProfileReviewResponse>.FailureResponse(
                     promptRes.Message ?? "Không tìm thấy prompt đánh giá hồ sơ.");
 
             var t = promptRes.Data;
-            var (applicationText, imageParts) = await BuildApplicationTextAndImagesAsync(request);
+            var (profileReviewText, imageParts) = await BuildProfileReviewTextAndImagesAsync(request);
 
-            var promptText = t.Template.Replace("{ApplicationText}", applicationText);
+            var promptText = t.Template.Replace("{ProfileReviewText}", profileReviewText);
             var fullPrompt = string.IsNullOrEmpty(t.SystemPrompt) ? promptText : $"{t.SystemPrompt}\n\n{promptText}";
 
             var geminiResult = await generativeAiService.GenerateContentAsync(
@@ -72,7 +72,7 @@ public class AiService(
         }
     }
 
-    private async Task<(string ApplicationText, List<GenerativeAiImagePart> ImageParts)> BuildApplicationTextAndImagesAsync(ProfileReviewRequest r)
+    private async Task<(string ProfileReviewText, List<GenerativeAiImagePart> ImageParts)> BuildProfileReviewTextAndImagesAsync(ProfileReviewRequest r)
     {
         var sb = new System.Text.StringBuilder();
         sb.AppendLine("## Bio\n" + (string.IsNullOrWhiteSpace(r.Bio) ? "(trống)" : r.Bio));
