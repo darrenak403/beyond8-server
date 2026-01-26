@@ -24,6 +24,9 @@ public class Section : BaseEntity
     public int TotalLessons { get; set; } = 0;
     public int TotalDurationMinutes { get; set; } = 0;
 
+    // Section Assignment
+    public Guid? AssignmentId { get; set; }
+
     // Relationships
     public virtual ICollection<Lesson> Lessons { get; set; } = [];
 }
