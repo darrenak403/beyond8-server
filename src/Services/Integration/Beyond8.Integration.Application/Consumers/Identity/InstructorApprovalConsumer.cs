@@ -52,6 +52,7 @@ public class InstructorApprovalConsumer(
                             RequireReLogin = true
                         }
                     };
+
                     await notificationService.SendToUserAsync(
                         message.UserId.ToString(),
                         "RequireReLogin",

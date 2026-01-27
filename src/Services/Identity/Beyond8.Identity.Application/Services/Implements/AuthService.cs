@@ -160,7 +160,16 @@ public class AuthService(
     {
         try
         {
-            var user = await unitOfWork.UserRepository.FindOneAsync(x => x.Id == userId);
+            var user = await unitOfWork.UserRepository.AsQueryable()
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(x => x.Id == userId);
+
+            if (user == null)
+            {
+                logger.LogError("User with ID {UserId} not found", userId);
+                return ApiResponse<TokenResponse>.FailureResponse("Người dùng không tồn tại.");
+            }
 
             var validation = ValidateUserById(user, userId, requireActive: true, requireValidRefreshToken: true, refreshToken);
             if (!validation.IsValid)
