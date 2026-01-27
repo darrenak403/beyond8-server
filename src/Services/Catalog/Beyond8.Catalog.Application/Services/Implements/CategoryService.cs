@@ -74,33 +74,7 @@ public class CategoryService(ILogger<CategoryService> logger, IUnitOfWork unitOf
                 return ApiResponse<CategoryResponse>.FailureResponse("Danh mục với tên này đã tồn tại.");
             }
 
-            Category? newParentCategory = null;
-            if (request.ParentId.HasValue && request.ParentId != category.ParentId)
-            {
-                newParentCategory = await unitOfWork.CategoryRepository.FindOneAsync(c => c.Id == request.ParentId);
-                if (newParentCategory == null)
-                {
-                    return ApiResponse<CategoryResponse>.FailureResponse("Danh mục cha không tồn tại.");
-                }
-
-                // Prevent self-parent assignment
-                if (newParentCategory.Id == id)
-                {
-                    return ApiResponse<CategoryResponse>.FailureResponse("Danh mục không thể tự trỏ tới chính nó.");
-                }
-
-                // Check level constraints
-                if (newParentCategory.Level >= 1)
-                {
-                    return ApiResponse<CategoryResponse>.FailureResponse("Hệ thống chỉ hỗ trợ tối đa 2 cấp danh mục cấp 1 và cấp 2.");
-                }
-            }
-            else if (!request.ParentId.HasValue && request.ParentId != category.ParentId)
-            {
-                newParentCategory = null;
-            }
-
-            category.UpdateFromRequest(request, newParentCategory);
+            category.UpdateFromRequest(request);
             await unitOfWork.CategoryRepository.UpdateAsync(id, category);
             await unitOfWork.SaveChangesAsync();
 
