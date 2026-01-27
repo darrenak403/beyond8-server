@@ -24,7 +24,7 @@ public static class AiApis
         group.MapPost("/profile-review", InstructorProfileReview)
             .WithName("InstructorProfileReview")
             .WithDescription("Review instructor profile by AI (Require Authorization)")
-            .RequireAuthorization(r => r.RequireRole(Role.Instructor))
+            .RequireAuthorization()
             .Produces<ApiResponse<AiProfileReviewResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<AiProfileReviewResponse>>(StatusCodes.Status400BadRequest);
 
