@@ -22,6 +22,7 @@ namespace Beyond8.Identity.Application.Dtos.Users
         public string Timezone { get; set; } = "Asia/Ho_Chi_Minh";
         public string Locale { get; set; } = "vi-VN";
         public UserStatus Status { get; set; } = UserStatus.Active;
+        public SubscriptionResponse? Subscription { get; set; }
     }
 
     public class UserSimpleResponse

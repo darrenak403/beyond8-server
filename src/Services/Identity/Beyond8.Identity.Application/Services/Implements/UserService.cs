@@ -33,7 +33,10 @@ namespace Beyond8.Identity.Application.Services.Implements
                     return ApiResponse<UserResponse>.FailureResponse("Không tìm thấy tài khoản.");
                 }
 
-                return ApiResponse<UserResponse>.SuccessResponse(user.ToUserResponse(), "Lấy thông tin tài khoản thành công.");
+                var response = user.ToUserResponse();
+                var subscription = await unitOfWork.UserSubscriptionRepository.GetActiveByUserIdAsync(user.Id);
+                response.Subscription = subscription?.ToSubscriptionResponse();
+                return ApiResponse<UserResponse>.SuccessResponse(response, "Lấy thông tin tài khoản thành công.");
             }
             catch (Exception ex)
             {
@@ -140,8 +143,11 @@ namespace Beyond8.Identity.Application.Services.Implements
                 await unitOfWork.UserRepository.UpdateAsync(user!.Id, user!);
                 await unitOfWork.SaveChangesAsync();
 
+                var updateResponse = user.ToUserResponse();
+                var subscription = await unitOfWork.UserSubscriptionRepository.GetActiveByUserIdAsync(user.Id);
+                updateResponse.Subscription = subscription?.ToSubscriptionResponse();
                 logger.LogInformation("User with ID: {UserId} updated successfully", id);
-                return ApiResponse<UserResponse>.SuccessResponse(user.ToUserResponse(), "Cập nhật tài khoản thành công.");
+                return ApiResponse<UserResponse>.SuccessResponse(updateResponse, "Cập nhật tài khoản thành công.");
             }
             catch (Exception ex)
             {
@@ -176,9 +182,11 @@ namespace Beyond8.Identity.Application.Services.Implements
                 await unitOfWork.UserRepository.UpdateAsync(user.Id, user);
                 await unitOfWork.SaveChangesAsync();
 
+                var adminResponse = user.ToUserResponse();
+                var subscription = await unitOfWork.UserSubscriptionRepository.GetActiveByUserIdAsync(user.Id);
+                adminResponse.Subscription = subscription?.ToSubscriptionResponse();
                 logger.LogInformation("User roles updated successfully for user with ID: {UserId} by admin/staff", id);
-
-                return ApiResponse<UserResponse>.SuccessResponse(user.ToUserResponse(), "Thêm vai trò tài khoản thành công.");
+                return ApiResponse<UserResponse>.SuccessResponse(adminResponse, "Thêm vai trò tài khoản thành công.");
             }
             catch (Exception ex)
             {
@@ -356,5 +364,70 @@ namespace Beyond8.Identity.Application.Services.Implements
             }
         }
 
+        public async Task<ApiResponse<SubscriptionResponse>> GetMySubscriptionStatsAsync(Guid userId)
+        {
+            try
+            {
+                var user = await unitOfWork.UserRepository.GetByIdAsync(userId);
+
+                if (user == null)
+                {
+                    logger.LogWarning("User not found with ID: {UserId}", userId);
+                    return ApiResponse<SubscriptionResponse>.FailureResponse("Không tìm thấy tài khoản.");
+                }
+
+                var subscription = await unitOfWork.UserSubscriptionRepository.GetActiveByUserIdAsync(userId);
+
+                if (subscription == null)
+                {
+                    logger.LogWarning("User has no active subscription with ID: {UserId}", userId);
+                    return ApiResponse<SubscriptionResponse>.FailureResponse("Người dùng không có gói đăng ký.");
+                }
+
+                var subscriptionResponse = subscription.ToSubscriptionResponse();
+
+                return ApiResponse<SubscriptionResponse>.SuccessResponse(subscriptionResponse, "Lấy thông tin gói đăng ký thành công.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error getting my quota for user with ID {UserId}", userId);
+                return ApiResponse<SubscriptionResponse>.FailureResponse("Đã xảy ra lỗi khi lấy thông tin gói đăng ký.");
+            }
+        }
+
+        public async Task<ApiResponse<SubscriptionResponse>> UpdateMySubscriptionAsync(Guid userId, UpdateSubscriptionRequest request)
+        {
+            try
+            {
+                var (isValid, error, user) = await ValidateUserByIdAsync(userId, requireActive: true);
+                if (!isValid) return ApiResponse<SubscriptionResponse>.FailureResponse(error!);
+
+                var subscription = await unitOfWork.UserSubscriptionRepository.GetActiveByUserIdAsync(userId);
+
+                if (subscription == null)
+                {
+                    logger.LogWarning("User has no active subscription with ID: {UserId}", userId);
+                    return ApiResponse<SubscriptionResponse>.FailureResponse("Người dùng không có gói đăng ký.");
+                }
+
+                if (subscription.TotalRemainingRequests < request.NumberOfRequests)
+                {
+                    return ApiResponse<SubscriptionResponse>.FailureResponse("Số lượng yêu cầu vượt quá số lượng gói đăng ký.");
+                }
+
+                subscription.UpdateSubscriptionRequest(request);
+
+                await unitOfWork.UserSubscriptionRepository.UpdateAsync(subscription.Id, subscription);
+                await unitOfWork.SaveChangesAsync();
+
+                var subscriptionResponse = subscription.ToSubscriptionResponse();
+                return ApiResponse<SubscriptionResponse>.SuccessResponse(subscriptionResponse, "Cập nhật gói đăng ký thành công.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error updating my subscription for user with ID {UserId}", userId);
+                return ApiResponse<SubscriptionResponse>.FailureResponse("Đã xảy ra lỗi khi cập nhật gói đăng ký.");
+            }
+        }
     }
 }

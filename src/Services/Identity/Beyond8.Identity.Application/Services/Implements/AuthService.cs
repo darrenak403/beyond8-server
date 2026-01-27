@@ -51,7 +51,11 @@ namespace Beyond8.Identity.Application.Services.Implements
                     logger.LogInformation("User with email {Email} logged in successfully with role {Role}", request.Email, role.Role.Code);
                 }
 
-                var tokenResponse = tokenService.GenerateTokens(u.ToTokenClaims());
+                var (tier, expiresAt) = await GetSubscriptionTierAndExpiresAsync(u);
+                var claims = u.ToTokenClaims();
+                claims.SubscriptionTier = tier;
+                claims.SubscriptionExpiresAt = expiresAt;
+                var tokenResponse = tokenService.GenerateTokens(claims);
 
                 u.RefreshToken = tokenResponse.RefreshToken;
                 u.RefreshTokenExpiresAt = tokenResponse.ExpiresAt.AddDays(7);
@@ -182,7 +186,11 @@ namespace Beyond8.Identity.Application.Services.Implements
                     return ApiResponse<TokenResponse>.FailureResponse("Refresh token đã hết hạn. Vui lòng đăng nhập lại.");
                 }
 
-                var tokenResponse = tokenService.GenerateTokens(u.ToTokenClaims());
+                var (tier, expiresAt) = await GetSubscriptionTierAndExpiresAsync(u);
+                var claims = u.ToTokenClaims();
+                claims.SubscriptionTier = tier;
+                claims.SubscriptionExpiresAt = expiresAt;
+                var tokenResponse = tokenService.GenerateTokens(claims);
 
                 var timeUntilExpiry = u.RefreshTokenExpiresAt!.Value - DateTime.UtcNow;
 
@@ -514,6 +522,15 @@ namespace Beyond8.Identity.Application.Services.Implements
         {
             var random = new Random();
             return random.Next(100000, 999999).ToString();
+        }
+
+        private async Task<(string Tier, DateTime? ExpiresAt)> GetSubscriptionTierAndExpiresAsync(User user)
+        {
+            var sub = await unitOfWork.UserSubscriptionRepository.GetActiveByUserIdAsync(user.Id);
+            if (sub != null)
+                return (sub.Plan.Code, sub.ExpiresAt);
+            var freeTrialEnds = user.CreatedAt.AddDays(7);
+            return ("FREE", freeTrialEnds);
         }
     }
 }

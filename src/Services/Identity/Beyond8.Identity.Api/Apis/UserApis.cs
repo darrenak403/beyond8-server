@@ -108,7 +108,49 @@ namespace Beyond8.Identity.Api.Apis
                 .Produces<ApiResponse<string>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
+            group.MapGet("/me/subscription/stats", GetMySubscriptionInfoAsync)
+                .WithName("GetMySubscriptionStats")
+                .WithDescription("Lấy thông tin gói đăng ký của người dùng hiện tại")
+                .RequireAuthorization()
+                .Produces<ApiResponse<SubscriptionResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<SubscriptionResponse>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
+            group.MapPatch("/me/subscription/update", UpdateMySubscriptionAsync)
+                .WithName("UpdateMySubscription")
+                .WithDescription("Cập nhật gói đăng ký của người dùng hiện tại")
+                .RequireAuthorization()
+                .Produces<ApiResponse<SubscriptionResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<SubscriptionResponse>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
             return group;
+        }
+
+        private static async Task<IResult> UpdateMySubscriptionAsync(
+            [FromBody] UpdateSubscriptionRequest request,
+            [FromServices] IUserService userService,
+            [FromServices] IValidator<UpdateSubscriptionRequest> validator,
+            [FromServices] ICurrentUserService currentUserService)
+        {
+            if (!request.ValidateRequest(validator, out var validationResult))
+                return validationResult!;
+
+            var response = await userService.UpdateMySubscriptionAsync(currentUserService.UserId, request);
+
+            return response.IsSuccess
+                ? Results.Ok(response)
+                : Results.BadRequest(response);
+        }
+        private static async Task<IResult> GetMySubscriptionInfoAsync(
+            [FromServices] ICurrentUserService currentUserService,
+            [FromServices] IUserService userService)
+        {
+            var response = await userService.GetMySubscriptionStatsAsync(currentUserService.UserId);
+
+            return response.IsSuccess
+                ? Results.Ok(response)
+                : Results.BadRequest(response);
         }
 
         private static async Task<IResult> UploadUserCoverAsync(

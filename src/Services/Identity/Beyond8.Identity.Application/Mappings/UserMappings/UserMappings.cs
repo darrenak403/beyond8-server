@@ -1,3 +1,4 @@
+using Beyond8.Identity.Application.Dtos;
 using Beyond8.Identity.Application.Dtos.Users;
 using Beyond8.Identity.Domain.Entities;
 using Beyond8.Identity.Domain.Enums;
@@ -93,6 +94,50 @@ namespace Beyond8.Identity.Application.Mappings.AuthMappings
             if (!string.IsNullOrEmpty(request.Bio))
                 user.Bio = request.Bio;
 
+        }
+
+        public static SubscriptionResponse ToSubscriptionResponse(this UserSubscription subscription)
+        {
+            return new SubscriptionResponse
+            {
+                RemainingRequests = subscription.RemainingRequestsPerWeek,
+                IsRequestLimitedReached = subscription.RemainingRequestsPerWeek <= 0,
+                RequestLimitedEndsAt = subscription.RequestLimitedEndsAt,
+                SubscriptionPlan = subscription.Plan != null ? subscription.Plan.ToSubscriptionPlanResponse() : null
+            };
+        }
+
+        public static SubscriptionPlanResponse ToSubscriptionPlanResponse(this SubscriptionPlan plan)
+        {
+            return new SubscriptionPlanResponse
+            {
+                Code = plan.Code,
+                Name = plan.Name,
+                Description = plan.Description,
+                Price = plan.Price,
+                Currency = plan.Currency,
+                DurationDays = plan.DurationDays,
+                TotalRequestsInPeriod = plan.TotalRequestsInPeriod,
+                MaxRequestsPerWeek = plan.MaxRequestsPerWeek
+            };
+        }
+
+        public static void UpdateSubscriptionRequest(this UserSubscription subscription, UpdateSubscriptionRequest request)
+        {
+            if (request.NumberOfRequests > 0)
+            {
+                subscription.TotalRemainingRequests -= request.NumberOfRequests;
+                subscription.RemainingRequestsPerWeek -= request.NumberOfRequests;
+                if (subscription.RemainingRequestsPerWeek < 0)
+                {
+                    subscription.RemainingRequestsPerWeek = 0;
+                    subscription.RequestLimitedEndsAt = DateTime.UtcNow.AddDays(7);
+                }
+                else
+                {
+                    subscription.RequestLimitedEndsAt = null;
+                }
+            }
         }
     }
 }

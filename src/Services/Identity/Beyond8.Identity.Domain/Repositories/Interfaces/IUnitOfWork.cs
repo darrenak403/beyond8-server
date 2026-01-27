@@ -7,5 +7,7 @@ namespace Beyond8.Identity.Domain.Repositories.Interfaces
         IUserRepository UserRepository { get; }
         IInstructorProfileRepository InstructorProfileRepository { get; }
         IRoleRepository RoleRepository { get; }
+        ISubscriptionPlanRepository SubscriptionPlanRepository { get; }
+        IUserSubscriptionRepository UserSubscriptionRepository { get; }
     }
 }

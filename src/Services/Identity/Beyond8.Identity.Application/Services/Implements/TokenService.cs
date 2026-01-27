@@ -52,7 +52,9 @@ namespace Beyond8.Identity.Application.Services.Implements
                     new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                     new(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
                     new("userId", tokenClaims.UserId.ToString()),
-                    new("userName", tokenClaims.UserName)
+                    new("userName", tokenClaims.UserName),
+                    new("subscription_tier", tokenClaims.SubscriptionTier),
+                    new("subscription_expires_at", tokenClaims.SubscriptionExpiresAt?.ToUniversalTime().ToString("O") ?? string.Empty)
                 };
             foreach (var role in tokenClaims.Roles)
             {
