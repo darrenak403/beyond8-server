@@ -13,7 +13,7 @@ public static class AiUsageApis
         builder.MapGroup("/api/v1/ai-usage")
             .MapAiUsageRoutes()
             .WithTags("AI Usage Api")
-            .RequireAuthorization();
+            .RequireRateLimiting("Fixed");
 
         return builder;
     }
@@ -23,6 +23,7 @@ public static class AiUsageApis
         group.MapGet("/me", GetMyUsage)
             .WithName("GetMyUsage")
             .WithDescription("Lấy lịch sử sử dụng AI của người dùng hiện tại")
+            .RequireAuthorization(r => r.RequireRole(Role.Student, Role.Instructor))
             .Produces<ApiResponse<List<AiUsageResponse>>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<List<AiUsageResponse>>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
@@ -30,7 +31,7 @@ public static class AiUsageApis
         group.MapGet("/all", GetAllUsage)
             .WithName("GetAllUsage")
             .WithDescription("Lấy tất cả records sử dụng AI (Admin only)")
-            .RequireAuthorization(r => r.RequireRole("Admin"))
+            .RequireAuthorization(r => r.RequireRole(Role.Admin))
             .Produces<ApiResponse<List<AiUsageResponse>>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<List<AiUsageResponse>>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
@@ -38,7 +39,7 @@ public static class AiUsageApis
         group.MapGet("/user/{userId:guid}", GetUsageByUser)
             .WithName("GetUsageByUser")
             .WithDescription("Lấy lịch sử sử dụng AI của user cụ thể (Admin only)")
-            .RequireAuthorization(r => r.RequireRole("Admin"))
+            .RequireAuthorization(r => r.RequireRole(Role.Admin))
             .Produces<ApiResponse<List<AiUsageResponse>>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<List<AiUsageResponse>>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
@@ -46,7 +47,7 @@ public static class AiUsageApis
         group.MapGet("/statistics", GetUsageStatistics)
             .WithName("GetUsageStatistics")
             .WithDescription("Lấy thống kê tổng quan sử dụng AI (Admin only)")
-            .RequireAuthorization(r => r.RequireRole("Admin"))
+            .RequireAuthorization(r => r.RequireRole(Role.Admin))
             .Produces<ApiResponse<AiUsageStatisticsResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<AiUsageStatisticsResponse>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
@@ -54,7 +55,7 @@ public static class AiUsageApis
         group.MapGet("/by-date-range", GetUsageByDateRange)
             .WithName("GetUsageByDateRange")
             .WithDescription("Lấy lịch sử sử dụng AI trong khoảng thời gian (Admin only)")
-            .RequireAuthorization(r => r.RequireRole("Admin"))
+            .RequireAuthorization(r => r.RequireRole(Role.Admin))
             .Produces<ApiResponse<List<AiUsageResponse>>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<List<AiUsageResponse>>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);

@@ -15,7 +15,8 @@ public static class AiPromptApis
     {
         builder.MapGroup("/api/v1/ai-prompts")
             .MapAiPromptRoutes()
-            .WithTags("AI Prompt Api");
+            .WithTags("AI Prompt Api")
+            .RequireRateLimiting("Fixed");
 
         return builder;
     }

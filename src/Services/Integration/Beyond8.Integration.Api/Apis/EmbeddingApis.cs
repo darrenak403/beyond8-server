@@ -14,6 +14,7 @@ public static class EmbeddingApis
         builder.MapGroup("/api/v1/embeddings")
             .MapEmbeddingRoutes()
             .WithTags("Embedding Api")
+            .RequireRateLimiting("Fixed")
             .RequireAuthorization();
 
         return builder;
@@ -32,7 +33,7 @@ public static class EmbeddingApis
             .WithName("EmbedCourseDocuments")
             .WithDescription("Upload PDF file và tự động chunk, embed vào Qdrant")
             .DisableAntiforgery()
-            .RequireAuthorization()
+            .RequireAuthorization(r => r.RequireRole(Role.Instructor))
             .Produces<ApiResponse<List<DocumentEmbeddingResponse>>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<List<DocumentEmbeddingResponse>>>(StatusCodes.Status400BadRequest);
 

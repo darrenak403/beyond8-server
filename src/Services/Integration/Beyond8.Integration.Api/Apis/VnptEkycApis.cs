@@ -13,7 +13,8 @@ public static class VnptEkycApis
     {
         builder.MapGroup("/api/v1/vnpt-ekyc")
             .MapVnptEkycRoutes()
-            .WithTags("VNPT eKYC Api");
+            .WithTags("VNPT eKYC Api")
+            .RequireRateLimiting("Fixed");
 
         return builder;
     }
