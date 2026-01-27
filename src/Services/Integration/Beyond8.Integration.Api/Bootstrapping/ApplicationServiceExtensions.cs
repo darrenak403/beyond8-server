@@ -22,160 +22,161 @@ using Microsoft.Extensions.Options;
 using Resend;
 using Scalar.AspNetCore;
 
-namespace Beyond8.Integration.Api.Bootstrapping;
-
-public static class Bootstrapper
+namespace Beyond8.Integration.Api.Bootstrapping
 {
-    public static IHostApplicationBuilder AddApplicationServices(this IHostApplicationBuilder builder)
+    public static class Bootstrapper
     {
-        builder.Services.AddOpenApi();
-
-        builder.AddCommonExtensions();
-
-        builder.AddPostgresDatabase<IntegrationDbContext>(Const.IntegrationServiceDatabase);
-
-        builder.AddServiceRedis(nameof(Integration), connectionName: Const.Redis);
-
-        // Configure AWS S3
-        builder.Services.Configure<S3Settings>(builder.Configuration.GetSection(S3Settings.SectionName));
-
-        builder.Services.AddSingleton<IAmazonS3>(sp =>
+        public static IHostApplicationBuilder AddApplicationServices(this IHostApplicationBuilder builder)
         {
-            var s3Settings = sp.GetRequiredService<IOptions<S3Settings>>().Value;
-            var config = new AmazonS3Config
+            builder.Services.AddOpenApi();
+
+            builder.AddCommonExtensions();
+
+            builder.AddPostgresDatabase<IntegrationDbContext>(Const.IntegrationServiceDatabase);
+
+            builder.AddServiceRedis(nameof(Integration), connectionName: Const.Redis);
+
+            // Configure AWS S3
+            builder.Services.Configure<S3Settings>(builder.Configuration.GetSection(S3Settings.SectionName));
+
+            builder.Services.AddSingleton<IAmazonS3>(sp =>
             {
-                RegionEndpoint = RegionEndpoint.GetBySystemName(s3Settings.Region),
-                ForcePathStyle = true
-            };
+                var s3Settings = sp.GetRequiredService<IOptions<S3Settings>>().Value;
+                var config = new AmazonS3Config
+                {
+                    RegionEndpoint = RegionEndpoint.GetBySystemName(s3Settings.Region),
+                    ForcePathStyle = true
+                };
 
-            return new AmazonS3Client(s3Settings.AccessKey, s3Settings.SecretKey, config);
-        });
+                return new AmazonS3Client(s3Settings.AccessKey, s3Settings.SecretKey, config);
+            });
 
-        // Register AI provider configurations
-        builder.Services.AddHttpClient();
-        builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection(GeminiSettings.SectionName));
-        builder.Services.Configure<BedrockSettings>(builder.Configuration.GetSection(BedrockSettings.SectionName));
+            // Register AI provider configurations
+            builder.Services.AddHttpClient();
+            builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection(GeminiSettings.SectionName));
+            builder.Services.Configure<BedrockSettings>(builder.Configuration.GetSection(BedrockSettings.SectionName));
 
-        var aiProvider = builder.Configuration.GetValue<string>("AiProvider") ?? "Gemini";
-        if (aiProvider.Equals("Bedrock", StringComparison.OrdinalIgnoreCase))
-        {
-            builder.Services.AddScoped<IGenerativeAiService, BedrockService>();
-        }
-        else
-        {
-            builder.Services.AddScoped<IGenerativeAiService, GeminiService>();
-        }
-
-        // Register Resend configuration
-        builder.Services.Configure<ResendSettings>(
-        builder.Configuration.GetSection(ResendSettings.SectionName));
-
-        builder.Services.AddSingleton<IResend>(sp =>
-        {
-            var options = sp.GetRequiredService<IOptions<ResendSettings>>().Value;
-            if (string.IsNullOrWhiteSpace(options.ApiKey))
-                throw new InvalidOperationException("ApiKey is missing in Resend Settings");
-
-            return ResendClient.Create(options.ApiKey.Trim());
-        });
-
-        // Register VnptEkyc configuration
-        builder.Services.Configure<VnptEkycSettings>(builder.Configuration.GetSection(VnptEkycSettings.SectionName));
-
-        builder.Services.AddHttpClient("VnptEkycClient", (serviceProvider, client) =>
-        {
-            var options = serviceProvider.GetRequiredService<IOptions<VnptEkycSettings>>().Value;
-
-            client.BaseAddress = new Uri(options.BaseUrl);
-            client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
-
-            if (!string.IsNullOrEmpty(options.AccessToken))
+            var aiProvider = builder.Configuration.GetValue<string>("AiProvider") ?? "Gemini";
+            if (aiProvider.Equals("Bedrock", StringComparison.OrdinalIgnoreCase))
             {
-                client.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", options.AccessToken);
+                builder.Services.AddScoped<IGenerativeAiService, BedrockService>();
+            }
+            else
+            {
+                builder.Services.AddScoped<IGenerativeAiService, GeminiService>();
             }
 
-            if (!string.IsNullOrEmpty(options.TokenId))
+            // Register Resend configuration
+            builder.Services.Configure<ResendSettings>(
+            builder.Configuration.GetSection(ResendSettings.SectionName));
+
+            builder.Services.AddSingleton<IResend>(sp =>
             {
-                client.DefaultRequestHeaders.Add("Token-id", options.TokenId);
-            }
+                var options = sp.GetRequiredService<IOptions<ResendSettings>>().Value;
+                if (string.IsNullOrWhiteSpace(options.ApiKey))
+                    throw new InvalidOperationException("ApiKey is missing in Resend Settings");
 
-            if (!string.IsNullOrEmpty(options.TokenKey))
+                return ResendClient.Create(options.ApiKey.Trim());
+            });
+
+            // Register VnptEkyc configuration
+            builder.Services.Configure<VnptEkycSettings>(builder.Configuration.GetSection(VnptEkycSettings.SectionName));
+
+            builder.Services.AddHttpClient("VnptEkycClient", (serviceProvider, client) =>
             {
-                client.DefaultRequestHeaders.Add("Token-key", options.TokenKey);
-            }
-        });
+                var options = serviceProvider.GetRequiredService<IOptions<VnptEkycSettings>>().Value;
 
-        // Register repositories
-        builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+                client.BaseAddress = new Uri(options.BaseUrl);
+                client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
 
-        builder.Services.AddSignalR(options =>
-        {
-            options.EnableDetailedErrors = builder.Environment.IsDevelopment();
-        });
+                if (!string.IsNullOrEmpty(options.AccessToken))
+                {
+                    client.DefaultRequestHeaders.Authorization =
+                        new AuthenticationHeaderValue("Bearer", options.AccessToken);
+                }
 
-        // Configure MassTransit with RabbitMQ and register consumers
-        builder.AddMassTransitWithRabbitMq(config =>
-        {
-            // Register consumers from Identity events
-            config.AddConsumer<OtpEmailConsumer>();
-            config.AddConsumer<InstructorProfileSubmittedConsumer>();
-            config.AddConsumer<InstructorApprovalConsumer>();
-            config.AddConsumer<InstructorUpdateRequestEmailConsumer>();
-        });
+                if (!string.IsNullOrEmpty(options.TokenId))
+                {
+                    client.DefaultRequestHeaders.Add("Token-id", options.TokenId);
+                }
 
-        // Configure Qdrant - Use Aspire Qdrant Client
-        builder.AddQdrantClient(Const.Qdrant);
+                if (!string.IsNullOrEmpty(options.TokenKey))
+                {
+                    client.DefaultRequestHeaders.Add("Token-key", options.TokenKey);
+                }
+            });
+
+            // Register repositories
+            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+            builder.Services.AddSignalR(options =>
+            {
+                options.EnableDetailedErrors = builder.Environment.IsDevelopment();
+            });
+
+            // Configure MassTransit with RabbitMQ and register consumers
+            builder.AddMassTransitWithRabbitMq(config =>
+            {
+                // Register consumers from Identity events
+                config.AddConsumer<OtpEmailConsumer>();
+                config.AddConsumer<InstructorProfileSubmittedConsumer>();
+                config.AddConsumer<InstructorApprovalConsumer>();
+                config.AddConsumer<InstructorUpdateRequestEmailConsumer>();
+            });
+
+            // Configure Qdrant - Use Aspire Qdrant Client
+            builder.AddQdrantClient(Const.Qdrant);
         
-        // Configure Qdrant Settings (for vector dimension config)
-        builder.Services.Configure<QdrantSettings>(builder.Configuration.GetSection(QdrantSettings.SectionName));
+            // Configure Qdrant Settings (for vector dimension config)
+            builder.Services.Configure<QdrantSettings>(builder.Configuration.GetSection(QdrantSettings.SectionName));
 
-        // Hugging Face Embedding Service
-        builder.Services.Configure<HuggingFaceSettings>(builder.Configuration.GetSection(HuggingFaceSettings.SectionName));
+            // Hugging Face Embedding Service
+            builder.Services.Configure<HuggingFaceSettings>(builder.Configuration.GetSection(HuggingFaceSettings.SectionName));
 
-        // Register services
-        builder.Services.AddScoped<INotificationService, SignalRNotificationService>();
-        builder.Services.AddScoped<INotificationHistoryService, NotificationHistoryService>();
-        builder.Services.AddScoped<IStorageService, S3Service>();
-        builder.Services.AddScoped<IMediaFileService, MediaFileService>();
-        builder.Services.AddScoped<IAiUsageService, AiUsageService>();
-        builder.Services.AddScoped<IAiPromptService, AiPromptService>();
-        builder.Services.AddScoped<IUrlContentDownloader, UrlContentDownloader>();
-        builder.Services.AddScoped<IEmailService, EmailService>();
-        builder.Services.AddScoped<IVnptEkycService, VnptEkycService>();
-        builder.Services.AddScoped<IAiService, AiService>();
-        builder.Services.AddScoped<IPdfChunkService, PdfChunkService>();
-        builder.Services.AddScoped<IVectorEmbeddingService, VectorEmbeddingService>();
+            // Register services
+            builder.Services.AddScoped<INotificationService, SignalRNotificationService>();
+            builder.Services.AddScoped<INotificationHistoryService, NotificationHistoryService>();
+            builder.Services.AddScoped<IStorageService, S3Service>();
+            builder.Services.AddScoped<IMediaFileService, MediaFileService>();
+            builder.Services.AddScoped<IAiUsageService, AiUsageService>();
+            builder.Services.AddScoped<IAiPromptService, AiPromptService>();
+            builder.Services.AddScoped<IUrlContentDownloader, UrlContentDownloader>();
+            builder.Services.AddScoped<IEmailService, EmailService>();
+            builder.Services.AddScoped<IVnptEkycService, VnptEkycService>();
+            builder.Services.AddScoped<IAiService, AiService>();
+            builder.Services.AddScoped<IPdfChunkService, PdfChunkService>();
+            builder.Services.AddScoped<IVectorEmbeddingService, VectorEmbeddingService>();
 
-        // Register validators
-        builder.Services.AddValidatorsFromAssemblyContaining<UploadFileRequest>();
+            // Register validators
+            builder.Services.AddValidatorsFromAssemblyContaining<UploadFileRequest>();
 
-        return builder;
-    }
-
-    public static WebApplication UseApplicationServices(this WebApplication app)
-    {
-        app.UseCommonService();
-
-        if (app.Environment.IsDevelopment())
-        {
-            app.MapOpenApi();
-            app.MapScalarApiReference();
+            return builder;
         }
 
-        app.UseHttpsRedirection();
+        public static WebApplication UseApplicationServices(this WebApplication app)
+        {
+            app.UseCommonService();
 
-        app.MapHub<AppHub>("/hubs/app")
-            .RequireCors(app.Environment.IsDevelopment() ? "AllowDevelopmentClients" : "AllowProductionClients");
+            if (app.Environment.IsDevelopment())
+            {
+                app.MapOpenApi();
+                app.MapScalarApiReference();
+            }
 
-        app.MapMediaFileApi();
-        app.MapAiApi();
-        app.MapAiUsageApi();
-        app.MapAiPromptApi();
-        app.MapVnptEkycApi();
-        app.MapNotificationApi();
-        app.MapEmbeddingApi();
+            app.UseHttpsRedirection();
 
-        return app;
+            app.MapHub<AppHub>("/hubs/app")
+                .RequireCors(app.Environment.IsDevelopment() ? "AllowDevelopmentClients" : "AllowProductionClients");
+
+            app.MapMediaFileApi();
+            app.MapAiApi();
+            app.MapAiUsageApi();
+            app.MapAiPromptApi();
+            app.MapVnptEkycApi();
+            app.MapNotificationApi();
+            app.MapEmbeddingApi();
+
+            return app;
+        }
     }
 }

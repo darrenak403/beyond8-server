@@ -1,8 +1,9 @@
-namespace Beyond8.Identity.Application.Dtos.Auth;
-
-public class RegisterRequest
+namespace Beyond8.Identity.Application.Dtos.Auth
 {
-    public string Email { get; set; } = string.Empty;
-    public string Password { get; set; } = string.Empty;
-}
+    public class RegisterRequest
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+    }
 
+}

@@ -1,54 +1,55 @@
-namespace Beyond8.Common.Utilities;
-
-public class ApiResponse<T>
+namespace Beyond8.Common.Utilities
 {
-    public bool IsSuccess { get; set; }
-    public string Message { get; set; } = string.Empty;
-    public T? Data { get; set; }
-    public object? Metadata { get; set; }
-
-    public static ApiResponse<T> SuccessResponse(
-        T data,
-        string message = "Thành công",
-        object? metadata = null)
+    public class ApiResponse<T>
     {
-        return new ApiResponse<T>
-        {
-            IsSuccess = true,
-            Message = message,
-            Data = data,
-            Metadata = metadata
-        };
-    }
+        public bool IsSuccess { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public T? Data { get; set; }
+        public object? Metadata { get; set; }
 
-    public static ApiResponse<T> FailureResponse(
-        string message,
-        object? metadata = null)
-    {
-        return new ApiResponse<T>
+        public static ApiResponse<T> SuccessResponse(
+            T data,
+            string message = "Thành công",
+            object? metadata = null)
         {
-            IsSuccess = false,
-            Message = message,
-            Data = default,
-            Metadata = metadata
-        };
-    }
+            return new ApiResponse<T>
+            {
+                IsSuccess = true,
+                Message = message,
+                Data = data,
+                Metadata = metadata
+            };
+        }
 
-    public static ApiResponse<List<T>> SuccessPagedResponse<T>(
-        List<T> items,
-        int totalItems,
-        int pageNumber,
-        int pageSize,
-        string message = "Thành công")
-    {
-        var pagingMetadata = new PagingMetadata(totalItems, pageNumber, pageSize);
-
-        return new ApiResponse<List<T>>
+        public static ApiResponse<T> FailureResponse(
+            string message,
+            object? metadata = null)
         {
-            IsSuccess = true,
-            Message = message,
-            Data = items,
-            Metadata = pagingMetadata
-        };
+            return new ApiResponse<T>
+            {
+                IsSuccess = false,
+                Message = message,
+                Data = default,
+                Metadata = metadata
+            };
+        }
+
+        public static ApiResponse<List<T>> SuccessPagedResponse<T>(
+            List<T> items,
+            int totalItems,
+            int pageNumber,
+            int pageSize,
+            string message = "Thành công")
+        {
+            var pagingMetadata = new PagingMetadata(totalItems, pageNumber, pageSize);
+
+            return new ApiResponse<List<T>>
+            {
+                IsSuccess = true,
+                Message = message,
+                Data = items,
+                Metadata = pagingMetadata
+            };
+        }
     }
 }

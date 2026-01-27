@@ -1,8 +1,9 @@
-namespace Beyond8.Integration.Application.Dtos.AiIntegration.Embedding;
-
-public class EmbeddingResponse
+namespace Beyond8.Integration.Application.Dtos.AiIntegration.Embedding
 {
-    public float[] Vector { get; set; } = [];
-    public int Dimension { get; set; }
-    public string Model { get; set; } = string.Empty;
+    public class EmbeddingResponse
+    {
+        public float[] Vector { get; set; } = [];
+        public int Dimension { get; set; }
+        public string Model { get; set; } = string.Empty;
+    }
 }

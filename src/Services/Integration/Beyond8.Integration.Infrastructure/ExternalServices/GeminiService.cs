@@ -3,335 +3,337 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using Beyond8.Common.Utilities;
-using Beyond8.Integration.Application.Dtos.AiIntegration;
-using Beyond8.Integration.Application.Services.Interfaces;
 using Beyond8.Integration.Domain.Enums;
 using Beyond8.Integration.Domain.Repositories.Interfaces;
 using Beyond8.Integration.Infrastructure.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Beyond8.Integration.Application.Dtos.AiIntegration.GenerativeAi;
+using Beyond8.Integration.Application.Dtos.Usages;
+using Beyond8.Integration.Application.Services.Interfaces;
 
-namespace Beyond8.Integration.Infrastructure.ExternalServices;
-
-public class GeminiService(
-    IOptions<GeminiSettings> config,
-    IHttpClientFactory httpClientFactory,
-    IAiUsageService aiUsageService,
-    IUnitOfWork unitOfWork,
-    ILogger<GeminiService> logger) : IGenerativeAiService
+namespace Beyond8.Integration.Infrastructure.ExternalServices
 {
-    private readonly GeminiSettings _config = config.Value;
-
-    public async Task<ApiResponse<GenerativeAiResponse>> GenerateContentAsync(
-        string prompt,
-        AiOperation operation,
-        Guid userId,
-        Guid? promptId = null,
-        string? model = null,
-        int? maxTokens = null,
-        decimal? temperature = null,
-        decimal? topP = null,
-        IReadOnlyList<GenerativeAiImagePart>? inlineImages = null)
+    public class GeminiService(
+        IOptions<GeminiSettings> config,
+        IHttpClientFactory httpClientFactory,
+        IAiUsageService aiUsageService,
+        IUnitOfWork unitOfWork,
+        ILogger<GeminiService> logger) : IGenerativeAiService
     {
-        var stopwatch = Stopwatch.StartNew();
+        private readonly GeminiSettings _config = config.Value;
 
-        try
+        public async Task<ApiResponse<GenerativeAiResponse>> GenerateContentAsync(
+            string prompt,
+            AiOperation operation,
+            Guid userId,
+            Guid? promptId = null,
+            string? model = null,
+            int? maxTokens = null,
+            decimal? temperature = null,
+            decimal? topP = null,
+            IReadOnlyList<GenerativeAiImagePart>? inlineImages = null)
         {
-            var selectedModel = model ?? _config.DefaultModel;
-            var parts = new List<object> { new { text = prompt } };
-            if (inlineImages?.Count > 0)
-            {
-                foreach (var img in inlineImages)
-                {
-                    parts.Add(new
-                    {
-                        inlineData = new
-                        {
-                            mimeType = img.MimeType,
-                            data = Convert.ToBase64String(img.Data)
-                        }
-                    });
-                }
-            }
+            var stopwatch = Stopwatch.StartNew();
 
-            var requestBody = new
+            try
             {
-                contents = new[]
+                var selectedModel = model ?? _config.DefaultModel;
+                var parts = new List<object> { new { text = prompt } };
+                if (inlineImages?.Count > 0)
                 {
-                    new { parts }
-                },
-                generationConfig = new
-                {
-                    maxOutputTokens = maxTokens ?? _config.DefaultParameters.MaxTokens,
-                    temperature = temperature ?? _config.DefaultParameters.Temperature,
-                    topP = topP ?? _config.DefaultParameters.TopP,
-                    topK = _config.DefaultParameters.TopK
+                    foreach (var img in inlineImages)
+                    {
+                        parts.Add(new
+                        {
+                            inlineData = new
+                            {
+                                mimeType = img.MimeType,
+                                data = Convert.ToBase64String(img.Data)
+                            }
+                        });
+                    }
                 }
+
+                var requestBody = new
+                {
+                    contents = new[]
+                    {
+                        new { parts }
+                    },
+                    generationConfig = new
+                    {
+                        maxOutputTokens = maxTokens ?? _config.DefaultParameters.MaxTokens,
+                        temperature = temperature ?? _config.DefaultParameters.Temperature,
+                        topP = topP ?? _config.DefaultParameters.TopP,
+                        topK = _config.DefaultParameters.TopK
+                    }
+                };
+
+                var httpClient = httpClientFactory.CreateClient();
+                httpClient.Timeout = TimeSpan.FromSeconds(_config.TimeoutSeconds);
+
+                var url = $"{_config.ApiEndpoint.TrimEnd('/')}/models/{selectedModel}:generateContent";
+                var jsonBody = JsonSerializer.Serialize(requestBody);
+
+                HttpResponseMessage? response = null;
+                var lastResponseContent = string.Empty;
+
+                for (var attempt = 0; attempt <= _config.MaxRetries; attempt++)
+                {
+                    if (attempt > 0)
+                    {
+                        var delayMs = GetRetryDelayMs(response!, attempt);
+                        logger.LogWarning("Gemini 429/503, retry {Attempt}/{Max} after {DelayMs}ms", attempt, _config.MaxRetries, delayMs);
+                        await Task.Delay(delayMs);
+                    }
+
+                    using var request = new HttpRequestMessage(HttpMethod.Post, url);
+                    request.Headers.TryAddWithoutValidation("X-goog-api-key", _config.ApiKey);
+                    request.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
+
+                    response = await httpClient.SendAsync(request);
+                    lastResponseContent = await response.Content.ReadAsStringAsync();
+
+                    if (response.IsSuccessStatusCode)
+                        break;
+
+                    var isRetryable = response.StatusCode is HttpStatusCode.TooManyRequests or HttpStatusCode.ServiceUnavailable;
+                    if (attempt >= _config.MaxRetries || !isRetryable)
+                        break;
+                }
+
+                stopwatch.Stop();
+
+                if (response == null || !response.IsSuccessStatusCode)
+                {
+                    logger.LogError("Gemini API error: {StatusCode} - {Content}", response?.StatusCode, lastResponseContent);
+
+                    await TrackFailedUsageAsync(userId, selectedModel, operation, promptId, stopwatch.ElapsedMilliseconds, lastResponseContent);
+
+                    var userMessage = GetUserFriendlyMessage(response?.StatusCode);
+                    return ApiResponse<GenerativeAiResponse>.FailureResponse(userMessage);
+                }
+
+                var geminiResponse = ParseGeminiResponse(lastResponseContent, selectedModel, stopwatch.ElapsedMilliseconds);
+
+                await TrackSuccessfulUsageAsync(userId, selectedModel, operation, promptId, geminiResponse, prompt);
+
+                logger.LogInformation("Gemini content generated successfully for user {UserId} using model {Model}", userId, selectedModel);
+
+                return ApiResponse<GenerativeAiResponse>.SuccessResponse(geminiResponse, "Tạo nội dung AI thành công.");
+            }
+            catch (Exception ex)
+            {
+                stopwatch.Stop();
+                logger.LogError(ex, "Error generating content with Gemini for user {UserId}", userId);
+
+                await TrackFailedUsageAsync(userId, model ?? _config.DefaultModel, operation, promptId, stopwatch.ElapsedMilliseconds, ex.Message);
+
+                return ApiResponse<GenerativeAiResponse>.FailureResponse("Đã xảy ra lỗi khi tạo nội dung AI.");
+            }
+        }
+
+        public async Task<ApiResponse<GenerativeAiResponse>> GenerateContentWithTemplateAsync(
+            Guid promptId,
+            Dictionary<string, string> variables,
+            AiOperation operation,
+            Guid userId)
+        {
+            try
+            {
+                var promptTemplate = await unitOfWork.AiPromptRepository.GetByIdAsync(promptId);
+                if (promptTemplate == null)
+                {
+                    logger.LogWarning("Prompt template not found with ID: {PromptId}", promptId);
+                    return ApiResponse<GenerativeAiResponse>.FailureResponse("Không tìm thấy prompt template.");
+                }
+
+                if (!promptTemplate.IsActive)
+                {
+                    logger.LogWarning("Prompt template is inactive with ID: {PromptId}", promptId);
+                    return ApiResponse<GenerativeAiResponse>.FailureResponse("Prompt template không hoạt động.");
+                }
+
+                var prompt = ReplaceVariables(promptTemplate.Template, variables);
+                var systemPrompt = string.IsNullOrEmpty(promptTemplate.SystemPrompt)
+                    ? prompt
+                    : $"{promptTemplate.SystemPrompt}\n\n{prompt}";
+
+                return await GenerateContentAsync(
+                    systemPrompt,
+                    operation,
+                    userId,
+                    promptId,
+                    null,
+                    promptTemplate.MaxTokens,
+                    promptTemplate.Temperature,
+                    promptTemplate.TopP);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error generating content with template {PromptId} for user {UserId}", promptId, userId);
+                return ApiResponse<GenerativeAiResponse>.FailureResponse("Đã xảy ra lỗi khi tạo nội dung AI từ template.");
+            }
+        }
+
+        public async Task<ApiResponse<bool>> CheckHealthAsync()
+        {
+            try
+            {
+                var testPrompt = "Hello, this is a health check.";
+                var result = await GenerateContentAsync(
+                    testPrompt,
+                    AiOperation.TextGeneration,
+                    Guid.Empty,
+                    null,
+                    null,
+                    10,
+                    0.1m,
+                    0.1m);
+
+                return result.IsSuccess
+                    ? ApiResponse<bool>.SuccessResponse(true, "Gemini service is healthy.")
+                    : ApiResponse<bool>.FailureResponse("Gemini service health check failed.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error checking Gemini service health");
+                return ApiResponse<bool>.FailureResponse("Gemini service health check failed.");
+            }
+        }
+
+        private GenerativeAiResponse ParseGeminiResponse(string responseContent, string model, long responseTimeMs)
+        {
+            var jsonDoc = JsonDocument.Parse(responseContent);
+            var root = jsonDoc.RootElement;
+
+            var content = root.GetProperty("candidates")[0]
+                .GetProperty("content")
+                .GetProperty("parts")[0]
+                .GetProperty("text")
+                .GetString() ?? string.Empty;
+
+            var usageMetadata = root.GetProperty("usageMetadata");
+            var promptTokenCount = usageMetadata.GetProperty("promptTokenCount").GetInt32();
+            var candidatesTokenCount = usageMetadata.GetProperty("candidatesTokenCount").GetInt32();
+            var totalTokenCount = usageMetadata.GetProperty("totalTokenCount").GetInt32();
+
+            var inputCost = (promptTokenCount / 1_000_000m) * _config.Pricing.InputCostPer1MTokens;
+            var outputCost = (candidatesTokenCount / 1_000_000m) * _config.Pricing.OutputCostPer1MTokens;
+
+            return new GenerativeAiResponse
+            {
+                Content = content,
+                InputTokens = promptTokenCount,
+                OutputTokens = candidatesTokenCount,
+                TotalTokens = totalTokenCount,
+                InputCost = inputCost,
+                OutputCost = outputCost,
+                TotalCost = inputCost + outputCost,
+                ResponseTimeMs = (int)responseTimeMs,
+                Model = model
+            };
+        }
+
+        private async Task TrackSuccessfulUsageAsync(
+            Guid userId,
+            string model,
+            AiOperation operation,
+            Guid? promptId,
+            GenerativeAiResponse response,
+            string requestSummary)
+        {
+            var usageRequest = new AiUsageRequest
+            {
+                UserId = userId,
+                Provider = AiProvider.Gemini,
+                Model = model,
+                Operation = operation,
+                InputTokens = response.InputTokens,
+                OutputTokens = response.OutputTokens,
+                InputCost = response.InputCost,
+                OutputCost = response.OutputCost,
+                PromptId = promptId,
+                RequestSummary = requestSummary.Length > 500 ? requestSummary[..500] : requestSummary,
+                ResponseTimeMs = response.ResponseTimeMs,
+                Status = AiUsageStatus.Success,
+                ErrorMessage = null,
+                Metadata = null
             };
 
-            var httpClient = httpClientFactory.CreateClient();
-            httpClient.Timeout = TimeSpan.FromSeconds(_config.TimeoutSeconds);
+            await aiUsageService.TrackUsageAsync(usageRequest);
+        }
 
-            var url = $"{_config.ApiEndpoint.TrimEnd('/')}/models/{selectedModel}:generateContent";
-            var jsonBody = JsonSerializer.Serialize(requestBody);
-
-            HttpResponseMessage? response = null;
-            var lastResponseContent = string.Empty;
-
-            for (var attempt = 0; attempt <= _config.MaxRetries; attempt++)
+        private async Task TrackFailedUsageAsync(
+            Guid userId,
+            string model,
+            AiOperation operation,
+            Guid? promptId,
+            long responseTimeMs,
+            string errorMessage)
+        {
+            var usageRequest = new AiUsageRequest
             {
-                if (attempt > 0)
-                {
-                    var delayMs = GetRetryDelayMs(response!, attempt);
-                    logger.LogWarning("Gemini 429/503, retry {Attempt}/{Max} after {DelayMs}ms", attempt, _config.MaxRetries, delayMs);
-                    await Task.Delay(delayMs);
-                }
+                UserId = userId,
+                Provider = AiProvider.Gemini,
+                Model = model,
+                Operation = operation,
+                InputTokens = 0,
+                OutputTokens = 0,
+                InputCost = 0,
+                OutputCost = 0,
+                PromptId = promptId,
+                RequestSummary = null,
+                ResponseTimeMs = (int)responseTimeMs,
+                Status = AiUsageStatus.Failed,
+                ErrorMessage = errorMessage.Length > 1000 ? errorMessage[..1000] : errorMessage,
+                Metadata = null
+            };
 
-                using var request = new HttpRequestMessage(HttpMethod.Post, url);
-                request.Headers.TryAddWithoutValidation("X-goog-api-key", _config.ApiKey);
-                request.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
+            await aiUsageService.TrackUsageAsync(usageRequest);
+        }
 
-                response = await httpClient.SendAsync(request);
-                lastResponseContent = await response.Content.ReadAsStringAsync();
+        private static string ReplaceVariables(string template, Dictionary<string, string> variables)
+        {
+            var result = template;
+            foreach (var (key, value) in variables)
+            {
+                result = result.Replace($"{{{key}}}", value);
+            }
+            return result;
+        }
 
-                if (response.IsSuccessStatusCode)
-                    break;
+        /// <summary>Chờ retry: ưu tiên Retry-After header, không thì exponential backoff (1s, 2s, 4s...), tối đa 60s.</summary>
+        private static int GetRetryDelayMs(HttpResponseMessage response, int attempt)
+        {
+            if (response.Headers.RetryAfter?.Delta is { } delta)
+                return (int)Math.Min(delta.TotalMilliseconds, 60_000);
 
-                var isRetryable = response.StatusCode is HttpStatusCode.TooManyRequests or HttpStatusCode.ServiceUnavailable;
-                if (attempt >= _config.MaxRetries || !isRetryable)
-                    break;
+            if (response.Headers.RetryAfter?.Date is { } date)
+            {
+                var ms = (date - DateTimeOffset.UtcNow).TotalMilliseconds;
+                if (ms > 0) return (int)Math.Min(ms, 60_000);
             }
 
-            stopwatch.Stop();
+            var backoffMs = (int)(Math.Pow(2, attempt) * 1000);
+            return Math.Min(backoffMs, 60_000);
+        }
 
-            if (response == null || !response.IsSuccessStatusCode)
+        private static string GetUserFriendlyMessage(HttpStatusCode? statusCode)
+        {
+            return statusCode switch
             {
-                logger.LogError("Gemini API error: {StatusCode} - {Content}", response?.StatusCode, lastResponseContent);
-
-                await TrackFailedUsageAsync(userId, selectedModel, operation, promptId, stopwatch.ElapsedMilliseconds, lastResponseContent);
-
-                var userMessage = GetUserFriendlyMessage(response?.StatusCode);
-                return ApiResponse<GenerativeAiResponse>.FailureResponse(userMessage);
-            }
-
-            var geminiResponse = ParseGeminiResponse(lastResponseContent, selectedModel, stopwatch.ElapsedMilliseconds);
-
-            await TrackSuccessfulUsageAsync(userId, selectedModel, operation, promptId, geminiResponse, prompt);
-
-            logger.LogInformation("Gemini content generated successfully for user {UserId} using model {Model}", userId, selectedModel);
-
-            return ApiResponse<GenerativeAiResponse>.SuccessResponse(geminiResponse, "Tạo nội dung AI thành công.");
+                HttpStatusCode.TooManyRequests => "Tạm thời quá tải. Vui lòng thử lại sau vài phút.",
+                HttpStatusCode.ServiceUnavailable => "Dịch vụ AI tạm thời bận. Vui lòng thử lại sau.",
+                HttpStatusCode.Unauthorized => "Lỗi xác thực API. Kiểm tra cấu hình Gemini.",
+                HttpStatusCode.BadRequest => "Yêu cầu không hợp lệ. Vui lòng kiểm tra dữ liệu gửi lên.",
+                HttpStatusCode.NotFound => "Model hoặc endpoint không tồn tại. Kiểm tra cấu hình.",
+                HttpStatusCode.RequestEntityTooLarge => "Nội dung gửi lên vượt quá giới hạn. Vui lòng rút gọn.",
+                _ => statusCode is { } s && (int)s >= 500
+                    ? "Dịch vụ AI gặp sự cố. Vui lòng thử lại sau."
+                    : "Đã xảy ra lỗi khi gọi API AI. Vui lòng thử lại."
+            };
         }
-        catch (Exception ex)
-        {
-            stopwatch.Stop();
-            logger.LogError(ex, "Error generating content with Gemini for user {UserId}", userId);
-
-            await TrackFailedUsageAsync(userId, model ?? _config.DefaultModel, operation, promptId, stopwatch.ElapsedMilliseconds, ex.Message);
-
-            return ApiResponse<GenerativeAiResponse>.FailureResponse("Đã xảy ra lỗi khi tạo nội dung AI.");
-        }
-    }
-
-    public async Task<ApiResponse<GenerativeAiResponse>> GenerateContentWithTemplateAsync(
-        Guid promptId,
-        Dictionary<string, string> variables,
-        AiOperation operation,
-        Guid userId)
-    {
-        try
-        {
-            var promptTemplate = await unitOfWork.AiPromptRepository.GetByIdAsync(promptId);
-            if (promptTemplate == null)
-            {
-                logger.LogWarning("Prompt template not found with ID: {PromptId}", promptId);
-                return ApiResponse<GenerativeAiResponse>.FailureResponse("Không tìm thấy prompt template.");
-            }
-
-            if (!promptTemplate.IsActive)
-            {
-                logger.LogWarning("Prompt template is inactive with ID: {PromptId}", promptId);
-                return ApiResponse<GenerativeAiResponse>.FailureResponse("Prompt template không hoạt động.");
-            }
-
-            var prompt = ReplaceVariables(promptTemplate.Template, variables);
-            var systemPrompt = string.IsNullOrEmpty(promptTemplate.SystemPrompt)
-                ? prompt
-                : $"{promptTemplate.SystemPrompt}\n\n{prompt}";
-
-            return await GenerateContentAsync(
-                systemPrompt,
-                operation,
-                userId,
-                promptId,
-                null,
-                promptTemplate.MaxTokens,
-                promptTemplate.Temperature,
-                promptTemplate.TopP);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error generating content with template {PromptId} for user {UserId}", promptId, userId);
-            return ApiResponse<GenerativeAiResponse>.FailureResponse("Đã xảy ra lỗi khi tạo nội dung AI từ template.");
-        }
-    }
-
-    public async Task<ApiResponse<bool>> CheckHealthAsync()
-    {
-        try
-        {
-            var testPrompt = "Hello, this is a health check.";
-            var result = await GenerateContentAsync(
-                testPrompt,
-                AiOperation.TextGeneration,
-                Guid.Empty,
-                null,
-                null,
-                10,
-                0.1m,
-                0.1m);
-
-            return result.IsSuccess
-                ? ApiResponse<bool>.SuccessResponse(true, "Gemini service is healthy.")
-                : ApiResponse<bool>.FailureResponse("Gemini service health check failed.");
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error checking Gemini service health");
-            return ApiResponse<bool>.FailureResponse("Gemini service health check failed.");
-        }
-    }
-
-    private GenerativeAiResponse ParseGeminiResponse(string responseContent, string model, long responseTimeMs)
-    {
-        var jsonDoc = JsonDocument.Parse(responseContent);
-        var root = jsonDoc.RootElement;
-
-        var content = root.GetProperty("candidates")[0]
-            .GetProperty("content")
-            .GetProperty("parts")[0]
-            .GetProperty("text")
-            .GetString() ?? string.Empty;
-
-        var usageMetadata = root.GetProperty("usageMetadata");
-        var promptTokenCount = usageMetadata.GetProperty("promptTokenCount").GetInt32();
-        var candidatesTokenCount = usageMetadata.GetProperty("candidatesTokenCount").GetInt32();
-        var totalTokenCount = usageMetadata.GetProperty("totalTokenCount").GetInt32();
-
-        var inputCost = (promptTokenCount / 1_000_000m) * _config.Pricing.InputCostPer1MTokens;
-        var outputCost = (candidatesTokenCount / 1_000_000m) * _config.Pricing.OutputCostPer1MTokens;
-
-        return new GenerativeAiResponse
-        {
-            Content = content,
-            InputTokens = promptTokenCount,
-            OutputTokens = candidatesTokenCount,
-            TotalTokens = totalTokenCount,
-            InputCost = inputCost,
-            OutputCost = outputCost,
-            TotalCost = inputCost + outputCost,
-            ResponseTimeMs = (int)responseTimeMs,
-            Model = model
-        };
-    }
-
-    private async Task TrackSuccessfulUsageAsync(
-        Guid userId,
-        string model,
-        AiOperation operation,
-        Guid? promptId,
-        GenerativeAiResponse response,
-        string requestSummary)
-    {
-        var usageRequest = new AiUsageRequest
-        {
-            UserId = userId,
-            Provider = AiProvider.Gemini,
-            Model = model,
-            Operation = operation,
-            InputTokens = response.InputTokens,
-            OutputTokens = response.OutputTokens,
-            InputCost = response.InputCost,
-            OutputCost = response.OutputCost,
-            PromptId = promptId,
-            RequestSummary = requestSummary.Length > 500 ? requestSummary[..500] : requestSummary,
-            ResponseTimeMs = response.ResponseTimeMs,
-            Status = AiUsageStatus.Success,
-            ErrorMessage = null,
-            Metadata = null
-        };
-
-        await aiUsageService.TrackUsageAsync(usageRequest);
-    }
-
-    private async Task TrackFailedUsageAsync(
-        Guid userId,
-        string model,
-        AiOperation operation,
-        Guid? promptId,
-        long responseTimeMs,
-        string errorMessage)
-    {
-        var usageRequest = new AiUsageRequest
-        {
-            UserId = userId,
-            Provider = AiProvider.Gemini,
-            Model = model,
-            Operation = operation,
-            InputTokens = 0,
-            OutputTokens = 0,
-            InputCost = 0,
-            OutputCost = 0,
-            PromptId = promptId,
-            RequestSummary = null,
-            ResponseTimeMs = (int)responseTimeMs,
-            Status = AiUsageStatus.Failed,
-            ErrorMessage = errorMessage.Length > 1000 ? errorMessage[..1000] : errorMessage,
-            Metadata = null
-        };
-
-        await aiUsageService.TrackUsageAsync(usageRequest);
-    }
-
-    private static string ReplaceVariables(string template, Dictionary<string, string> variables)
-    {
-        var result = template;
-        foreach (var (key, value) in variables)
-        {
-            result = result.Replace($"{{{key}}}", value);
-        }
-        return result;
-    }
-
-    /// <summary>Chờ retry: ưu tiên Retry-After header, không thì exponential backoff (1s, 2s, 4s...), tối đa 60s.</summary>
-    private static int GetRetryDelayMs(HttpResponseMessage response, int attempt)
-    {
-        if (response.Headers.RetryAfter?.Delta is { } delta)
-            return (int)Math.Min(delta.TotalMilliseconds, 60_000);
-
-        if (response.Headers.RetryAfter?.Date is { } date)
-        {
-            var ms = (date - DateTimeOffset.UtcNow).TotalMilliseconds;
-            if (ms > 0) return (int)Math.Min(ms, 60_000);
-        }
-
-        var backoffMs = (int)(Math.Pow(2, attempt) * 1000);
-        return Math.Min(backoffMs, 60_000);
-    }
-
-    private static string GetUserFriendlyMessage(HttpStatusCode? statusCode)
-    {
-        return statusCode switch
-        {
-            HttpStatusCode.TooManyRequests => "Tạm thời quá tải. Vui lòng thử lại sau vài phút.",
-            HttpStatusCode.ServiceUnavailable => "Dịch vụ AI tạm thời bận. Vui lòng thử lại sau.",
-            HttpStatusCode.Unauthorized => "Lỗi xác thực API. Kiểm tra cấu hình Gemini.",
-            HttpStatusCode.BadRequest => "Yêu cầu không hợp lệ. Vui lòng kiểm tra dữ liệu gửi lên.",
-            HttpStatusCode.NotFound => "Model hoặc endpoint không tồn tại. Kiểm tra cấu hình.",
-            HttpStatusCode.RequestEntityTooLarge => "Nội dung gửi lên vượt quá giới hạn. Vui lòng rút gọn.",
-            _ => statusCode is { } s && (int)s >= 500
-                ? "Dịch vụ AI gặp sự cố. Vui lòng thử lại sau."
-                : "Đã xảy ra lỗi khi gọi API AI. Vui lòng thử lại."
-        };
     }
 }

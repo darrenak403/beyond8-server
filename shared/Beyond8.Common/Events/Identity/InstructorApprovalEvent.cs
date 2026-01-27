@@ -1,9 +1,10 @@
-namespace Beyond8.Common.Events.Identity;
-
-public record InstructorApprovalEvent(
-    Guid UserId,
-    string ToEmail,
-    string InstructorName,
-    string ProfileUrl,
-    DateTime Timestamp
-);
+namespace Beyond8.Common.Events.Identity
+{
+    public record InstructorApprovalEvent(
+        Guid UserId,
+        string ToEmail,
+        string InstructorName,
+        string ProfileUrl,
+        DateTime Timestamp
+    );
+}

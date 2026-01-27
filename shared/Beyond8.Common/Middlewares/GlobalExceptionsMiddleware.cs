@@ -3,48 +3,49 @@ using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Text.Json;
 
-namespace Beyond8.Common.Middlewares;
-
-public class GlobalExceptionsMiddleware(RequestDelegate next, ILogger<GlobalExceptionsMiddleware> logger)
+namespace Beyond8.Common.Middlewares
 {
-    private readonly RequestDelegate _next = next;
-    private readonly ILogger<GlobalExceptionsMiddleware> _logger = logger;
-
-    public async Task InvokeAsync(HttpContext context)
+    public class GlobalExceptionsMiddleware(RequestDelegate next, ILogger<GlobalExceptionsMiddleware> logger)
     {
-        try
+        private readonly RequestDelegate _next = next;
+        private readonly ILogger<GlobalExceptionsMiddleware> _logger = logger;
+
+        public async Task InvokeAsync(HttpContext context)
         {
-            await _next(context);
+            try
+            {
+                await _next(context);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled exception occurred");
+                await HandleExceptionAsync(context, ex);
+            }
         }
-        catch (Exception ex)
+
+        private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
         {
-            _logger.LogError(ex, "Unhandled exception occurred");
-            await HandleExceptionAsync(context, ex);
+            var response = context.Response;
+            response.ContentType = "application/json";
+
+            var statusCode = exception switch
+            {
+                UnauthorizedAccessException => HttpStatusCode.Unauthorized,
+                ArgumentException => HttpStatusCode.BadRequest,
+                KeyNotFoundException => HttpStatusCode.NotFound,
+                _ => HttpStatusCode.InternalServerError
+            };
+
+            response.StatusCode = (int)statusCode;
+
+            var result = JsonSerializer.Serialize(new
+            {
+                success = false,
+                error = exception.Message,
+                statusCode = (int)statusCode
+            });
+
+            await response.WriteAsync(result);
         }
-    }
-
-    private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
-    {
-        var response = context.Response;
-        response.ContentType = "application/json";
-
-        var statusCode = exception switch
-        {
-            UnauthorizedAccessException => HttpStatusCode.Unauthorized,
-            ArgumentException => HttpStatusCode.BadRequest,
-            KeyNotFoundException => HttpStatusCode.NotFound,
-            _ => HttpStatusCode.InternalServerError
-        };
-
-        response.StatusCode = (int)statusCode;
-
-        var result = JsonSerializer.Serialize(new
-        {
-            success = false,
-            error = exception.Message,
-            statusCode = (int)statusCode
-        });
-
-        await response.WriteAsync(result);
     }
 }

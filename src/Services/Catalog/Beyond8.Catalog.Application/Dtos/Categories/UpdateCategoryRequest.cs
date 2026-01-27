@@ -1,8 +1,9 @@
-namespace Beyond8.Catalog.Application.Dtos.Categories;
-
-public class UpdateCategoryRequest
+namespace Beyond8.Catalog.Application.Dtos.Categories
 {
-    public string Name { get; set; } = string.Empty;
-    public string? Description { get; set; }
-    public Guid? ParentId { get; set; }
+    public class UpdateCategoryRequest
+    {
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public Guid? ParentId { get; set; }
+    }
 }

@@ -4,55 +4,56 @@ using Beyond8.Integration.Application.Dtos.Ai;
 using Beyond8.Integration.Application.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Beyond8.Integration.Api.Apis;
-
-public static class AiApis
+namespace Beyond8.Integration.Api.Apis
 {
-    public static IEndpointRouteBuilder MapAiApi(this IEndpointRouteBuilder builder)
+    public static class AiApis
     {
-        builder.MapGroup("/api/v1/ai")
-            .MapAiRoutes()
-            .WithTags("AI Api")
-            .RequireRateLimiting("AiFixedLimit")
-            .RequireAuthorization();
+        public static IEndpointRouteBuilder MapAiApi(this IEndpointRouteBuilder builder)
+        {
+            builder.MapGroup("/api/v1/ai")
+                .MapAiRoutes()
+                .WithTags("AI Api")
+                .RequireRateLimiting("AiFixedLimit")
+                .RequireAuthorization();
 
-        return builder;
-    }
+            return builder;
+        }
 
-    private static RouteGroupBuilder MapAiRoutes(this RouteGroupBuilder group)
-    {
-        group.MapPost("/profile-review", InstructorProfileReview)
-            .WithName("InstructorProfileReview")
-            .WithDescription("Review instructor profile by AI (Require Authorization)")
-            .RequireAuthorization()
-            .Produces<ApiResponse<AiProfileReviewResponse>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<AiProfileReviewResponse>>(StatusCodes.Status400BadRequest);
+        private static RouteGroupBuilder MapAiRoutes(this RouteGroupBuilder group)
+        {
+            group.MapPost("/profile-review", InstructorProfileReview)
+                .WithName("InstructorProfileReview")
+                .WithDescription("Review instructor profile by AI (Require Authorization)")
+                .RequireAuthorization()
+                .Produces<ApiResponse<AiProfileReviewResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<AiProfileReviewResponse>>(StatusCodes.Status400BadRequest);
 
-        group.MapGet("/health", HealthCheck)
-            .WithName("HealthCheck")
-            .WithDescription("Check the health of the AI service")
-            .AllowAnonymous()
-            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized);
+            group.MapGet("/health", HealthCheck)
+                .WithName("HealthCheck")
+                .WithDescription("Check the health of the AI service")
+                .AllowAnonymous()
+                .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
 
-        return group;
-    }
+            return group;
+        }
 
-    private static async Task<IResult> HealthCheck(
-        [FromServices] IGenerativeAiService aiService
-    )
-    {
-        var result = await aiService.CheckHealthAsync();
-        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
-    }
+        private static async Task<IResult> HealthCheck(
+            [FromServices] IGenerativeAiService aiService
+        )
+        {
+            var result = await aiService.CheckHealthAsync();
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
 
-    private static async Task<IResult> InstructorProfileReview(
-        [FromBody] ProfileReviewRequest request,
-        [FromServices] IAiService aiService,
-        [FromServices] ICurrentUserService currentUserService)
-    {
-        var result = await aiService.InstructorProfileReviewAsync(request, currentUserService.UserId);
-        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        private static async Task<IResult> InstructorProfileReview(
+            [FromBody] ProfileReviewRequest request,
+            [FromServices] IAiService aiService,
+            [FromServices] ICurrentUserService currentUserService)
+        {
+            var result = await aiService.InstructorProfileReviewAsync(request, currentUserService.UserId);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
     }
 }

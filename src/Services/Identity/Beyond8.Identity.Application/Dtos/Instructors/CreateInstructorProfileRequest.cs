@@ -1,19 +1,20 @@
 using Beyond8.Identity.Domain.JSONFields;
 
-namespace Beyond8.Identity.Application.Dtos.Instructors;
-
-public class CreateInstructorProfileRequest
+namespace Beyond8.Identity.Application.Dtos.Instructors
 {
-    public string Bio { get; set; } = string.Empty;
-    public string Headline { get; set; } = string.Empty;
-    public List<string> ExpertiseAreas { get; set; } = [];
-    public List<EducationInfo> Education { get; set; } = [];
-    public List<WorkInfo>? WorkExperience { get; set; }
-    public SocialInfo? SocialLinks { get; set; }
-    public BankInfo BankInfo { get; set; } = new();
-    public string? TaxId { get; set; }
-    public List<string> TeachingLanguages { get; set; } = ["vi-VN"];
-    public string? IntroVideoUrl { get; set; }
-    public List<IdentityInfo> IdentityDocuments { get; set; } = [];
-    public List<CertificateInfo>? Certificates { get; set; }
+    public class CreateInstructorProfileRequest
+    {
+        public string Bio { get; set; } = string.Empty;
+        public string Headline { get; set; } = string.Empty;
+        public List<string> ExpertiseAreas { get; set; } = [];
+        public List<EducationInfo> Education { get; set; } = [];
+        public List<WorkInfo>? WorkExperience { get; set; }
+        public SocialInfo? SocialLinks { get; set; }
+        public BankInfo BankInfo { get; set; } = new();
+        public string? TaxId { get; set; }
+        public List<string> TeachingLanguages { get; set; } = ["vi-VN"];
+        public string? IntroVideoUrl { get; set; }
+        public List<IdentityInfo> IdentityDocuments { get; set; } = [];
+        public List<CertificateInfo>? Certificates { get; set; }
+    }
 }

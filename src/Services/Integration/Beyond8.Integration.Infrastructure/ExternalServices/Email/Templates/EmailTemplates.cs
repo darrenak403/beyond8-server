@@ -1,10 +1,10 @@
-namespace Beyond8.Integration.Infrastructure.ExternalServices.Email.Templates;
-
-public static class EmailTemplates
+namespace Beyond8.Integration.Infrastructure.ExternalServices.Email.Templates
 {
-    public static string GetOtpEmailTemplate(string otpCode, string purpose)
+    public static class EmailTemplates
     {
-        return $@"
+        public static string GetOtpEmailTemplate(string otpCode, string purpose)
+        {
+            return $@"
 <!DOCTYPE html>
 <html lang='vi'>
 <head>
@@ -70,11 +70,11 @@ public static class EmailTemplates
     </table>
 </body>
 </html>";
-    }
+        }
 
-    public static string GetInstructorApprovalEmailTemplate(string instructorName, string profileUrl)
-    {
-        return $@"
+        public static string GetInstructorApprovalEmailTemplate(string instructorName, string profileUrl)
+        {
+            return $@"
 <!DOCTYPE html>
 <html lang='vi'>
 <head>
@@ -165,11 +165,11 @@ public static class EmailTemplates
     </table>
 </body>
 </html>";
-    }
+        }
 
-    public static string GetInstructorRejectionEmailTemplate(string instructorName, string reason)
-    {
-        return $@"
+        public static string GetInstructorRejectionEmailTemplate(string instructorName, string reason)
+        {
+            return $@"
 <!DOCTYPE html>
 <html lang='vi'>
 <head>
@@ -250,11 +250,11 @@ public static class EmailTemplates
     </table>
 </body>
 </html>";
-    }
+        }
 
-    public static string GetInstructorUpdateRequestEmailTemplate(string instructorName, string updateNotes)
-    {
-        return $@"
+        public static string GetInstructorUpdateRequestEmailTemplate(string instructorName, string updateNotes)
+        {
+            return $@"
 <!DOCTYPE html>
 <html lang='vi'>
 <head>
@@ -292,7 +292,7 @@ public static class EmailTemplates
                             <div style='background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 20px; margin: 30px 0; border-radius: 4px;'>
                                 <h3 style='color: #92400e; margin: 0 0 10px 0; font-size: 16px;'>📝 Yêu cầu cập nhật:</h3>
                                 <p style='color: #78350f; font-size: 15px; margin: 0; line-height: 1.6; white-space: pre-wrap;'>
-{updateNotes}
+    {updateNotes}
                                 </p>
                             </div>
 
@@ -334,5 +334,6 @@ public static class EmailTemplates
     </table>
 </body>
 </html>";
+        }
     }
 }
