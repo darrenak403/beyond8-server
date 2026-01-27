@@ -20,7 +20,9 @@ public static class CommonExtensions
                                        "http://localhost:3000",
                                        "http://localhost:5173",
                                        "http://api-gateway.beyond8.dev",
-                                       "https://api-gateway.beyond8.dev"
+                                       "https://api-gateway.beyond8.dev",
+                                       "http://api-gateway-beyond8.dev.localhost:8080",
+                                       "https://api-gateway-beyond8.dev.localhost:8080"
                                    )
                                    .AllowAnyMethod()
                                    .AllowAnyHeader()
