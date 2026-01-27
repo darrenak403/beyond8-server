@@ -49,9 +49,8 @@ public class BedrockService(
                 return ApiResponse<GenerativeAiResponse>.FailureResponse(errorMsg);
             }
 
-            // Use credentials from configuration only (appsettings.json or User Secrets)
             var credentials = new BasicAWSCredentials(_config.AccessKey, _config.SecretKey);
-            
+
             using var client = new AmazonBedrockRuntimeClient(credentials, region);
 
             // Build messages for Claude
