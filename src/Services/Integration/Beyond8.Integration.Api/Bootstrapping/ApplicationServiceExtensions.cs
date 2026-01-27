@@ -166,7 +166,7 @@ public static class Bootstrapper
         app.UseHttpsRedirection();
 
         app.MapHub<AppHub>("/hubs/app")
-            .RequireCors("AllowDevelopmentClients");
+            .RequireCors(app.Environment.IsDevelopment() ? "AllowDevelopmentClients" : "AllowProductionClients");
 
         app.MapMediaFileApi();
         app.MapAiApi();
