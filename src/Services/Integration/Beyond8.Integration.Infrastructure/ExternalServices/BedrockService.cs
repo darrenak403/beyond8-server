@@ -38,9 +38,20 @@ public class BedrockService(
         try
         {
             var selectedModel = model ?? _config.DefaultModel;
-            var credentials = new BasicAWSCredentials(_config.AccessKey, _config.SecretKey);
             var region = RegionEndpoint.GetBySystemName(_config.Region);
 
+            // Validate that credentials are provided in configuration (appsettings.json or User Secrets)
+            if (string.IsNullOrWhiteSpace(_config.AccessKey) || string.IsNullOrWhiteSpace(_config.SecretKey))
+            {
+                var errorMsg = "AWS Bedrock credentials (AccessKey and SecretKey) must be configured in appsettings.json or User Secrets. " +
+                               "Please set AWS:Bedrock:AccessKey and AWS:Bedrock:SecretKey.";
+                logger.LogError("Bedrock credentials not configured: {Error}", errorMsg);
+                return ApiResponse<GenerativeAiResponse>.FailureResponse(errorMsg);
+            }
+
+            // Use credentials from configuration only (appsettings.json or User Secrets)
+            var credentials = new BasicAWSCredentials(_config.AccessKey, _config.SecretKey);
+            
             using var client = new AmazonBedrockRuntimeClient(credentials, region);
 
             // Build messages for Claude
