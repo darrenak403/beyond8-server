@@ -22,9 +22,6 @@ namespace Beyond8.Integration.Application.Validators.VnptEkyc
             if (string.IsNullOrWhiteSpace(hash))
                 return false;
 
-            // Basic validation for Minio hash format
-            // Format: idg-{guid}/{guid}/{date}/{filename}
-            // Example: idg-bbee2cbb-b05c-4857-9788-6ed9c3f74391/397894be-02aa-4a4f-8458-a912ef72167c/20200331/IDG01_622c2972-730a-11ea-9632-8fd0d0c7fe71
             var parts = hash.Split('/');
             return parts.Length >= 3 && hash.StartsWith("idg-");
         }
@@ -34,8 +31,6 @@ namespace Beyond8.Integration.Application.Validators.VnptEkyc
             if (string.IsNullOrWhiteSpace(clientSession))
                 return false;
 
-            // Validate client session format
-            // Format: <IOS/ANDROID>_<model>_<OS/API>_<Device/Simulator>_<SDK version>_<Device id>_<Timestamp>
             var parts = clientSession.Split('_');
             if (parts.Length < 7)
                 return false;

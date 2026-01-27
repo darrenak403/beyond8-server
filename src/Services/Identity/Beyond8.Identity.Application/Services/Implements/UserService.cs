@@ -284,9 +284,6 @@ namespace Beyond8.Identity.Application.Services.Implements
             }
         }
 
-        /// <summary>
-        /// Validates user by Id. Returns (IsValid, ErrorMessage, ValidUser). Use for GetUserById, UpdateUser, DeleteUser, UpdateUserStatus.
-        /// </summary>
         private async Task<(bool IsValid, string? ErrorMessage, User? ValidUser)> ValidateUserByIdAsync(
             Guid userId,
             bool requireActive = false)
@@ -307,9 +304,7 @@ namespace Beyond8.Identity.Application.Services.Implements
             return (true, null, user);
         }
 
-        /// <summary>
-        /// Validates email uniqueness. Returns (IsValid, ErrorMessage).
-        /// </summary>
+
         private async Task<(bool IsValid, string? ErrorMessage)> ValidateEmailUniqueAsync(string email, Guid? excludeUserId = null)
         {
             var existingUser = await unitOfWork.UserRepository.FindOneAsync(u =>
@@ -322,9 +317,7 @@ namespace Beyond8.Identity.Application.Services.Implements
 
             return (true, null);
         }
-        /// <summary>
-        /// Updates user roles: revokes existing active roles and assigns new roles from request.
-        /// </summary>
+
         private async Task UpdateUserRolesAsync(User user, List<string> roleCodes)
         {
             foreach (var userRole in user.UserRoles.Where(ur => ur.RevokedAt == null))

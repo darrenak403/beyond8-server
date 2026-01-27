@@ -6,17 +6,12 @@ namespace Beyond8.Common.Extensions
 {
     public static class MassTransitExtensions
     {
-        /// <summary>
-        /// Adds MassTransit with RabbitMQ configuration.
-        /// Use configurator action to register consumers for each service.
-        /// </summary>
         public static IHostApplicationBuilder AddMassTransitWithRabbitMq(
             this IHostApplicationBuilder builder,
             Action<IBusRegistrationConfigurator>? configurator = null)
         {
             builder.Services.AddMassTransit(x =>
             {
-                // Allow each service to register its own consumers
                 configurator?.Invoke(x);
 
                 x.UsingRabbitMq((context, cfg) =>

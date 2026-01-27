@@ -42,7 +42,6 @@ namespace Beyond8.Integration.Application.Mappings.AiIntegrationMappings
             entity.UpdatedBy = userId;
         }
 
-        /// <summary>Chỉ gán các trường metadata (Description, Category, Tags, IsActive, UpdatedBy).</summary>
         public static void ApplyMetadataOnly(this AiPrompt entity, UpdateAiPromptRequest request, Guid userId)
         {
             if (request.Description != null) entity.Description = request.Description;
@@ -52,7 +51,6 @@ namespace Beyond8.Integration.Application.Mappings.AiIntegrationMappings
             entity.UpdatedBy = userId;
         }
 
-        /// <summary>Merge request lên current (request ưu tiên khi có giá trị), tạo entity mới với Version và IsActive.</summary>
         public static AiPrompt ToNewVersionEntity(this AiPrompt current, UpdateAiPromptRequest request, string nextVersion)
         {
             return new AiPrompt

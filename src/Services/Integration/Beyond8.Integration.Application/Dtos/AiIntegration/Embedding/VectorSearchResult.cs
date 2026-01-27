@@ -11,7 +11,6 @@ namespace Beyond8.Integration.Application.Dtos.AiIntegration.Embedding
         public int? PageNumber { get; set; }
     
         // For Lesson Content
-        public Guid? LessonId { get; set; }
         public Guid? SectionId { get; set; }
         public Guid? LessonDocumentId { get; set; }
     

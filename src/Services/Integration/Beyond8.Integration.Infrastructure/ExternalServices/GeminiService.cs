@@ -304,7 +304,6 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
             return result;
         }
 
-        /// <summary>Chờ retry: ưu tiên Retry-After header, không thì exponential backoff (1s, 2s, 4s...), tối đa 60s.</summary>
         private static int GetRetryDelayMs(HttpResponseMessage response, int attempt)
         {
             if (response.Headers.RetryAfter?.Delta is { } delta)

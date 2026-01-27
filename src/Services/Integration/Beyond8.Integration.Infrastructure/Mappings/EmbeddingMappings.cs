@@ -5,9 +5,6 @@ namespace Beyond8.Integration.Infrastructure.Mappings
 {
     public static class EmbeddingMappings
     {
-        /// <summary>
-        /// Convert Qdrant ScoredPoint to VectorSearchResult
-        /// </summary>
         public static VectorSearchResult ToVectorSearchResult(this ScoredPoint point)
         {
             var result = new VectorSearchResult
@@ -38,12 +35,6 @@ namespace Beyond8.Integration.Infrastructure.Mappings
             if (point.Payload.TryGetValue("pageNumber", out var pageNum))
             {
                 result.PageNumber = (int)pageNum.IntegerValue;
-            }
-
-            // Parse lessonId if present
-            if (point.Payload.TryGetValue("lessonId", out var lessonIdValue))
-            {
-                result.LessonId = Guid.Parse(lessonIdValue.StringValue);
             }
 
             return result;

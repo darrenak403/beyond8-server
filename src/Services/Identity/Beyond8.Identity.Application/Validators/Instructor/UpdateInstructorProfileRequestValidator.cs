@@ -92,25 +92,17 @@ namespace Beyond8.Identity.Application.Validators.Instructor
                 .MaximumLength(500).WithMessage("URL video giới thiệu không được vượt quá 500 ký tự");
         }
 
-        /// <summary>
-        /// Validate education list has required fields
-        /// </summary>
+
         private static bool ValidateEducationList(List<EducationInfo> educationList, ValidationContext<UpdateInstructorProfileRequest> context)
         {
             return !educationList.Any(edu => string.IsNullOrWhiteSpace(edu.Degree) || string.IsNullOrWhiteSpace(edu.School));
         }
 
-        /// <summary>
-        /// Validate work experience list has required fields
-        /// </summary>
         private static bool ValidateWorkExperienceList(List<WorkInfo> workList, ValidationContext<UpdateInstructorProfileRequest> context)
         {
             return !workList.Any(work => string.IsNullOrWhiteSpace(work.Role) || string.IsNullOrWhiteSpace(work.Company));
         }
 
-        /// <summary>
-        /// Validate all social media URLs
-        /// </summary>
         private static void ValidateSocialLinks(SocialInfo socialLinks, ValidationContext<UpdateInstructorProfileRequest> context)
         {
             ValidateSocialUrl(socialLinks.LinkedIn, "LinkedIn", context);
@@ -118,9 +110,6 @@ namespace Beyond8.Identity.Application.Validators.Instructor
             ValidateSocialUrl(socialLinks.Website, "Website", context);
         }
 
-        /// <summary>
-        /// Validate a single social media URL
-        /// </summary>
         private static void ValidateSocialUrl(string? url, string platform, ValidationContext<UpdateInstructorProfileRequest> context)
         {
             if (!string.IsNullOrWhiteSpace(url) && !IsValidUrl(url))
@@ -129,9 +118,6 @@ namespace Beyond8.Identity.Application.Validators.Instructor
             }
         }
 
-        /// <summary>
-        /// Check if URL is valid
-        /// </summary>
         private static bool IsValidUrl(string url)
         {
             return Uri.TryCreate(url, UriKind.Absolute, out var uri) &&

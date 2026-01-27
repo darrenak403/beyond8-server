@@ -153,6 +153,11 @@ namespace Beyond8.Identity.Infrastructure.Data.Seeders
                             UserId = userIds[3],
                             RoleId = roleIds[2],
                             AssignedAt = DateTime.UtcNow
+                        },
+                        new() {
+                            UserId = userIds[3],
+                            RoleId = roleIds[3],
+                            AssignedAt = DateTime.UtcNow
                         }
                     ],
                 }

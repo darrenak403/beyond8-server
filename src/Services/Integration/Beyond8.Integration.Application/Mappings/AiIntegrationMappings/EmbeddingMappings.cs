@@ -4,17 +4,13 @@ namespace Beyond8.Integration.Application.Mappings.AiIntegrationMappings
 {
     public static class EmbeddingMappings
     {
-        /// <summary>
-        /// Convert DocumentChunk to DocumentEmbedding with vector
-        /// </summary>
-        public static DocumentEmbedding ToDocumentEmbedding(this DocumentChunk chunk, float[] vector, Guid courseId, Guid? lessonId = null)
+        public static DocumentEmbedding ToDocumentEmbedding(this DocumentChunk chunk, float[] vector, Guid courseId)
         {
             return new DocumentEmbedding
             {
                 Vector = vector,
                 CourseId = courseId,
                 DocumentId = chunk.DocumentId,
-                LessonId = lessonId,
                 PageNumber = chunk.PageNumber,
                 ChunkIndex = chunk.ChunkIndex,
                 Text = chunk.Text,
@@ -25,9 +21,6 @@ namespace Beyond8.Integration.Application.Mappings.AiIntegrationMappings
             };
         }
 
-        /// <summary>
-        /// Convert DocumentEmbedding to DocumentEmbeddingResponse
-        /// </summary>
         public static DocumentEmbeddingResponse ToDocumentEmbeddingResponse(this DocumentEmbedding embedding, Guid id)
         {
             return new DocumentEmbeddingResponse
@@ -35,7 +28,6 @@ namespace Beyond8.Integration.Application.Mappings.AiIntegrationMappings
                 Id = id,
                 CourseId = embedding.CourseId,
                 DocumentId = embedding.DocumentId,
-                LessonId = embedding.LessonId,
                 PageNumber = embedding.PageNumber,
                 ChunkIndex = embedding.ChunkIndex,
                 Text = embedding.Text,

@@ -824,10 +824,6 @@ public class Question : BaseEntity
 
     public int Points { get; set; } = 1;
 
-    // Media
-    public string? ImageUrl { get; set; }
-    public string? VideoUrl { get; set; }
-
     // Statistics
     public int TimesUsed { get; set; } = 0;
     public int TimesCorrect { get; set; } = 0;

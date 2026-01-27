@@ -16,6 +16,7 @@ namespace Beyond8.Integration.Api.Apis
         private const string InstructorProfileCertificatesFolder = "instructor/profile/certificates";
         private const string InstructorProfileIdentityCardsFolder = "instructor/profile/identity-cards";
         private const string InstructorProfileVideosFolder = "instructor/profile/intro-videos";
+        private const string CourseThumbnailFolder = "course/thumbnails";
 
         public static IEndpointRouteBuilder MapMediaFileApi(this IEndpointRouteBuilder builder)
         {
@@ -72,6 +73,14 @@ namespace Beyond8.Integration.Api.Apis
             group.MapPost("/identity-card/back/presigned-url", GetIdentityCardBackPresignUrlAsync)
                 .WithName("GetIdentityCardBackPresignedUrl")
                 .WithDescription("Lấy presigned URL để upload mặt sau CMND/CCCD")
+                .RequireAuthorization(r => r.RequireRole(Role.Student, Role.Instructor))
+                .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
+            group.MapPost("/course-thumbnail/presigned-url", GetCourseThumbnailPresignUrlAsync)
+                .WithName("GetCourseThumbnailPresignedUrl")
+                .WithDescription("Lấy presigned URL để upload thumbnail khóa học")
                 .RequireAuthorization(r => r.RequireRole(Role.Student, Role.Instructor))
                 .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status400BadRequest)
@@ -226,11 +235,28 @@ namespace Beyond8.Integration.Api.Apis
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
 
-        private static async Task<IResult> ConfirmUploadAsync(
-            [FromBody] ConfirmUploadRequest request,
+        private static async Task<IResult> GetCourseThumbnailPresignUrlAsync(
+            [FromBody] UploadFileRequest request,
             [FromServices] IMediaFileService mediaFileService,
-            [FromServices] ICurrentUserService currentUserService,
-            [FromServices] IValidator<ConfirmUploadRequest> validator)
+            [FromServices] ICurrentUserService currentUserService)
+        {
+            var validator = UploadFileRequestValidator.ForDocument();
+            if (!request.ValidateRequest(validator, out var validationResult))
+                return validationResult!;
+
+            var result = await mediaFileService.InitiateUploadAsync(
+                currentUserService.UserId,
+                request,
+                CourseThumbnailFolder);
+
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
+
+        private static async Task<IResult> ConfirmUploadAsync(
+        [FromBody] ConfirmUploadRequest request,
+        [FromServices] IMediaFileService mediaFileService,
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IValidator<ConfirmUploadRequest> validator)
         {
             if (!request.ValidateRequest(validator, out var validationResult))
                 return validationResult!;

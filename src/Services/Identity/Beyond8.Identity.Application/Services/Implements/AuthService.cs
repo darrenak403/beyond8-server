@@ -427,9 +427,7 @@ namespace Beyond8.Identity.Application.Services.Implements
             }
         }
 
-        /// <summary>
-        /// Validates user by Id. Returns (IsValid, ErrorMessage, ValidUser). Use for Logout, ChangePassword, RefreshToken.
-        /// </summary>
+
         private (bool IsValid, string? ErrorMessage, User? ValidUser) ValidateUserById(
             User? user,
             Guid userId,
@@ -468,9 +466,7 @@ namespace Beyond8.Identity.Application.Services.Implements
             return (true, null, user);
         }
 
-        /// <summary>
-        /// Validates user by Email. Returns (IsValid, ErrorMessage, ValidUser). Use for Login, ForgotPassword, ResendOtp, ResetPassword.
-        /// </summary>
+
         private (bool IsValid, string? ErrorMessage, User? ValidUser, object? Metadata) ValidateUserByEmail(
             User? user,
             string email,
@@ -495,9 +491,7 @@ namespace Beyond8.Identity.Application.Services.Implements
             return (true, null, user, null);
         }
 
-        /// <summary>
-        /// Validates OTP from cache. Returns (IsValid, ErrorMessage).
-        /// </summary>
+
         private async Task<(bool IsValid, string? ErrorMessage)> ValidateOtpFromCacheAsync(string cacheKey, string otpCode, string email)
         {
             var cachedOtp = await cacheService.GetAsync<string>(cacheKey);

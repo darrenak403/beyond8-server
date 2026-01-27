@@ -4,81 +4,144 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Beyond8.Integration.Infrastructure.Data.Seeders
 {
-    public static class AiPromptSeeder
+  public static class AiPromptSeeder
+  {
+    public static async Task SeedAsync(IntegrationDbContext context)
     {
-      public static async Task SeedAsync(IntegrationDbContext context)
+      if (await context.AiPrompts.AnyAsync())
       {
-        if (await context.AiPrompts.AnyAsync())
-        {
-          return; // Already seeded
+        return; // Already seeded
+      }
+
+      var prompts = new List<AiPrompt>();
+
+      // Add prompts from each category
+      prompts.AddRange(GetCourseContentPrompts());
+      prompts.AddRange(GetAssessmentPrompts());
+      prompts.AddRange(GetFeedbackPrompts());
+      prompts.AddRange(GetContentAnalysisPrompts());
+      prompts.AddRange(GetTranslationPrompts());
+      prompts.AddRange(GetPersonalizationPrompts());
+      prompts.AddRange(GetModerationPrompts());
+
+      await context.AiPrompts.AddRangeAsync(prompts);
+      await context.SaveChangesAsync();
+    }
+
+    private static List<AiPrompt> GetCourseContentPrompts()
+    {
+      // TODO: Add course content prompts
+      // Examples: Generate lesson outlines, explain concepts, create examples
+      return [];
+    }
+
+    private static List<AiPrompt> GetAssessmentPrompts()
+    {
+      return
+      [
+          new AiPrompt
+              {
+                  Name = "Quiz Generation",
+                  Description = "Sinh câu hỏi trắc nghiệm (MCQ) chất lượng cao, phân loại theo thang đo Bloom và tự động tính trọng số điểm.",
+                  Category = PromptCategory.Assessment,
+                  SystemPrompt = "Bạn là một chuyên gia khảo thí và thiết kế chương trình giảng dạy. Nhiệm vụ của bạn là tạo ra các câu hỏi trắc nghiệm khách quan, chính xác về kiến thức, tuân thủ cấu trúc JSON nghiêm ngặt, và tính toán điểm số hợp lý.",
+                  Version = "2.0.0",
+                  IsActive = true,
+                  MaxTokens = 4096,
+                  Temperature = 0.3m,
+                  TopP = 0.9m,
+                  Tags = "assessment,quiz,multiple-choice,bloom-taxonomy",
+                  Template = @"INPUT DATA:
+---
+CONTEXT (Nội dung khóa học):
+{Context}
+---
+USER QUERY (Chủ đề trọng tâm): {Query}
+
+CẤU HÌNH BÀI KIỂM TRA:
+1. Số lượng: Easy ({EasyCount}), Medium ({MediumCount}), Hard ({HardCount}).
+2. Tổng điểm tối đa (Total Max Points): {MaxPoints}.
+
+TIÊU CHUẨN CHẤT LƯỢNG CÂU HỎI (QUAN TRỌNG):
+- Độ khó Easy (Nhận biết/Thông hiểu): Hỏi về định nghĩa, khái niệm cơ bản có trong context.
+- Độ khó Medium (Vận dụng): Đưa ra tình huống giả định hoặc đoạn code nhỏ, yêu cầu xác định kết quả hoặc lỗi sai.
+- Độ khó Hard (Phân tích/Đánh giá): Yêu cầu so sánh các giải pháp, tìm nguyên nhân sâu xa của vấn đề phức tạp, hoặc tối ưu hóa.
+- Đáp án nhiễu (Distractors): Phải có vẻ hợp lý (plausible), tránh các đáp án quá ngây ngô. KHÔNG dùng ""Tất cả đáp án trên"" hoặc ""Không đáp án nào đúng"".
+
+CHIẾN LƯỢC PHÂN BỔ ĐIỂM SỐ:
+Hãy tính toán điểm số (points) cho từng câu dựa trên độ khó theo tỷ lệ trọng số:
+**Easy : Medium : Hard = 1 : 1.5 : 2**
+(Quy trình: Tính giá trị đơn vị X sao cho tổng điểm = {MaxPoints}, sau đó gán điểm Easy=X, Medium=1.5X, Hard=2X. Làm tròn điểm đến 1 chữ số thập phân).
+
+OUTPUT FORMAT:
+- Chỉ trả về JSON thuần (Raw JSON).
+- KHÔNG bọc trong markdown block (```json).
+- KHÔNG thêm lời dẫn hay giải thích ngoài JSON.
+
+JSON SCHEMA MẪU:
+{{
+  ""easy"": [
+    {{
+      ""content"": ""Câu hỏi mức độ nhớ/hiểu?"",
+      ""type"": 0,
+      ""options"": [
+        {{ ""id"": ""a"", ""text"": ""Đáp án sai 1"", ""isCorrect"": false }},
+        {{ ""id"": ""b"", ""text"": ""Đáp án ĐÚNG"", ""isCorrect"": true }},
+        {{ ""id"": ""c"", ""text"": ""Đáp án sai 2"", ""isCorrect"": false }},
+        {{ ""id"": ""d"", ""text"": ""Đáp án sai 3"", ""isCorrect"": false }}
+      ],
+      ""explanation"": ""Giải thích ngắn gọn tại sao đáp án đúng là đúng."",
+      ""tags"": [""keyword""],
+      ""difficulty"": 0,
+      ""points"": 1.5
+    }}
+  ],
+  ""medium"": [ ...tương tự... ],
+  ""hard"": [ ...tương tự... ]
+}}"
         }
+      ];
+    }
 
-        var prompts = new List<AiPrompt>();
+    private static List<AiPrompt> GetFeedbackPrompts()
+    {
+      // TODO: Add feedback prompts
+      // Examples: Provide constructive feedback, grade with rubric, suggest improvements
+      return [];
+    }
 
-        // Add prompts from each category
-        prompts.AddRange(GetCourseContentPrompts());
-        prompts.AddRange(GetAssessmentPrompts());
-        prompts.AddRange(GetFeedbackPrompts());
-        prompts.AddRange(GetContentAnalysisPrompts());
-        prompts.AddRange(GetTranslationPrompts());
-        prompts.AddRange(GetPersonalizationPrompts());
-        prompts.AddRange(GetModerationPrompts());
+    private static List<AiPrompt> GetContentAnalysisPrompts()
+    {
+      return [];
+    }
 
-        await context.AiPrompts.AddRangeAsync(prompts);
-        await context.SaveChangesAsync();
-      }
+    private static List<AiPrompt> GetTranslationPrompts()
+    {
+      return [];
+    }
 
-      private static List<AiPrompt> GetCourseContentPrompts()
-      {
-        // TODO: Add course content prompts
-        // Examples: Generate lesson outlines, explain concepts, create examples
-        return [];
-      }
+    private static List<AiPrompt> GetPersonalizationPrompts()
+    {
+      return [];
+    }
 
-      private static List<AiPrompt> GetAssessmentPrompts()
-      {
-        // TODO: Add assessment prompts
-        // Examples: Generate quiz questions, create rubrics, design assignments
-        return [];
-      }
-
-      private static List<AiPrompt> GetFeedbackPrompts()
-      {
-        // TODO: Add feedback prompts
-        // Examples: Provide constructive feedback, grade with rubric, suggest improvements
-        return [];
-      }
-
-      private static List<AiPrompt> GetContentAnalysisPrompts()
-      {
-        // TODO: Add content analysis prompts
-        // Examples: Summarize content, extract key concepts, analyze difficulty
-        return [];
-      }
-
-      private static List<AiPrompt> GetTranslationPrompts()
-      {
-        // TODO: Add translation prompts
-        // Examples: Translate educational content, localize terminology
-        return [];
-      }
-
-      private static List<AiPrompt> GetPersonalizationPrompts()
-      {
-        // TODO: Add personalization prompts
-        // Examples: Adapt content to learning style, suggest learning path
-        return [];
-      }
-
-      private static List<AiPrompt> GetModerationPrompts()
-      {
-        return
-        [
-            new AiPrompt
+    private static List<AiPrompt> GetModerationPrompts()
+    {
+      return
+      [
+          new AiPrompt
             {
                 Name = "Instructor Profile Review",
-                Description = "Đánh giá hồ sơ giảng viên với tiêu chí linh hoạt và giọng văn thân thiện, mang tính xây dựng (Constructive Feedback). Trả về JSON.",
+                Description = "Đánh giá hồ sơ giảng viên với tiêu chí linh hoạt và giọng văn thân thiện, mang tính xây dựng. Trả về JSON.",
                 Category = PromptCategory.Moderation,
+                SystemPrompt = "Bạn là trợ lý AI thân thiện, chuyên nghiệp. Nhiệm vụ của bạn là đánh giá hồ sơ giảng viên với thái độ tích cực, mang tính xây dựng để giúp họ cải thiện, thay vì chỉ trích lỗi sai.",
+                Version = "1.1.0",
+                IsActive = true,
+                Variables = @"{""ApplicationText"": ""JSON string của ProfileReviewRequest""}",
+                MaxTokens = 4096,
+                Temperature = 0.3m,
+                TopP = 1.0m,
+                Tags = "moderation,instructor,application-review,friendly",
                 Template = @"Bạn là ""Người đồng hành phát triển hồ sơ giảng viên"". 
 Nhiệm vụ: Phân tích dữ liệu và trả về JSON. KHÔNG trả về markdown, KHÔNG giải thích thêm ngoài JSON.
 
@@ -180,17 +243,9 @@ OUTPUT FORMAT (JSON Only):
 }
 
 --- HỒ SƠ ĐẦU VÀO ---
-{ApplicationText}",
-                SystemPrompt = "Bạn là trợ lý AI thân thiện, chuyên nghiệp. Nhiệm vụ của bạn là đánh giá hồ sơ giảng viên với thái độ tích cực, mang tính xây dựng để giúp họ cải thiện, thay vì chỉ trích lỗi sai.",
-                Version = "1.1.0",
-                IsActive = true,
-                Variables = @"{""ApplicationText"": ""JSON string của ProfileReviewRequest""}",
-                MaxTokens = 4096,
-                Temperature = 0.3m,
-                TopP = 1.0m,
-                Tags = "moderation,instructor,application-review,friendly"
+{ApplicationText}"
             }
-        ];
-      }
+      ];
     }
+  }
 }

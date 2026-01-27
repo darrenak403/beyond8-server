@@ -14,7 +14,7 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
             Guid courseId,
             Guid documentId,
             int chunkSize = 500,
-            int chunkOverlap = 50)
+            int chunkOverlap = 15)
         {
             try
             {
@@ -87,11 +87,7 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
 
                 if (previousWord != null)
                 {
-                    var distance = word.BoundingBox.BottomLeft.X - previousWord.BoundingBox.BottomRight.X;
-                    if (distance > word.BoundingBox.Width * 0.3) // Nếu khoảng cách lớn hơn 30% width của từ
-                    {
-                        textBuilder.Append(' ');
-                    }
+                    textBuilder.Append(' ');
                 }
 
                 textBuilder.Append(currentWord);
@@ -100,6 +96,7 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
 
             return textBuilder.ToString();
         }
+
 
         private static List<string> ChunkText(string text, int chunkSize, int chunkOverlap)
         {
@@ -112,26 +109,29 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
             if (words.Length == 0)
                 return new List<string> { text };
 
+            // Giới hạn overlap tối đa ~25% số từ trong chunk (ước lượng chunkSize/5 ký tự ≈ chunkSize/20 từ)
+            var maxOverlapWords = Math.Max(1, chunkSize / 20);
+            var overlapWords = Math.Min(chunkOverlap, maxOverlapWords);
+
             var currentChunk = new StringBuilder();
             var currentLength = 0;
             var startIndex = 0;
 
-            for (int i = 0; i < words.Length; i++)
+            for (var i = 0; i < words.Length; i++)
             {
                 var word = words[i];
                 var wordLength = word.Length + 1; // +1 for space
 
                 if (currentLength + wordLength > chunkSize && currentChunk.Length > 0)
                 {
-                    // Save current chunk
                     chunks.Add(currentChunk.ToString().Trim());
 
-                    // Start new chunk with overlap
-                    var overlapStart = Math.Max(0, startIndex - chunkOverlap);
+                    // Bước nhảy: chunk mới bắt đầu từ (startIndex - overlapWords) từ, tránh overlap quá lớn
+                    var overlapStart = Math.Max(0, startIndex - overlapWords);
                     currentChunk.Clear();
                     currentLength = 0;
 
-                    for (int j = overlapStart; j < i; j++)
+                    for (var j = overlapStart; j < i; j++)
                     {
                         currentChunk.Append(words[j]);
                         currentChunk.Append(' ');
@@ -146,11 +146,8 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                 currentLength += wordLength;
             }
 
-            // Add last chunk
             if (currentChunk.Length > 0)
-            {
                 chunks.Add(currentChunk.ToString().Trim());
-            }
 
             return chunks;
         }

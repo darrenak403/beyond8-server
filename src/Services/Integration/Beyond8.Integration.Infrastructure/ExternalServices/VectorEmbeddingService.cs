@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Beyond8.Common.Utilities;
@@ -42,12 +43,30 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                     return ApiResponse<List<DocumentEmbeddingResponse>>.FailureResponse("Không có chunks để embed.");
                 }
 
+                // BƯỚC 1: Dedupe theo vị trí — giữ bản đầu tiên nếu chunking sinh ra 2 chunk cùng (Page, Index)
+                var uniqueChunks = chunkResult
+                    .GroupBy(c => new { c.DocumentId, c.PageNumber, c.ChunkIndex })
+                    .Select(g => g.First())
+                    .ToList();
+
+                if (uniqueChunks.Count < chunkResult.Count)
+                {
+                    logger.LogInformation(
+                        "Deduped chunks by position for document {DocumentId}: {OriginalCount} -> {UniqueCount}",
+                        documentId,
+                        chunkResult.Count,
+                        uniqueChunks.Count);
+                }
+
+                // BƯỚC 2: Subset dedupe — loại chunk nằm trọn trong chunk khác (cùng trang), giữ chunk dài hơn
+                var finalChunks = ProcessAndDeduplicateChunks(uniqueChunks, documentId);
+
                 const int batchSize = 20; // Số chunks gom lại mỗi batch
                 var embeddings = new List<DocumentEmbedding>();
 
-                for (int i = 0; i < chunkResult.Count; i += batchSize)
+                for (int i = 0; i < finalChunks.Count; i += batchSize)
                 {
-                    var batch = chunkResult.Skip(i).Take(batchSize).ToList();
+                    var batch = finalChunks.Skip(i).Take(batchSize).ToList();
                     var texts = batch.Select(c => c.Text).ToArray();
 
                     var batchResult = await EmbedTextsBatchAsync(texts);
@@ -69,6 +88,9 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                     logger.LogWarning("Không thể embed bất kỳ chunk nào.");
                     return ApiResponse<List<DocumentEmbeddingResponse>>.FailureResponse("Không thể embed bất kỳ chunk nào.");
                 }
+
+                // Xóa hết points của document này trước khi upsert để tránh duplicate khi re-embed
+                await DeleteDocumentPointsAsync(courseId, documentId);
 
                 // Lưu vào Qdrant
                 var upsertResult = await UpsertCourseDocumentsAsync(courseId, embeddings);
@@ -143,6 +165,95 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
         }
 
 
+        private List<DocumentChunk> ProcessAndDeduplicateChunks(List<DocumentChunk> rawChunks, Guid documentId)
+        {
+            if (rawChunks.Count == 0)
+                return [];
+
+            // BƯỚC 1: Sắp xếp theo độ dài giảm dần — chunk dài (nhiều tin) được xét trước
+            var sortedChunks = rawChunks.OrderByDescending(c => c.Text.Length).ToList();
+
+            var finalChunks = new List<DocumentChunk>();
+
+            foreach (var candidate in sortedChunks)
+            {
+                // BƯỚC 2: Chunk ngắn hơn chỉ bị loại nếu nằm trọn trong chunk đã giữ (cùng trang)
+                var isSubset = finalChunks.Any(accepted =>
+                    accepted.PageNumber == candidate.PageNumber
+                    && accepted.Text.Contains(candidate.Text.Trim(), StringComparison.OrdinalIgnoreCase));
+
+                if (!isSubset)
+                    finalChunks.Add(candidate);
+            }
+
+            // BƯỚC 3: Sắp xếp lại theo thứ tự xuất hiện (trang rồi index)
+            var result = finalChunks
+                .OrderBy(c => c.PageNumber)
+                .ThenBy(c => c.ChunkIndex)
+                .ToList();
+
+            if (result.Count < rawChunks.Count)
+            {
+                logger.LogInformation(
+                    "Deduplication: Removed {Diff} subset chunks (kept {Kept}/{Original}) for document {DocId}",
+                    rawChunks.Count - result.Count,
+                    result.Count,
+                    rawChunks.Count,
+                    documentId);
+            }
+
+            return result;
+        }
+
+        private async Task DeleteDocumentPointsAsync(Guid courseId, Guid documentId)
+        {
+            var collectionName = GetCollectionName(courseId);
+
+            try
+            {
+                var exists = await CourseCollectionExistsAsync(courseId);
+                if (!exists)
+                {
+                    return;
+                }
+
+                var conditions = new List<Condition>
+                {
+                    new Condition
+                    {
+                        Field = new FieldCondition
+                        {
+                            Key = "courseId",
+                            Match = new Match { Text = courseId.ToString() }
+                        }
+                    },
+                    new Condition
+                    {
+                        Field = new FieldCondition
+                        {
+                            Key = "documentId",
+                            Match = new Match { Text = documentId.ToString() }
+                        }
+                    }
+                };
+
+                var filter = new Filter { Must = { conditions } };
+                await qdrantClient.DeleteAsync(collectionName, filter);
+
+                logger.LogInformation(
+                    "Deleted document points for document {DocumentId} in course {CourseId}",
+                    documentId,
+                    courseId);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex,
+                    "Failed to delete document points for document {DocumentId} in course {CourseId}, upsert will continue",
+                    documentId,
+                    courseId);
+            }
+        }
+
         private async Task<bool> UpsertCourseDocumentsAsync(
             Guid courseId,
             List<DocumentEmbedding> embeddings)
@@ -154,13 +265,13 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
             {
                 // Ensure collection exists
                 await EnsureCollectionExistsAsync(courseId);
-
                 var points = embeddings.Select((embedding, index) =>
                 {
-                    var pointId = embedding.Metadata.ContainsKey("Id") &&
-                                 Guid.TryParse(embedding.Metadata["Id"].ToString(), out var id)
-                        ? id.ToString()
-                        : Guid.NewGuid().ToString();
+                    var key = $"{embedding.CourseId:N}_{embedding.DocumentId:N}_{embedding.PageNumber}_{embedding.ChunkIndex}";
+                    var hash = SHA256.HashData(Encoding.UTF8.GetBytes(key));
+                    var guidBytes = new byte[16];
+                    Array.Copy(hash, 0, guidBytes, 0, 16);
+                    var pointId = new Guid(guidBytes).ToString();
 
                     var payload = new Dictionary<string, Value>
                     {
@@ -171,12 +282,6 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                         ["text"] = embedding.Text,
                         ["createdAt"] = DateTime.UtcNow.ToString("O")
                     };
-
-                    // Add lessonId if present
-                    if (embedding.LessonId.HasValue)
-                    {
-                        payload["lessonId"] = embedding.LessonId.Value.ToString();
-                    }
 
                     // Add metadata fields
                     foreach (var meta in embedding.Metadata)
@@ -269,13 +374,19 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                     scoreThreshold: scoreThreshold.HasValue ? (float?)scoreThreshold.Value : null,
                     filter: searchFilter);
 
-                var results = searchResult.Select(point => point.ToVectorSearchResult()).ToList();
+                var rawResults = searchResult.Select(point => point.ToVectorSearchResult()).ToList();
+                // Dedupe theo (DocumentId, PageNumber, ChunkIndex), giữ bản có Score cao nhất
+                var results = rawResults
+                    .GroupBy(r => new { r.DocumentId, r.PageNumber, r.ChunkIndex })
+                    .Select(g => g.OrderByDescending(x => x.Score).First())
+                    .ToList();
 
                 stopwatch.Stop();
                 logger.LogInformation(
-                    "Searched course {CourseId} collection, found {Count} results in {ElapsedMs}ms",
+                    "Searched course {CourseId} collection, found {Count} results ({RawCount} raw) in {ElapsedMs}ms",
                     courseId,
                     results.Count,
+                    rawResults.Count,
                     stopwatch.ElapsedMilliseconds);
 
                 return results;
