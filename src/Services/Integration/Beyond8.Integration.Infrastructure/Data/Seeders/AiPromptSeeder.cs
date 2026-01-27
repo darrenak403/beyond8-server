@@ -76,7 +76,7 @@ public static class AiPromptSeeder
     [
         new AiPrompt
         {
-            Name = "Instructor Application Review (Friendly)",
+            Name = "Instructor Profile Review",
             Description = "Đánh giá hồ sơ giảng viên với tiêu chí linh hoạt và giọng văn thân thiện, mang tính xây dựng (Constructive Feedback). Trả về JSON.",
             Category = PromptCategory.Moderation,
             Template = @"Bạn là ""Người đồng hành phát triển hồ sơ giảng viên"". 
