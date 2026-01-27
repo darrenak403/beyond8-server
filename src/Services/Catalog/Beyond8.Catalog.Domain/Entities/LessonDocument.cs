@@ -1,4 +1,3 @@
-using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Beyond8.Common.Data.Base;
@@ -22,8 +21,6 @@ public class LessonDocument : BaseEntity
 
     public bool IsDownloadable { get; set; } = false;
     public int DownloadCount { get; set; } = 0;
-
-    public Guid? VectorDbId { get; set; }
     public bool IsIndexedInVectorDb { get; set; } = false;
 
 }

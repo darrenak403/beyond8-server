@@ -11,7 +11,7 @@ public class AppHub : Hub
     {
         var roles = Context.User?.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
 
-        if (roles != null && roles.Any())
+        if (roles != null && roles.Count != 0)
         {
             foreach (var role in roles)
             {

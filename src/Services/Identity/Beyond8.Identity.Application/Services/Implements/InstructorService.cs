@@ -474,7 +474,6 @@ public class InstructorService(
 
             profile.VerificationStatus = VerificationStatus.Hidden;
 
-            // Revoke instructor role instead of removing
             var instructorRole = await unitOfWork.RoleRepository.FindByCodeAsync("ROLE_INSTRUCTOR");
             if (instructorRole != null)
             {
@@ -538,13 +537,14 @@ public class InstructorService(
 
             logger.LogInformation("Unhidden instructor profile {ProfileId} by user {UserId}", profileId, userId);
 
+            // Chỉ chuyển trạng thái sang Recovering, role sẽ được cấp lại khi admin approve
             profile.VerificationStatus = VerificationStatus.Recovering;
 
             await unitOfWork.InstructorProfileRepository.UpdateAsync(profileId, profile);
             await unitOfWork.SaveChangesAsync();
 
             logger.LogInformation("Successfully un-hidden instructor profile {ProfileId} by user {UserId}", profileId, userId);
-            return ApiResponse<bool>.SuccessResponse(true, "Khôi phục hồ sơ giảng viên thành công. Hồ sơ hiện đang ở trạng thái yêu cầu cập nhật.");
+            return ApiResponse<bool>.SuccessResponse(true, "Khôi phục hồ sơ giảng viên thành công. Hồ sơ hiện đang ở trạng thái yêu cầu cập nhật và chờ admin duyệt lại để cấp role.");
         }
         catch (Exception ex)
         {

@@ -12,10 +12,7 @@ public static class TokenMappings
             UserId = user.Id,
             Email = user.Email,
             UserName = user.FullName,
-            Roles = user.UserRoles
-                .Where(ur => ur.RevokedAt == null)
-                .Select(ur => ur.Role.Code)
-                .ToList(),
+            Roles = [.. user.UserRoles.Where(ur => ur.RevokedAt == null && ur.Role.Code != "ROLE_INSTRUCTOR").Select(ur => ur.Role.Code)],
         };
     }
 }

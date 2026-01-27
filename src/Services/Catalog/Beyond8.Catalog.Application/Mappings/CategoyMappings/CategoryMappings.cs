@@ -1,4 +1,3 @@
-using System;
 using Beyond8.Catalog.Application.Dtos.Categories;
 using Beyond8.Catalog.Domain.Entities;
 using Beyond8.Common.Utilities;
@@ -11,23 +10,33 @@ public static class CategoryMappings
     {
         var slug = request.Name.ToSlug();
         var level = parentCategory != null ? parentCategory.Level + 1 : 0;
-        string? path = null;
-        if (parentCategory != null)
-        {
-            path = string.IsNullOrEmpty(parentCategory.Path)
-                ? parentCategory.Id.ToString()
-                : $"{parentCategory.Path}/{parentCategory.Id}";
-        }
-        return new Category
+        var isRoot = parentCategory == null;
+        var type = parentCategory != null ? parentCategory.Type : request.Type;
+
+        var category = new Category
         {
             Name = request.Name,
             Slug = slug,
             Description = request.Description,
             ParentId = request.ParentId,
             Level = level,
-            Path = path,
             IsActive = true,
+            Type = type,
+            IsRoot = isRoot
         };
+
+        if (parentCategory != null)
+        {
+            category.Path = string.IsNullOrEmpty(parentCategory.Path)
+                ? parentCategory.Id.ToString()
+                : $"{parentCategory.Path}/{parentCategory.Id}";
+        }
+        else
+        {
+            category.Path = category.Id.ToString();
+        }
+
+        return category;
     }
 
     public static CategoryResponse ToResponse(this Category entity)
@@ -44,6 +53,8 @@ public static class CategoryMappings
             Path = entity.Path,
             IsActive = entity.IsActive,
             TotalCourses = entity.TotalCourses,
+            Type = entity.Type,
+            IsRoot = entity.IsRoot,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt
         };
@@ -56,8 +67,9 @@ public static class CategoryMappings
             Id = entity.Id,
             Name = entity.Name,
             Slug = entity.Slug,
-            Description = entity.Description,
-            ParentId = entity.ParentId
+            ParentId = entity.ParentId,
+            Type = entity.Type,
+            IsRoot = entity.IsRoot
         };
     }
 
@@ -69,6 +81,8 @@ public static class CategoryMappings
             Name = entity.Name,
             Slug = entity.Slug,
             Level = entity.Level,
+            Type = entity.Type,
+            IsRoot = entity.IsRoot,
             SubCategories = entity.SubCategories?
                 .Select(c => c.ToCategoryTreeDto())
                 .OrderBy(c => c.Level).ThenBy(c => c.Name)

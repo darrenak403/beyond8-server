@@ -96,10 +96,10 @@ public static class InstructorProfileMappings
             UserId = userId,
             Bio = request.Bio,
             Headline = request.Headline,
-            ExpertiseAreas = request.ExpertiseAreas.Any()
+            ExpertiseAreas = request.ExpertiseAreas.Count != 0
                 ? JsonSerializer.Serialize(request.ExpertiseAreas)
                 : null,
-            Education = request.Education.Any()
+            Education = request.Education.Count != 0
                 ? JsonSerializer.Serialize(request.Education)
                 : null,
             WorkExperience = request.WorkExperience?.Any() == true
@@ -112,7 +112,7 @@ public static class InstructorProfileMappings
             TaxId = request.TaxId,
             TeachingLanguages = request.TeachingLanguages,
             IntroVideoUrl = request.IntroVideoUrl,
-            IdentityDocuments = request.IdentityDocuments.Any()
+            IdentityDocuments = request.IdentityDocuments.Count != 0
                 ? JsonSerializer.Serialize(request.IdentityDocuments)
                 : null,
             Certificates = request.Certificates?.Any() == true
@@ -131,17 +131,17 @@ public static class InstructorProfileMappings
             instructorProfile.Headline = request.Headline;
 
         if (request.ExpertiseAreas != null)
-            instructorProfile.ExpertiseAreas = request.ExpertiseAreas.Any()
+            instructorProfile.ExpertiseAreas = request.ExpertiseAreas.Count != 0
                 ? JsonSerializer.Serialize(request.ExpertiseAreas)
                 : null;
 
         if (request.Education != null)
-            instructorProfile.Education = request.Education.Any()
+            instructorProfile.Education = request.Education.Count != 0
                 ? JsonSerializer.Serialize(request.Education)
                 : null;
 
         if (request.WorkExperience != null)
-            instructorProfile.WorkExperience = request.WorkExperience.Any()
+            instructorProfile.WorkExperience = request.WorkExperience.Count != 0
                 ? JsonSerializer.Serialize(request.WorkExperience)
                 : null;
 
@@ -158,7 +158,7 @@ public static class InstructorProfileMappings
             instructorProfile.IntroVideoUrl = request.IntroVideoUrl;
 
         if (request.Certificates != null)
-            instructorProfile.Certificates = request.Certificates.Any()
+            instructorProfile.Certificates = request.Certificates.Count != 0
                 ? JsonSerializer.Serialize(request.Certificates)
                 : null;
 

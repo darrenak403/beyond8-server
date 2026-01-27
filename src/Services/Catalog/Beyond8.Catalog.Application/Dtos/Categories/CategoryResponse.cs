@@ -1,4 +1,4 @@
-using System;
+using Beyond8.Catalog.Domain.Enums;
 
 namespace Beyond8.Catalog.Application.Dtos.Categories;
 
@@ -16,6 +16,9 @@ public class CategoryResponse
 
     public bool IsActive { get; set; }
     public int TotalCourses { get; set; }
+
+    public CategoryType Type { get; set; } = CategoryType.Other;
+    public bool IsRoot { get; set; } = false;
 
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }

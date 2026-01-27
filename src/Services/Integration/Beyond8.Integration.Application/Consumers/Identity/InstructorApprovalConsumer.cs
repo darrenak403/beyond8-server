@@ -1,4 +1,5 @@
 using Beyond8.Common.Events.Identity;
+using Beyond8.Integration.Application.Dtos.Notifications;
 using Beyond8.Integration.Application.Mappings.NotificationMappings;
 using Beyond8.Integration.Application.Services.Interfaces;
 using Beyond8.Integration.Domain.Enums;
@@ -42,12 +43,14 @@ public class InstructorApprovalConsumer(
                     await unitOfWork.NotificationRepository.AddAsync(message.ReLoginNotificationToNotification(NotificationStatus.Delivered));
                     await unitOfWork.SaveChangesAsync();
 
-                    // Send real-time notification via SignalR
-                    var data = new
+                    var data = new DataInfor
                     {
-                        title = "Yêu cầu đăng nhập lại",
-                        message = "Tài khoản của bạn đã được duyệt thành công. Vui lòng đăng xuất và đăng nhập lại để cập nhật quyền truy cập.",
-                        requireReLogin = true
+                        Title = "Yêu cầu đăng nhập lại",
+                        Message = "Tài khoản của bạn đã được duyệt thành công. Vui lòng đăng xuất và đăng nhập lại để cập nhật quyền truy cập.",
+                        Metadata = new
+                        {
+                            RequireReLogin = true
+                        }
                     };
                     await notificationService.SendToUserAsync(
                         message.UserId.ToString(),
