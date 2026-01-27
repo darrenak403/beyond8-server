@@ -5,9 +5,7 @@ using Beyond8.Common.Extensions;
 using Beyond8.Common.Utilities;
 using Beyond8.Integration.Api.Apis;
 using Beyond8.Integration.Application.Consumers.Identity;
-using Beyond8.Integration.Application.Dtos.AiIntegration;
 using Beyond8.Integration.Application.Dtos.MediaFiles;
-using Beyond8.Integration.Application.Dtos.VnptEkyc;
 using Beyond8.Integration.Application.Services.Implements;
 using Beyond8.Integration.Application.Services.Interfaces;
 using Beyond8.Integration.Domain.Repositories.Interfaces;
@@ -58,6 +56,16 @@ public static class Bootstrapper
         builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection(GeminiSettings.SectionName));
         builder.Services.Configure<BedrockSettings>(builder.Configuration.GetSection(BedrockSettings.SectionName));
 
+        var aiProvider = builder.Configuration.GetValue<string>("AiProvider") ?? "Gemini";
+        if (aiProvider.Equals("Bedrock", StringComparison.OrdinalIgnoreCase))
+        {
+            builder.Services.AddScoped<IGenerativeAiService, BedrockService>();
+        }
+        else
+        {
+            builder.Services.AddScoped<IGenerativeAiService, GeminiService>();
+        }
+
         // Register Resend configuration
         builder.Services.Configure<ResendSettings>(
         builder.Configuration.GetSection(ResendSettings.SectionName));
@@ -105,8 +113,6 @@ public static class Bootstrapper
         {
             options.EnableDetailedErrors = builder.Environment.IsDevelopment();
         });
-        builder.Services.AddScoped<INotificationService, SignalRNotificationService>();
-        builder.Services.AddScoped<INotificationHistoryService, NotificationHistoryService>();
 
         // Configure MassTransit with RabbitMQ and register consumers
         builder.AddMassTransitWithRabbitMq(config =>
@@ -118,32 +124,31 @@ public static class Bootstrapper
             config.AddConsumer<InstructorUpdateRequestEmailConsumer>();
         });
 
+        // Configure Qdrant - Use Aspire Qdrant Client
+        builder.AddQdrantClient(Const.Qdrant);
+        
+        // Configure Qdrant Settings (for vector dimension config)
+        builder.Services.Configure<QdrantSettings>(builder.Configuration.GetSection(QdrantSettings.SectionName));
+
+        // Hugging Face Embedding Service
+        builder.Services.Configure<HuggingFaceSettings>(builder.Configuration.GetSection(HuggingFaceSettings.SectionName));
+
         // Register services
+        builder.Services.AddScoped<INotificationService, SignalRNotificationService>();
+        builder.Services.AddScoped<INotificationHistoryService, NotificationHistoryService>();
         builder.Services.AddScoped<IStorageService, S3Service>();
         builder.Services.AddScoped<IMediaFileService, MediaFileService>();
         builder.Services.AddScoped<IAiUsageService, AiUsageService>();
         builder.Services.AddScoped<IAiPromptService, AiPromptService>();
-
-        // Register AI provider based on configuration
-        var aiProvider = builder.Configuration.GetValue<string>("AiProvider") ?? "Gemini";
-        if (aiProvider.Equals("Bedrock", StringComparison.OrdinalIgnoreCase))
-        {
-            builder.Services.AddScoped<IGenerativeAiService, BedrockService>();
-        }
-        else
-        {
-            builder.Services.AddScoped<IGenerativeAiService, GeminiService>();
-        }
-
         builder.Services.AddScoped<IUrlContentDownloader, UrlContentDownloader>();
         builder.Services.AddScoped<IEmailService, EmailService>();
         builder.Services.AddScoped<IVnptEkycService, VnptEkycService>();
         builder.Services.AddScoped<IAiService, AiService>();
+        builder.Services.AddScoped<IPdfChunkService, PdfChunkService>();
+        builder.Services.AddScoped<IVectorEmbeddingService, VectorEmbeddingService>();
 
         // Register validators
         builder.Services.AddValidatorsFromAssemblyContaining<UploadFileRequest>();
-        builder.Services.AddValidatorsFromAssemblyContaining<AiUsageRequest>();
-        builder.Services.AddValidatorsFromAssemblyContaining<LivenessRequest>();
 
         return builder;
     }
@@ -169,6 +174,7 @@ public static class Bootstrapper
         app.MapAiPromptApi();
         app.MapVnptEkycApi();
         app.MapNotificationApi();
+        app.MapEmbeddingApi();
 
         return app;
     }

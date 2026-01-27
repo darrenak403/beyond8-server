@@ -442,7 +442,7 @@ public class InstructorService(
     {
         try
         {
-            var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(p => p.Id == profileId && p.VerificationStatus != VerificationStatus.Hidden);
+            var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(p => p.Id == profileId);
 
             if (profile == null)
             {
@@ -463,6 +463,7 @@ public class InstructorService(
                 .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
                 .FirstOrDefaultAsync(u => u.Id == profile.UserId);
+
             if (user == null)
             {
                 logger.LogError("User {UserId} not found for instructor profile {ProfileId}",
@@ -474,7 +475,6 @@ public class InstructorService(
 
             profile.VerificationStatus = VerificationStatus.Hidden;
 
-            // Revoke instructor role instead of removing
             var instructorRole = await unitOfWork.RoleRepository.FindByCodeAsync("ROLE_INSTRUCTOR");
             if (instructorRole != null)
             {
@@ -538,13 +538,14 @@ public class InstructorService(
 
             logger.LogInformation("Unhidden instructor profile {ProfileId} by user {UserId}", profileId, userId);
 
+            // Chỉ chuyển trạng thái sang Recovering, role sẽ được cấp lại khi admin approve
             profile.VerificationStatus = VerificationStatus.Recovering;
 
             await unitOfWork.InstructorProfileRepository.UpdateAsync(profileId, profile);
             await unitOfWork.SaveChangesAsync();
 
             logger.LogInformation("Successfully un-hidden instructor profile {ProfileId} by user {UserId}", profileId, userId);
-            return ApiResponse<bool>.SuccessResponse(true, "Khôi phục hồ sơ giảng viên thành công. Hồ sơ hiện đang ở trạng thái yêu cầu cập nhật.");
+            return ApiResponse<bool>.SuccessResponse(true, "Hồ sơ hiện đang ở trạng thái yêu cầu khôi phục.");
         }
         catch (Exception ex)
         {

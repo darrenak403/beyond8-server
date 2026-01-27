@@ -1,4 +1,3 @@
-using System;
 using Beyond8.Catalog.Api.Apis;
 using Beyond8.Catalog.Application.Dtos.Categories;
 using Beyond8.Catalog.Application.Services.Implements;

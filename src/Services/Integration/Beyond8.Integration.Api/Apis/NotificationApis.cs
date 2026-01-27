@@ -8,27 +8,34 @@ namespace Beyond8.Integration.Api.Apis;
 
 public static class NotificationApis
 {
-    public static IEndpointRouteBuilder MapNotificationApi(this IEndpointRouteBuilder app)
+    public static IEndpointRouteBuilder MapNotificationApi(this IEndpointRouteBuilder builder)
     {
-        var group = app.MapGroup("/api/v1/notifications")
+        builder.MapGroup("/api/v1/notifications")
+            .MapNotificationRoutes()
             .WithTags("Notifications")
+            .RequireRateLimiting("Fixed")
             .RequireAuthorization();
 
+        return builder;
+    }
+
+    private static RouteGroupBuilder MapNotificationRoutes(this RouteGroupBuilder group)
+    {
         group.MapGet("/my-notifications", GetMyNotifications)
             .WithName("GetMyNotifications")
             .WithSummary("Lấy danh sách thông báo của người dùng hiện tại (Admin/Staff/User thông thường)")
-            .Produces<ApiResponse<List<NotificationResponse>>>()
-            .Produces(400)
-            .Produces(401);
+            .Produces<ApiResponse<List<NotificationResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<List<NotificationResponse>>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
 
         group.MapGet("/instructor-notifications", GetInstructorNotifications)
             .WithName("GetInstructorNotifications")
             .WithSummary("Lấy danh sách thông báo cho Instructor (chia 2 phần: User và Instructor)")
-            .Produces<ApiResponse<InstructorNotificationResponse>>()
-            .Produces(400)
-            .Produces(401);
+            .Produces<ApiResponse<InstructorNotificationResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<InstructorNotificationResponse>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
 
-        return app;
+        return group;
     }
 
     private static async Task<IResult> GetMyNotifications(

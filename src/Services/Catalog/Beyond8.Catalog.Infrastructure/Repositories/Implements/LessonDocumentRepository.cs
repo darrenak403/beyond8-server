@@ -1,4 +1,3 @@
-using System;
 using Beyond8.Catalog.Domain.Entities;
 using Beyond8.Catalog.Domain.Repositories.Interfaces;
 using Beyond8.Catalog.Infrastructure.Data;

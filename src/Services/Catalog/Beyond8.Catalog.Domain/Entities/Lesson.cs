@@ -1,4 +1,3 @@
-using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Beyond8.Catalog.Domain.Enums;
@@ -41,11 +40,6 @@ public class Lesson : BaseEntity
 
     // Lesson Type Quiz
     public Guid? QuizId { get; set; }
-
-    // Lesson Type Assignment
-    public Guid? AssignmentId { get; set; }
-
-    // Lesson Type Quiz and Assignment
     public int MinCompletionSeconds { get; set; } = 0;
     public int RequiredScore { get; set; } = 0;
 

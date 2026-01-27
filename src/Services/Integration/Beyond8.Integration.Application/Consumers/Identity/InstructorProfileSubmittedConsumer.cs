@@ -1,5 +1,6 @@
 using Beyond8.Common.Events.Identity;
 using Beyond8.Common.Utilities;
+using Beyond8.Integration.Application.Dtos.Notifications;
 using Beyond8.Integration.Application.Mappings.NotificationMappings;
 using Beyond8.Integration.Application.Services.Interfaces;
 using Beyond8.Integration.Domain.Enums;
@@ -27,14 +28,14 @@ public class InstructorProfileSubmittedConsumer(
                 message.Email, message.ProfileId);
 
             var frontendUrl = configuration.GetValue<string>("FrontendUrl") ?? "http://localhost:5173";
-            var data = new
+            var data = new DataInfor
             {
-                userId = message.UserId,
-                profileId = message.ProfileId,
-                instructorName = message.InstructorName,
-                email = message.Email,
-                profileUrl = $"{frontendUrl}/instructor/{message.ProfileId}/admin",
-                timestamp = message.Timestamp
+                Title = "Hồ sơ giảng viên",
+                Message = $"Hồ sơ giảng viên đã được gửi bởi email {message.Email}.",
+                Metadata = new
+                {
+                    userId = message.UserId,
+                }
             };
 
             await notificationService.SendToGroupAsync($"{Role.Admin}Group", "InstructorApplicationSubmitted", data);

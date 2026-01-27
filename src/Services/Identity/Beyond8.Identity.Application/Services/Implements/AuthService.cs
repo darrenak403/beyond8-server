@@ -33,6 +33,7 @@ public class AuthService(
                 .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
                 .FirstOrDefaultAsync(x => x.Email == normalizedEmail);
+
             var validation = ValidateUserByEmail(user, request.Email);
             if (!validation.IsValid)
                 return ApiResponse<TokenResponse>.FailureResponse(validation.ErrorMessage!, validation.Metadata);
@@ -43,6 +44,11 @@ public class AuthService(
             {
                 logger.LogError("Invalid password for user with email {Email}", request.Email);
                 return ApiResponse<TokenResponse>.FailureResponse("Mật khẩu không đúng, vui lòng thử lại.");
+            }
+
+            foreach (var role in u.UserRoles)
+            {
+                logger.LogInformation("User with email {Email} logged in successfully with role {Role}", request.Email, role.Role.Code);
             }
 
             var tokenResponse = tokenService.GenerateTokens(u.ToTokenClaims());

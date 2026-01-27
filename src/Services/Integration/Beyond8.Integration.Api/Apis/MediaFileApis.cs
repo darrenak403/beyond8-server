@@ -22,7 +22,7 @@ public static class MediaFileApis
         builder.MapGroup("/api/v1/media")
             .MapMediaFileRoutes()
             .WithTags("Media File Api")
-            .RequireAuthorization();
+            .RequireRateLimiting("Fixed");
 
         return builder;
     }
@@ -32,6 +32,7 @@ public static class MediaFileApis
         group.MapPost("/avatar/presigned-url", GetAvatarPresignUrlAsync)
             .WithName("GetAvatarPresignedUrl")
             .WithDescription("Lấy presigned URL để upload avatar")
+            .RequireAuthorization()
             .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
@@ -39,6 +40,7 @@ public static class MediaFileApis
         group.MapPost("/cover/presigned-url", GetCoverPresignUrlAsync)
             .WithName("GetCoverPresignedUrl")
             .WithDescription("Lấy presigned URL để upload cover")
+            .RequireAuthorization()
             .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
@@ -46,6 +48,7 @@ public static class MediaFileApis
         group.MapPost("/intro-video/presigned-url", GetIntroVideoPresignUrlAsync)
             .WithName("GetIntroVideoPresignedUrl")
             .WithDescription("Lấy presigned URL để upload video giới thiệu")
+            .RequireAuthorization(r => r.RequireRole(Role.Student, Role.Instructor))
             .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
@@ -53,6 +56,7 @@ public static class MediaFileApis
         group.MapPost("/certificate/presigned-url", GetCertificatePresignUrlAsync)
             .WithName("GetCertificatePresignedUrl")
             .WithDescription("Lấy presigned URL để upload chứng chỉ")
+            .RequireAuthorization(r => r.RequireRole(Role.Student, Role.Instructor))
             .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
@@ -60,6 +64,7 @@ public static class MediaFileApis
         group.MapPost("/identity-card/front/presigned-url", GetIdentityCardFrontPresignUrlAsync)
             .WithName("GetIdentityCardFrontPresignedUrl")
             .WithDescription("Lấy presigned URL để upload mặt trước CMND/CCCD")
+            .RequireAuthorization(r => r.RequireRole(Role.Student, Role.Instructor))
             .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
@@ -67,6 +72,7 @@ public static class MediaFileApis
         group.MapPost("/identity-card/back/presigned-url", GetIdentityCardBackPresignUrlAsync)
             .WithName("GetIdentityCardBackPresignedUrl")
             .WithDescription("Lấy presigned URL để upload mặt sau CMND/CCCD")
+            .RequireAuthorization(r => r.RequireRole(Role.Student, Role.Instructor))
             .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
@@ -81,6 +87,7 @@ public static class MediaFileApis
         group.MapGet("/{fileId:guid}", GetFileByIdAsync)
             .WithName("GetFileById")
             .WithDescription("Lấy thông tin file theo ID")
+            .RequireAuthorization()
             .Produces<ApiResponse<MediaFileDto>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<MediaFileDto>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
@@ -88,6 +95,7 @@ public static class MediaFileApis
         group.MapDelete("/{fileId:guid}", DeleteFileAsync)
             .WithName("DeleteFile")
             .WithDescription("Xóa file theo ID")
+            .RequireAuthorization()
             .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
@@ -96,6 +104,7 @@ public static class MediaFileApis
         group.MapGet("/file-info", GetFileInfoByCloudFrontUrlAsync)
             .WithName("GetFileInfoByCloudFrontUrl")
             .WithDescription("Lấy thông tin file từ CloudFront URL")
+            .RequireAuthorization()
             .Produces<ApiResponse<MediaFileInfoDto>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<MediaFileInfoDto>>(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status401Unauthorized);
@@ -103,6 +112,7 @@ public static class MediaFileApis
         group.MapGet("/download", GetDownloadUrlAsync)
             .WithName("GetDownloadUrl")
             .WithDescription("Tạo presigned URL để download file")
+            .RequireAuthorization()
             .Produces<ApiResponse<DownloadUrlDto>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<DownloadUrlDto>>(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status401Unauthorized);
