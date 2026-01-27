@@ -1,7 +1,6 @@
 using Beyond8.Catalog.Application.Dtos.Courses;
 using Beyond8.Catalog.Application.Mappings.CourseMappings;
 using Beyond8.Catalog.Application.Services.Interfaces;
-using Beyond8.Catalog.Domain.Entities;
 using Beyond8.Catalog.Domain.Enums;
 using Beyond8.Catalog.Domain.Repositories.Interfaces;
 using Beyond8.Common.Security;
@@ -13,8 +12,7 @@ namespace Beyond8.Catalog.Application.Services.Implements;
 
 public class CourseService(
     ILogger<CourseService> logger,
-    IUnitOfWork unitOfWork,
-    ICurrentUserService currentUserService) : ICourseService
+    IUnitOfWork unitOfWork) : ICourseService
 {
     public async Task<ApiResponse<CourseResponse>> CreateCourseAsync(CreateCourseRequest request)
     {
