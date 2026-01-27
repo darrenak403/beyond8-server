@@ -1,5 +1,6 @@
 using Beyond8.Catalog.Api.Apis;
 using Beyond8.Catalog.Application.Dtos.Categories;
+using Beyond8.Catalog.Application.Dtos.Courses;
 using Beyond8.Catalog.Application.Services.Implements;
 using Beyond8.Catalog.Application.Services.Interfaces;
 using Beyond8.Catalog.Domain.Repositories.Interfaces;
@@ -27,8 +28,10 @@ public static class ApplicationServiceExtensions
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         builder.Services.AddScoped<ICategoryService, CategoryService>();
+        builder.Services.AddScoped<ICourseService, CourseService>();
 
         builder.Services.AddValidatorsFromAssemblyContaining<CreateCategoryRequest>();
+        builder.Services.AddValidatorsFromAssemblyContaining<UpdateCourseMetadataRequest>();
         return builder;
     }
 
@@ -43,6 +46,7 @@ public static class ApplicationServiceExtensions
         app.UseHttpsRedirection();
 
         app.MapCategoryApi();
+        app.MapCourseApi();
 
         return app;
     }

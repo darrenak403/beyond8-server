@@ -69,6 +69,14 @@ public class Course : BaseEntity
     public Guid? ApprovedBy { get; set; }
     public DateTime? ApprovedAt { get; set; }
 
+    [MaxLength(1000)]
+    public string? ApprovalNotes { get; set; }
+
+    [MaxLength(1000)]
+    public string? RejectionReason { get; set; }
+
+    public bool IsActive { get; set; } = true;
+
     // Relationships
     public virtual ICollection<Section> Sections { get; set; } = [];
     public virtual ICollection<CourseDocument> Documents { get; set; } = [];
