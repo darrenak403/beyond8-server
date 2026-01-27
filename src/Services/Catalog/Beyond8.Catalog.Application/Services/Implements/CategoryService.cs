@@ -51,6 +51,222 @@ public class CategoryService(ILogger<CategoryService> logger, IUnitOfWork unitOf
         }
     }
 
+    public async Task<ApiResponse<CategoryResponse>> UpdateCategoryAsync(Guid id, UpdateCategoryRequest request)
+    {
+        try
+        {
+            var category = await unitOfWork.CategoryRepository
+                .AsQueryable()
+                .Include(c => c.Parent)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (category == null)
+            {
+                logger.LogWarning("Category not found with id: {CategoryId}", id);
+                return ApiResponse<CategoryResponse>.FailureResponse("Danh mục không tồn tại.");
+            }
+
+            // Check if new name already exists (excluding current category)
+            var existingWithName = await unitOfWork.CategoryRepository.FindOneAsync(c => c.Name == request.Name && c.Id != id);
+            if (existingWithName != null)
+            {
+                logger.LogWarning("Category with name already exists: {Name}", request.Name);
+                return ApiResponse<CategoryResponse>.FailureResponse("Danh mục với tên này đã tồn tại.");
+            }
+
+            Category? newParentCategory = null;
+            if (request.ParentId.HasValue && request.ParentId != category.ParentId)
+            {
+                newParentCategory = await unitOfWork.CategoryRepository.FindOneAsync(c => c.Id == request.ParentId);
+                if (newParentCategory == null)
+                {
+                    return ApiResponse<CategoryResponse>.FailureResponse("Danh mục cha không tồn tại.");
+                }
+
+                // Prevent self-parent assignment
+                if (newParentCategory.Id == id)
+                {
+                    return ApiResponse<CategoryResponse>.FailureResponse("Danh mục không thể tự trỏ tới chính nó.");
+                }
+
+                // Check level constraints
+                if (newParentCategory.Level >= 1)
+                {
+                    return ApiResponse<CategoryResponse>.FailureResponse("Hệ thống chỉ hỗ trợ tối đa 2 cấp danh mục cấp 1 và cấp 2.");
+                }
+            }
+            else if (!request.ParentId.HasValue && request.ParentId != category.ParentId)
+            {
+                newParentCategory = null;
+            }
+
+            category.UpdateFromRequest(request, newParentCategory);
+            await unitOfWork.CategoryRepository.UpdateAsync(id, category);
+            await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation("Category updated successfully: {CategoryId}", id);
+            return ApiResponse<CategoryResponse>.SuccessResponse(category.ToResponse(), "Cập nhật danh mục thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error updating category with id: {CategoryId}", id);
+            return ApiResponse<CategoryResponse>.FailureResponse("Đã xảy ra lỗi khi cập nhật danh mục.");
+        }
+    }
+
+    public async Task<ApiResponse<CategoryResponse>> GetCategoryByIdAsync(Guid id)
+    {
+        try
+        {
+            var category = await unitOfWork.CategoryRepository
+                .AsQueryable()
+                .Include(c => c.Parent)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (category == null)
+            {
+                logger.LogWarning("Category not found with id: {CategoryId}", id);
+                return ApiResponse<CategoryResponse>.FailureResponse("Danh mục không tồn tại.");
+            }
+
+            return ApiResponse<CategoryResponse>.SuccessResponse(category.ToResponse(), "Lấy danh mục thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting category with id: {CategoryId}", id);
+            return ApiResponse<CategoryResponse>.FailureResponse("Đã xảy ra lỗi khi lấy danh mục.");
+        }
+    }
+
+    public async Task<ApiResponse<List<CategoryResponse>>> GetAllCategoriesAsync(PaginationRequest pagination)
+    {
+        try
+        {
+            var paginatedCategories = await unitOfWork.CategoryRepository.GetPagedAsync(
+                pageNumber: pagination.PageNumber,
+                pageSize: pagination.PageSize,
+                filter: x => x.IsActive,
+                orderBy: query => query.OrderBy(x => x.Level).ThenBy(x => x.Name)
+            );
+
+            var categoryResponses = paginatedCategories.Items
+                .Select(c => c.ToResponse())
+                .ToList();
+
+            return ApiResponse<List<CategoryResponse>>.SuccessPagedResponse(
+                categoryResponses,
+                paginatedCategories.TotalCount,
+                pagination.PageNumber,
+                pagination.PageSize,
+                "Lấy danh sách danh mục thành công."
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting all categories");
+            return ApiResponse<List<CategoryResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách danh mục.");
+        }
+    }
+
+    public async Task<ApiResponse<List<CategoryResponse>>> GetCategoriesByParentIdAsync(Guid parentId)
+    {
+        try
+        {
+            var parentCategory = await unitOfWork.CategoryRepository.FindOneAsync(c => c.Id == parentId);
+            if (parentCategory == null)
+            {
+                logger.LogWarning("Parent category not found with id: {ParentId}", parentId);
+                return ApiResponse<List<CategoryResponse>>.FailureResponse("Danh mục cha không tồn tại.");
+            }
+
+            var childCategories = await unitOfWork.CategoryRepository
+                .AsQueryable()
+                .Where(x => x.ParentId == parentId && x.IsActive)
+                .OrderBy(x => x.Name)
+                .ToListAsync();
+
+            var categoryResponses = childCategories
+                .Select(c => c.ToResponse())
+                .ToList();
+
+            return ApiResponse<List<CategoryResponse>>.SuccessResponse(
+                categoryResponses,
+                "Lấy danh sách danh mục con thành công."
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting categories by parent id: {ParentId}", parentId);
+            return ApiResponse<List<CategoryResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách danh mục con.");
+        }
+    }
+
+    public async Task<ApiResponse<bool>> DeleteCategoryAsync(Guid id)
+    {
+        try
+        {
+            var category = await unitOfWork.CategoryRepository.FindOneAsync(c => c.Id == id);
+            if (category == null)
+            {
+                logger.LogWarning("Category not found with id: {CategoryId}", id);
+                return ApiResponse<bool>.FailureResponse("Danh mục không tồn tại.");
+            }
+
+            // Check if category has subcategories
+            var hasSubcategories = await unitOfWork.CategoryRepository
+                .AsQueryable()
+                .AnyAsync(c => c.ParentId == id);
+
+            if (hasSubcategories)
+            {
+                return ApiResponse<bool>.FailureResponse("Không thể xóa danh mục có chứa danh mục con.");
+            }
+
+            // Check if category has courses
+            var hasCourses = category.Courses.Count > 0;
+            if (hasCourses)
+            {
+                return ApiResponse<bool>.FailureResponse("Không thể xóa danh mục có chứa khóa học.");
+            }
+
+            await unitOfWork.CategoryRepository.DeleteAsync(id);
+            await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation("Category deleted successfully: {CategoryId}", id);
+            return ApiResponse<bool>.SuccessResponse(true, "Xóa danh mục thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error deleting category with id: {CategoryId}", id);
+            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi xóa danh mục.");
+        }
+    }
+
+    public async Task<ApiResponse<bool>> ToggleCategoryStatusAsync(Guid id)
+    {
+        try
+        {
+            var category = await unitOfWork.CategoryRepository.FindOneAsync(c => c.Id == id);
+            if (category == null)
+            {
+                logger.LogWarning("Category not found with id: {CategoryId}", id);
+                return ApiResponse<bool>.FailureResponse("Danh mục không tồn tại.");
+            }
+
+            category.IsActive = !category.IsActive;
+            await unitOfWork.CategoryRepository.UpdateAsync(id, category);
+            await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation("Category status toggled for id: {CategoryId}, new status: {IsActive}", id, category.IsActive);
+            return ApiResponse<bool>.SuccessResponse(true, $"Danh mục đã được {(category.IsActive ? "kích hoạt" : "vô hiệu hóa")}.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error toggling category status with id: {CategoryId}", id);
+            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi thay đổi trạng thái danh mục.");
+        }
+    }
+
     public async Task<ApiResponse<List<CategoryTreeDto>>> GetCategoryTreeAsync()
     {
         try

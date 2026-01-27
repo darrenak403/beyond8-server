@@ -89,4 +89,29 @@ public static class CategoryMappings
                 .ToList() ?? []
         };
     }
+
+    public static void UpdateFromRequest(this Category entity, UpdateCategoryRequest request, Category? parentCategory)
+    {
+        entity.Name = request.Name;
+        entity.Slug = request.Name.ToSlug();
+        entity.Description = request.Description;
+
+        if (request.ParentId != entity.ParentId)
+        {
+            entity.ParentId = request.ParentId;
+            if (parentCategory != null)
+            {
+                entity.Level = parentCategory.Level + 1;
+                entity.Path = string.IsNullOrEmpty(parentCategory.Path)
+                    ? parentCategory.Id.ToString()
+                    : $"{parentCategory.Path}/{parentCategory.Id}";
+            }
+            else
+            {
+                entity.Level = 0;
+                entity.Path = entity.Id.ToString();
+            }
+        }
+    }
 }
+
