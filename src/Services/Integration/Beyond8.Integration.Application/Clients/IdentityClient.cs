@@ -12,7 +12,7 @@ public class IdentityClient(HttpClient httpClient, IHttpContextAccessor httpCont
     {
         try
         {
-            var data = await GetAsync<SubscriptionResponse>($"/api/v1/users/me/subscription/stats");
+            var data = await GetAsync<SubscriptionResponse>($"/api/v1/subscriptions/me");
             return ApiResponse<SubscriptionResponse>.SuccessResponse(data, "OK");
         }
         catch (Exception ex)
@@ -26,7 +26,7 @@ public class IdentityClient(HttpClient httpClient, IHttpContextAccessor httpCont
     {
         try
         {
-            var data = await PatchAsync<SubscriptionResponse>($"/api/v1/users/{userId}/subscription", request);
+            var data = await PatchAsync<SubscriptionResponse>($"/api/v1/subscriptions/{userId}", request);
             return ApiResponse<SubscriptionResponse>.SuccessResponse(data, "OK");
         }
         catch (Exception ex)
