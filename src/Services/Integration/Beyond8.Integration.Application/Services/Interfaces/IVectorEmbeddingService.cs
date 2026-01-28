@@ -8,7 +8,8 @@ namespace Beyond8.Integration.Application.Services.Interfaces
         Task<ApiResponse<List<DocumentEmbeddingResponse>>> EmbedAndSavePdfAsync(
             Stream pdfStream,
             Guid courseId,
-            Guid documentId);
+            Guid documentId,
+            Guid? lessonId = null);
 
         Task<List<VectorSearchResult>> SearchAsync(VectorSearchRequest request);
 

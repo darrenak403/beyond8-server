@@ -30,7 +30,8 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
         public async Task<ApiResponse<List<DocumentEmbeddingResponse>>> EmbedAndSavePdfAsync(
             Stream pdfStream,
             Guid courseId,
-            Guid documentId)
+            Guid documentId,
+            Guid? lessonId = null)
         {
             var stopwatch = Stopwatch.StartNew();
 
@@ -79,7 +80,7 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                     var vectors = batchResult;
                     for (int j = 0; j < batch.Count && j < vectors.Count(); j++)
                     {
-                        embeddings.Add(batch[j].ToDocumentEmbedding(vectors[j], courseId));
+                        embeddings.Add(batch[j].ToDocumentEmbedding(vectors[j], courseId, lessonId));
                     }
                 }
 
@@ -89,8 +90,7 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                     return ApiResponse<List<DocumentEmbeddingResponse>>.FailureResponse("Không thể embed bất kỳ chunk nào.");
                 }
 
-                // Xóa hết points của document này trước khi upsert để tránh duplicate khi re-embed
-                await DeleteDocumentPointsAsync(courseId, documentId);
+                await DeleteDocumentPointsAsync(courseId, documentId, lessonId);
 
                 // Lưu vào Qdrant
                 var upsertResult = await UpsertCourseDocumentsAsync(courseId, embeddings);
@@ -140,17 +140,53 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                     return [];
                 }
 
-                // Search trong Qdrant
-                var searchResult = await SearchInCourseAsync(
-                    request.CourseId,
-                    embeddingResult!.Vector,
-                    request.TopK,
-                    request.ScoreThreshold);
+                List<VectorSearchResult> searchResult;
+                if (request.LessonId.HasValue)
+                {
+                    var lessonChunks = await SearchInCourseAsync(
+                        request.CourseId,
+                        embeddingResult!.Vector,
+                        request.TopK,
+                        request.ScoreThreshold,
+                        request.LessonId);
+
+                    var courseChunks = await SearchInCourseAsync(
+                        request.CourseId,
+                        embeddingResult!.Vector,
+                        request.TopK,
+                        request.ScoreThreshold,
+                        lessonId: null);
+
+                    var seen = new HashSet<(Guid?, int?, int)>(
+                        lessonChunks.Select(r => (r.DocumentId, r.PageNumber, r.ChunkIndex)));
+
+                    var combined = new List<VectorSearchResult>(lessonChunks);
+
+                    foreach (var r in courseChunks)
+                    {
+                        if (combined.Count >= request.TopK) break;
+                        if (seen.Add((r.DocumentId, r.PageNumber, r.ChunkIndex)))
+                            combined.Add(r);
+                    }
+
+                    searchResult = combined.Take(request.TopK).ToList();
+                }
+                else
+                {
+                    searchResult = await SearchInCourseAsync(
+                        request.CourseId,
+                        embeddingResult!.Vector,
+                        request.TopK,
+                        request.ScoreThreshold,
+                        lessonId: null);
+                }
 
                 stopwatch.Stop();
+                var lessonPart = request.LessonId.HasValue ? $" (lesson {request.LessonId})" : "";
                 logger.LogInformation(
-                    "Searched course {CourseId} with query in {ElapsedMs}ms, found {Count} results",
+                    "Searched course {CourseId}{LessonPart} with query in {ElapsedMs}ms, found {Count} results",
                     request.CourseId,
+                    lessonPart,
                     stopwatch.ElapsedMilliseconds,
                     searchResult?.Count ?? 0);
 
@@ -205,7 +241,7 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
             return result;
         }
 
-        private async Task DeleteDocumentPointsAsync(Guid courseId, Guid documentId)
+        private async Task DeleteDocumentPointsAsync(Guid courseId, Guid documentId, Guid? lessonId = null)
         {
             var collectionName = GetCollectionName(courseId);
 
@@ -237,13 +273,27 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                     }
                 };
 
+                if (lessonId.HasValue)
+                {
+                    conditions.Add(new Condition
+                    {
+                        Field = new FieldCondition
+                        {
+                            Key = "lessonId",
+                            Match = new Match { Text = lessonId.Value.ToString() }
+                        }
+                    });
+                }
+
                 var filter = new Filter { Must = { conditions } };
                 await qdrantClient.DeleteAsync(collectionName, filter);
 
                 logger.LogInformation(
-                    "Deleted document points for document {DocumentId} in course {CourseId}",
+                    "Deleted document points for document {DocumentId} in course {CourseId}" +
+                    (lessonId.HasValue ? " (lesson {LessonId})" : ""),
                     documentId,
-                    courseId);
+                    courseId,
+                    lessonId);
             }
             catch (Exception ex)
             {
@@ -282,6 +332,10 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                         ["text"] = embedding.Text,
                         ["createdAt"] = DateTime.UtcNow.ToString("O")
                     };
+                    if (embedding.LessonId.HasValue)
+                    {
+                        payload["lessonId"] = embedding.LessonId.Value.ToString();
+                    }
 
                     // Add metadata fields
                     foreach (var meta in embedding.Metadata)
@@ -331,7 +385,8 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
             Guid courseId,
             float[] queryVector,
             int topK = 5,
-            double? scoreThreshold = null)
+            double? scoreThreshold = null,
+            Guid? lessonId = null)
         {
             var stopwatch = Stopwatch.StartNew();
             var collectionName = GetCollectionName(courseId);
@@ -361,6 +416,17 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                     }
                 };
 
+                if (lessonId.HasValue)
+                {
+                    conditions.Add(new Condition
+                    {
+                        Field = new FieldCondition
+                        {
+                            Key = "lessonId",
+                            Match = new Match { Text = lessonId.Value.ToString() }
+                        }
+                    });
+                }
 
                 var searchFilter = new Filter
                 {

@@ -70,7 +70,8 @@ namespace Beyond8.Integration.Api.Apis
             var result = await embeddingService.EmbedAndSavePdfAsync(
                 stream,
                 request.CourseId,
-                request.DocumentId);
+                request.DocumentId,
+                request.LessonId);
 
             return result.IsSuccess
                 ? Results.Ok(result)

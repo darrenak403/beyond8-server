@@ -28,7 +28,8 @@ public static class SubscriptionMappings
             Currency = plan.Currency,
             DurationDays = plan.DurationDays,
             TotalRequestsInPeriod = plan.TotalRequestsInPeriod,
-            MaxRequestsPerWeek = plan.MaxRequestsPerWeek
+            MaxRequestsPerWeek = plan.MaxRequestsPerWeek,
+            Includes = plan.Includes?.ToList() ?? []
         };
     }
 

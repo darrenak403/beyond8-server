@@ -10,4 +10,5 @@ public class SubscriptionPlanResponse
     public int DurationDays { get; set; }
     public int TotalRequestsInPeriod { get; set; }
     public int MaxRequestsPerWeek { get; set; }
+    public List<string> Includes { get; set; } = [];
 }

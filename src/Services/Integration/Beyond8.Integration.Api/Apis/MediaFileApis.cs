@@ -17,6 +17,7 @@ namespace Beyond8.Integration.Api.Apis
         private const string InstructorProfileIdentityCardsFolder = "instructor/profile/identity-cards";
         private const string InstructorProfileVideosFolder = "instructor/profile/intro-videos";
         private const string CourseThumbnailFolder = "course/thumbnails";
+        
 
         public static IEndpointRouteBuilder MapMediaFileApi(this IEndpointRouteBuilder builder)
         {
