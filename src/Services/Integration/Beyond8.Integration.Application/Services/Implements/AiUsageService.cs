@@ -1,8 +1,9 @@
+using System.Linq.Expressions;
 using Beyond8.Common.Utilities;
-using Beyond8.Integration.Application.Dtos.AiIntegration;
 using Beyond8.Integration.Application.Dtos.Usages;
 using Beyond8.Integration.Application.Mappings.AiIntegrationMappings;
 using Beyond8.Integration.Application.Services.Interfaces;
+using Beyond8.Integration.Domain.Entities;
 using Beyond8.Integration.Domain.Repositories.Interfaces;
 using Microsoft.Extensions.Logging;
 
@@ -112,13 +113,22 @@ namespace Beyond8.Integration.Application.Services.Implements
             }
         }
 
-        public async Task<ApiResponse<List<AiUsageResponse>>> GetAllUsageAsync(PaginationRequest pagination)
+        public async Task<ApiResponse<List<AiUsageResponse>>> GetAllUsageAsync(AiUsageSearchRequest searchRequest)
         {
             try
             {
+                Expression<Func<AiUsage, bool>>? filter = null;
+                if (searchRequest.StartDate.HasValue || searchRequest.EndDate.HasValue)
+                {
+                    var start = searchRequest.StartDate ?? DateTime.MinValue;
+                    var end = searchRequest.EndDate ?? DateTime.MaxValue;
+                    filter = u => u.CreatedAt >= start && u.CreatedAt <= end;
+                }
+
                 var usages = await unitOfWork.AiUsageRepository.GetPagedAsync(
-                    pageNumber: pagination.PageNumber,
-                    pageSize: pagination.PageSize,
+                    pageNumber: searchRequest.PageNumber,
+                    pageSize: searchRequest.PageSize,
+                    filter: filter,
                     orderBy: query => query.OrderByDescending(u => u.CreatedAt)
                 );
 
@@ -129,8 +139,8 @@ namespace Beyond8.Integration.Application.Services.Implements
                 return ApiResponse<List<AiUsageResponse>>.SuccessPagedResponse(
                     responses,
                     usages.TotalCount,
-                    pagination.PageNumber,
-                    pagination.PageSize,
+                    searchRequest.PageNumber,
+                    searchRequest.PageSize,
                     "Lấy tất cả lịch sử sử dụng AI thành công.");
             }
             catch (Exception ex)
@@ -169,34 +179,5 @@ namespace Beyond8.Integration.Application.Services.Implements
             }
         }
 
-        public async Task<ApiResponse<List<AiUsageResponse>>> GetUsageByDateRangeAsync(DateRangePaginationRequest request)
-        {
-            try
-            {
-                var usages = await unitOfWork.AiUsageRepository.GetPagedAsync(
-                    pageNumber: request.PageNumber,
-                    pageSize: request.PageSize,
-                    filter: u => u.CreatedAt >= request.StartDate && u.CreatedAt <= request.EndDate,
-                    orderBy: query => query.OrderByDescending(u => u.CreatedAt)
-                );
-
-                var responses = usages.Items.Select(u => u.ToResponse()).ToList();
-
-                logger.LogInformation("Retrieved {Count} AI usages between {StartDate} and {EndDate}",
-                    responses.Count, request.StartDate, request.EndDate);
-
-                return ApiResponse<List<AiUsageResponse>>.SuccessPagedResponse(
-                    responses,
-                    usages.TotalCount,
-                    request.PageNumber,
-                    request.PageSize,
-                    "Lấy lịch sử sử dụng AI theo khoảng thời gian thành công.");
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error getting usage by date range from {StartDate} to {EndDate}", request.StartDate, request.EndDate);
-                return ApiResponse<List<AiUsageResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy lịch sử sử dụng AI theo khoảng thời gian.");
-            }
-        }
     }
 }

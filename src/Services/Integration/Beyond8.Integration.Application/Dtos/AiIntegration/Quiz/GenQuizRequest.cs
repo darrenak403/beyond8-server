@@ -4,6 +4,8 @@ namespace Beyond8.Integration.Application.Dtos.AiIntegration.Quiz
     {
         public Guid CourseId { get; set; }
 
+        public Guid? LessonId { get; set; }
+
         public string? Query { get; set; }
 
         public int TotalCount { get; set; } = 10;

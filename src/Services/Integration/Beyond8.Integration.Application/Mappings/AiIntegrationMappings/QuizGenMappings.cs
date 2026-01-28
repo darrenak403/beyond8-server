@@ -12,6 +12,7 @@ namespace Beyond8.Integration.Application.Mappings.AiIntegrationMappings
             return new VectorSearchRequest
             {
                 CourseId = request.CourseId,
+                LessonId = request.LessonId,
                 Query = string.IsNullOrWhiteSpace(request.Query) ? "nội dung khóa học" : request.Query,
                 TopK = request.TopK > 0 ? request.TopK : defaultTopK
             };

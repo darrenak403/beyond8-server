@@ -37,13 +37,6 @@ namespace Beyond8.Integration.Api.Apis
                 .Produces<ApiResponse<AiPromptResponse>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<AiPromptResponse>>(StatusCodes.Status404NotFound);
 
-            group.MapGet("/category/{category}", GetPromptsByCategory)
-                .WithName("GetPromptsByCategory")
-                .WithDescription("Lấy AI prompt templates theo category")
-                .RequireAuthorization(r => r.RequireRole(Role.Admin))
-                .Produces<ApiResponse<List<AiPromptResponse>>>(StatusCodes.Status200OK)
-                .Produces<ApiResponse<List<AiPromptResponse>>>(StatusCodes.Status400BadRequest);
-
             group.MapPost("/", CreatePrompt)
                 .WithName("CreatePrompt")
                 .WithDescription("Tạo AI prompt template mới (Admin only)")
@@ -94,15 +87,6 @@ namespace Beyond8.Integration.Api.Apis
         {
             var result = await promptService.GetPromptByIdAsync(id);
             return result.IsSuccess ? Results.Ok(result) : Results.NotFound(result);
-        }
-
-        private static async Task<IResult> GetPromptsByCategory(
-            [FromRoute] PromptCategory category,
-            [FromServices] IAiPromptService promptService,
-            [AsParameters] PaginationRequest paginationRequest)
-        {
-            var result = await promptService.GetPromptsByCategoryAsync((int)category, paginationRequest);
-            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
 
         private static async Task<IResult> CreatePrompt(

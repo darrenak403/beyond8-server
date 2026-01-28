@@ -4,13 +4,14 @@ namespace Beyond8.Integration.Application.Mappings.AiIntegrationMappings
 {
     public static class EmbeddingMappings
     {
-        public static DocumentEmbedding ToDocumentEmbedding(this DocumentChunk chunk, float[] vector, Guid courseId)
+        public static DocumentEmbedding ToDocumentEmbedding(this DocumentChunk chunk, float[] vector, Guid courseId, Guid? lessonId = null)
         {
             return new DocumentEmbedding
             {
                 Vector = vector,
                 CourseId = courseId,
                 DocumentId = chunk.DocumentId,
+                LessonId = lessonId,
                 PageNumber = chunk.PageNumber,
                 ChunkIndex = chunk.ChunkIndex,
                 Text = chunk.Text,

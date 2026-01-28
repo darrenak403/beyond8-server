@@ -32,6 +32,9 @@ namespace Beyond8.Identity.Domain.Entities
         /// <summary>Max requests per week: Free=35, Plus=50, Pro=100.</summary>
         public int MaxRequestsPerWeek { get; set; } = 35;
 
+        /// <summary>Danh sách quyền lợi hiển thị cho frontend (ví dụ: "35 request AI/7 ngày", "Hỗ trợ email").</summary>
+        public List<string> Includes { get; set; } = [];
+
         public bool IsActive { get; set; } = true;
 
         public virtual ICollection<UserSubscription> UserSubscriptions { get; set; } = [];

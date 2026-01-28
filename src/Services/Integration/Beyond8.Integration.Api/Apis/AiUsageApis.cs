@@ -1,6 +1,5 @@
 using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
-using Beyond8.Integration.Application.Dtos.AiIntegration;
 using Beyond8.Integration.Application.Dtos.Usages;
 using Beyond8.Integration.Application.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -31,7 +30,7 @@ namespace Beyond8.Integration.Api.Apis
 
             group.MapGet("/all", GetAllUsage)
                 .WithName("GetAllUsage")
-                .WithDescription("Lấy tất cả records sử dụng AI (Admin only)")
+                .WithDescription("Lấy tất cả records sử dụng AI (Admin only). Query: pageNumber, pageSize, startDate, endDate (optional).")
                 .RequireAuthorization(r => r.RequireRole(Role.Admin))
                 .Produces<ApiResponse<List<AiUsageResponse>>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<List<AiUsageResponse>>>(StatusCodes.Status400BadRequest)
@@ -53,14 +52,6 @@ namespace Beyond8.Integration.Api.Apis
                 .Produces<ApiResponse<AiUsageStatisticsResponse>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
-            group.MapGet("/by-date-range", GetUsageByDateRange)
-                .WithName("GetUsageByDateRange")
-                .WithDescription("Lấy lịch sử sử dụng AI trong khoảng thời gian (Admin only)")
-                .RequireAuthorization(r => r.RequireRole(Role.Admin))
-                .Produces<ApiResponse<List<AiUsageResponse>>>(StatusCodes.Status200OK)
-                .Produces<ApiResponse<List<AiUsageResponse>>>(StatusCodes.Status400BadRequest)
-                .Produces(StatusCodes.Status401Unauthorized);
-
             return group;
         }
 
@@ -76,9 +67,9 @@ namespace Beyond8.Integration.Api.Apis
 
         private static async Task<IResult> GetAllUsage(
             [FromServices] IAiUsageService usageService,
-            [AsParameters] PaginationRequest paginationRequest)
+            [AsParameters] AiUsageSearchRequest searchRequest)
         {
-            var result = await usageService.GetAllUsageAsync(paginationRequest);
+            var result = await usageService.GetAllUsageAsync(searchRequest);
 
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
@@ -100,15 +91,5 @@ namespace Beyond8.Integration.Api.Apis
 
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
-
-        private static async Task<IResult> GetUsageByDateRange(
-            [FromServices] IAiUsageService usageService,
-            [AsParameters] DateRangePaginationRequest request)
-        {
-            var result = await usageService.GetUsageByDateRangeAsync(request);
-
-            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
-        }
     }
-
 }

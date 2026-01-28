@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Beyond8.Common.Data.Base;
 using Beyond8.Identity.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -49,6 +50,9 @@ namespace Beyond8.Identity.Infrastructure.Data
                     entity.HasQueryFilter(e => e.DeletedAt == null);
                     entity.HasIndex(p => p.Code).IsUnique();
                     entity.Property(p => p.Price).HasPrecision(18, 2);
+                    entity.Property(p => p.Includes).HasConversion(
+                        v => JsonSerializer.Serialize(v ?? new List<string>()),
+                        v => JsonSerializer.Deserialize<List<string>>(v) ?? new List<string>());
                 });
             modelBuilder.Entity<UserSubscription>(entity =>
                 {
