@@ -1,8 +1,8 @@
-namespace Beyond8.Integration.Application.Dtos.AiIntegration.Embedding;
-
-public class EmbedCourseDocumentsRequest
+namespace Beyond8.Integration.Application.Dtos.AiIntegration.Embedding
 {
-    public Guid CourseId { get; set; }
-    public Guid DocumentId { get; set; }
-    public Guid? LessonId { get; set; }
+    public class EmbedCourseDocumentsRequest
+    {
+        public Guid CourseId { get; set; }
+        public Guid DocumentId { get; set; }
+    }
 }

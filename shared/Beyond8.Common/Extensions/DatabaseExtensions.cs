@@ -1,19 +1,20 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 
-namespace Beyond8.Common.Extensions;
-
-public static class DatabaseExtensions
+namespace Beyond8.Common.Extensions
 {
-    public static IHostApplicationBuilder AddPostgresDatabase<TContext>(
-        this IHostApplicationBuilder builder,
-        string databaseName) where TContext : DbContext
+    public static class DatabaseExtensions
     {
-        builder.AddNpgsqlDbContext<TContext>(databaseName, configureDbContextOptions: options =>
+        public static IHostApplicationBuilder AddPostgresDatabase<TContext>(
+            this IHostApplicationBuilder builder,
+            string databaseName) where TContext : DbContext
         {
-            options.UseNpgsql(builder => builder.MigrationsAssembly(typeof(TContext).Assembly.FullName));
-        });
+            builder.AddNpgsqlDbContext<TContext>(databaseName, configureDbContextOptions: options =>
+            {
+                options.UseNpgsql(builder => builder.MigrationsAssembly(typeof(TContext).Assembly.FullName));
+            });
 
-        return builder;
+            return builder;
+        }
     }
 }

@@ -1,13 +1,14 @@
 using Beyond8.Integration.Application.Dtos.VnptEkyc;
 using FluentValidation;
 
-namespace Beyond8.Integration.Application.Validators.VnptEkyc;
-
-public class ClassifyRequestValidator : AbstractValidator<ClassifyRequest>
+namespace Beyond8.Integration.Application.Validators.VnptEkyc
 {
-    public ClassifyRequestValidator()
+    public class ClassifyRequestValidator : AbstractValidator<ClassifyRequest>
     {
-        RuleFor(x => x.Img)
-            .NotEmpty().WithMessage("Image hash không được để trống");
+        public ClassifyRequestValidator()
+        {
+            RuleFor(x => x.Img)
+                .NotEmpty().WithMessage("Image hash không được để trống");
+        }
     }
 }

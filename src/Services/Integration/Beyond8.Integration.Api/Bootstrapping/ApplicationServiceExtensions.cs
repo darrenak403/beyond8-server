@@ -4,6 +4,7 @@ using Amazon.S3;
 using Beyond8.Common.Extensions;
 using Beyond8.Common.Utilities;
 using Beyond8.Integration.Api.Apis;
+using Beyond8.Integration.Application.Clients;
 using Beyond8.Integration.Application.Consumers.Identity;
 using Beyond8.Integration.Application.Dtos.MediaFiles;
 using Beyond8.Integration.Application.Services.Implements;
@@ -19,163 +20,206 @@ using Beyond8.Integration.Infrastructure.Hubs;
 using Beyond8.Integration.Infrastructure.Repositories.Implements;
 using FluentValidation;
 using Microsoft.Extensions.Options;
+using Polly;
+using Polly.Extensions.Http;
 using Resend;
 using Scalar.AspNetCore;
 
-namespace Beyond8.Integration.Api.Bootstrapping;
-
-public static class Bootstrapper
+namespace Beyond8.Integration.Api.Bootstrapping
 {
-    public static IHostApplicationBuilder AddApplicationServices(this IHostApplicationBuilder builder)
+    public static class Bootstrapper
     {
-        builder.Services.AddOpenApi();
-
-        builder.AddCommonExtensions();
-
-        builder.AddPostgresDatabase<IntegrationDbContext>(Const.IntegrationServiceDatabase);
-
-        builder.AddServiceRedis(nameof(Integration), connectionName: Const.Redis);
-
-        // Configure AWS S3
-        builder.Services.Configure<S3Settings>(builder.Configuration.GetSection(S3Settings.SectionName));
-
-        builder.Services.AddSingleton<IAmazonS3>(sp =>
+        public static IHostApplicationBuilder AddApplicationServices(this IHostApplicationBuilder builder)
         {
-            var s3Settings = sp.GetRequiredService<IOptions<S3Settings>>().Value;
-            var config = new AmazonS3Config
+            builder.Services.AddOpenApi();
+
+            builder.AddCommonExtensions();
+
+            builder.AddPostgresDatabase<IntegrationDbContext>(Const.IntegrationServiceDatabase);
+
+            builder.AddServiceRedis(nameof(Integration), connectionName: Const.Redis);
+
+            // Configure AWS S3
+            builder.Services.Configure<S3Settings>(builder.Configuration.GetSection(S3Settings.SectionName));
+
+            builder.Services.AddSingleton<IAmazonS3>(sp =>
             {
-                RegionEndpoint = RegionEndpoint.GetBySystemName(s3Settings.Region),
-                ForcePathStyle = true
-            };
+                var s3Settings = sp.GetRequiredService<IOptions<S3Settings>>().Value;
+                var config = new AmazonS3Config
+                {
+                    RegionEndpoint = RegionEndpoint.GetBySystemName(s3Settings.Region),
+                    ForcePathStyle = true
+                };
 
-            return new AmazonS3Client(s3Settings.AccessKey, s3Settings.SecretKey, config);
-        });
+                return new AmazonS3Client(s3Settings.AccessKey, s3Settings.SecretKey, config);
+            });
 
-        // Register AI provider configurations
-        builder.Services.AddHttpClient();
-        builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection(GeminiSettings.SectionName));
-        builder.Services.Configure<BedrockSettings>(builder.Configuration.GetSection(BedrockSettings.SectionName));
+            // Register AI provider configurations
+            builder.Services.AddHttpClient();
+            builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection(GeminiSettings.SectionName));
+            builder.Services.Configure<BedrockSettings>(builder.Configuration.GetSection(BedrockSettings.SectionName));
 
-        var aiProvider = builder.Configuration.GetValue<string>("AiProvider") ?? "Gemini";
-        if (aiProvider.Equals("Bedrock", StringComparison.OrdinalIgnoreCase))
-        {
-            builder.Services.AddScoped<IGenerativeAiService, BedrockService>();
-        }
-        else
-        {
-            builder.Services.AddScoped<IGenerativeAiService, GeminiService>();
-        }
-
-        // Register Resend configuration
-        builder.Services.Configure<ResendSettings>(
-        builder.Configuration.GetSection(ResendSettings.SectionName));
-
-        builder.Services.AddSingleton<IResend>(sp =>
-        {
-            var options = sp.GetRequiredService<IOptions<ResendSettings>>().Value;
-            if (string.IsNullOrWhiteSpace(options.ApiKey))
-                throw new InvalidOperationException("ApiKey is missing in Resend Settings");
-
-            return ResendClient.Create(options.ApiKey.Trim());
-        });
-
-        // Register VnptEkyc configuration
-        builder.Services.Configure<VnptEkycSettings>(builder.Configuration.GetSection(VnptEkycSettings.SectionName));
-
-        builder.Services.AddHttpClient("VnptEkycClient", (serviceProvider, client) =>
-        {
-            var options = serviceProvider.GetRequiredService<IOptions<VnptEkycSettings>>().Value;
-
-            client.BaseAddress = new Uri(options.BaseUrl);
-            client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
-
-            if (!string.IsNullOrEmpty(options.AccessToken))
+            var aiProvider = builder.Configuration.GetValue<string>("AiProvider") ?? "Gemini";
+            if (aiProvider.Equals("Bedrock", StringComparison.OrdinalIgnoreCase))
             {
-                client.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", options.AccessToken);
+                builder.Services.AddScoped<IGenerativeAiService, BedrockService>();
+            }
+            else
+            {
+                builder.Services.AddScoped<IGenerativeAiService, GeminiService>();
             }
 
-            if (!string.IsNullOrEmpty(options.TokenId))
+            // Register Resend configuration
+            builder.Services.Configure<ResendSettings>(
+            builder.Configuration.GetSection(ResendSettings.SectionName));
+
+            builder.Services.AddSingleton<IResend>(sp =>
             {
-                client.DefaultRequestHeaders.Add("Token-id", options.TokenId);
-            }
+                var options = sp.GetRequiredService<IOptions<ResendSettings>>().Value;
+                if (string.IsNullOrWhiteSpace(options.ApiKey))
+                    throw new InvalidOperationException("ApiKey is missing in Resend Settings");
 
-            if (!string.IsNullOrEmpty(options.TokenKey))
+                return ResendClient.Create(options.ApiKey.Trim());
+            });
+
+            // Register VnptEkyc configuration
+            builder.Services.Configure<VnptEkycSettings>(builder.Configuration.GetSection(VnptEkycSettings.SectionName));
+
+            builder.Services.AddHttpClient("VnptEkycClient", (serviceProvider, client) =>
             {
-                client.DefaultRequestHeaders.Add("Token-key", options.TokenKey);
-            }
-        });
+                var options = serviceProvider.GetRequiredService<IOptions<VnptEkycSettings>>().Value;
 
-        // Register repositories
-        builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+                client.BaseAddress = new Uri(options.BaseUrl);
+                client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
 
-        builder.Services.AddSignalR(options =>
-        {
-            options.EnableDetailedErrors = builder.Environment.IsDevelopment();
-        });
+                if (!string.IsNullOrEmpty(options.AccessToken))
+                {
+                    client.DefaultRequestHeaders.Authorization =
+                        new AuthenticationHeaderValue("Bearer", options.AccessToken);
+                }
 
-        // Configure MassTransit with RabbitMQ and register consumers
-        builder.AddMassTransitWithRabbitMq(config =>
-        {
-            // Register consumers from Identity events
-            config.AddConsumer<OtpEmailConsumer>();
-            config.AddConsumer<InstructorProfileSubmittedConsumer>();
-            config.AddConsumer<InstructorApprovalConsumer>();
-            config.AddConsumer<InstructorUpdateRequestEmailConsumer>();
-        });
+                if (!string.IsNullOrEmpty(options.TokenId))
+                {
+                    client.DefaultRequestHeaders.Add("Token-id", options.TokenId);
+                }
 
-        // Configure Qdrant - Use Aspire Qdrant Client
-        builder.AddQdrantClient(Const.Qdrant);
-        
-        // Configure Qdrant Settings (for vector dimension config)
-        builder.Services.Configure<QdrantSettings>(builder.Configuration.GetSection(QdrantSettings.SectionName));
+                if (!string.IsNullOrEmpty(options.TokenKey))
+                {
+                    client.DefaultRequestHeaders.Add("Token-key", options.TokenKey);
+                }
+            });
 
-        // Hugging Face Embedding Service
-        builder.Services.Configure<HuggingFaceSettings>(builder.Configuration.GetSection(HuggingFaceSettings.SectionName));
+            // Register repositories
+            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-        // Register services
-        builder.Services.AddScoped<INotificationService, SignalRNotificationService>();
-        builder.Services.AddScoped<INotificationHistoryService, NotificationHistoryService>();
-        builder.Services.AddScoped<IStorageService, S3Service>();
-        builder.Services.AddScoped<IMediaFileService, MediaFileService>();
-        builder.Services.AddScoped<IAiUsageService, AiUsageService>();
-        builder.Services.AddScoped<IAiPromptService, AiPromptService>();
-        builder.Services.AddScoped<IUrlContentDownloader, UrlContentDownloader>();
-        builder.Services.AddScoped<IEmailService, EmailService>();
-        builder.Services.AddScoped<IVnptEkycService, VnptEkycService>();
-        builder.Services.AddScoped<IAiService, AiService>();
-        builder.Services.AddScoped<IPdfChunkService, PdfChunkService>();
-        builder.Services.AddScoped<IVectorEmbeddingService, VectorEmbeddingService>();
+            builder.Services.AddSignalR(options =>
+            {
+                options.EnableDetailedErrors = builder.Environment.IsDevelopment();
+            });
 
-        // Register validators
-        builder.Services.AddValidatorsFromAssemblyContaining<UploadFileRequest>();
+            // Configure MassTransit with RabbitMQ and register consumers
+            builder.AddMassTransitWithRabbitMq(config =>
+            {
+                // Register consumers from Identity events
+                config.AddConsumer<OtpEmailConsumer>();
+                config.AddConsumer<InstructorProfileSubmittedConsumer>();
+                config.AddConsumer<InstructorApprovalConsumer>();
+                config.AddConsumer<InstructorUpdateRequestEmailConsumer>();
+            });
 
-        return builder;
-    }
+            // Configure Qdrant - Use Aspire Qdrant Client
+            builder.AddQdrantClient(Const.Qdrant);
 
-    public static WebApplication UseApplicationServices(this WebApplication app)
-    {
-        app.UseCommonService();
+            // Configure Qdrant Settings (for vector dimension config)
+            builder.Services.Configure<QdrantSettings>(builder.Configuration.GetSection(QdrantSettings.SectionName));
 
-        if (app.Environment.IsDevelopment())
-        {
-            app.MapOpenApi();
-            app.MapScalarApiReference();
+            // Hugging Face Embedding Service
+            builder.Services.Configure<HuggingFaceSettings>(builder.Configuration.GetSection(HuggingFaceSettings.SectionName));
+
+            // Register clients
+            builder.AddClientServices();
+
+            // Register services
+            builder.Services.AddScoped<INotificationService, SignalRNotificationService>();
+            builder.Services.AddScoped<INotificationHistoryService, NotificationHistoryService>();
+            builder.Services.AddScoped<IStorageService, S3Service>();
+            builder.Services.AddScoped<IMediaFileService, MediaFileService>();
+            builder.Services.AddScoped<IAiUsageService, AiUsageService>();
+            builder.Services.AddScoped<IAiPromptService, AiPromptService>();
+            builder.Services.AddScoped<IUrlContentDownloader, UrlContentDownloader>();
+            builder.Services.AddScoped<IEmailService, EmailService>();
+            builder.Services.AddScoped<IVnptEkycService, VnptEkycService>();
+            builder.Services.AddScoped<IAiService, AiService>();
+            builder.Services.AddScoped<IPdfChunkService, PdfChunkService>();
+            builder.Services.AddScoped<IVectorEmbeddingService, VectorEmbeddingService>();
+
+            // Register validators
+            builder.Services.AddValidatorsFromAssemblyContaining<UploadFileRequest>();
+
+            return builder;
         }
 
-        app.UseHttpsRedirection();
+        public static IHostApplicationBuilder AddClientServices(this IHostApplicationBuilder builder)
+        {
+            builder.Services.AddHttpContextAccessor();
 
-        app.MapHub<AppHub>("/hubs/app")
-            .RequireCors("AllowDevelopmentClients");
+            builder.Services.AddHttpClient<IIdentityClient, IdentityClient>(client =>
+            {
+                client.BaseAddress = new Uri(Const.IdentityServiceBaseUrl);
+                client.Timeout = TimeSpan.FromSeconds(30);
+            })
+            .AddPolicyHandler(GetResiliencePolicy());
 
-        app.MapMediaFileApi();
-        app.MapAiApi();
-        app.MapAiUsageApi();
-        app.MapAiPromptApi();
-        app.MapVnptEkycApi();
-        app.MapNotificationApi();
-        app.MapEmbeddingApi();
+            return builder;
+        }
 
-        return app;
+        private static IAsyncPolicy<HttpResponseMessage> GetResiliencePolicy()
+        {
+            var jitterer = new Random();
+
+            var retryPolicy = HttpPolicyExtensions
+                .HandleTransientHttpError()
+                .OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+                .WaitAndRetryAsync(
+                    retryCount: 3,
+                    sleepDurationProvider: retryAttempt =>
+                        TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))
+                        + TimeSpan.FromMilliseconds(jitterer.Next(0, 1000))
+                );
+
+            var circuitBreakerPolicy = HttpPolicyExtensions
+                .HandleTransientHttpError()
+                .CircuitBreakerAsync(
+                    handledEventsAllowedBeforeBreaking: 5,
+                    durationOfBreak: TimeSpan.FromSeconds(30)
+                );
+
+            return Policy.WrapAsync(retryPolicy, circuitBreakerPolicy);
+        }
+        public static WebApplication UseApplicationServices(this WebApplication app)
+        {
+            app.UseCommonService();
+
+            if (app.Environment.IsDevelopment())
+            {
+                app.MapOpenApi();
+                app.MapScalarApiReference();
+            }
+
+            app.UseHttpsRedirection();
+
+            app.MapHub<AppHub>("/hubs/app")
+                .RequireCors(app.Environment.IsDevelopment() ? "AllowDevelopmentClients" : "AllowProductionClients");
+
+            app.MapMediaFileApi();
+            app.MapAiApi();
+            app.MapAiUsageApi();
+            app.MapAiPromptApi();
+            app.MapVnptEkycApi();
+            app.MapNotificationApi();
+            app.MapEmbeddingApi();
+
+            return app;
+        }
     }
 }

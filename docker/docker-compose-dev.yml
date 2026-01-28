@@ -26,7 +26,7 @@ x-integration-service-environment: &integration-service-environment
   ConnectionStrings__rabbitmq: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
   AWS__S3__AccessKey: ${AWS_ACCESS_KEY}
   AWS__S3__SecretKey: ${AWS_SECRET_KEY}
-  AWS__S3__Region: ${AWS_REGION}
+  AWS__S3__Region: ${AWS_S3_REGION}
   AWS__S3__BucketName: ${AWS_BUCKET_NAME}
   AWS__S3__CloudFrontUrl: ${AWS_CLOUD_FRONT_URL}
 
@@ -34,7 +34,7 @@ x-integration-service-environment: &integration-service-environment
 
   AWS__Bedrock__AccessKey: ${AWS_ACCESS_KEY}
   AWS__Bedrock__SecretKey: ${AWS_SECRET_KEY}
-  AWS__Bedrock__Region: ${AWS_REGION}
+  AWS__Bedrock__Region: ${AWS_BEDROCK_REGION}
   AWS__Bedrock__DefaultModel: ${AWS_BEDROCK_DEFAULT_MODEL}
   AWS__Bedrock__MaxRetries: ${AWS_BEDROCK_MAX_RETRIES}
   AWS__Bedrock__TimeoutSeconds: ${AWS_BEDROCK_TIMEOUT_SECONDS}

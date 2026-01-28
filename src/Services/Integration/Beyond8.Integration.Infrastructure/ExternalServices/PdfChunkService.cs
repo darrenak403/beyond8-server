@@ -5,153 +5,151 @@ using Microsoft.Extensions.Logging;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
 
-namespace Beyond8.Integration.Infrastructure.ExternalServices;
-
-public class PdfChunkService(ILogger<PdfChunkService> logger) : IPdfChunkService
+namespace Beyond8.Integration.Infrastructure.ExternalServices
 {
-    public List<DocumentChunk> ChunkPdf(
-        Stream pdfStream,
-        Guid courseId,
-        Guid documentId,
-        int chunkSize = 500,
-        int chunkOverlap = 50)
+    public class PdfChunkService(ILogger<PdfChunkService> logger) : IPdfChunkService
     {
-        try
+        public List<DocumentChunk> ChunkPdf(
+            Stream pdfStream,
+            Guid courseId,
+            Guid documentId,
+            int chunkSize = 500,
+            int chunkOverlap = 15)
         {
-            var chunks = new List<DocumentChunk>();
-
-            using var document = PdfDocument.Open(pdfStream);
-            var pageNumber = 1;
-
-            foreach (var page in document.GetPages())
+            try
             {
-                var pageText = ExtractTextFromPage(page);
+                var chunks = new List<DocumentChunk>();
 
-                if (string.IsNullOrWhiteSpace(pageText))
+                using var document = PdfDocument.Open(pdfStream);
+                var pageNumber = 1;
+
+                foreach (var page in document.GetPages())
                 {
-                    pageNumber++;
-                    continue;
-                }
+                    var pageText = ExtractTextFromPage(page);
 
-                // Chunk text theo chunkSize và chunkOverlap
-                var pageChunks = ChunkText(pageText, chunkSize, chunkOverlap);
-
-                for (int i = 0; i < pageChunks.Count; i++)
-                {
-                    chunks.Add(new DocumentChunk
+                    if (string.IsNullOrWhiteSpace(pageText))
                     {
-                        Text = pageChunks[i],
-                        CourseId = courseId,
-                        DocumentId = documentId,
-                        PageNumber = pageNumber,
-                        ChunkIndex = i,
-                        SectionTitle = null // Có thể parse từ PDF structure sau
-                    });
+                        pageNumber++;
+                        continue;
+                    }
+
+                    // Chunk text theo chunkSize và chunkOverlap
+                    var pageChunks = ChunkText(pageText, chunkSize, chunkOverlap);
+
+                    for (int i = 0; i < pageChunks.Count; i++)
+                    {
+                        chunks.Add(new DocumentChunk
+                        {
+                            Text = pageChunks[i],
+                            CourseId = courseId,
+                            DocumentId = documentId,
+                            PageNumber = pageNumber,
+                            ChunkIndex = i,
+                            SectionTitle = null // Có thể parse từ PDF structure sau
+                        });
+                    }
+
+                    pageNumber++;
                 }
 
-                pageNumber++;
-            }
+                if (chunks.Count == 0)
+                {
+                    logger.LogWarning("Không thể extract text từ PDF.");
+                    return [];
+                }
 
-            if (chunks.Count == 0)
+                logger.LogInformation(
+                    "Chunked PDF into {ChunkCount} chunks across {PageCount} pages",
+                    chunks.Count,
+                    pageNumber - 1);
+
+                return chunks;
+            }
+            catch (Exception ex)
             {
-                logger.LogWarning("Không thể extract text từ PDF.");
+                logger.LogError(ex, "Error chunking PDF");
                 return [];
             }
-
-            logger.LogInformation(
-                "Chunked PDF into {ChunkCount} chunks across {PageCount} pages",
-                chunks.Count,
-                pageNumber - 1);
-
-            return chunks;
         }
-        catch (Exception ex)
+
+        private static string ExtractTextFromPage(Page page)
         {
-            logger.LogError(ex, "Error chunking PDF");
-            return [];
-        }
-    }
+            var words = page.GetWords();
+            if (!words.Any())
+                return string.Empty;
 
-    private static string ExtractTextFromPage(Page page)
-    {
-        var words = page.GetWords();
-        if (!words.Any())
-            return string.Empty;
+            var textBuilder = new StringBuilder();
+            Word? previousWord = null;
 
-        var textBuilder = new StringBuilder();
-        Word? previousWord = null;
-
-        foreach (var word in words)
-        {
-            var currentWord = word.Text;
-
-            if (previousWord != null)
+            foreach (var word in words)
             {
-                var distance = word.BoundingBox.BottomLeft.X - previousWord.BoundingBox.BottomRight.X;
-                if (distance > word.BoundingBox.Width * 0.3) // Nếu khoảng cách lớn hơn 30% width của từ
+                var currentWord = word.Text;
+
+                if (previousWord != null)
                 {
                     textBuilder.Append(' ');
                 }
+
+                textBuilder.Append(currentWord);
+                previousWord = word;
             }
 
-            textBuilder.Append(currentWord);
-            previousWord = word;
+            return textBuilder.ToString();
         }
 
-        return textBuilder.ToString();
-    }
 
-    private static List<string> ChunkText(string text, int chunkSize, int chunkOverlap)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return new List<string>();
-
-        var chunks = new List<string>();
-        var words = text.Split([' ', '\n', '\r', '\t'], StringSplitOptions.RemoveEmptyEntries);
-
-        if (words.Length == 0)
-            return new List<string> { text };
-
-        var currentChunk = new StringBuilder();
-        var currentLength = 0;
-        var startIndex = 0;
-
-        for (int i = 0; i < words.Length; i++)
+        private static List<string> ChunkText(string text, int chunkSize, int chunkOverlap)
         {
-            var word = words[i];
-            var wordLength = word.Length + 1; // +1 for space
+            if (string.IsNullOrWhiteSpace(text))
+                return new List<string>();
 
-            if (currentLength + wordLength > chunkSize && currentChunk.Length > 0)
+            var chunks = new List<string>();
+            var words = text.Split([' ', '\n', '\r', '\t'], StringSplitOptions.RemoveEmptyEntries);
+
+            if (words.Length == 0)
+                return new List<string> { text };
+
+            // Giới hạn overlap tối đa ~25% số từ trong chunk (ước lượng chunkSize/5 ký tự ≈ chunkSize/20 từ)
+            var maxOverlapWords = Math.Max(1, chunkSize / 20);
+            var overlapWords = Math.Min(chunkOverlap, maxOverlapWords);
+
+            var currentChunk = new StringBuilder();
+            var currentLength = 0;
+            var startIndex = 0;
+
+            for (var i = 0; i < words.Length; i++)
             {
-                // Save current chunk
-                chunks.Add(currentChunk.ToString().Trim());
+                var word = words[i];
+                var wordLength = word.Length + 1; // +1 for space
 
-                // Start new chunk with overlap
-                var overlapStart = Math.Max(0, startIndex - chunkOverlap);
-                currentChunk.Clear();
-                currentLength = 0;
-
-                for (int j = overlapStart; j < i; j++)
+                if (currentLength + wordLength > chunkSize && currentChunk.Length > 0)
                 {
-                    currentChunk.Append(words[j]);
-                    currentChunk.Append(' ');
-                    currentLength += words[j].Length + 1;
+                    chunks.Add(currentChunk.ToString().Trim());
+
+                    // Bước nhảy: chunk mới bắt đầu từ (startIndex - overlapWords) từ, tránh overlap quá lớn
+                    var overlapStart = Math.Max(0, startIndex - overlapWords);
+                    currentChunk.Clear();
+                    currentLength = 0;
+
+                    for (var j = overlapStart; j < i; j++)
+                    {
+                        currentChunk.Append(words[j]);
+                        currentChunk.Append(' ');
+                        currentLength += words[j].Length + 1;
+                    }
+
+                    startIndex = overlapStart;
                 }
 
-                startIndex = overlapStart;
+                currentChunk.Append(word);
+                currentChunk.Append(' ');
+                currentLength += wordLength;
             }
 
-            currentChunk.Append(word);
-            currentChunk.Append(' ');
-            currentLength += wordLength;
-        }
+            if (currentChunk.Length > 0)
+                chunks.Add(currentChunk.ToString().Trim());
 
-        // Add last chunk
-        if (currentChunk.Length > 0)
-        {
-            chunks.Add(currentChunk.ToString().Trim());
+            return chunks;
         }
-
-        return chunks;
     }
 }

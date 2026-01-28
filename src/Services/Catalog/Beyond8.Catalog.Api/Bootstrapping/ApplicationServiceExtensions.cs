@@ -10,40 +10,41 @@ using Beyond8.Common.Utilities;
 using FluentValidation;
 using Scalar.AspNetCore;
 
-namespace Beyond8.Catalog.Api.Bootstrapping;
-
-public static class ApplicationServiceExtensions
+namespace Beyond8.Catalog.Api.Bootstrapping
 {
-    public static IHostApplicationBuilder AddApplicationServices(this IHostApplicationBuilder builder)
+    public static class ApplicationServiceExtensions
     {
-        builder.Services.AddOpenApi();
-        builder.AddCommonExtensions();
-        builder.AddPostgresDatabase<CatalogDbContext>(Const.CatalogServiceDatabase);
-
-        builder.AddServiceRedis(nameof(Catalog), connectionName: Const.Redis);
-
-        builder.AddMassTransitWithRabbitMq();
-
-        builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-
-        builder.Services.AddScoped<ICategoryService, CategoryService>();
-
-        builder.Services.AddValidatorsFromAssemblyContaining<CreateCategoryRequest>();
-        return builder;
-    }
-
-    public static WebApplication UseApplicationServices(this WebApplication app)
-    {
-        app.UseCommonService();
-        if (app.Environment.IsDevelopment())
+        public static IHostApplicationBuilder AddApplicationServices(this IHostApplicationBuilder builder)
         {
-            app.MapOpenApi();
-            app.MapScalarApiReference();
+            builder.Services.AddOpenApi();
+            builder.AddCommonExtensions();
+            builder.AddPostgresDatabase<CatalogDbContext>(Const.CatalogServiceDatabase);
+
+            builder.AddServiceRedis(nameof(Catalog), connectionName: Const.Redis);
+
+            builder.AddMassTransitWithRabbitMq();
+
+            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+            builder.Services.AddScoped<ICategoryService, CategoryService>();
+
+            builder.Services.AddValidatorsFromAssemblyContaining<CreateCategoryRequest>();
+            return builder;
         }
-        app.UseHttpsRedirection();
 
-        app.MapCategoryApi();
+        public static WebApplication UseApplicationServices(this WebApplication app)
+        {
+            app.UseCommonService();
+            if (app.Environment.IsDevelopment())
+            {
+                app.MapOpenApi();
+                app.MapScalarApiReference();
+            }
+            app.UseHttpsRedirection();
 
-        return app;
+            app.MapCategoryApi();
+
+            return app;
+        }
     }
 }
