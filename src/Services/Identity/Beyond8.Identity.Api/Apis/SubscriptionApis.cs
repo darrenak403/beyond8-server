@@ -31,11 +31,10 @@ public static class SubscriptionApis
         group.MapGet("/plans", GetSubscriptionPlansAsync)
             .WithName("GetSubscriptionPlans")
             .WithDescription("Lấy danh sách gói đăng ký")
-            .RequireAuthorization(x => x.RequireRole(Role.Admin))
+            .AllowAnonymous()
             .Produces<ApiResponse<List<SubscriptionPlanResponse>>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<List<SubscriptionPlanResponse>>>(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status403Forbidden);
+            .Produces(StatusCodes.Status401Unauthorized);
 
         group.MapPut("/{id:guid}", UpdateSubscriptionAsync)
             .WithName("UpdateSubscription")
