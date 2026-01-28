@@ -32,7 +32,8 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
             int? maxTokens = null,
             decimal? temperature = null,
             decimal? topP = null,
-            IReadOnlyList<GenerativeAiImagePart>? inlineImages = null)
+            IReadOnlyList<GenerativeAiImagePart>? inlineImages = null,
+            bool trackUsage = true)
         {
             var stopwatch = Stopwatch.StartNew();
 
@@ -152,7 +153,8 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
 
                     logger.LogError("Bedrock API error: {Error}", errorMsg);
 
-                    await TrackFailedUsageAsync(userId, selectedModel, operation, promptId, stopwatch.ElapsedMilliseconds, errorMsg);
+                    if (trackUsage)
+                        await TrackFailedUsageAsync(userId, selectedModel, operation, promptId, stopwatch.ElapsedMilliseconds, errorMsg);
 
                     return ApiResponse<GenerativeAiResponse>.FailureResponse($"Đã xảy ra lỗi khi gọi Bedrock API: {errorMsg}");
                 }
@@ -161,7 +163,8 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
 
                 var bedrockResponse = ParseBedrockResponse(response, selectedModel, stopwatch.ElapsedMilliseconds);
 
-                await TrackSuccessfulUsageAsync(userId, selectedModel, operation, promptId, bedrockResponse, prompt);
+                if (trackUsage)
+                    await TrackSuccessfulUsageAsync(userId, selectedModel, operation, promptId, bedrockResponse, prompt);
 
                 logger.LogInformation("Bedrock content generated successfully for user {UserId} using model {Model}", userId, selectedModel);
 
@@ -172,7 +175,8 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                 stopwatch.Stop();
                 logger.LogError(ex, "Error generating content with Bedrock for user {UserId}", userId);
 
-                await TrackFailedUsageAsync(userId, model ?? _config.DefaultModel, operation, promptId, stopwatch.ElapsedMilliseconds, ex.Message);
+                if (trackUsage)
+                    await TrackFailedUsageAsync(userId, model ?? _config.DefaultModel, operation, promptId, stopwatch.ElapsedMilliseconds, ex.Message);
 
                 return ApiResponse<GenerativeAiResponse>.FailureResponse("Đã xảy ra lỗi khi tạo nội dung AI.");
             }
@@ -234,7 +238,9 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                     null,
                     10,
                     0.1m,
-                    0.1m);
+                    0.1m,
+                    inlineImages: null,
+                    trackUsage: false);
 
                 return result.IsSuccess
                     ? ApiResponse<bool>.SuccessResponse(true, "Bedrock service is healthy.")

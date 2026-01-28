@@ -51,12 +51,10 @@ namespace Beyond8.AppHost.Extensions
                 .WithReference(redis)
                 .WithReference(rabbitMq)
                 .WithReference(qdrant)
-                .WithReference(identityService)
                 .WaitFor(postgres)
                 .WaitFor(redis)
                 .WaitFor(rabbitMq)
-                .WaitFor(qdrant)
-                .WaitFor(identityService);
+                .WaitFor(qdrant);
 
             var catalogService = builder.AddProject<Projects.Beyond8_Catalog_Api>("Catalog-Service")
                 .WithReference(catalogDb)
