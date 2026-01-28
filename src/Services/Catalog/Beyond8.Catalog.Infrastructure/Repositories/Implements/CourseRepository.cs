@@ -87,14 +87,11 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
                 query = query.Where(c => c.IsActive == isActive.Value);
             }
 
-            // Get total count before pagination
             var totalCount = await query.CountAsync();
 
-            // Apply sorting and pagination
             List<Course> items;
             if (isRandom.HasValue && isRandom.Value)
             {
-                // Get all filtered items and shuffle
                 var allItems = await query.ToListAsync();
                 var random = new Random();
                 allItems = allItems.OrderBy(x => random.Next()).ToList();
@@ -103,7 +100,6 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
             }
             else
             {
-                // Apply sorting (default by CreatedAt)
                 query = isDescending.HasValue && isDescending.Value
                     ? query.OrderByDescending(c => c.CreatedAt)
                     : query.OrderBy(c => c.CreatedAt);
