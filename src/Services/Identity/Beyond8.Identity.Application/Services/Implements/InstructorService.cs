@@ -556,11 +556,11 @@ namespace Beyond8.Identity.Application.Services.Implements
             }
         }
 
-        public async Task<ApiResponse<bool>> CheckInstructorProfileVerifiedAsync(Guid id)
+        public async Task<ApiResponse<bool>> CheckInstructorProfileVerifiedAsync(Guid userId)
         {
             try
             {
-                var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(p => p.Id == id);
+                var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(p => p.UserId == userId);
                 if (profile == null)
                 {
                     return ApiResponse<bool>.FailureResponse("Hồ sơ giảng viên không tồn tại.");
@@ -570,7 +570,7 @@ namespace Beyond8.Identity.Application.Services.Implements
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error checking instructor profile verified status for id: {Id}", id);
+                logger.LogError(ex, "Error checking instructor profile verified status for userId: {UserId}", userId);
                 return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi kiểm tra trạng thái hồ sơ giảng viên.");
             }
         }
