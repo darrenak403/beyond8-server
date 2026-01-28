@@ -55,7 +55,7 @@ public class CourseService(
         }
     }
 
-    public async Task<ApiResponse<CourseResponse>> CreateCourseAsync(CreateCourseRequest request)
+    public async Task<ApiResponse<CourseResponse>> CreateCourseAsync(CreateCourseRequest request, Guid currentUserId)
     {
         try
         {
@@ -76,6 +76,7 @@ public class CourseService(
             }
 
             var course = request.ToEntity();
+            course.InstructorId = currentUserId;
             await unitOfWork.CourseRepository.AddAsync(course);
             await unitOfWork.SaveChangesAsync();
 

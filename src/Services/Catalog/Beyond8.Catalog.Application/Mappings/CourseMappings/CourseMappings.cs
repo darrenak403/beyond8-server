@@ -18,7 +18,6 @@ public static class CourseMappings
             Description = request.Description,
             ShortDescription = request.ShortDescription,
             CategoryId = request.CategoryId,
-            InstructorId = request.InstructorId,
             Level = request.Level,
             Language = request.Language,
             Price = request.Price,

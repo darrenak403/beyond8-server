@@ -6,7 +6,7 @@ namespace Beyond8.Catalog.Application.Services.Interfaces;
 public interface ICourseService
 {
     // Tạo & Quản Lý Khóa Học // luồng 2
-    Task<ApiResponse<CourseResponse>> CreateCourseAsync(CreateCourseRequest request);
+    Task<ApiResponse<CourseResponse>> CreateCourseAsync(CreateCourseRequest request, Guid currentUserId);
     Task<ApiResponse<CourseResponse>> UpdateCourseMetadataAsync(Guid id, Guid currentUserId, UpdateCourseMetadataRequest request);
     Task<ApiResponse<CourseResponse>> GetCourseByIdAsync(Guid id, Guid currentUserId);
     Task<ApiResponse<bool>> DeleteCourseAsync(Guid id, Guid currentUserId);

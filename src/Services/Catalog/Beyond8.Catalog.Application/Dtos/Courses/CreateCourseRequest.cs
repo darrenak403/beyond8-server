@@ -16,5 +16,4 @@ public class CreateCourseRequest
     public List<string> Outcomes { get; set; } = [];
     public List<string>? Requirements { get; set; }
     public List<string>? TargetAudience { get; set; }
-    public Guid InstructorId { get; set; }
 }

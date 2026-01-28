@@ -149,17 +149,16 @@ public static class CourseApis
         if (!request.ValidateRequest(validator, out var validationResult))
             return validationResult!;
 
-        // Set instructor ID from current user
-        request.InstructorId = currentUserService.UserId;
+        var currentUserId = currentUserService.UserId;
 
         // Check instructor verification before proceeding
-        var verificationResponse = await identityClient.CheckInstructorProfileVerifiedAsync(request.InstructorId);
+        var verificationResponse = await identityClient.CheckInstructorProfileVerifiedAsync(currentUserId);
         if (!verificationResponse.IsSuccess || !verificationResponse.Data)
         {
             return Results.BadRequest(ApiResponse<CourseResponse>.FailureResponse("Giảng viên chưa được xác minh."));
         }
 
-        var result = await courseService.CreateCourseAsync(request);
+        var result = await courseService.CreateCourseAsync(request, currentUserId);
         return result.IsSuccess
             ? Results.Ok(result)
             : Results.BadRequest(result);
