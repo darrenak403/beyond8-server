@@ -97,6 +97,13 @@ namespace Beyond8.Identity.Api.Apis
                 .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status404NotFound);
 
+            group.MapGet("/{id:Guid}/verified", CheckInstructorProfileVerifiedAsync)
+                .WithName("CheckInstructorProfileVerified")
+                .WithDescription("Kiểm tra trạng thái hồ sơ giảng viên có được xác minh hay không")
+                .AllowAnonymous()
+                .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest);
+
             group.MapDelete("/{id:Guid}/hidden", HiddenInstructorProfileAsync)
                 .WithName("HiddenInstructorProfile")
                 .WithDescription("Xóa/Ẩn hồ sơ giảng viên (Admin, Staff, Instructor only)")
@@ -194,6 +201,16 @@ namespace Beyond8.Identity.Api.Apis
             return response.IsSuccess
                             ? Results.Ok(response)
                             : Results.NotFound(response);
+        }
+
+        private static async Task<IResult> CheckInstructorProfileVerifiedAsync(
+            [FromRoute] Guid id,
+            [FromServices] IInstructorService instructorService)
+        {
+            var response = await instructorService.CheckInstructorProfileVerifiedAsync(id);
+            return response.IsSuccess
+                            ? Results.Ok(response)
+                            : Results.BadRequest(response);
         }
 
         private static async Task<IResult> GetInstructorProfilesForAdminAsync(

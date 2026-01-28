@@ -23,6 +23,8 @@ namespace Beyond8.Identity.Application.Services.Interfaces
         Task<ApiResponse<CheckApplyInstructorResponse>> CheckApplyInstructorProfileAsync(Guid userId);
         Task<ApiResponse<bool>> HiddenInstructorProfileAsync(Guid profileId, Guid userId);
         Task<ApiResponse<bool>> UnHiddenInstructorProfileAsync(Guid profileId, Guid userId);
+        Task<ApiResponse<bool>> CheckInstructorProfileVerifiedAsync(Guid id);
+
 
     }
 }
