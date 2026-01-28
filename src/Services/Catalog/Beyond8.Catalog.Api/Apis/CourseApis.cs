@@ -1,3 +1,4 @@
+using Beyond8.Catalog.Application.Clients.Identity;
 using Beyond8.Catalog.Application.Dtos.Courses;
 using Beyond8.Catalog.Application.Services.Interfaces;
 using Beyond8.Common.Extensions;
@@ -22,6 +23,13 @@ public static class CourseApis
 
     public static RouteGroupBuilder MapCourseRoutes(this RouteGroupBuilder group)
     {
+        // Public Search Operations
+        group.MapGet("/", GetAllCoursesAsync)
+            .WithName("GetAllCourses")
+            .WithDescription("Lấy danh sách tất cả khóa học")
+            .Produces<ApiResponse<List<CourseResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<List<CourseResponse>>>(StatusCodes.Status400BadRequest);
+
         // Instructor Operations
         group.MapPost("/", CreateCourseAsync)
             .WithName("CreateCourse")
@@ -122,17 +130,34 @@ public static class CourseApis
         return group;
     }
 
+
+    private static async Task<IResult> GetAllCoursesAsync(
+        [FromServices] ICourseService courseService,
+        [AsParameters] PaginationCourseSearchRequest pagination)
+    {
+        var result = await courseService.GetAllCoursesAsync(pagination);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
     private static async Task<IResult> CreateCourseAsync(
         [FromBody] CreateCourseRequest request,
         [FromServices] ICourseService courseService,
         [FromServices] IValidator<CreateCourseRequest> validator,
-        [FromServices] ICurrentUserService currentUserService)
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IIdentityClient identityClient)
     {
         if (!request.ValidateRequest(validator, out var validationResult))
             return validationResult!;
 
         // Set instructor ID from current user
         request.InstructorId = currentUserService.UserId;
+
+        // Check instructor verification before proceeding
+        var verificationResponse = await identityClient.CheckInstructorProfileVerifiedAsync(request.InstructorId);
+        if (!verificationResponse.IsSuccess || !verificationResponse.Data)
+        {
+            return Results.BadRequest(ApiResponse<CourseResponse>.FailureResponse("Giảng viên chưa được xác minh."));
+        }
 
         var result = await courseService.CreateCourseAsync(request);
         return result.IsSuccess
@@ -153,9 +178,18 @@ public static class CourseApis
     private static async Task<IResult> DeleteCourseAsync(
         Guid id,
         [FromServices] ICourseService courseService,
-        [FromServices] ICurrentUserService currentUserService)
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IIdentityClient identityClient)
     {
         var currentUserId = currentUserService.UserId;
+
+        // Check instructor verification before proceeding
+        var verificationResponse = await identityClient.CheckInstructorProfileVerifiedAsync(currentUserId);
+        if (!verificationResponse.IsSuccess || !verificationResponse.Data)
+        {
+            return Results.BadRequest(ApiResponse<bool>.FailureResponse("Giảng viên chưa được xác minh."));
+        }
+
         var result = await courseService.DeleteCourseAsync(id, currentUserId);
         return result.IsSuccess
             ? Results.Ok(result)
@@ -165,7 +199,7 @@ public static class CourseApis
     private static async Task<IResult> GetCoursesByInstructorAsync(
         [FromServices] ICourseService courseService,
         [FromServices] ICurrentUserService currentUserService,
-        [AsParameters] PaginationRequest pagination)
+        [AsParameters] PaginationCourseSearchRequest pagination)
     {
         var instructorId = currentUserService.UserId;
         var result = await courseService.GetCoursesByInstructorAsync(instructorId, pagination);
@@ -184,9 +218,18 @@ public static class CourseApis
     private static async Task<IResult> SubmitForApprovalAsync(
         Guid id,
         [FromServices] ICourseService courseService,
-        [FromServices] ICurrentUserService currentUserService)
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IIdentityClient identityClient)
     {
         var currentUserId = currentUserService.UserId;
+
+        // Check instructor verification before proceeding
+        var verificationResponse = await identityClient.CheckInstructorProfileVerifiedAsync(currentUserId);
+        if (!verificationResponse.IsSuccess || !verificationResponse.Data)
+        {
+            return Results.BadRequest(ApiResponse<bool>.FailureResponse("Giảng viên chưa được xác minh."));
+        }
+
         var result = await courseService.SubmitForApprovalAsync(id, currentUserId);
         return result.IsSuccess
             ? Results.Ok(result)
@@ -195,10 +238,12 @@ public static class CourseApis
 
     private static async Task<IResult> GetPendingApprovalCoursesAsync(
         [FromServices] ICourseService courseService,
-        [AsParameters] PaginationRequest pagination)
+        [AsParameters] PaginationCourseSearchRequest pagination)
     {
         var result = await courseService.GetPendingApprovalCoursesAsync(pagination);
-        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        return result.IsSuccess
+            ? Results.Ok(result)
+            : Results.BadRequest(result);
     }
 
     private static async Task<IResult> ApproveCourseAsync(
@@ -234,9 +279,18 @@ public static class CourseApis
     private static async Task<IResult> PublishCourseAsync(
         Guid id,
         [FromServices] ICourseService courseService,
-        [FromServices] ICurrentUserService currentUserService)
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IIdentityClient identityClient)
     {
         var currentUserId = currentUserService.UserId;
+
+        // Check instructor verification before proceeding
+        var verificationResponse = await identityClient.CheckInstructorProfileVerifiedAsync(currentUserId);
+        if (!verificationResponse.IsSuccess || !verificationResponse.Data)
+        {
+            return Results.BadRequest(ApiResponse<bool>.FailureResponse("Giảng viên chưa được xác minh."));
+        }
+
         var result = await courseService.PublishCourseAsync(id, currentUserId);
         return result.IsSuccess
             ? Results.Ok(result)
@@ -246,9 +300,18 @@ public static class CourseApis
     private static async Task<IResult> UnpublishCourseAsync(
         Guid id,
         [FromServices] ICourseService courseService,
-        [FromServices] ICurrentUserService currentUserService)
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IIdentityClient identityClient)
     {
         var currentUserId = currentUserService.UserId;
+
+        // Check instructor verification before proceeding
+        var verificationResponse = await identityClient.CheckInstructorProfileVerifiedAsync(currentUserId);
+        if (!verificationResponse.IsSuccess || !verificationResponse.Data)
+        {
+            return Results.BadRequest(ApiResponse<bool>.FailureResponse("Giảng viên chưa được xác minh."));
+        }
+
         var result = await courseService.UnpublishCourseAsync(id, currentUserId);
         return result.IsSuccess
             ? Results.Ok(result)
@@ -259,15 +322,25 @@ public static class CourseApis
         [FromBody] UpdateCourseMetadataRequest request,
         [FromServices] ICourseService courseService,
         [FromServices] IValidator<UpdateCourseMetadataRequest> validator,
-        [FromServices] ICurrentUserService currentUserService)
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IIdentityClient identityClient)
     {
         if (!request.ValidateRequest(validator, out var validationResult))
             return validationResult!;
 
         var currentUserId = currentUserService.UserId;
+
+        // Check instructor verification before proceeding
+        var verificationResponse = await identityClient.CheckInstructorProfileVerifiedAsync(currentUserId);
+        if (!verificationResponse.IsSuccess || !verificationResponse.Data)
+        {
+            return Results.BadRequest(ApiResponse<CourseResponse>.FailureResponse("Giảng viên chưa được xác minh."));
+        }
+
         var result = await courseService.UpdateCourseMetadataAsync(id, currentUserId, request);
         return result.IsSuccess
             ? Results.Ok(result)
             : Results.BadRequest(result);
     }
+
 }

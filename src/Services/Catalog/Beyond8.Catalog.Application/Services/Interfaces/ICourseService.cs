@@ -24,8 +24,7 @@ public interface ICourseService
     // Publishing & Public Access // luồng 2
     Task<ApiResponse<bool>> PublishCourseAsync(Guid courseId, Guid currentUserId);
     Task<ApiResponse<bool>> UnpublishCourseAsync(Guid courseId, Guid currentUserId);
-    // Task<ApiResponse<List<CourseResponse>>> GetPublishedCoursesAsync(PaginationRequest pagination);
-    // Task<ApiResponse<List<CourseResponse>>> GetPublishedCoursesByCategoryAsync(Guid categoryId, PaginationRequest pagination);
+    Task<ApiResponse<List<CourseResponse>>> GetAllCoursesAsync(PaginationCourseSearchRequest request);
 
     // Đăng Ký Học // luồng 3 
     // Task<ApiResponse<CourseDetailResponse>> GetCourseDetailForEnrollmentAsync(Guid courseId);

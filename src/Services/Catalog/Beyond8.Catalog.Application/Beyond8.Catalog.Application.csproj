@@ -13,7 +13,6 @@
   <ItemGroup>
     <Folder Include="Clients/" />
     <Folder Include="Clients/Identity/" />
-    <Folder Include="Dtos\Courses\" />
     <Folder Include="Validators\Course\" />
   </ItemGroup>
 
