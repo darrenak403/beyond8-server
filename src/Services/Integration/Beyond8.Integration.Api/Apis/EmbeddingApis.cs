@@ -25,7 +25,7 @@ namespace Beyond8.Integration.Api.Apis
             group.MapGet("/health", HealthCheck)
                 .WithName("EmbeddingHealthCheck")
                 .WithDescription("Check the health of the embedding service (Qdrant and Hugging Face)")
-                .AllowAnonymous()
+                .RequireAuthorization()
                 .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest);
 

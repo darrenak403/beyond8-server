@@ -4,6 +4,7 @@ using Amazon.S3;
 using Beyond8.Common.Extensions;
 using Beyond8.Common.Utilities;
 using Beyond8.Integration.Api.Apis;
+using Beyond8.Integration.Application.Clients;
 using Beyond8.Integration.Application.Consumers.Identity;
 using Beyond8.Integration.Application.Dtos.MediaFiles;
 using Beyond8.Integration.Application.Services.Implements;
@@ -19,6 +20,8 @@ using Beyond8.Integration.Infrastructure.Hubs;
 using Beyond8.Integration.Infrastructure.Repositories.Implements;
 using FluentValidation;
 using Microsoft.Extensions.Options;
+using Polly;
+using Polly.Extensions.Http;
 using Resend;
 using Scalar.AspNetCore;
 
@@ -126,12 +129,15 @@ namespace Beyond8.Integration.Api.Bootstrapping
 
             // Configure Qdrant - Use Aspire Qdrant Client
             builder.AddQdrantClient(Const.Qdrant);
-        
+
             // Configure Qdrant Settings (for vector dimension config)
             builder.Services.Configure<QdrantSettings>(builder.Configuration.GetSection(QdrantSettings.SectionName));
 
             // Hugging Face Embedding Service
             builder.Services.Configure<HuggingFaceSettings>(builder.Configuration.GetSection(HuggingFaceSettings.SectionName));
+
+            // Register clients
+            builder.AddClientServices();
 
             // Register services
             builder.Services.AddScoped<INotificationService, SignalRNotificationService>();
@@ -153,6 +159,43 @@ namespace Beyond8.Integration.Api.Bootstrapping
             return builder;
         }
 
+        public static IHostApplicationBuilder AddClientServices(this IHostApplicationBuilder builder)
+        {
+            builder.Services.AddHttpContextAccessor();
+
+            builder.Services.AddHttpClient<IIdentityClient, IdentityClient>(client =>
+            {
+                client.BaseAddress = new Uri(Const.IdentityServiceBaseUrl);
+                client.Timeout = TimeSpan.FromSeconds(30);
+            })
+            .AddPolicyHandler(GetResiliencePolicy());
+
+            return builder;
+        }
+
+        private static IAsyncPolicy<HttpResponseMessage> GetResiliencePolicy()
+        {
+            var jitterer = new Random();
+
+            var retryPolicy = HttpPolicyExtensions
+                .HandleTransientHttpError()
+                .OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+                .WaitAndRetryAsync(
+                    retryCount: 3,
+                    sleepDurationProvider: retryAttempt =>
+                        TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))
+                        + TimeSpan.FromMilliseconds(jitterer.Next(0, 1000))
+                );
+
+            var circuitBreakerPolicy = HttpPolicyExtensions
+                .HandleTransientHttpError()
+                .CircuitBreakerAsync(
+                    handledEventsAllowedBeforeBreaking: 5,
+                    durationOfBreak: TimeSpan.FromSeconds(30)
+                );
+
+            return Policy.WrapAsync(retryPolicy, circuitBreakerPolicy);
+        }
         public static WebApplication UseApplicationServices(this WebApplication app)
         {
             app.UseCommonService();

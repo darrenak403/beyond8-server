@@ -41,7 +41,6 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                 var selectedModel = model ?? _config.DefaultModel;
                 var region = RegionEndpoint.GetBySystemName(_config.Region);
 
-                // Validate that credentials are provided in configuration (appsettings.json or User Secrets)
                 if (string.IsNullOrWhiteSpace(_config.AccessKey) || string.IsNullOrWhiteSpace(_config.SecretKey))
                 {
                     var errorMsg = "AWS Bedrock credentials (AccessKey and SecretKey) must be configured in appsettings.json or User Secrets. " +
@@ -54,7 +53,6 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
 
                 using var client = new AmazonBedrockRuntimeClient(credentials, region);
 
-                // Build messages for Claude
                 var contentBlocks = new List<ContentBlock> { new() { Text = prompt } };
 
                 if (inlineImages?.Count > 0)

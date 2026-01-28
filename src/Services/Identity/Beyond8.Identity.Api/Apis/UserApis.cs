@@ -116,9 +116,9 @@ namespace Beyond8.Identity.Api.Apis
                 .Produces<ApiResponse<SubscriptionResponse>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
-            group.MapPatch("/me/subscription/update", UpdateMySubscriptionAsync)
-                .WithName("UpdateMySubscription")
-                .WithDescription("Cập nhật gói đăng ký của người dùng hiện tại")
+            group.MapPatch("/{userId:guid}/subscription", UpdateSubscriptionAsync)
+                .WithName("UpdateSubscription")
+                .WithDescription("Cập nhật gói đăng ký của người dùng")
                 .RequireAuthorization()
                 .Produces<ApiResponse<SubscriptionResponse>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<SubscriptionResponse>>(StatusCodes.Status400BadRequest)
@@ -127,16 +127,16 @@ namespace Beyond8.Identity.Api.Apis
             return group;
         }
 
-        private static async Task<IResult> UpdateMySubscriptionAsync(
+        private static async Task<IResult> UpdateSubscriptionAsync(
             [FromBody] UpdateSubscriptionRequest request,
+            [FromRoute] Guid userId,
             [FromServices] IUserService userService,
-            [FromServices] IValidator<UpdateSubscriptionRequest> validator,
-            [FromServices] ICurrentUserService currentUserService)
+            [FromServices] IValidator<UpdateSubscriptionRequest> validator)
         {
             if (!request.ValidateRequest(validator, out var validationResult))
                 return validationResult!;
 
-            var response = await userService.UpdateMySubscriptionAsync(currentUserService.UserId, request);
+            var response = await userService.UpdateMySubscriptionAsync(userId, request);
 
             return response.IsSuccess
                 ? Results.Ok(response)

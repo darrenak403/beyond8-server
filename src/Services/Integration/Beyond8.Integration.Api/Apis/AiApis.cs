@@ -1,8 +1,10 @@
 using Beyond8.Common.Extensions;
 using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
+using Beyond8.Integration.Application.Clients;
 using Beyond8.Integration.Application.Dtos.Ai;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Quiz;
+using Beyond8.Integration.Application.Helpers.AiService;
 using Beyond8.Integration.Application.Services.Interfaces;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
@@ -34,7 +36,7 @@ namespace Beyond8.Integration.Api.Apis
             group.MapPost("/quiz/generate", GenerateQuiz)
                 .WithName("GenerateQuiz")
                 .WithDescription("Sinh quiz từ ngữ cảnh khóa học. Chia 3 cấp độ Easy/Medium/Hard, số lượng theo request.")
-                .RequireAuthorization(r => r.RequireRole(Role.Instructor, Role.Admin))
+                .RequireAuthorization()
                 .Produces<ApiResponse<GenQuizResponse>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<GenQuizResponse>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
@@ -42,7 +44,7 @@ namespace Beyond8.Integration.Api.Apis
             group.MapGet("/health", HealthCheck)
                 .WithName("HealthCheck")
                 .WithDescription("Check the health of the AI service")
-                .AllowAnonymous()
+                .RequireAuthorization()
                 .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
@@ -51,9 +53,16 @@ namespace Beyond8.Integration.Api.Apis
         }
 
         private static async Task<IResult> HealthCheck(
+            [FromServices] IIdentityClient identityClient,
+            [FromServices] ICurrentUserService currentUserService,
             [FromServices] IGenerativeAiService aiService
         )
         {
+            var check = await SubscriptionHelper.CheckSubscriptionStatusAsync(identityClient, currentUserService.UserId);
+            if (!check.IsAllowed)
+            {
+                return Results.BadRequest(ApiResponse<bool>.FailureResponse(check.Message, check.Metadata));
+            }
             var result = await aiService.CheckHealthAsync();
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
@@ -61,8 +70,14 @@ namespace Beyond8.Integration.Api.Apis
         private static async Task<IResult> InstructorProfileReview(
             [FromBody] ProfileReviewRequest request,
             [FromServices] IAiService aiService,
-            [FromServices] ICurrentUserService currentUserService)
+            [FromServices] ICurrentUserService currentUserService,
+            [FromServices] IIdentityClient identityClient)
         {
+            var check = await SubscriptionHelper.CheckSubscriptionStatusAsync(identityClient, currentUserService.UserId);
+            if (!check.IsAllowed)
+            {
+                return Results.BadRequest(ApiResponse<AiProfileReviewResponse>.FailureResponse(check.Message, check.Metadata));
+            }
             var result = await aiService.InstructorProfileReviewAsync(request, currentUserService.UserId);
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
@@ -71,13 +86,14 @@ namespace Beyond8.Integration.Api.Apis
             [FromBody] GenQuizRequest request,
             [FromServices] IAiService aiService,
             [FromServices] ICurrentUserService currentUserService,
-            [FromServices] IValidator<GenQuizRequest> validator)
+            [FromServices] IIdentityClient identityClient)
         {
-            if (!request.ValidateRequest(validator, out var validationResult))
-                return validationResult!;
-
+            var check = await SubscriptionHelper.CheckSubscriptionStatusAsync(identityClient, currentUserService.UserId);
+            if (!check.IsAllowed)
+            {
+                return Results.BadRequest(ApiResponse<GenQuizResponse>.FailureResponse(check.Message, check.Metadata));
+            }
             var result = await aiService.GenerateQuizAsync(request, currentUserService.UserId);
-
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
     }

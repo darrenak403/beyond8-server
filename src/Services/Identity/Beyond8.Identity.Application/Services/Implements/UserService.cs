@@ -378,8 +378,37 @@ namespace Beyond8.Identity.Application.Services.Implements
 
                 var subscription = await unitOfWork.UserSubscriptionRepository.GetActiveByUserIdAsync(userId);
 
+                if (subscription == null && user.IsEmailVerified)
+                {
+                    var freePlan = await unitOfWork.SubscriptionPlanRepository.FindByCodeAsync("FREE");
+                    if (freePlan != null)
+                    {
+                        var now = DateTime.UtcNow;
+                        var freeSubscription = new UserSubscription
+                        {
+                            UserId = user.Id,
+                            PlanId = freePlan.Id,
+                            StartedAt = now,
+                            ExpiresAt = now.AddDays(7),
+                            Status = SubscriptionStatus.Active,
+                            TotalRemainingRequests = 35,
+                            RemainingRequestsPerWeek = 35,
+                            RequestLimitedEndsAt = null,
+                            CreatedAt = now,
+                            CreatedBy = user.Id
+                        };
+                        await unitOfWork.UserSubscriptionRepository.AddAsync(freeSubscription);
+                        await unitOfWork.SaveChangesAsync();
+                        subscription = await unitOfWork.UserSubscriptionRepository.GetActiveByUserIdAsync(userId);
+                    }
+                }
+
                 if (subscription == null)
                 {
+                    if (!user.IsEmailVerified)
+                    {
+                        return ApiResponse<SubscriptionResponse>.FailureResponse("Vui lòng xác thực email để kích hoạt gói miễn phí.");
+                    }
                     logger.LogWarning("User has no active subscription with ID: {UserId}", userId);
                     return ApiResponse<SubscriptionResponse>.FailureResponse("Người dùng không có gói đăng ký.");
                 }
