@@ -163,9 +163,12 @@ namespace Beyond8.Integration.Api.Bootstrapping
         {
             builder.Services.AddHttpContextAccessor();
 
+            var identityBaseUrl = builder.Configuration["Clients:Identity:BaseUrl"]
+                                  ?? throw new ArgumentNullException("Identity URL missing");
+
             builder.Services.AddHttpClient<IIdentityClient, IdentityClient>(client =>
             {
-                client.BaseAddress = new Uri(Const.IdentityServiceBaseUrl);
+                client.BaseAddress = new Uri(identityBaseUrl);
                 client.Timeout = TimeSpan.FromSeconds(30);
             })
             .AddPolicyHandler(GetResiliencePolicy());
@@ -196,6 +199,7 @@ namespace Beyond8.Integration.Api.Bootstrapping
 
             return Policy.WrapAsync(retryPolicy, circuitBreakerPolicy);
         }
+
         public static WebApplication UseApplicationServices(this WebApplication app)
         {
             app.UseCommonService();

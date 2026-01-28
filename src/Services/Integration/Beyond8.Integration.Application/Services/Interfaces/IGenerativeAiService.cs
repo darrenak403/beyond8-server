@@ -15,7 +15,8 @@ namespace Beyond8.Integration.Application.Services.Interfaces
             int? maxTokens = null,
             decimal? temperature = null,
             decimal? topP = null,
-            IReadOnlyList<GenerativeAiImagePart>? inlineImages = null);
+            IReadOnlyList<GenerativeAiImagePart>? inlineImages = null,
+            bool trackUsage = true);
 
         Task<ApiResponse<GenerativeAiResponse>> GenerateContentWithTemplateAsync(
             Guid promptId,
