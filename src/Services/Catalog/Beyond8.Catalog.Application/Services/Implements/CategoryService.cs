@@ -15,13 +15,6 @@ namespace Beyond8.Catalog.Application.Services.Implements
         {
             try
             {
-                var existingCategory = await unitOfWork.CategoryRepository.FindOneAsync(c => c.Name == request.Name);
-                if (existingCategory != null)
-                {
-                    logger.LogWarning("Category already exists with name: {Name}", request.Name);
-                    return ApiResponse<CategorySimpleResponse>.FailureResponse("Danh mục đã tồn tại.");
-                }
-
                 Category? parentCategory = null;
 
                 if (request.ParentId.HasValue)
@@ -36,6 +29,15 @@ namespace Beyond8.Catalog.Application.Services.Implements
                     if (parentCategory.Level >= 1)
                     {
                         return ApiResponse<CategorySimpleResponse>.FailureResponse("Hệ thống chỉ hỗ trợ tối đa 2 cấp danh mục cấp 1 và cấp 2.");
+                    }
+                }
+                else
+                {
+                    var existingParentWithType = await unitOfWork.CategoryRepository.FindOneAsync(c => c.ParentId == null && c.Type == request.Type);
+                    if (existingParentWithType != null)
+                    {
+                        logger.LogWarning("Parent category already exists with type: {Type}", request.Type);
+                        return ApiResponse<CategorySimpleResponse>.FailureResponse("Danh mục cha với loại này đã tồn tại. Mỗi loại chỉ được tạo một danh mục cha duy nhất.");
                     }
                 }
 
