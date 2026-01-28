@@ -14,10 +14,26 @@ public class CourseService(
     ILogger<CourseService> logger,
     IUnitOfWork unitOfWork) : ICourseService
 {
+    private (bool CanPerform, string? ErrorMessage) CheckInstructorVerificationStatus(InstructorVerificationStatus status)
+    {
+        if (status == InstructorVerificationStatus.Hidden)
+            return (false, "Hồ sơ giảng viên của bạn đã bị ẩn. Bạn không được phép thực hiện các chức năng liên quan đến khóa học.");
+        if (status == InstructorVerificationStatus.Recovering)
+            return (false, "Hồ sơ giảng viên của bạn đang được khôi phục. Vui lòng chờ xét duyệt. Bạn không được phép thực hiện các chức năng liên quan đến khóa học trong giai đoạn này.");
+        return (true, null);
+    }
+
     public async Task<ApiResponse<CourseResponse>> CreateCourseAsync(CreateCourseRequest request)
     {
         try
         {
+            var (canPerform, errorMessage) = CheckInstructorVerificationStatus(request.InstructorStatus);
+            if (!canPerform)
+            {
+                logger.LogWarning("Instructor {InstructorId} is not allowed to create course: {Reason}", request.InstructorId, errorMessage);
+                return ApiResponse<CourseResponse>.FailureResponse(errorMessage!);
+            }
+
             // Validate category exists
             var category = await unitOfWork.CategoryRepository.FindOneAsync(c => c.Id == request.CategoryId && c.IsActive);
             if (category == null)
@@ -70,6 +86,14 @@ public class CourseService(
                 return ApiResponse<CourseResponse>.FailureResponse("Bạn không có quyền cập nhật khóa học này.");
             }
 
+            // Check instructor verification status
+            var (canPerform, errorMessage) = CheckInstructorVerificationStatus(course.InstructorStatus);
+            if (!canPerform)
+            {
+                logger.LogWarning("Instructor {UserId} is not allowed to update course metadata: {Reason}", currentUserId, errorMessage);
+                return ApiResponse<CourseResponse>.FailureResponse(errorMessage!);
+            }
+
             // Status validation: Prevent updates on suspended or archived courses
             if (course.Status == CourseStatus.Suspended || course.Status == CourseStatus.Archived)
             {
@@ -109,66 +133,6 @@ public class CourseService(
             return ApiResponse<CourseResponse>.FailureResponse("Đã xảy ra lỗi khi cập nhật thông tin khóa học.");
         }
     }
-
-    public async Task<ApiResponse<CourseResponse>> UpdateCourseContentAsync(Guid id, Guid currentUserId, UpdateCourseContentRequest request)
-    {
-        try
-        {
-            var course = await unitOfWork.CourseRepository
-                .AsQueryable()
-                .Include(c => c.Category)
-                .FirstOrDefaultAsync(c => c.Id == id && c.IsActive);
-
-            if (course == null)
-            {
-                logger.LogWarning("Course not found: {CourseId}", id);
-                return ApiResponse<CourseResponse>.FailureResponse("Khóa học không tồn tại.");
-            }
-
-            // Authorization check: Only the instructor who owns the course can update it
-            if (course.InstructorId != currentUserId)
-            {
-                logger.LogWarning("Unauthorized update attempt: User {UserId} tried to update course {CourseId} owned by {OwnerId}", currentUserId, id, course.InstructorId);
-                return ApiResponse<CourseResponse>.FailureResponse("Bạn không có quyền cập nhật khóa học này.");
-            }
-
-            // Status validation: Prevent updates on suspended or archived courses
-            if (course.Status == CourseStatus.Suspended || course.Status == CourseStatus.Archived)
-            {
-                logger.LogWarning("Cannot update course in status {Status}: {CourseId}", course.Status, id);
-                return ApiResponse<CourseResponse>.FailureResponse("Không thể cập nhật khóa học ở trạng thái này.");
-            }
-
-            // TODO: Check for active enrollments - if enrollment service is implemented
-            // If course has active students enrolled, content updates should be restricted
-            // For now, allow but log warning
-            // var hasActiveEnrollments = await CheckActiveEnrollmentsAsync(id);
-            // if (hasActiveEnrollments && (course.Status == CourseStatus.Published))
-            // {
-            //     return ApiResponse<CourseResponse>.FailureResponse("Không thể cập nhật nội dung khóa học đang có học viên đang học.");
-            // }
-
-            // Content updates require re-approval if course is already approved/published
-            if (course.Status == CourseStatus.Approved || course.Status == CourseStatus.Published)
-            {
-                course.Status = CourseStatus.PendingApproval;
-                logger.LogInformation("Course content updated, status changed to PendingApproval: {CourseId}", id);
-            }
-
-            course.UpdateContentFromRequest(request);
-            await unitOfWork.CourseRepository.UpdateAsync(id, course);
-            await unitOfWork.SaveChangesAsync();
-
-            logger.LogInformation("Course content updated successfully: {CourseId}", id);
-            return ApiResponse<CourseResponse>.SuccessResponse(course.ToResponse(), "Cập nhật nội dung khóa học thành công.");
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error updating course content: {CourseId}", id);
-            return ApiResponse<CourseResponse>.FailureResponse("Đã xảy ra lỗi khi cập nhật nội dung khóa học.");
-        }
-    }
-
     public async Task<ApiResponse<CourseResponse>> GetCourseByIdAsync(Guid id, Guid currentUserId)
     {
         try
@@ -216,6 +180,14 @@ public class CourseService(
             {
                 logger.LogWarning("Unauthorized delete attempt: User {UserId} tried to delete course {CourseId} owned by {OwnerId}", currentUserId, id, course.InstructorId);
                 return ApiResponse<bool>.FailureResponse("Bạn không có quyền xóa khóa học này.");
+            }
+
+            // Check instructor verification status
+            var (canPerform, errorMessage) = CheckInstructorVerificationStatus(course.InstructorStatus);
+            if (!canPerform)
+            {
+                logger.LogWarning("Instructor {UserId} is not allowed to delete course: {Reason}", currentUserId, errorMessage);
+                return ApiResponse<bool>.FailureResponse(errorMessage!);
             }
 
             // Status validation: Prevent deletion of published courses with active enrollments
@@ -325,6 +297,14 @@ public class CourseService(
             {
                 logger.LogWarning("Unauthorized submit attempt: User {UserId} tried to submit course {CourseId} owned by {OwnerId}", currentUserId, courseId, course.InstructorId);
                 return ApiResponse<bool>.FailureResponse("Bạn không có quyền nộp duyệt khóa học này.");
+            }
+
+            // Check instructor verification status
+            var (canPerform, errorMessage) = CheckInstructorVerificationStatus(course.InstructorStatus);
+            if (!canPerform)
+            {
+                logger.LogWarning("Instructor {UserId} is not allowed to submit course for approval: {Reason}", currentUserId, errorMessage);
+                return ApiResponse<bool>.FailureResponse(errorMessage!);
             }
 
             // Validate course can be submitted
@@ -469,6 +449,14 @@ public class CourseService(
                 return ApiResponse<bool>.FailureResponse("Bạn không có quyền công bố khóa học này.");
             }
 
+            // Check instructor verification status
+            var (canPerform, errorMessage) = CheckInstructorVerificationStatus(course.InstructorStatus);
+            if (!canPerform)
+            {
+                logger.LogWarning("Instructor {UserId} is not allowed to publish course: {Reason}", currentUserId, errorMessage);
+                return ApiResponse<bool>.FailureResponse(errorMessage!);
+            }
+
             if (course.Status != CourseStatus.Approved)
             {
                 return ApiResponse<bool>.FailureResponse("Chỉ có thể công bố khóa học đã được phê duyệt.");
@@ -506,6 +494,14 @@ public class CourseService(
                 return ApiResponse<bool>.FailureResponse("Bạn không có quyền gỡ bỏ công bố khóa học này.");
             }
 
+            // Check instructor verification status
+            var (canPerform, errorMessage) = CheckInstructorVerificationStatus(course.InstructorStatus);
+            if (!canPerform)
+            {
+                logger.LogWarning("Instructor {UserId} is not allowed to unpublish course: {Reason}", currentUserId, errorMessage);
+                return ApiResponse<bool>.FailureResponse(errorMessage!);
+            }
+
             if (course.Status != CourseStatus.Published)
             {
                 return ApiResponse<bool>.FailureResponse("Khóa học không ở trạng thái công khai.");
@@ -522,75 +518,6 @@ public class CourseService(
         {
             logger.LogError(ex, "Error unpublishing course: {CourseId}", courseId);
             return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi ẩn khóa học.");
-        }
-    }
-
-    public async Task<ApiResponse<bool>> UpdateCourseThumbnailAsync(Guid courseId, Guid currentUserId, string thumbnailUrl)
-    {
-        try
-        {
-            var course = await unitOfWork.CourseRepository.FindOneAsync(c => c.Id == courseId && c.IsActive);
-            if (course == null)
-            {
-                logger.LogWarning("Course not found: {CourseId}", courseId);
-                return ApiResponse<bool>.FailureResponse("Khóa học không tồn tại.");
-            }
-
-            // Authorization check: Only the instructor who owns the course can update thumbnail
-            if (course.InstructorId != currentUserId)
-            {
-                logger.LogWarning("Unauthorized thumbnail update attempt: User {UserId} tried to update course {CourseId} owned by {OwnerId}", currentUserId, courseId, course.InstructorId);
-                return ApiResponse<bool>.FailureResponse("Bạn không có quyền cập nhật thumbnail khóa học này.");
-            }
-
-            course.ThumbnailUrl = thumbnailUrl;
-            await unitOfWork.CourseRepository.UpdateAsync(courseId, course);
-            await unitOfWork.SaveChangesAsync();
-
-            logger.LogInformation("Course thumbnail updated: {CourseId}", courseId);
-            return ApiResponse<bool>.SuccessResponse(true, "Cập nhật thumbnail thành công.");
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error updating course thumbnail: {CourseId}", courseId);
-            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi cập nhật thumbnail.");
-        }
-    }
-
-    public async Task<ApiResponse<bool>> UpdateCoursePriceAsync(Guid courseId, Guid currentUserId, decimal newPrice)
-    {
-        try
-        {
-            var course = await unitOfWork.CourseRepository.FindOneAsync(c => c.Id == courseId && c.IsActive);
-            if (course == null)
-            {
-                logger.LogWarning("Course not found: {CourseId}", courseId);
-                return ApiResponse<bool>.FailureResponse("Khóa học không tồn tại.");
-            }
-
-            // Authorization check: Only the instructor who owns the course can update price
-            if (course.InstructorId != currentUserId)
-            {
-                logger.LogWarning("Unauthorized price update attempt: User {UserId} tried to update course {CourseId} owned by {OwnerId}", currentUserId, courseId, course.InstructorId);
-                return ApiResponse<bool>.FailureResponse("Bạn không có quyền cập nhật giá khóa học này.");
-            }
-
-            if (newPrice < 0 || newPrice > 100000000)
-            {
-                return ApiResponse<bool>.FailureResponse("Giá khóa học phải từ 0 đến 100 triệu VND.");
-            }
-
-            course.Price = newPrice;
-            await unitOfWork.CourseRepository.UpdateAsync(courseId, course);
-            await unitOfWork.SaveChangesAsync();
-
-            logger.LogInformation("Course price updated: {CourseId}, new price: {Price}", courseId, newPrice);
-            return ApiResponse<bool>.SuccessResponse(true, "Cập nhật giá khóa học thành công.");
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error updating course price: {CourseId}", courseId);
-            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi cập nhật giá khóa học.");
         }
     }
 }

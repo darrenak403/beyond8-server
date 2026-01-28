@@ -48,12 +48,6 @@ public static class CourseMappings
         entity.TargetAudience = request.TargetAudience != null ? JsonSerializer.Serialize(request.TargetAudience) : null;
     }
 
-    public static void UpdateContentFromRequest(this Course entity, UpdateCourseContentRequest request)
-    {
-        entity.Description = request.Description;
-        // Future: Update sections, lessons, etc.
-    }
-
     public static CourseResponse ToResponse(this Course entity)
     {
         return new CourseResponse

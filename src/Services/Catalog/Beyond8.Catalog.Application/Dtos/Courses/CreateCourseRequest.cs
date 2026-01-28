@@ -16,6 +16,6 @@ public class CreateCourseRequest
     public List<string> Outcomes { get; set; } = [];
     public List<string>? Requirements { get; set; }
     public List<string>? TargetAudience { get; set; }
-    // Set by API layer from current user
     public Guid InstructorId { get; set; }
+    public InstructorVerificationStatus InstructorStatus { get; set; } = InstructorVerificationStatus.Verified;
 }

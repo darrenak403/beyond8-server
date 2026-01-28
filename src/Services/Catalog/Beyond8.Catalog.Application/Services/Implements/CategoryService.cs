@@ -15,13 +15,6 @@ public class CategoryService(ILogger<CategoryService> logger, IUnitOfWork unitOf
     {
         try
         {
-            var existingCategory = await unitOfWork.CategoryRepository.FindOneAsync(c => c.Name == request.Name);
-            if (existingCategory != null)
-            {
-                logger.LogWarning("Category already exists with name: {Name}", request.Name);
-                return ApiResponse<CategorySimpleResponse>.FailureResponse("Danh mục đã tồn tại.");
-            }
-
             Category? parentCategory = null;
 
             if (request.ParentId.HasValue)
@@ -33,9 +26,26 @@ public class CategoryService(ILogger<CategoryService> logger, IUnitOfWork unitOf
                     return ApiResponse<CategorySimpleResponse>.FailureResponse("Danh mục cha không tồn tại.");
                 }
 
+                // Kiểm tra type của con phải giống với cha
+                if (parentCategory.Type != request.Type)
+                {
+                    logger.LogWarning("Child category type {ChildType} does not match parent type {ParentType}", request.Type, parentCategory.Type);
+                    return ApiResponse<CategorySimpleResponse>.FailureResponse("Type của danh mục con phải giống với danh mục cha.");
+                }
+
                 if (parentCategory.Level >= 1)
                 {
                     return ApiResponse<CategorySimpleResponse>.FailureResponse("Hệ thống chỉ hỗ trợ tối đa 2 cấp danh mục cấp 1 và cấp 2.");
+                }
+            }
+            else
+            {
+                // Tạo danh mục cha: kiểm tra xem đã có cha với type này chưa
+                var existingParentWithType = await unitOfWork.CategoryRepository.FindOneAsync(c => c.ParentId == null && c.Type == request.Type);
+                if (existingParentWithType != null)
+                {
+                    logger.LogWarning("Parent category with type {Type} already exists", request.Type);
+                    return ApiResponse<CategorySimpleResponse>.FailureResponse("Danh mục cha với type này đã tồn tại.");
                 }
             }
 

@@ -71,17 +71,9 @@ public static class CourseApis
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
-        group.MapPut("/{id}/metadata", UpdateCourseMetadataAsync)
+        group.MapPatch("/{id}/metadata", UpdateCourseMetadataAsync)
             .WithName("UpdateCourseMetadata")
             .WithDescription("Cập nhật thông tin cơ bản khóa học (không cần duyệt lại)")
-            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
-            .Produces<ApiResponse<CourseResponse>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<CourseResponse>>(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized);
-
-        group.MapPut("/{id}/content", UpdateCourseContentAsync)
-            .WithName("UpdateCourseContent")
-            .WithDescription("Cập nhật nội dung khóa học (có thể cần duyệt lại)")
             .RequireAuthorization(x => x.RequireRole(Role.Instructor))
             .Produces<ApiResponse<CourseResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<CourseResponse>>(StatusCodes.Status400BadRequest)
@@ -127,24 +119,6 @@ public static class CourseApis
             .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
-
-        // Utility Operations
-        group.MapPatch("/{id}/thumbnail", UpdateCourseThumbnailAsync)
-            .WithName("UpdateCourseThumbnail")
-            .WithDescription("Cập nhật thumbnail khóa học")
-            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
-            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized);
-
-        group.MapPatch("/{id}/price", UpdateCoursePriceAsync)
-            .WithName("UpdateCoursePrice")
-            .WithDescription("Cập nhật giá khóa học")
-            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
-            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized);
-
         return group;
     }
 
@@ -280,33 +254,6 @@ public static class CourseApis
             ? Results.Ok(result)
             : Results.BadRequest(result);
     }
-
-    private static async Task<IResult> UpdateCourseThumbnailAsync(
-        Guid id,
-        [FromBody] UpdateThumbnailRequest request,
-        [FromServices] ICourseService courseService,
-        [FromServices] ICurrentUserService currentUserService)
-    {
-        var currentUserId = currentUserService.UserId;
-        var result = await courseService.UpdateCourseThumbnailAsync(id, currentUserId, request.ThumbnailUrl);
-        return result.IsSuccess
-            ? Results.Ok(result)
-            : Results.BadRequest(result);
-    }
-
-    private static async Task<IResult> UpdateCoursePriceAsync(
-        Guid id,
-        [FromBody] UpdatePriceRequest request,
-        [FromServices] ICourseService courseService,
-        [FromServices] ICurrentUserService currentUserService)
-    {
-        var currentUserId = currentUserService.UserId;
-        var result = await courseService.UpdateCoursePriceAsync(id, currentUserId, request.NewPrice);
-        return result.IsSuccess
-            ? Results.Ok(result)
-            : Results.BadRequest(result);
-    }
-
     private static async Task<IResult> UpdateCourseMetadataAsync(
         Guid id,
         [FromBody] UpdateCourseMetadataRequest request,
@@ -323,32 +270,4 @@ public static class CourseApis
             ? Results.Ok(result)
             : Results.BadRequest(result);
     }
-
-    private static async Task<IResult> UpdateCourseContentAsync(
-        Guid id,
-        [FromBody] UpdateCourseContentRequest request,
-        [FromServices] ICourseService courseService,
-        [FromServices] IValidator<UpdateCourseContentRequest> validator,
-        [FromServices] ICurrentUserService currentUserService)
-    {
-        if (!request.ValidateRequest(validator, out var validationResult))
-            return validationResult!;
-
-        var currentUserId = currentUserService.UserId;
-        var result = await courseService.UpdateCourseContentAsync(id, currentUserId, request);
-        return result.IsSuccess
-            ? Results.Ok(result)
-            : Results.BadRequest(result);
-    }
-}
-
-// Additional DTOs for API requests
-public class UpdateThumbnailRequest
-{
-    public string ThumbnailUrl { get; set; } = string.Empty;
-}
-
-public class UpdatePriceRequest
-{
-    public decimal NewPrice { get; set; }
 }

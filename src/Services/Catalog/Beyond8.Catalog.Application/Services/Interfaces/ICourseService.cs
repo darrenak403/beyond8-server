@@ -8,7 +8,6 @@ public interface ICourseService
     // Tạo & Quản Lý Khóa Học // luồng 2
     Task<ApiResponse<CourseResponse>> CreateCourseAsync(CreateCourseRequest request);
     Task<ApiResponse<CourseResponse>> UpdateCourseMetadataAsync(Guid id, Guid currentUserId, UpdateCourseMetadataRequest request);
-    Task<ApiResponse<CourseResponse>> UpdateCourseContentAsync(Guid id, Guid currentUserId, UpdateCourseContentRequest request);
     Task<ApiResponse<CourseResponse>> GetCourseByIdAsync(Guid id, Guid currentUserId);
     Task<ApiResponse<bool>> DeleteCourseAsync(Guid id, Guid currentUserId);
 
@@ -39,7 +38,5 @@ public interface ICourseService
     // Task<ApiResponse<List<CourseResponse>>> GetMostPopularCoursesAsync(int topCount = 10);
 
     // Utility Operations // luồng 2
-    Task<ApiResponse<bool>> UpdateCourseThumbnailAsync(Guid courseId, Guid currentUserId, string thumbnailUrl);
-    Task<ApiResponse<bool>> UpdateCoursePriceAsync(Guid courseId, Guid currentUserId, decimal newPrice);
     // Task<ApiResponse<List<CourseResponse>>> SearchCoursesAsync(string searchTerm, PaginationRequest pagination);
 }
