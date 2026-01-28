@@ -9,9 +9,6 @@ namespace Beyond8.Catalog.Domain.Entities
     {
         public Guid InstructorId { get; set; }
 
-        public InstructorVerificationStatus InstructorStatus { get; set; } = InstructorVerificationStatus.Verified;
-
-        // Category
         public Guid CategoryId { get; set; }
         [ForeignKey(nameof(CategoryId))]
         public virtual Category Category { get; set; } = null!;
@@ -68,6 +65,14 @@ namespace Beyond8.Catalog.Domain.Entities
 
         public Guid? ApprovedBy { get; set; }
         public DateTime? ApprovedAt { get; set; }
+
+        [MaxLength(1000)]
+        public string? ApprovalNotes { get; set; }
+
+        [MaxLength(1000)]
+        public string? RejectionReason { get; set; }
+
+        public bool IsActive { get; set; } = true;
 
         // Relationships
         public virtual ICollection<Section> Sections { get; set; } = [];
