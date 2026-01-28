@@ -37,6 +37,7 @@ namespace Beyond8.Identity.Api.Bootstrapping
             builder.Services.AddScoped<ITokenService, TokenService>();
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IInstructorService, InstructorService>();
+            builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 
             // Add FluentValidation validators
             builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequest>();
@@ -59,6 +60,8 @@ namespace Beyond8.Identity.Api.Bootstrapping
             app.MapAuthApi();
             app.MapUserApi();
             app.MapInstructorApi();
+            app.MapSubscriptionApi();
+
             return app;
         }
     }
