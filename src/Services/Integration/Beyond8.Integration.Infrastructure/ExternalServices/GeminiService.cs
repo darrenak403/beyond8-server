@@ -32,7 +32,8 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
             int? maxTokens = null,
             decimal? temperature = null,
             decimal? topP = null,
-            IReadOnlyList<GenerativeAiImagePart>? inlineImages = null)
+            IReadOnlyList<GenerativeAiImagePart>? inlineImages = null,
+            bool trackUsage = true)
         {
             var stopwatch = Stopwatch.StartNew();
 
@@ -109,7 +110,8 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                 {
                     logger.LogError("Gemini API error: {StatusCode} - {Content}", response?.StatusCode, lastResponseContent);
 
-                    await TrackFailedUsageAsync(userId, selectedModel, operation, promptId, stopwatch.ElapsedMilliseconds, lastResponseContent);
+                    if (trackUsage)
+                        await TrackFailedUsageAsync(userId, selectedModel, operation, promptId, stopwatch.ElapsedMilliseconds, lastResponseContent);
 
                     var userMessage = GetUserFriendlyMessage(response?.StatusCode);
                     return ApiResponse<GenerativeAiResponse>.FailureResponse(userMessage);
@@ -117,7 +119,8 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
 
                 var geminiResponse = ParseGeminiResponse(lastResponseContent, selectedModel, stopwatch.ElapsedMilliseconds);
 
-                await TrackSuccessfulUsageAsync(userId, selectedModel, operation, promptId, geminiResponse, prompt);
+                if (trackUsage)
+                    await TrackSuccessfulUsageAsync(userId, selectedModel, operation, promptId, geminiResponse, prompt);
 
                 logger.LogInformation("Gemini content generated successfully for user {UserId} using model {Model}", userId, selectedModel);
 
@@ -128,7 +131,8 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                 stopwatch.Stop();
                 logger.LogError(ex, "Error generating content with Gemini for user {UserId}", userId);
 
-                await TrackFailedUsageAsync(userId, model ?? _config.DefaultModel, operation, promptId, stopwatch.ElapsedMilliseconds, ex.Message);
+                if (trackUsage)
+                    await TrackFailedUsageAsync(userId, model ?? _config.DefaultModel, operation, promptId, stopwatch.ElapsedMilliseconds, ex.Message);
 
                 return ApiResponse<GenerativeAiResponse>.FailureResponse("Đã xảy ra lỗi khi tạo nội dung AI.");
             }
@@ -190,7 +194,9 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                     null,
                     10,
                     0.1m,
-                    0.1m);
+                    0.1m,
+                    inlineImages: null,
+                    trackUsage: false);
 
                 return result.IsSuccess
                     ? ApiResponse<bool>.SuccessResponse(true, "Gemini service is healthy.")

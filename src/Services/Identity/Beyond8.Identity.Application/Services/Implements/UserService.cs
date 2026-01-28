@@ -2,6 +2,7 @@ using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
 using Beyond8.Identity.Application.Dtos.Users;
 using Beyond8.Identity.Application.Mappings.AuthMappings;
+using Beyond8.Identity.Application.Mappings.SubscriptionMappings;
 using Beyond8.Identity.Application.Services.Interfaces;
 using Beyond8.Identity.Domain.Entities;
 using Beyond8.Identity.Domain.Enums;
@@ -361,101 +362,6 @@ namespace Beyond8.Identity.Application.Services.Implements
                         logger.LogWarning("Role with code {RoleCode} not found when updating user roles", roleCode);
                     }
                 }
-            }
-        }
-
-        public async Task<ApiResponse<SubscriptionResponse>> GetMySubscriptionStatsAsync(Guid userId)
-        {
-            try
-            {
-                var user = await unitOfWork.UserRepository.GetByIdAsync(userId);
-
-                if (user == null)
-                {
-                    logger.LogWarning("User not found with ID: {UserId}", userId);
-                    return ApiResponse<SubscriptionResponse>.FailureResponse("Không tìm thấy tài khoản.");
-                }
-
-                var subscription = await unitOfWork.UserSubscriptionRepository.GetActiveByUserIdAsync(userId);
-
-                if (subscription == null && user.IsEmailVerified)
-                {
-                    var freePlan = await unitOfWork.SubscriptionPlanRepository.FindByCodeAsync("FREE");
-                    if (freePlan != null)
-                    {
-                        var now = DateTime.UtcNow;
-                        var freeSubscription = new UserSubscription
-                        {
-                            UserId = user.Id,
-                            PlanId = freePlan.Id,
-                            StartedAt = now,
-                            ExpiresAt = now.AddDays(7),
-                            Status = SubscriptionStatus.Active,
-                            TotalRemainingRequests = 35,
-                            RemainingRequestsPerWeek = 35,
-                            RequestLimitedEndsAt = null,
-                            CreatedAt = now,
-                            CreatedBy = user.Id
-                        };
-                        await unitOfWork.UserSubscriptionRepository.AddAsync(freeSubscription);
-                        await unitOfWork.SaveChangesAsync();
-                        subscription = await unitOfWork.UserSubscriptionRepository.GetActiveByUserIdAsync(userId);
-                    }
-                }
-
-                if (subscription == null)
-                {
-                    if (!user.IsEmailVerified)
-                    {
-                        return ApiResponse<SubscriptionResponse>.FailureResponse("Vui lòng xác thực email để kích hoạt gói miễn phí.");
-                    }
-                    logger.LogWarning("User has no active subscription with ID: {UserId}", userId);
-                    return ApiResponse<SubscriptionResponse>.FailureResponse("Người dùng không có gói đăng ký.");
-                }
-
-                var subscriptionResponse = subscription.ToSubscriptionResponse();
-
-                return ApiResponse<SubscriptionResponse>.SuccessResponse(subscriptionResponse, "Lấy thông tin gói đăng ký thành công.");
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error getting my quota for user with ID {UserId}", userId);
-                return ApiResponse<SubscriptionResponse>.FailureResponse("Đã xảy ra lỗi khi lấy thông tin gói đăng ký.");
-            }
-        }
-
-        public async Task<ApiResponse<SubscriptionResponse>> UpdateMySubscriptionAsync(Guid userId, UpdateSubscriptionRequest request)
-        {
-            try
-            {
-                var (isValid, error, user) = await ValidateUserByIdAsync(userId, requireActive: true);
-                if (!isValid) return ApiResponse<SubscriptionResponse>.FailureResponse(error!);
-
-                var subscription = await unitOfWork.UserSubscriptionRepository.GetActiveByUserIdAsync(userId);
-
-                if (subscription == null)
-                {
-                    logger.LogWarning("User has no active subscription with ID: {UserId}", userId);
-                    return ApiResponse<SubscriptionResponse>.FailureResponse("Người dùng không có gói đăng ký.");
-                }
-
-                if (subscription.TotalRemainingRequests < request.NumberOfRequests)
-                {
-                    return ApiResponse<SubscriptionResponse>.FailureResponse("Số lượng yêu cầu vượt quá số lượng gói đăng ký.");
-                }
-
-                subscription.UpdateSubscriptionRequest(request);
-
-                await unitOfWork.UserSubscriptionRepository.UpdateAsync(subscription.Id, subscription);
-                await unitOfWork.SaveChangesAsync();
-
-                var subscriptionResponse = subscription.ToSubscriptionResponse();
-                return ApiResponse<SubscriptionResponse>.SuccessResponse(subscriptionResponse, "Cập nhật gói đăng ký thành công.");
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error updating my subscription for user with ID {UserId}", userId);
-                return ApiResponse<SubscriptionResponse>.FailureResponse("Đã xảy ra lỗi khi cập nhật gói đăng ký.");
             }
         }
     }

@@ -51,12 +51,10 @@ namespace Beyond8.AppHost.Extensions
                 .WithReference(redis)
                 .WithReference(rabbitMq)
                 .WithReference(qdrant)
-                .WithReference(identityService)
                 .WaitFor(postgres)
                 .WaitFor(redis)
                 .WaitFor(rabbitMq)
-                .WaitFor(qdrant)
-                .WaitFor(identityService);
+                .WaitFor(qdrant);
 
             var catalogService = builder.AddProject<Projects.Beyond8_Catalog_Api>("Catalog-Service")
                 .WithReference(catalogDb)
@@ -75,6 +73,7 @@ namespace Beyond8.AppHost.Extensions
                     config.AddRoute("/api/v1/auth/{**catch-all}", identityCluster);
                     config.AddRoute("/api/v1/users/{**catch-all}", identityCluster);
                     config.AddRoute("/api/v1/instructors/{**catch-all}", identityCluster);
+                    config.AddRoute("/api/v1/subscriptions/{**catch-all}", identityCluster);
 
                     var integrationCluster = config.AddProjectCluster(integrationService);
                     config.AddRoute("/api/v1/media/{**catch-all}", integrationCluster);
