@@ -1,8 +1,9 @@
-namespace Beyond8.Integration.Domain.Enums;
-
-public enum NotificationStatus
+namespace Beyond8.Integration.Domain.Enums
 {
-    Pending = 0,
-    Delivered = 1,
-    Failed = 2,
+    public enum NotificationStatus
+    {
+        Pending = 0,
+        Delivered = 1,
+        Failed = 2,
+    }
 }

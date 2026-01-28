@@ -1,6 +1,7 @@
-namespace Beyond8.Identity.Application.Dtos.Auth;
-
-public class RefreshTokenRequest
+namespace Beyond8.Identity.Application.Dtos.Auth
 {
-    public string RefreshToken { get; set; } = string.Empty;
+    public class RefreshTokenRequest
+    {
+        public string RefreshToken { get; set; } = string.Empty;
+    }
 }

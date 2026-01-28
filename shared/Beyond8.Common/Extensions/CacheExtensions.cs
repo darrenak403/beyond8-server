@@ -4,24 +4,25 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using StackExchange.Redis;
 
-namespace Beyond8.Common.Extensions;
-
-public static class CacheExtensions
+namespace Beyond8.Common.Extensions
 {
-    private const string DefaultConnectionName = Const.Redis;
-
-    public static IHostApplicationBuilder AddServiceRedis(this IHostApplicationBuilder builder, string serviceName, string connectionName = DefaultConnectionName)
+    public static class CacheExtensions
     {
-        builder.AddRedisClient(connectionName);
+        private const string DefaultConnectionName = Const.Redis;
 
-        builder.Services.AddSingleton<ICacheService>(sp =>
+        public static IHostApplicationBuilder AddServiceRedis(this IHostApplicationBuilder builder, string serviceName, string connectionName = DefaultConnectionName)
         {
-            var connection = sp.GetRequiredService<IConnectionMultiplexer>();
-            var db = connection.GetDatabase();
+            builder.AddRedisClient(connectionName);
 
-            return new CacheService(db, serviceName);
-        });
+            builder.Services.AddSingleton<ICacheService>(sp =>
+            {
+                var connection = sp.GetRequiredService<IConnectionMultiplexer>();
+                var db = connection.GetDatabase();
 
-        return builder;
+                return new CacheService(db, serviceName);
+            });
+
+            return builder;
+        }
     }
 }

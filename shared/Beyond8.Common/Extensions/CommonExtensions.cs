@@ -6,102 +6,102 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.Text.Json.Serialization;
 
-namespace Beyond8.Common.Extensions;
-
-public static class CommonExtensions
+namespace Beyond8.Common.Extensions
 {
-    public static IHostApplicationBuilder AddCommonExtensions(this IHostApplicationBuilder builder)
+    public static class CommonExtensions
     {
-        builder.Services.AddCors(options =>
-                    {
-                        options.AddPolicy("AllowDevelopmentClients", builder =>
+        public static IHostApplicationBuilder AddCommonExtensions(this IHostApplicationBuilder builder)
+        {
+            builder.Services.AddCors(options =>
                         {
-                            builder.WithOrigins(
-                                       "http://localhost:3000",
-                                       "http://localhost:5173",
-                                       "http://api-gateway.beyond8.dev",
-                                       "https://api-gateway.beyond8.dev",
-                                       "http://api-gateway-beyond8.dev.localhost:8080",
-                                       "https://api-gateway-beyond8.dev.localhost:8080"
-                                   )
-                                   .AllowAnyMethod()
-                                   .AllowAnyHeader()
-                                   .AllowCredentials();
+                            options.AddPolicy("AllowDevelopmentClients", builder =>
+                            {
+                                builder.WithOrigins(
+                                           "http://localhost:3000",
+                                           "http://localhost:5173",
+                                           "http://api-gateway.beyond8.dev",
+                                           "https://api-gateway.beyond8.dev"
+                                       )
+                                       .AllowAnyMethod()
+                                       .AllowAnyHeader()
+                                       .AllowCredentials();
+                            });
+
+                            options.AddPolicy("AllowProductionClients", builder =>
+                            {
+                                builder.WithOrigins(
+                                           "https://beyond8.io.vn",
+                                           "https://www.beyond8.io.vn",
+                                           "https://app.beyond8.io.vn",
+                                           "https://admin.beyond8.io.vn"
+                                       )
+                                       .AllowAnyMethod()
+                                       .AllowAnyHeader()
+                                       .AllowCredentials();
+                            });
                         });
 
-                        options.AddPolicy("AllowProductionClients", builder =>
-                        {
-                            builder.WithOrigins(
-                                       "https://beyond8.io.vn",
-                                       "https://www.beyond8.io.vn",
-                                       "https://app.beyond8.io.vn",
-                                       "https://admin.beyond8.io.vn"
-                                   )
-                                   .AllowAnyMethod()
-                                   .AllowAnyHeader()
-                                   .AllowCredentials();
-                        });
-                    });
-
-        builder.Services.AddRateLimiter(options =>
-        {
-            options.AddFixedWindowLimiter(policyName: "Fixed", options =>
+            builder.Services.AddRateLimiter(options =>
             {
-                options.PermitLimit = 100;
-                options.Window = TimeSpan.FromMinutes(1);
-                options.QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
-                options.QueueLimit = 0;
+                options.AddFixedWindowLimiter(policyName: "Fixed", options =>
+                {
+                    options.PermitLimit = 100;
+                    options.Window = TimeSpan.FromMinutes(1);
+                    options.QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
+                    options.QueueLimit = 0;
+                });
+
+                options.AddTokenBucketLimiter(policyName: "AiFixedLimit", options =>
+                {
+                    options.TokenLimit = 10;
+                    options.ReplenishmentPeriod = TimeSpan.FromSeconds(60);
+                    options.TokensPerPeriod = 10;
+                    options.QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
+                    options.QueueLimit = 0;
+                });
             });
 
-            options.AddTokenBucketLimiter(policyName: "AiFixedLimit", options =>
+            builder.Services.Configure<RateLimiterOptions>(options =>
             {
-                options.TokenLimit = 10;
-                options.ReplenishmentPeriod = TimeSpan.FromSeconds(60);
-                options.TokensPerPeriod = 10;
-                options.QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
-                options.QueueLimit = 0;
+                options.RejectionStatusCode = 429;
             });
-        });
 
-        builder.Services.Configure<RateLimiterOptions>(options =>
-        {
-            options.RejectionStatusCode = 429;
-        });
+            builder.Services.Configure<JsonOptions>(options =>
+            {
+                options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            });
 
-        builder.Services.Configure<JsonOptions>(options =>
-        {
-            options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
-        });
+            builder.AddJwtAuthentication();
+            builder.AddDocumentGlobalAuthentication();
 
-        builder.AddJwtAuthentication();
-        builder.AddDocumentGlobalAuthentication();
-
-        return builder;
-    }
-
-    public static WebApplication UseCommonService(this WebApplication app)
-    {
-
-        // CORS must be called before other middleware
-        if (app.Environment.IsDevelopment())
-        {
-            app.UseCors("AllowDevelopmentClients");
-        }
-        else
-        {
-            app.UseCors("AllowProductionClients");
+            return builder;
         }
 
-        // Exception handling after CORS
-        app.UseMiddleware<GlobalExceptionsMiddleware>();
+        public static WebApplication UseCommonService(this WebApplication app)
+        {
 
-        // Authentication and Authorization
-        app.UseAuthentication();
-        app.UseAuthorization();
+            // CORS must be called before other middleware
+            if (app.Environment.IsDevelopment())
+            {
+                app.UseCors("AllowDevelopmentClients");
+            }
+            else
+            {
+                app.UseCors("AllowProductionClients");
+            }
 
-        // Rate limiting last
-        app.UseRateLimiter();
+            // Exception handling after CORS
+            app.UseMiddleware<GlobalExceptionsMiddleware>();
 
-        return app;
+            // Authentication and Authorization
+            app.UseAuthentication();
+            app.UseAuthorization();
+
+            // Rate limiting last
+            app.UseRateLimiter();
+
+            return app;
+        }
     }
 }
+

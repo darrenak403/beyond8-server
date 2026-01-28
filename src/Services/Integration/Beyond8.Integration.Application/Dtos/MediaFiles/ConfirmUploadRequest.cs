@@ -1,6 +1,7 @@
-namespace Beyond8.Integration.Application.Dtos.MediaFiles;
-
-public class ConfirmUploadRequest
+namespace Beyond8.Integration.Application.Dtos.MediaFiles
 {
-    public Guid FileId { get; set; }
+    public class ConfirmUploadRequest
+    {
+        public Guid FileId { get; set; }
+    }
 }

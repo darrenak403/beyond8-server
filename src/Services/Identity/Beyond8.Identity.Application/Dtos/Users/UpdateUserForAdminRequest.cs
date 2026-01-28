@@ -1,6 +1,7 @@
-namespace Beyond8.Identity.Application.Dtos.Users;
-
-public class UpdateUserForAdminRequest
+namespace Beyond8.Identity.Application.Dtos.Users
 {
-    public List<string> Roles { get; set; } = null!;
+    public class UpdateUserForAdminRequest
+    {
+        public List<string> Roles { get; set; } = null!;
+    }
 }

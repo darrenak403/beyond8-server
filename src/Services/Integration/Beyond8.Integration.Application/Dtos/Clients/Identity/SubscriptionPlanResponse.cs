@@ -1,0 +1,13 @@
+namespace Beyond8.Integration.Application.Dtos.Clients.Identity;
+
+public class SubscriptionPlanResponse
+{
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public decimal Price { get; set; }
+    public string Currency { get; set; } = "VND";
+    public int DurationDays { get; set; }
+    public int TotalRequestsInPeriod { get; set; }
+    public int MaxRequestsPerWeek { get; set; }
+}

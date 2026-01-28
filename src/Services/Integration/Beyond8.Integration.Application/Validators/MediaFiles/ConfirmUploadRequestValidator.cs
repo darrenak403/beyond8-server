@@ -1,13 +1,14 @@
 using Beyond8.Integration.Application.Dtos.MediaFiles;
 using FluentValidation;
 
-namespace Beyond8.Integration.Application.Validators.MediaFiles;
-
-public class ConfirmUploadRequestValidator : AbstractValidator<ConfirmUploadRequest>
+namespace Beyond8.Integration.Application.Validators.MediaFiles
 {
-    public ConfirmUploadRequestValidator()
+    public class ConfirmUploadRequestValidator : AbstractValidator<ConfirmUploadRequest>
     {
-        RuleFor(x => x.FileId)
-            .NotEmpty().WithMessage("File ID không được để trống");
+        public ConfirmUploadRequestValidator()
+        {
+            RuleFor(x => x.FileId)
+                .NotEmpty().WithMessage("File ID không được để trống");
+        }
     }
 }

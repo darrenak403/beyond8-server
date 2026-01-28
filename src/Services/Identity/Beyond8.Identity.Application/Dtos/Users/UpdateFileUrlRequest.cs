@@ -1,6 +1,7 @@
-namespace Beyond8.Identity.Application.Dtos.Users;
-
-public class UpdateFileUrlRequest
+namespace Beyond8.Identity.Application.Dtos.Users
 {
-    public string FileUrl { get; set; } = null!;
+    public class UpdateFileUrlRequest
+    {
+        public string FileUrl { get; set; } = null!;
+    }
 }

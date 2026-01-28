@@ -6,66 +6,67 @@ using Beyond8.Integration.Domain.Repositories.Interfaces;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 
-namespace Beyond8.Integration.Application.Consumers.Identity;
-
-public class OtpEmailConsumer(
-    IEmailService emailService,
-    IUnitOfWork unitOfWork,
-    ILogger<OtpEmailConsumer> logger
-) : IConsumer<OtpEmailEvent>
+namespace Beyond8.Integration.Application.Consumers.Identity
 {
-    public async Task Consume(ConsumeContext<OtpEmailEvent> context)
+    public class OtpEmailConsumer(
+        IEmailService emailService,
+        IUnitOfWork unitOfWork,
+        ILogger<OtpEmailConsumer> logger
+    ) : IConsumer<OtpEmailEvent>
     {
-        var message = context.Message;
-
-        try
+        public async Task Consume(ConsumeContext<OtpEmailEvent> context)
         {
-            logger.LogInformation("Consuming OTP email event for {Email} with purpose {Purpose}",
-                message.ToEmail, message.Purpose);
+            var message = context.Message;
 
-            var success = await emailService.SendOtpEmailAsync(
-                message.ToEmail,
-                message.ToName,
-                message.OtpCode,
-                message.Purpose
-            );
-
-            if (success)
+            try
             {
-                logger.LogInformation("Successfully sent OTP email to {Email}", message.ToEmail);
+                logger.LogInformation("Consuming OTP email event for {Email} with purpose {Purpose}",
+                    message.ToEmail, message.Purpose);
 
-                try
+                var success = await emailService.SendOtpEmailAsync(
+                    message.ToEmail,
+                    message.ToName,
+                    message.OtpCode,
+                    message.Purpose
+                );
+
+                if (success)
                 {
-                    await unitOfWork.NotificationRepository.AddAsync(message.OtpEmailEventToNotification(NotificationStatus.Delivered));
-                    await unitOfWork.SaveChangesAsync();
+                    logger.LogInformation("Successfully sent OTP email to {Email} with OTP code {OtpCode}", message.ToEmail, message.OtpCode);
+
+                    try
+                    {
+                        await unitOfWork.NotificationRepository.AddAsync(message.OtpEmailEventToNotification(NotificationStatus.Delivered));
+                        await unitOfWork.SaveChangesAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(ex, "Failed to save notification for OTP email to {Email}, but email was sent successfully", message.ToEmail);
+                    }
                 }
-                catch (Exception ex)
+                else
                 {
-                    logger.LogWarning(ex, "Failed to save notification for OTP email to {Email}, but email was sent successfully", message.ToEmail);
+                    logger.LogError("Failed to send OTP email to {Email}", message.ToEmail);
+
+                    try
+                    {
+                        await unitOfWork.NotificationRepository.AddAsync(message.OtpEmailEventToNotification(NotificationStatus.Failed));
+                        await unitOfWork.SaveChangesAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(ex, "Failed to save notification for OTP email to {Email}", message.ToEmail);
+                    }
                 }
+
+                logger.LogInformation("OTP email event for {Email} with purpose {Purpose} consumed successfully",
+                    message.ToEmail, message.Purpose);
             }
-            else
+            catch (Exception ex)
             {
-                logger.LogError("Failed to send OTP email to {Email}", message.ToEmail);
-
-                try
-                {
-                    await unitOfWork.NotificationRepository.AddAsync(message.OtpEmailEventToNotification(NotificationStatus.Failed));
-                    await unitOfWork.SaveChangesAsync();
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex, "Failed to save notification for OTP email to {Email}", message.ToEmail);
-                }
+                logger.LogError(ex, "Error consuming OTP email event for {Email}", message.ToEmail);
+                throw;
             }
-
-            logger.LogInformation("OTP email event for {Email} with purpose {Purpose} consumed successfully",
-                message.ToEmail, message.Purpose);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error consuming OTP email event for {Email}", message.ToEmail);
-            throw;
         }
     }
 }

@@ -1,82 +1,83 @@
 using Beyond8.Integration.Application.Dtos.MediaFiles;
 using FluentValidation;
 
-namespace Beyond8.Integration.Application.Validators.MediaFiles;
-
-public class UploadFileRequestValidator : AbstractValidator<UploadFileRequest>
+namespace Beyond8.Integration.Application.Validators.MediaFiles
 {
-    private static readonly string[] AllowedImageTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-    private static readonly string[] AllowedDocumentTypes = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
-    private static readonly string[] AllowedVideoTypes = ["video/mp4", "video/mov", "video/avi", "video/wmv", "video/flv", "video/mkv"];
-
-    public UploadFileRequestValidator()
+    public class UploadFileRequestValidator : AbstractValidator<UploadFileRequest>
     {
-        RuleFor(x => x.FileName)
-            .NotEmpty().WithMessage("Tên file không được để trống")
-            .MaximumLength(500).WithMessage("Tên file không được vượt quá 500 ký tự");
+        private static readonly string[] AllowedImageTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+        private static readonly string[] AllowedDocumentTypes = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
+        private static readonly string[] AllowedVideoTypes = ["video/mp4", "video/mov", "video/avi", "video/wmv", "video/flv", "video/mkv"];
 
-        RuleFor(x => x.ContentType)
-            .NotEmpty().WithMessage("Content type không được để trống")
-            .MaximumLength(200).WithMessage("Content type không được vượt quá 200 ký tự");
+        public UploadFileRequestValidator()
+        {
+            RuleFor(x => x.FileName)
+                .NotEmpty().WithMessage("Tên file không được để trống")
+                .MaximumLength(500).WithMessage("Tên file không được vượt quá 500 ký tự");
 
-        RuleFor(x => x.Size)
-            .GreaterThan(0).WithMessage("Kích thước file phải lớn hơn 0")
-            .LessThanOrEqualTo(10485760).WithMessage("Kích thước file không được vượt quá 10MB");
-    }
+            RuleFor(x => x.ContentType)
+                .NotEmpty().WithMessage("Content type không được để trống")
+                .MaximumLength(200).WithMessage("Content type không được vượt quá 200 ký tự");
 
-    public static UploadFileRequestValidator ForAvatar()
-    {
-        var validator = new UploadFileRequestValidator();
+            RuleFor(x => x.Size)
+                .GreaterThan(0).WithMessage("Kích thước file phải lớn hơn 0")
+                .LessThanOrEqualTo(10485760).WithMessage("Kích thước file không được vượt quá 10MB");
+        }
 
-        validator.RuleFor(x => x.ContentType)
-            .Must(ct => AllowedImageTypes.Contains(ct.ToLower()))
-            .WithMessage($"Avatar chỉ chấp nhận định dạng: {string.Join(", ", AllowedImageTypes)}");
+        public static UploadFileRequestValidator ForAvatar()
+        {
+            var validator = new UploadFileRequestValidator();
 
-        validator.RuleFor(x => x.Size)
-            .LessThanOrEqualTo(5242880).WithMessage("Kích thước avatar không được vượt quá 5MB");
+            validator.RuleFor(x => x.ContentType)
+                .Must(ct => AllowedImageTypes.Contains(ct.ToLower()))
+                .WithMessage($"Avatar chỉ chấp nhận định dạng: {string.Join(", ", AllowedImageTypes)}");
 
-        return validator;
-    }
+            validator.RuleFor(x => x.Size)
+                .LessThanOrEqualTo(5242880).WithMessage("Kích thước avatar không được vượt quá 5MB");
 
-    public static UploadFileRequestValidator ForCover()
-    {
-        var validator = new UploadFileRequestValidator();
+            return validator;
+        }
 
-        validator.RuleFor(x => x.ContentType)
-            .Must(ct => AllowedImageTypes.Contains(ct.ToLower()))
-            .WithMessage($"Cover chỉ chấp nhận định dạng: {string.Join(", ", AllowedImageTypes)}");
+        public static UploadFileRequestValidator ForCover()
+        {
+            var validator = new UploadFileRequestValidator();
 
-        validator.RuleFor(x => x.Size)
-            .LessThanOrEqualTo(5242880).WithMessage("Kích thước cover không được vượt quá 5MB");
+            validator.RuleFor(x => x.ContentType)
+                .Must(ct => AllowedImageTypes.Contains(ct.ToLower()))
+                .WithMessage($"Cover chỉ chấp nhận định dạng: {string.Join(", ", AllowedImageTypes)}");
 
-        return validator;
-    }
+            validator.RuleFor(x => x.Size)
+                .LessThanOrEqualTo(5242880).WithMessage("Kích thước cover không được vượt quá 5MB");
 
-    public static UploadFileRequestValidator ForDocument()
-    {
-        var validator = new UploadFileRequestValidator();
+            return validator;
+        }
 
-        validator.RuleFor(x => x.ContentType)
-            .Must(ct => AllowedDocumentTypes.Contains(ct.ToLower()))
-            .WithMessage($"Tài liệu chỉ chấp nhận định dạng: {string.Join(", ", AllowedDocumentTypes)}");
+        public static UploadFileRequestValidator ForDocument()
+        {
+            var validator = new UploadFileRequestValidator();
 
-        validator.RuleFor(x => x.Size)
-            .LessThanOrEqualTo(10485760).WithMessage("Kích thước tài liệu không được vượt quá 10MB");
+            validator.RuleFor(x => x.ContentType)
+                .Must(ct => AllowedDocumentTypes.Contains(ct.ToLower()))
+                .WithMessage($"Tài liệu chỉ chấp nhận định dạng: {string.Join(", ", AllowedDocumentTypes)}");
 
-        return validator;
-    }
+            validator.RuleFor(x => x.Size)
+                .LessThanOrEqualTo(10485760).WithMessage("Kích thước tài liệu không được vượt quá 10MB");
 
-    public static UploadFileRequestValidator ForIntroVideo()
-    {
-        var validator = new UploadFileRequestValidator();
+            return validator;
+        }
 
-        validator.RuleFor(x => x.ContentType)
-            .Must(ct => AllowedVideoTypes.Contains(ct.ToLower()))
-            .WithMessage("Video chỉ chấp nhận định dạng: mp4, mov, avi, wmv, flv, mkv, webm");
+        public static UploadFileRequestValidator ForIntroVideo()
+        {
+            var validator = new UploadFileRequestValidator();
 
-        validator.RuleFor(x => x.Size)
-            .LessThanOrEqualTo(5242880).WithMessage("Kích thước video không được vượt quá 5MB");
+            validator.RuleFor(x => x.ContentType)
+                .Must(ct => AllowedVideoTypes.Contains(ct.ToLower()))
+                .WithMessage("Video chỉ chấp nhận định dạng: mp4, mov, avi, wmv, flv, mkv, webm");
 
-        return validator;
+            validator.RuleFor(x => x.Size)
+                .LessThanOrEqualTo(5242880).WithMessage("Kích thước video không được vượt quá 5MB");
+
+            return validator;
+        }
     }
 }
