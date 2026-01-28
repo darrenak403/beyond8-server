@@ -97,13 +97,6 @@ namespace Beyond8.Identity.Api.Apis
                 .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status404NotFound);
 
-            group.MapGet("/{id:Guid}/verified", CheckInstructorProfileVerifiedAsync)
-                .WithName("CheckInstructorProfileVerified")
-                .WithDescription("Kiểm tra trạng thái hồ sơ giảng viên có được xác minh hay không")
-                .AllowAnonymous()
-                .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
-                .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest);
-
             group.MapDelete("/{id:Guid}/hidden", HiddenInstructorProfileAsync)
                 .WithName("HiddenInstructorProfile")
                 .WithDescription("Xóa/Ẩn hồ sơ giảng viên (Admin, Staff, Instructor only)")
@@ -121,6 +114,14 @@ namespace Beyond8.Identity.Api.Apis
                 .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized)
                 .Produces(StatusCodes.Status403Forbidden);
+
+
+            group.MapGet("/{id:Guid}/verified", CheckInstructorProfileVerifiedAsync)
+                .WithName("CheckInstructorProfileVerified")
+                .WithDescription("Kiểm tra trạng thái hồ sơ giảng viên có được xác minh hay không")
+                .AllowAnonymous()
+                .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest);
 
             return group;
         }
