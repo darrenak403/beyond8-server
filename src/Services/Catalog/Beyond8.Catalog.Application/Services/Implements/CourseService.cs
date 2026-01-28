@@ -1,3 +1,4 @@
+using Beyond8.Catalog.Application.Clients.Identity;
 using Beyond8.Catalog.Application.Dtos.Courses;
 using Beyond8.Catalog.Application.Mappings.CourseMappings;
 using Beyond8.Catalog.Application.Services.Interfaces;
@@ -12,26 +13,18 @@ namespace Beyond8.Catalog.Application.Services.Implements;
 
 public class CourseService(
     ILogger<CourseService> logger,
-    IUnitOfWork unitOfWork) : ICourseService
+    IUnitOfWork unitOfWork,
+    IIdentityClient identityClient) : ICourseService
 {
-    private (bool CanPerform, string? ErrorMessage) CheckInstructorVerificationStatus(InstructorVerificationStatus status)
-    {
-        if (status == InstructorVerificationStatus.Hidden)
-            return (false, "Hồ sơ giảng viên của bạn đã bị ẩn. Bạn không được phép thực hiện các chức năng liên quan đến khóa học.");
-        if (status == InstructorVerificationStatus.Recovering)
-            return (false, "Hồ sơ giảng viên của bạn đang được khôi phục. Vui lòng chờ xét duyệt. Bạn không được phép thực hiện các chức năng liên quan đến khóa học trong giai đoạn này.");
-        return (true, null);
-    }
-
     public async Task<ApiResponse<CourseResponse>> CreateCourseAsync(CreateCourseRequest request)
     {
         try
         {
-            var (canPerform, errorMessage) = CheckInstructorVerificationStatus(request.InstructorStatus);
-            if (!canPerform)
+            var verificationResponse = await identityClient.CheckInstructorProfileVerifiedAsync(request.InstructorId);
+            if (!verificationResponse.IsSuccess || !verificationResponse.Data)
             {
-                logger.LogWarning("Instructor {InstructorId} is not allowed to create course: {Reason}", request.InstructorId, errorMessage);
-                return ApiResponse<CourseResponse>.FailureResponse(errorMessage!);
+                logger.LogWarning("Instructor {InstructorId} is not verified", request.InstructorId);
+                return ApiResponse<CourseResponse>.FailureResponse("Giảng viên chưa được xác minh.");
             }
 
             // Validate category exists
@@ -87,11 +80,11 @@ public class CourseService(
             }
 
             // Check instructor verification status
-            var (canPerform, errorMessage) = CheckInstructorVerificationStatus(course.InstructorStatus);
-            if (!canPerform)
+            var verificationResponse = await identityClient.CheckInstructorProfileVerifiedAsync(course.InstructorId);
+            if (!verificationResponse.IsSuccess || !verificationResponse.Data)
             {
-                logger.LogWarning("Instructor {UserId} is not allowed to update course metadata: {Reason}", currentUserId, errorMessage);
-                return ApiResponse<CourseResponse>.FailureResponse(errorMessage!);
+                logger.LogWarning("Instructor {UserId} is not verified", currentUserId);
+                return ApiResponse<CourseResponse>.FailureResponse("Giảng viên chưa được xác minh.");
             }
 
             // Status validation: Prevent updates on suspended or archived courses
@@ -183,11 +176,11 @@ public class CourseService(
             }
 
             // Check instructor verification status
-            var (canPerform, errorMessage) = CheckInstructorVerificationStatus(course.InstructorStatus);
-            if (!canPerform)
+            var verificationResponse = await identityClient.CheckInstructorProfileVerifiedAsync(course.InstructorId);
+            if (!verificationResponse.IsSuccess || !verificationResponse.Data)
             {
-                logger.LogWarning("Instructor {UserId} is not allowed to delete course: {Reason}", currentUserId, errorMessage);
-                return ApiResponse<bool>.FailureResponse(errorMessage!);
+                logger.LogWarning("Instructor {UserId} is not verified", currentUserId);
+                return ApiResponse<bool>.FailureResponse("Giảng viên chưa được xác minh.");
             }
 
             // Status validation: Prevent deletion of published courses with active enrollments
@@ -300,11 +293,11 @@ public class CourseService(
             }
 
             // Check instructor verification status
-            var (canPerform, errorMessage) = CheckInstructorVerificationStatus(course.InstructorStatus);
-            if (!canPerform)
+            var verificationResponse = await identityClient.CheckInstructorProfileVerifiedAsync(course.InstructorId);
+            if (!verificationResponse.IsSuccess || !verificationResponse.Data)
             {
-                logger.LogWarning("Instructor {UserId} is not allowed to submit course for approval: {Reason}", currentUserId, errorMessage);
-                return ApiResponse<bool>.FailureResponse(errorMessage!);
+                logger.LogWarning("Instructor {UserId} is not verified", currentUserId);
+                return ApiResponse<bool>.FailureResponse("Giảng viên chưa được xác minh.");
             }
 
             // Validate course can be submitted
@@ -450,11 +443,11 @@ public class CourseService(
             }
 
             // Check instructor verification status
-            var (canPerform, errorMessage) = CheckInstructorVerificationStatus(course.InstructorStatus);
-            if (!canPerform)
+            var verificationResponse = await identityClient.CheckInstructorProfileVerifiedAsync(course.InstructorId);
+            if (!verificationResponse.IsSuccess || !verificationResponse.Data)
             {
-                logger.LogWarning("Instructor {UserId} is not allowed to publish course: {Reason}", currentUserId, errorMessage);
-                return ApiResponse<bool>.FailureResponse(errorMessage!);
+                logger.LogWarning("Instructor {UserId} is not verified", currentUserId);
+                return ApiResponse<bool>.FailureResponse("Giảng viên chưa được xác minh.");
             }
 
             if (course.Status != CourseStatus.Approved)
@@ -495,11 +488,11 @@ public class CourseService(
             }
 
             // Check instructor verification status
-            var (canPerform, errorMessage) = CheckInstructorVerificationStatus(course.InstructorStatus);
-            if (!canPerform)
+            var verificationResponse = await identityClient.CheckInstructorProfileVerifiedAsync(course.InstructorId);
+            if (!verificationResponse.IsSuccess || !verificationResponse.Data)
             {
-                logger.LogWarning("Instructor {UserId} is not allowed to unpublish course: {Reason}", currentUserId, errorMessage);
-                return ApiResponse<bool>.FailureResponse(errorMessage!);
+                logger.LogWarning("Instructor {UserId} is not verified", currentUserId);
+                return ApiResponse<bool>.FailureResponse("Giảng viên chưa được xác minh.");
             }
 
             if (course.Status != CourseStatus.Published)

@@ -12,7 +12,7 @@ public class IdentityClient(HttpClient httpClient, IHttpContextAccessor httpCont
     {
         try
         {
-            var data = await GetAsync<bool>($"/api/v1/users/me/subscription/stats");
+            var data = await GetAsync<bool>($"/api/v1/instructors/{instructorId}/verified");
             return ApiResponse<bool>.SuccessResponse(data, "OK");
         }
         catch (Exception ex)

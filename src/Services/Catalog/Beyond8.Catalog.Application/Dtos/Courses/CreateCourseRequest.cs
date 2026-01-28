@@ -17,5 +17,4 @@ public class CreateCourseRequest
     public List<string>? Requirements { get; set; }
     public List<string>? TargetAudience { get; set; }
     public Guid InstructorId { get; set; }
-    public InstructorVerificationStatus InstructorStatus { get; set; } = InstructorVerificationStatus.Verified;
 }

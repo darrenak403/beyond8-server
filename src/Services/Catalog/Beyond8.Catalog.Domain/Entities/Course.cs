@@ -9,9 +9,6 @@ namespace Beyond8.Catalog.Domain.Entities
     {
         public Guid InstructorId { get; set; }
 
-        public InstructorVerificationStatus InstructorStatus { get; set; } = InstructorVerificationStatus.Verified;
-
-        // Category
         public Guid CategoryId { get; set; }
         [ForeignKey(nameof(CategoryId))]
         public virtual Category Category { get; set; } = null!;

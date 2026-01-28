@@ -34,6 +34,9 @@ namespace Beyond8.Catalog.Api.Bootstrapping
             builder.Services.AddScoped<ICourseService, CourseService>();
 
             builder.Services.AddValidatorsFromAssemblyContaining<CreateCategoryRequest>();
+
+            builder.AddClientServices();
+
             return builder;
         }
 
@@ -41,7 +44,9 @@ namespace Beyond8.Catalog.Api.Bootstrapping
         {
             builder.Services.AddHttpContextAccessor();
 
-            var identityBaseUrl = builder.Configuration.GetSection("Clients:Identity:BaseUrl") ?? throw new ArgumentNullException("Clients:Identity:BaseUrl configuration is missing");
+            var identityBaseUrl = builder.Configuration["Clients:Identity:BaseUrl"]
+                                 ?? throw new ArgumentNullException("Identity URL missing");
+
             builder.Services.AddHttpClient<IIdentityClient, IdentityClient>(client =>
             {
                 client.BaseAddress = new Uri(identityBaseUrl);
@@ -87,6 +92,7 @@ namespace Beyond8.Catalog.Api.Bootstrapping
             app.UseHttpsRedirection();
 
             app.MapCategoryApi();
+            app.MapCourseApi();
 
             return app;
         }
