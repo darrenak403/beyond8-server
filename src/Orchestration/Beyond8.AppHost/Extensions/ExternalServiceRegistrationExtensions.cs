@@ -82,8 +82,10 @@ namespace Beyond8.AppHost.Extensions
                     config.AddRoute("/api/v1/ai-prompts/{**catch-all}", integrationCluster);
                     config.AddRoute("/api/v1/notifications/{**catch-all}", integrationCluster);
 
-                    var catalogCluster = config.AddProjectCluster(catalogService);
-                    config.AddRoute("/api/v1/catalog/{**catch-all}", catalogCluster);
+                var catalogCluster = config.AddProjectCluster(catalogService);
+                config.AddRoute("/api/v1/catalog/{**catch-all}", catalogCluster);
+                config.AddRoute("/api/v1/categories/{**catch-all}", catalogCluster);
+                config.AddRoute("/api/v1/courses/{**catch-all}", catalogCluster);
 
                     // SignalR hub route
                     config.AddRoute("/hubs/{**catch-all}", integrationCluster);

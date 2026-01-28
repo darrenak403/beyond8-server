@@ -418,11 +418,33 @@ namespace Beyond8.Identity.Application.Services.Implements
                     return ApiResponse<bool>.FailureResponse("Tài khoản đã được xác thực trước đó.");
                 }
 
+                var freePlan = await unitOfWork.SubscriptionPlanRepository.FindByCodeAsync("FREE");
+                if (freePlan == null)
+                {
+                    logger.LogError("FREE subscription plan not found in database");
+                    return ApiResponse<bool>.FailureResponse("Hệ thống chưa được cấu hình đúng. Vui lòng liên hệ quản trị viên.");
+                }
+
                 user.IsEmailVerified = true;
-
                 await unitOfWork.UserRepository.UpdateAsync(user.Id, user);
-                await unitOfWork.SaveChangesAsync();
 
+                var now = DateTime.UtcNow;
+                var freeSubscription = new UserSubscription
+                {
+                    UserId = user.Id,
+                    PlanId = freePlan.Id,
+                    StartedAt = now,
+                    ExpiresAt = now.AddDays(7),
+                    Status = SubscriptionStatus.Active,
+                    TotalRemainingRequests = 35,
+                    RemainingRequestsPerWeek = 35,
+                    RequestLimitedEndsAt = null,
+                    CreatedAt = now,
+                    CreatedBy = user.Id
+                };
+                await unitOfWork.UserSubscriptionRepository.AddAsync(freeSubscription);
+
+                await unitOfWork.SaveChangesAsync();
                 await cacheService.RemoveAsync(cacheKey);
 
                 logger.LogInformation("User with email {Email} verified successfully", request.Email);

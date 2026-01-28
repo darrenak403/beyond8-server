@@ -89,5 +89,12 @@ namespace Beyond8.Catalog.Application.Mappings.CategoyMappings
                     .ToList() ?? []
             };
         }
+
+        public static void UpdateFromRequest(this Category entity, UpdateCategoryRequest request)
+        {
+            entity.Name = request.Name;
+            entity.Description = request.Description;
+            entity.Slug = request.Name.ToSlug();
+        }
     }
 }

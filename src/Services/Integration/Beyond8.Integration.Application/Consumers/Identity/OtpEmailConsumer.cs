@@ -32,7 +32,7 @@ namespace Beyond8.Integration.Application.Consumers.Identity
 
                 if (success)
                 {
-                    logger.LogInformation("Successfully sent OTP email to {Email}", message.ToEmail);
+                    logger.LogInformation("Successfully sent OTP email to {Email} with OTP code {OtpCode}", message.ToEmail, message.OtpCode);
 
                     try
                     {
