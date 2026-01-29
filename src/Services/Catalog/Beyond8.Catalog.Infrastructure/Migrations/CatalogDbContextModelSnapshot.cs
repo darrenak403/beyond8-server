@@ -294,6 +294,9 @@ namespace Beyond8.Catalog.Infrastructure.Migrations
                     b.Property<int?>("DurationSeconds")
                         .HasColumnType("integer");
 
+                    b.Property<string>("HlsVariants")
+                        .HasColumnType("jsonb");
+
                     b.Property<bool>("IsDownloadable")
                         .HasColumnType("boolean");
 
@@ -340,9 +343,6 @@ namespace Beyond8.Catalog.Infrastructure.Migrations
 
                     b.Property<Guid?>("UpdatedBy")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("VideoHlsUrl")
-                        .HasColumnType("text");
 
                     b.Property<string>("VideoOriginalUrl")
                         .HasColumnType("text");

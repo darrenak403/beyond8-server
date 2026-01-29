@@ -1,4 +1,5 @@
 using System;
+using Beyond8.Catalog.Application.Dtos.Users;
 using Beyond8.Common.Clients;
 using Beyond8.Common.Utilities;
 using Microsoft.AspNetCore.Http;
@@ -19,6 +20,20 @@ public class IdentityClient(HttpClient httpClient, IHttpContextAccessor httpCont
         {
             logger.LogError(ex, "CheckInstructorProfileVerifiedAsync failed for user {UserId}", userId);
             return ApiResponse<bool>.FailureResponse(ex.Message);
+        }
+    }
+
+    public async Task<ApiResponse<UserSimpleResponse>> GetUserByIdAsync(Guid userId)
+    {
+        try
+        {
+            var data = await GetAsync<UserSimpleResponse>($"/api/v1/users/{userId}");
+            return ApiResponse<UserSimpleResponse>.SuccessResponse(data, "OK");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "GetUserByIdAsync failed for user {UserId}", userId);
+            return ApiResponse<UserSimpleResponse>.FailureResponse(ex.Message);
         }
     }
 }

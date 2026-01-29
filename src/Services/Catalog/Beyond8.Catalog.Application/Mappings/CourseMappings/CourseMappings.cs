@@ -49,7 +49,7 @@ public static class CourseMappings
         entity.TargetAudience = request.TargetAudience != null ? JsonSerializer.Serialize(request.TargetAudience) : null;
     }
 
-    public static CourseResponse ToResponse(this Course entity)
+    public static CourseResponse ToResponse(this Course entity, string instructorName = "")
     {
         return new CourseResponse
         {
@@ -60,7 +60,7 @@ public static class CourseMappings
             CategoryId = entity.CategoryId,
             CategoryName = entity.Category?.Name ?? string.Empty,
             InstructorId = entity.InstructorId,
-            InstructorName = string.Empty, // TODO: Get from Identity service
+            InstructorName = instructorName,
             Status = entity.Status,
             Level = entity.Level,
             Language = entity.Language,
