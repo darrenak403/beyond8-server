@@ -13,8 +13,8 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
             int pageNumber,
             int pageSize,
             string? keyword,
-            Guid? categoryId,
-            Guid? instructorId,
+            string? categoryName,
+            string? instructorName,
             CourseStatus? status,
             CourseLevel? level,
             string? language,
@@ -42,14 +42,14 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
                     (c.ShortDescription != null && c.ShortDescription.ToLower().Contains(lowerKeyword)));
             }
 
-            if (categoryId.HasValue)
+            if (!string.IsNullOrWhiteSpace(categoryName))
             {
-                query = query.Where(c => c.CategoryId == categoryId.Value);
+                query = query.Where(c => c.Category.Name == categoryName);
             }
 
-            if (instructorId.HasValue)
+            if (!string.IsNullOrWhiteSpace(instructorName))
             {
-                query = query.Where(c => c.InstructorId == instructorId.Value);
+                query = query.Where(c => c.InstructorName == instructorName);
             }
 
             if (level.HasValue)

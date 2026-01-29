@@ -32,8 +32,8 @@ public class CourseService(
                 pageNumber,
                 pageSize,
                 keyword: request.Keyword,
-                categoryId: request.CategoryId,
-                instructorId: request.InstructorId,
+                categoryName: request.CategoryName,
+                instructorName: request.InstructorName,
                 status: request.Status,
                 level: request.Level,
                 language: request.Language,
@@ -195,7 +195,7 @@ public class CourseService(
         }
     }
 
-    public async Task<ApiResponse<List<CourseResponse>>> GetCoursesByInstructorAsync(Guid instructorId, PaginationRequest pagination)
+    public async Task<ApiResponse<List<CourseResponse>>> GetCoursesByInstructorAsync(Guid instructorId, PaginationCourseSearchRequest pagination)
     {
         try
         {
@@ -368,7 +368,7 @@ public class CourseService(
         }
     }
 
-    public async Task<ApiResponse<List<CourseResponse>>> GetPendingApprovalCoursesAsync(PaginationRequest pagination)
+    public async Task<ApiResponse<List<CourseResponse>>> GetPendingApprovalCoursesAsync(PaginationCourseSearchRequest pagination)
     {
         try
         {

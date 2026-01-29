@@ -6,8 +6,8 @@ namespace Beyond8.Catalog.Application.Dtos.Courses;
 public class PaginationCourseSearchRequest : PaginationRequest
 {
     public string? Keyword { get; set; }
-    public Guid? CategoryId { get; set; }
-    public Guid? InstructorId { get; set; }
+    public string? CategoryName { get; set; }
+    public string? InstructorName { get; set; }
     public CourseStatus? Status { get; set; }
     public CourseLevel? Level { get; set; }
     public string? Language { get; set; }

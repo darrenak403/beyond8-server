@@ -12,14 +12,14 @@ public interface ICourseService
     Task<ApiResponse<bool>> DeleteCourseAsync(Guid id, Guid currentUserId);
 
     // Instructor-Specific Operations // luồng 2
-    Task<ApiResponse<List<CourseResponse>>> GetCoursesByInstructorAsync(Guid instructorId, PaginationRequest pagination);
+    Task<ApiResponse<List<CourseResponse>>> GetCoursesByInstructorAsync(Guid instructorId, PaginationCourseSearchRequest pagination);
     Task<ApiResponse<CourseStatsDto>> GetCourseStatsByInstructorAsync(Guid instructorId);
 
     // Phê Duyệt Khóa Học
     Task<ApiResponse<bool>> SubmitForApprovalAsync(Guid courseId, Guid currentUserId);
     Task<ApiResponse<bool>> ApproveCourseAsync(Guid courseId, ApproveCourseRequest request);
     Task<ApiResponse<bool>> RejectCourseAsync(Guid courseId, RejectCourseRequest request);
-    Task<ApiResponse<List<CourseResponse>>> GetPendingApprovalCoursesAsync(PaginationRequest pagination);
+    Task<ApiResponse<List<CourseResponse>>> GetPendingApprovalCoursesAsync(PaginationCourseSearchRequest pagination);
 
     // Publishing & Public Access // luồng 2
     Task<ApiResponse<bool>> PublishCourseAsync(Guid courseId, Guid currentUserId);
