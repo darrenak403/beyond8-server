@@ -25,7 +25,8 @@ namespace Beyond8.Catalog.Domain.Entities
         public bool IsPublished { get; set; } = true;
 
         // Lesson Type Video
-        public string? VideoHlsUrl { get; set; }
+        [Column(TypeName = "jsonb")]
+        public string? HlsVariants { get; set; }
         public string? VideoOriginalUrl { get; set; }
         public string? VideoThumbnailUrl { get; set; }
 
