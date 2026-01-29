@@ -26,7 +26,9 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
             bool? isDescending,
             bool? isRandom)
         {
-            var query = context.Courses.AsQueryable().Where(c => c.InstructorVerificationStatus == InstructorVerificationStatus.Verified);
+            var query = context.Courses.AsQueryable()
+                .Where(c => c.InstructorVerificationStatus == InstructorVerificationStatus.Verified)
+                .Where(c => c.Status == CourseStatus.Published);
 
             if (!string.IsNullOrWhiteSpace(keyword))
             {

@@ -21,10 +21,14 @@ public class InstructorHiddenEventConsumer(ILogger<InstructorHiddenEventConsumer
             logger.LogWarning("Courses not found for user {UserId}", message.UserId);
             return;
         }
-        
+
         foreach (var course in courses)
         {
             course.InstructorVerificationStatus = InstructorVerificationStatus.Hidden;
+            if (course.Status == CourseStatus.Published)
+            {
+                course.Status = CourseStatus.Suspended;
+            }
             await unitOfWork.CourseRepository.UpdateAsync(course.Id, course);
         }
 
