@@ -1,6 +1,7 @@
-namespace Beyond8.Integration.Domain.Enums;
-
-public enum StorageProvider
+namespace Beyond8.Integration.Domain.Enums
 {
-    S3
+    public enum StorageProvider
+    {
+        S3
+    }
 }

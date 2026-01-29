@@ -1,7 +1,8 @@
-namespace Beyond8.Identity.Domain.Enums;
-
-public enum UserStatus
+namespace Beyond8.Identity.Domain.Enums
 {
-    Active = 0,
-    Inactive = 1
+    public enum UserStatus
+    {
+        Active = 0,
+        Inactive = 1
+    }
 }

@@ -15,4 +15,9 @@
     <ProjectReference Include="..\Beyond8.Integration.Domain\Beyond8.Integration.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Dtos\Clients\" />
+    <Folder Include="Dtos\Clients\Identity\" />
+  </ItemGroup>
+
 </Project>

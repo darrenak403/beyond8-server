@@ -1,14 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace Beyond8.Catalog.Infrastructure.Data;
-
-public class CatalogDbContextFactory : IDesignTimeDbContextFactory<CatalogDbContext>
+namespace Beyond8.Catalog.Infrastructure.Data
 {
-    public CatalogDbContext CreateDbContext(string[] args)
+    public class CatalogDbContextFactory : IDesignTimeDbContextFactory<CatalogDbContext>
     {
-        var optionsBuilder = new DbContextOptionsBuilder<CatalogDbContext>();
-        optionsBuilder.UseNpgsql("Host=localhost;Database=catalog_db;Username=postgres;Password=postgres");
-        return new CatalogDbContext(optionsBuilder.Options);
+        public CatalogDbContext CreateDbContext(string[] args)
+        {
+            var optionsBuilder = new DbContextOptionsBuilder<CatalogDbContext>();
+            optionsBuilder.UseNpgsql("Host=localhost;Database=catalog_db;Username=postgres;Password=postgres");
+            return new CatalogDbContext(optionsBuilder.Options);
+        }
     }
 }

@@ -1,6 +1,7 @@
-namespace Beyond8.Identity.Application.Dtos.Auth;
-
-public class ForgotPasswordRequest
+namespace Beyond8.Identity.Application.Dtos.Auth
 {
-    public string Email { get; set; } = string.Empty;
+    public class ForgotPasswordRequest
+    {
+        public string Email { get; set; } = string.Empty;
+    }
 }

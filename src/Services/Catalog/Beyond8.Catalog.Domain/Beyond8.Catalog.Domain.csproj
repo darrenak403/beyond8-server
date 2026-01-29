@@ -10,4 +10,8 @@
     <ProjectReference Include="..\..\..\..\shared\Beyond8.Common\Beyond8.Common.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="JSONFields\" />
+  </ItemGroup>
+
 </Project>
