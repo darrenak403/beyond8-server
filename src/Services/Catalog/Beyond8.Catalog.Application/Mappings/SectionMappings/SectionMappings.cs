@@ -22,4 +22,25 @@ public static class SectionMappingExtensions
             UpdatedAt = section.UpdatedAt
         };
     }
+
+    public static Section ToEntity(this CreateSectionRequest request)
+    {
+        return new Section
+        {
+            CourseId = request.CourseId,
+            Title = request.Title,
+            Description = request.Description,
+            OrderIndex = request.OrderIndex,
+            IsPublished = true, // Default value
+            AssignmentId = request.AssignmentId
+        };
+    }
+
+    public static void UpdateFrom(this Section section, UpdateSectionRequest request)
+    {
+        section.Title = request.Title;
+        section.Description = request.Description;
+        section.IsPublished = request.IsPublished;
+        section.AssignmentId = request.AssignmentId;
+    }
 }

@@ -128,26 +128,8 @@ public class LessonService(
                 .Where(l => l.SectionId == request.SectionId)
                 .MaxAsync(l => (int?)l.OrderIndex) ?? 0;
 
-            var lesson = new Lesson
-            {
-                SectionId = request.SectionId,
-                Title = request.Title,
-                Description = request.Description,
-                Type = request.Type,
-                OrderIndex = request.OrderIndex > 0 ? request.OrderIndex : maxOrder + 1,
-                IsPreview = request.IsPreview,
-                IsPublished = true,
-                HlsVariants = request.HlsVariants,
-                VideoOriginalUrl = request.VideoOriginalUrl,
-                VideoThumbnailUrl = request.VideoThumbnailUrl,
-                DurationSeconds = request.DurationSeconds,
-                VideoQualities = request.VideoQualities,
-                IsDownloadable = request.IsDownloadable,
-                TextContent = request.TextContent,
-                QuizId = request.QuizId,
-                MinCompletionSeconds = request.MinCompletionSeconds,
-                RequiredScore = request.RequiredScore
-            };
+            var lesson = request.ToEntity();
+            lesson.OrderIndex = request.OrderIndex > 0 ? request.OrderIndex : maxOrder + 1;
 
             await unitOfWork.LessonRepository.AddAsync(lesson);
             await unitOfWork.SaveChangesAsync();
@@ -187,21 +169,7 @@ public class LessonService(
                 return ApiResponse<LessonResponse>.FailureResponse("Bạn không có quyền chỉnh sửa bài học này.");
             }
 
-            lesson.Title = request.Title;
-            lesson.Description = request.Description;
-            lesson.Type = request.Type;
-            lesson.IsPreview = request.IsPreview;
-            lesson.IsPublished = request.IsPublished;
-            lesson.HlsVariants = request.HlsVariants;
-            lesson.VideoOriginalUrl = request.VideoOriginalUrl;
-            lesson.VideoThumbnailUrl = request.VideoThumbnailUrl;
-            lesson.DurationSeconds = request.DurationSeconds;
-            lesson.VideoQualities = request.VideoQualities;
-            lesson.IsDownloadable = request.IsDownloadable;
-            lesson.TextContent = request.TextContent;
-            lesson.QuizId = request.QuizId;
-            lesson.MinCompletionSeconds = request.MinCompletionSeconds;
-            lesson.RequiredScore = request.RequiredScore;
+            lesson.UpdateFrom(request);
 
             await unitOfWork.LessonRepository.UpdateAsync(lessonId, lesson);
             await unitOfWork.SaveChangesAsync();
