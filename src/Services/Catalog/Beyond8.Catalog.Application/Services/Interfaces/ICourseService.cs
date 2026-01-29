@@ -19,7 +19,7 @@ public interface ICourseService
     Task<ApiResponse<bool>> SubmitForApprovalAsync(Guid courseId, Guid currentUserId);
     Task<ApiResponse<bool>> ApproveCourseAsync(Guid courseId, ApproveCourseRequest request);
     Task<ApiResponse<bool>> RejectCourseAsync(Guid courseId, RejectCourseRequest request);
-    Task<ApiResponse<List<CourseResponse>>> GetPendingApprovalCoursesAsync(PaginationCourseSearchRequest pagination);
+    Task<ApiResponse<List<CourseResponse>>> GetAllCoursesForAdminAsync(PaginationCourseSearchRequest pagination);
 
     // Publishing & Public Access // luồng 2
     Task<ApiResponse<bool>> PublishCourseAsync(Guid courseId, Guid currentUserId);

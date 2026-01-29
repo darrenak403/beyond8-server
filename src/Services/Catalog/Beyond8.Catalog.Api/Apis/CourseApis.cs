@@ -87,9 +87,8 @@ public static class CourseApis
             .Produces<ApiResponse<CourseResponse>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
-        // Admin Operations
-        group.MapGet("/pending-approval", GetPendingApprovalCoursesAsync)
-            .WithName("GetPendingApprovalCourses")
+        group.MapGet("/admin", GetAllCoursesForAdminAsync)
+            .WithName("GetAllCoursesForAdminAsync")
             .WithDescription("Lấy danh sách khóa học chờ phê duyệt")
             .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
             .Produces<ApiResponse<List<CourseResponse>>>(StatusCodes.Status200OK)
@@ -236,11 +235,11 @@ public static class CourseApis
             : Results.BadRequest(result);
     }
 
-    private static async Task<IResult> GetPendingApprovalCoursesAsync(
+    private static async Task<IResult> GetAllCoursesForAdminAsync(
         [FromServices] ICourseService courseService,
         [AsParameters] PaginationCourseSearchRequest pagination)
     {
-        var result = await courseService.GetPendingApprovalCoursesAsync(pagination);
+        var result = await courseService.GetAllCoursesForAdminAsync(pagination);
         return result.IsSuccess
             ? Results.Ok(result)
             : Results.BadRequest(result);

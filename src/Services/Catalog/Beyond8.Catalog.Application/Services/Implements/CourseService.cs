@@ -199,19 +199,28 @@ public class CourseService(
     {
         try
         {
-            var courses = await unitOfWork.CourseRepository.GetPagedAsync(
-                pageNumber: pagination.PageNumber,
-                pageSize: pagination.PageSize,
-                filter: c => c.InstructorId == instructorId && c.IsActive,
-                orderBy: query => query.OrderByDescending(c => c.CreatedAt),
-                includes: query => query.Include(c => c.Category)
-            );
+            logger.LogInformation("Getting courses for instructor: {InstructorId}", instructorId);
 
-            var courseResponses = courses.Items.Select(c => c.ToResponse()).ToList();
+            var query = unitOfWork.CourseRepository
+                .AsQueryable()
+                .Include(c => c.Category)
+                .Where(c => c.InstructorId == instructorId);
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .OrderByDescending(c => c.CreatedAt)
+                .Skip((pagination.PageNumber - 1) * pagination.PageSize)
+                .Take(pagination.PageSize)
+                .ToListAsync();
+
+            logger.LogInformation("Found {Count} courses for instructor: {InstructorId}", totalCount, instructorId);
+
+            var courseResponses = items.Select(c => c.ToResponse()).ToList();
 
             return ApiResponse<List<CourseResponse>>.SuccessPagedResponse(
                 courseResponses,
-                courses.TotalCount,
+                totalCount,
                 pagination.PageNumber,
                 pagination.PageSize,
                 "Lấy danh sách khóa học thành công."
@@ -368,14 +377,14 @@ public class CourseService(
         }
     }
 
-    public async Task<ApiResponse<List<CourseResponse>>> GetPendingApprovalCoursesAsync(PaginationCourseSearchRequest pagination)
+    public async Task<ApiResponse<List<CourseResponse>>> GetAllCoursesForAdminAsync(PaginationCourseSearchRequest pagination)
     {
         try
         {
             var courses = await unitOfWork.CourseRepository.GetPagedAsync(
                 pageNumber: pagination.PageNumber,
                 pageSize: pagination.PageSize,
-                filter: c => c.Status == CourseStatus.PendingApproval && c.IsActive,
+                filter: c => c.Status != CourseStatus.Draft && c.IsActive,
                 orderBy: query => query.OrderBy(c => c.CreatedAt),
                 includes: query => query.Include(c => c.Category)
             );
@@ -387,13 +396,13 @@ public class CourseService(
                 courses.TotalCount,
                 pagination.PageNumber,
                 pagination.PageSize,
-                "Lấy danh sách khóa học chờ phê duyệt thành công."
+                "Lấy danh sách tất cả khóa học thành công."
             );
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error getting pending approval courses");
-            return ApiResponse<List<CourseResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách khóa học chờ phê duyệt.");
+            logger.LogError(ex, "Error getting all courses for admin");
+            return ApiResponse<List<CourseResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách khóa học.");
         }
     }
 
