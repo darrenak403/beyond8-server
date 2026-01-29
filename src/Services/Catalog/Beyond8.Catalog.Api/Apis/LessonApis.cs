@@ -15,7 +15,8 @@ public static class LessonApis
         builder.MapGroup("/api/v1/lessons")
             .MapLessonRoutes()
             .RequireRateLimiting("Fixed")
-            .WithTags("Lesson Api");
+            .WithTags("Lesson Api")
+            .RequireRateLimiting("Fixed");
 
         return builder;
     }

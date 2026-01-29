@@ -24,7 +24,6 @@ namespace Beyond8.Catalog.Domain.Entities
         public bool IsPreview { get; set; } = false;
         public bool IsPublished { get; set; } = true;
 
-
         [Column(TypeName = "jsonb")]
         public string? HlsVariants { get; set; }
         public string? VideoOriginalUrl { get; set; }

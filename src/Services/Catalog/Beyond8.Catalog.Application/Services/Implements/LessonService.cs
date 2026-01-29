@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Beyond8.Catalog.Application.Dtos.Lessons;
 using Beyond8.Catalog.Application.Mappings.LessonMappings;
 using Beyond8.Catalog.Application.Services.Interfaces;
