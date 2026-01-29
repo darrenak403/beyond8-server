@@ -5,9 +5,6 @@ namespace Beyond8.Integration.Application.Helpers.AiService
 {
     public static class SubscriptionHelper
     {
-        /// <summary>
-        /// Kiểm tra quyền sử dụng AI theo gói đăng ký của user.
-        /// </summary>
         public static async Task<SubscriptionCheckResult> CheckSubscriptionStatusAsync(
             IIdentityClient identityClient,
             Guid userId)

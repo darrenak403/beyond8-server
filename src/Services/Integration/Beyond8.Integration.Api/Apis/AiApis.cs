@@ -7,7 +7,6 @@ using Beyond8.Integration.Application.Dtos.AiIntegration.Embedding;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Quiz;
 using Beyond8.Integration.Application.Helpers.AiService;
 using Beyond8.Integration.Application.Services.Interfaces;
-using Beyond8.Integration.Api.Extensions;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 
@@ -70,20 +69,6 @@ namespace Beyond8.Integration.Api.Apis
             return group;
         }
 
-        private static async Task<IResult> HealthCheck(
-            [FromServices] IIdentityClient identityClient,
-            [FromServices] ICurrentUserService currentUserService,
-            [FromServices] IGenerativeAiService aiService
-        )
-        {
-            var check = await SubscriptionHelper.CheckSubscriptionStatusAsync(identityClient, currentUserService.UserId);
-            if (!check.IsAllowed)
-                return check.ToDeniedResult<bool>();
-
-            var result = await aiService.CheckHealthAsync();
-            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
-        }
-
         private static async Task<IResult> InstructorProfileReview(
             [FromBody] ProfileReviewRequest request,
             [FromServices] IAiService aiService,
@@ -92,7 +77,7 @@ namespace Beyond8.Integration.Api.Apis
         {
             var check = await SubscriptionHelper.CheckSubscriptionStatusAsync(identityClient, currentUserService.UserId);
             if (!check.IsAllowed)
-                return check.ToDeniedResult<AiProfileReviewResponse>();
+                return Results.BadRequest(ApiResponse<AiProfileReviewResponse>.FailureResponse(check.Message, check.Metadata));
 
             var result = await aiService.InstructorProfileReviewAsync(request, currentUserService.UserId);
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
@@ -106,7 +91,7 @@ namespace Beyond8.Integration.Api.Apis
         {
             var check = await SubscriptionHelper.CheckSubscriptionStatusAsync(identityClient, currentUserService.UserId);
             if (!check.IsAllowed)
-                return check.ToDeniedResult<GenQuizResponse>();
+                return Results.BadRequest(ApiResponse<GenQuizResponse>.FailureResponse(check.Message, check.Metadata));
 
             var result = await aiService.GenerateQuizAsync(request, currentUserService.UserId);
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
@@ -122,7 +107,7 @@ namespace Beyond8.Integration.Api.Apis
         {
             var check = await SubscriptionHelper.CheckSubscriptionStatusAsync(identityClient, currentUserService.UserId);
             if (!check.IsAllowed)
-                return check.ToDeniedResult<EmbedCourseDocumentsResult>();
+                return Results.BadRequest(ApiResponse<EmbedCourseDocumentsResult>.FailureResponse(check.Message, check.Metadata));
 
             if (!request.ValidateRequest(validator, out var validationResult))
                 return validationResult!;
@@ -142,6 +127,16 @@ namespace Beyond8.Integration.Api.Apis
         private static async Task<IResult> EmbeddingHealthCheck([FromServices] IEmbeddingService embeddingService)
         {
             var result = await embeddingService.CheckHealthAsync();
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
+
+        private static async Task<IResult> HealthCheck(
+            [FromServices] IIdentityClient identityClient,
+            [FromServices] ICurrentUserService currentUserService,
+            [FromServices] IGenerativeAiService aiService
+        )
+        {
+            var result = await aiService.CheckHealthAsync();
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
     }
