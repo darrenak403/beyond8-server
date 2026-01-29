@@ -91,7 +91,8 @@ public class SectionService(
                 Title = request.Title,
                 Description = request.Description,
                 OrderIndex = request.OrderIndex > 0 ? request.OrderIndex : maxOrder + 1,
-                IsPublished = true
+                IsPublished = true,
+                AssignmentId = request.AssignmentId
             };
 
             await unitOfWork.SectionRepository.AddAsync(section);
@@ -131,6 +132,7 @@ public class SectionService(
             section.Title = request.Title;
             section.Description = request.Description;
             section.IsPublished = request.IsPublished;
+            section.AssignmentId = request.AssignmentId;
 
             await unitOfWork.SectionRepository.UpdateAsync(sectionId, section);
             await unitOfWork.SaveChangesAsync();

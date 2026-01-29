@@ -17,6 +17,7 @@ public static class SectionMappingExtensions
             IsPublished = section.IsPublished,
             TotalLessons = section.TotalLessons,
             TotalDurationMinutes = section.TotalDurationMinutes,
+            AssignmentId = section.AssignmentId,
             CreatedAt = section.CreatedAt,
             UpdatedAt = section.UpdatedAt
         };

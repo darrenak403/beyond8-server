@@ -14,4 +14,6 @@ public class CreateSectionRequest
     public string? Description { get; set; }
 
     public int OrderIndex { get; set; }
+
+    public Guid? AssignmentId { get; set; }
 }

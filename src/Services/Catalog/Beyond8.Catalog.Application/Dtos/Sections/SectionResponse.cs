@@ -10,6 +10,7 @@ public class SectionResponse
     public bool IsPublished { get; set; }
     public int TotalLessons { get; set; }
     public int TotalDurationMinutes { get; set; }
+    public Guid? AssignmentId { get; set; }
     public DateTime? CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 }
