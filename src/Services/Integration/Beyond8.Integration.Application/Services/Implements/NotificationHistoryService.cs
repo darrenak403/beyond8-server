@@ -1,5 +1,6 @@
 using Beyond8.Common.Utilities;
 using Beyond8.Integration.Application.Dtos.Notifications;
+using Beyond8.Integration.Application.Mappings.NotificationMappings;
 using Beyond8.Integration.Application.Services.Interfaces;
 using Beyond8.Integration.Domain.Enums;
 using Beyond8.Integration.Domain.Repositories.Interfaces;
@@ -31,18 +32,7 @@ namespace Beyond8.Integration.Application.Services.Implements
                     pagination.Channel,
                     pagination.IsRead);
 
-                var notifications = result.Items.Select(n => new NotificationResponse
-                {
-                    Id = n.Id,
-                    Title = n.Title,
-                    Message = n.Message,
-                    UserId = n.UserId == Guid.Empty ? userId : n.UserId,
-                    Target = n.Target,
-                    Status = n.Status,
-                    Channels = n.Channels,
-                    ReadAt = n.ReadAt,
-                    IsRead = n.IsRead
-                }).ToList();
+                var notifications = result.Items.Select(n => n.ToNotificationResponse(userId)).ToList();
 
                 logger.LogInformation("Retrieved {Count} notifications for user {UserId} with roles {Roles}",
                     notifications.Count, userId, string.Join(", ", userRoles));
@@ -94,36 +84,14 @@ namespace Beyond8.Integration.Application.Services.Implements
                 {
                     UserNotifications = new NotificationSection
                     {
-                        Items = [.. userResult.Items.Select(n => new NotificationResponse
-                        {
-                            Id = n.Id,
-                            Title = n.Title,
-                            Message = n.Message,
-                            UserId = n.UserId == Guid.Empty ? userId : n.UserId,
-                            Target = n.Target,
-                            Status = n.Status,
-                            Channels = n.Channels,
-                            ReadAt = n.ReadAt,
-                            IsRead = n.IsRead
-                        })],
+                        Items = [.. userResult.Items.Select(n => n.ToNotificationResponse(userId)).ToList()],
                         TotalCount = userResult.TotalCount,
                         PageNumber = pagination.PageNumber,
                         PageSize = pagination.PageSize
                     },
                     InstructorNotifications = new NotificationSection
                     {
-                        Items = [.. instructorResult.Items.Select(n => new NotificationResponse
-                        {
-                            Id = n.Id,
-                            Title = n.Title,
-                            Message = n.Message,
-                            UserId = n.UserId == Guid.Empty ? userId : n.UserId,
-                            Target = n.Target,
-                            Status = n.Status,
-                            Channels = n.Channels,
-                            ReadAt = n.ReadAt,
-                            IsRead = n.IsRead
-                        })],
+                        Items = [.. instructorResult.Items.Select(n => n.ToNotificationResponse(userId)).ToList()],
                         TotalCount = instructorResult.TotalCount,
                         PageNumber = pagination.PageNumber,
                         PageSize = pagination.PageSize
@@ -163,6 +131,47 @@ namespace Beyond8.Integration.Application.Services.Implements
             }
 
             return targets;
+        }
+
+        public async Task<ApiResponse<bool>> UnreadNotificationAsync(Guid id, Guid userId)
+        {
+            try
+            {
+                var notification = await unitOfWork.NotificationRepository.FindOneAsync(n => n.Id == id && n.UserId == userId);
+                if (notification == null)
+                {
+                    return ApiResponse<bool>.FailureResponse("Thông báo không tồn tại");
+                }
+                notification.IsRead = false;
+                await unitOfWork.NotificationRepository.UpdateAsync(notification.Id, notification);
+                await unitOfWork.SaveChangesAsync();
+                return ApiResponse<bool>.SuccessResponse(true, "Đánh dấu thông báo chưa đọc thành công.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error unreading notification {Id} for user {UserId}", id, userId);
+                return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi đánh dấu thông báo chưa đọc.");
+            }
+        }
+
+        public async Task<ApiResponse<bool>> ReadNotificationAsync(Guid userId)
+        {
+            try
+            {
+                var notifications = await unitOfWork.NotificationRepository.GetAllAsync(n => n.UserId == userId);
+                foreach (var n in notifications)
+                {
+                    n.IsRead = true;
+                    await unitOfWork.NotificationRepository.UpdateAsync(n.Id, n);
+                }
+                await unitOfWork.SaveChangesAsync();
+                return ApiResponse<bool>.SuccessResponse(true, "Đánh dấu thông báo đã đọc thành công.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error reading notification for user {UserId}", userId);
+                return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi đánh dấu thông báo đã đọc.");
+            }
         }
     }
 }

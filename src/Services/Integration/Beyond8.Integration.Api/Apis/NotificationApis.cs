@@ -35,7 +35,38 @@ namespace Beyond8.Integration.Api.Apis
                 .Produces<ApiResponse<InstructorNotificationResponse>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
+            group.MapPut("/read", ReadNotification)
+                .WithName("ReadNotification")
+                .WithDescription("Đánh dấu thông báo đã đọc")
+                .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
+            group.MapPut("{id:guid}/unread", UnreadNotification)
+                .WithName("UnreadNotification")
+                .WithDescription("Đánh dấu thông báo chưa đọc")
+                .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
             return group;
+        }
+
+        private static async Task<IResult> UnreadNotification(
+            [FromRoute] Guid id,
+            [FromServices] INotificationHistoryService notificationHistoryService,
+            [FromServices] ICurrentUserService currentUserService)
+        {
+            var result = await notificationHistoryService.UnreadNotificationAsync(id, currentUserService.UserId);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
+
+        private static async Task<IResult> ReadNotification(
+            [FromServices] INotificationHistoryService notificationHistoryService,
+            [FromServices] ICurrentUserService currentUserService)
+        {
+            var result = await notificationHistoryService.ReadNotificationAsync(currentUserService.UserId);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
 
         private static async Task<IResult> GetMyNotifications(

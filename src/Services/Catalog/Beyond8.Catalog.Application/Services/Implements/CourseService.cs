@@ -76,7 +76,6 @@ public class CourseService(
             }
 
             var course = request.ToEntity(currentUserId, instructorResponse.Data.FullName);
-            course.Category = category;
             await unitOfWork.CourseRepository.AddAsync(course);
             await unitOfWork.SaveChangesAsync();
 
