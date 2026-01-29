@@ -64,7 +64,7 @@ public static class SubscriptionApis
     }
 
     private static async Task<IResult> UpdateSubscriptionAsync(
-        [FromBody] UpdateSubscriptionRequest request,
+        [FromBody] UpdateUsageQuotaRequest request,
         [FromRoute] Guid id,
         [FromServices] ISubscriptionService subscriptionService)
     {

@@ -6,5 +6,5 @@ namespace Beyond8.Catalog.Application.Clients.Identity;
 
 public interface IIdentityClient : IBaseClient
 {
-    Task<ApiResponse<bool>> CheckInstructorProfileVerifiedAsync(Guid instructorId);
+    Task<ApiResponse<bool>> CheckInstructorProfileVerifiedAsync(Guid userId);
 }

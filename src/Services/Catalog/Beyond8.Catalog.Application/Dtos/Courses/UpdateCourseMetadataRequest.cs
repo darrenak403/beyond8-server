@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using Beyond8.Catalog.Domain.Enums;
 
 namespace Beyond8.Catalog.Application.Dtos.Courses;
@@ -6,6 +5,7 @@ namespace Beyond8.Catalog.Application.Dtos.Courses;
 public class UpdateCourseMetadataRequest
 {
     public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
     public string? ShortDescription { get; set; }
     public Guid CategoryId { get; set; }
     public CourseLevel Level { get; set; } = CourseLevel.Beginner;

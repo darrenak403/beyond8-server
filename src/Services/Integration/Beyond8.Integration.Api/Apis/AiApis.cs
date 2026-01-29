@@ -3,6 +3,7 @@ using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
 using Beyond8.Integration.Application.Clients;
 using Beyond8.Integration.Application.Dtos.Ai;
+using Beyond8.Integration.Application.Dtos.AiIntegration.Embedding;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Quiz;
 using Beyond8.Integration.Application.Helpers.AiService;
 using Beyond8.Integration.Application.Services.Interfaces;
@@ -43,28 +44,29 @@ namespace Beyond8.Integration.Api.Apis
 
             group.MapGet("/health", HealthCheck)
                 .WithName("HealthCheck")
-                .WithDescription("Check the health of the AI service")
+                .WithDescription("Check the health of the AI service (generative AI)")
                 .RequireAuthorization()
                 .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
-            return group;
-        }
+            group.MapPost("/embed", EmbedCourseDocuments)
+                .WithName("EmbedCourseDocuments")
+                .WithDescription("Upload PDF, chunk và embed vào Qdrant (Instructor only)")
+                .DisableAntiforgery()
+                .RequireAuthorization(r => r.RequireRole(Role.Instructor))
+                .Produces<ApiResponse<EmbedCourseDocumentsResult>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<EmbedCourseDocumentsResult>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
 
-        private static async Task<IResult> HealthCheck(
-            [FromServices] IIdentityClient identityClient,
-            [FromServices] ICurrentUserService currentUserService,
-            [FromServices] IGenerativeAiService aiService
-        )
-        {
-            var check = await SubscriptionHelper.CheckSubscriptionStatusAsync(identityClient, currentUserService.UserId);
-            if (!check.IsAllowed)
-            {
-                return Results.BadRequest(ApiResponse<bool>.FailureResponse(check.Message, check.Metadata));
-            }
-            var result = await aiService.CheckHealthAsync();
-            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+            group.MapGet("/embed/health", EmbeddingHealthCheck)
+                .WithName("EmbeddingHealthCheck")
+                .WithDescription("Check the health of the embedding service (Qdrant, Hugging Face)")
+                .RequireAuthorization()
+                .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest);
+
+            return group;
         }
 
         private static async Task<IResult> InstructorProfileReview(
@@ -75,9 +77,8 @@ namespace Beyond8.Integration.Api.Apis
         {
             var check = await SubscriptionHelper.CheckSubscriptionStatusAsync(identityClient, currentUserService.UserId);
             if (!check.IsAllowed)
-            {
                 return Results.BadRequest(ApiResponse<AiProfileReviewResponse>.FailureResponse(check.Message, check.Metadata));
-            }
+
             var result = await aiService.InstructorProfileReviewAsync(request, currentUserService.UserId);
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
@@ -90,10 +91,52 @@ namespace Beyond8.Integration.Api.Apis
         {
             var check = await SubscriptionHelper.CheckSubscriptionStatusAsync(identityClient, currentUserService.UserId);
             if (!check.IsAllowed)
-            {
                 return Results.BadRequest(ApiResponse<GenQuizResponse>.FailureResponse(check.Message, check.Metadata));
-            }
+
             var result = await aiService.GenerateQuizAsync(request, currentUserService.UserId);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
+
+        private static async Task<IResult> EmbedCourseDocuments(
+            [FromForm] EmbedCourseDocumentsRequest request,
+            [FromForm] IFormFile file,
+            [FromServices] IEmbeddingService embeddingService,
+            [FromServices] IValidator<EmbedCourseDocumentsRequest> validator,
+            [FromServices] ICurrentUserService currentUserService,
+            [FromServices] IIdentityClient identityClient)
+        {
+            var check = await SubscriptionHelper.CheckSubscriptionStatusAsync(identityClient, currentUserService.UserId);
+            if (!check.IsAllowed)
+                return Results.BadRequest(ApiResponse<EmbedCourseDocumentsResult>.FailureResponse(check.Message, check.Metadata));
+
+            if (!request.ValidateRequest(validator, out var validationResult))
+                return validationResult!;
+
+            if (file == null || file.Length == 0)
+                return Results.BadRequest(ApiResponse<EmbedCourseDocumentsResult>.FailureResponse("File không được để trống."));
+
+            if (file.ContentType != "application/pdf")
+                return Results.BadRequest(ApiResponse<EmbedCourseDocumentsResult>.FailureResponse("Chỉ chấp nhận file PDF."));
+
+            await using var stream = file.OpenReadStream();
+            var result = await embeddingService.EmbedCourseDocumentsAsync(stream, request);
+
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
+
+        private static async Task<IResult> EmbeddingHealthCheck([FromServices] IEmbeddingService embeddingService)
+        {
+            var result = await embeddingService.CheckHealthAsync();
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
+
+        private static async Task<IResult> HealthCheck(
+            [FromServices] IIdentityClient identityClient,
+            [FromServices] ICurrentUserService currentUserService,
+            [FromServices] IGenerativeAiService aiService
+        )
+        {
+            var result = await aiService.CheckHealthAsync();
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
     }

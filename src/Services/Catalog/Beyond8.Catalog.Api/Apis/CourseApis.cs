@@ -1,3 +1,4 @@
+using Beyond8.Catalog.Application.Clients.Identity;
 using Beyond8.Catalog.Application.Dtos.Courses;
 using Beyond8.Catalog.Application.Services.Interfaces;
 using Beyond8.Common.Extensions;
@@ -22,6 +23,13 @@ public static class CourseApis
 
     public static RouteGroupBuilder MapCourseRoutes(this RouteGroupBuilder group)
     {
+        // Public Search Operations
+        group.MapGet("/", GetAllCoursesAsync)
+            .WithName("GetAllCourses")
+            .WithDescription("Lấy danh sách tất cả khóa học")
+            .Produces<ApiResponse<List<CourseResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<List<CourseResponse>>>(StatusCodes.Status400BadRequest);
+
         // Instructor Operations
         group.MapPost("/", CreateCourseAsync)
             .WithName("CreateCourse")
@@ -107,7 +115,7 @@ public static class CourseApis
         group.MapPost("/{id}/publish", PublishCourseAsync)
             .WithName("PublishCourse")
             .WithDescription("Công bố khóa học")
-            .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
+            .RequireAuthorization()
             .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
@@ -119,29 +127,46 @@ public static class CourseApis
             .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
+            
         return group;
+    }
+
+
+    private static async Task<IResult> GetAllCoursesAsync(
+        [FromServices] ICourseService courseService,
+        [AsParameters] PaginationCourseSearchRequest pagination)
+    {
+        var result = await courseService.GetAllCoursesAsync(pagination);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
     private static async Task<IResult> CreateCourseAsync(
         [FromBody] CreateCourseRequest request,
         [FromServices] ICourseService courseService,
         [FromServices] IValidator<CreateCourseRequest> validator,
-        [FromServices] ICurrentUserService currentUserService)
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IIdentityClient identityClient)
     {
         if (!request.ValidateRequest(validator, out var validationResult))
             return validationResult!;
 
-        // Set instructor ID from current user
-        request.InstructorId = currentUserService.UserId;
+        var currentUserId = currentUserService.UserId;
 
-        var result = await courseService.CreateCourseAsync(request);
+        // Check instructor verification before proceeding
+        var (isVerified, message) = await CheckInstructorVerificationAsync(currentUserService, identityClient);
+        if (!isVerified)
+        {
+            return Results.BadRequest(ApiResponse<CourseResponse>.FailureResponse(message));
+        }
+
+        var result = await courseService.CreateCourseAsync(request, currentUserId);
         return result.IsSuccess
             ? Results.Ok(result)
             : Results.BadRequest(result);
     }
 
     private static async Task<IResult> GetCourseByIdAsync(
-        Guid id,
+        [FromRoute] Guid id,
         [FromServices] ICourseService courseService,
         [FromServices] ICurrentUserService currentUserService)
     {
@@ -151,11 +176,20 @@ public static class CourseApis
     }
 
     private static async Task<IResult> DeleteCourseAsync(
-        Guid id,
+        [FromRoute] Guid id,
         [FromServices] ICourseService courseService,
-        [FromServices] ICurrentUserService currentUserService)
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IIdentityClient identityClient)
     {
         var currentUserId = currentUserService.UserId;
+
+        // Check instructor verification before proceeding
+        var (isVerified, message) = await CheckInstructorVerificationAsync(currentUserService, identityClient);
+        if (!isVerified)
+        {
+            return Results.BadRequest(ApiResponse<bool>.FailureResponse(message));
+        }
+
         var result = await courseService.DeleteCourseAsync(id, currentUserId);
         return result.IsSuccess
             ? Results.Ok(result)
@@ -165,7 +199,7 @@ public static class CourseApis
     private static async Task<IResult> GetCoursesByInstructorAsync(
         [FromServices] ICourseService courseService,
         [FromServices] ICurrentUserService currentUserService,
-        [AsParameters] PaginationRequest pagination)
+        [AsParameters] PaginationCourseSearchRequest pagination)
     {
         var instructorId = currentUserService.UserId;
         var result = await courseService.GetCoursesByInstructorAsync(instructorId, pagination);
@@ -182,11 +216,20 @@ public static class CourseApis
     }
 
     private static async Task<IResult> SubmitForApprovalAsync(
-        Guid id,
+        [FromRoute] Guid id,
         [FromServices] ICourseService courseService,
-        [FromServices] ICurrentUserService currentUserService)
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IIdentityClient identityClient)
     {
         var currentUserId = currentUserService.UserId;
+
+        // Check instructor verification before proceeding
+        var (isVerified, message) = await CheckInstructorVerificationAsync(currentUserService, identityClient);
+        if (!isVerified)
+        {
+            return Results.BadRequest(ApiResponse<bool>.FailureResponse(message));
+        }
+
         var result = await courseService.SubmitForApprovalAsync(id, currentUserId);
         return result.IsSuccess
             ? Results.Ok(result)
@@ -195,14 +238,16 @@ public static class CourseApis
 
     private static async Task<IResult> GetPendingApprovalCoursesAsync(
         [FromServices] ICourseService courseService,
-        [AsParameters] PaginationRequest pagination)
+        [AsParameters] PaginationCourseSearchRequest pagination)
     {
         var result = await courseService.GetPendingApprovalCoursesAsync(pagination);
-        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        return result.IsSuccess
+            ? Results.Ok(result)
+            : Results.BadRequest(result);
     }
 
     private static async Task<IResult> ApproveCourseAsync(
-        Guid id,
+        [FromRoute] Guid id,
         [FromBody] ApproveCourseRequest request,
         [FromServices] ICourseService courseService,
         [FromServices] IValidator<ApproveCourseRequest> validator)
@@ -217,7 +262,7 @@ public static class CourseApis
     }
 
     private static async Task<IResult> RejectCourseAsync(
-        Guid id,
+        [FromRoute] Guid id,
         [FromBody] RejectCourseRequest request,
         [FromServices] ICourseService courseService,
         [FromServices] IValidator<RejectCourseRequest> validator)
@@ -232,11 +277,20 @@ public static class CourseApis
     }
 
     private static async Task<IResult> PublishCourseAsync(
-        Guid id,
+        [FromRoute] Guid id,
         [FromServices] ICourseService courseService,
-        [FromServices] ICurrentUserService currentUserService)
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IIdentityClient identityClient)
     {
         var currentUserId = currentUserService.UserId;
+
+        // Check instructor verification before proceeding
+        var (isVerified, message) = await CheckInstructorVerificationAsync(currentUserService, identityClient);
+        if (!isVerified)
+        {
+            return Results.BadRequest(ApiResponse<bool>.FailureResponse(message));
+        }
+
         var result = await courseService.PublishCourseAsync(id, currentUserId);
         return result.IsSuccess
             ? Results.Ok(result)
@@ -244,30 +298,61 @@ public static class CourseApis
     }
 
     private static async Task<IResult> UnpublishCourseAsync(
-        Guid id,
+        [FromRoute] Guid id,
         [FromServices] ICourseService courseService,
-        [FromServices] ICurrentUserService currentUserService)
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IIdentityClient identityClient)
     {
         var currentUserId = currentUserService.UserId;
+
+        // Check instructor verification before proceeding
+        var (isVerified, message) = await CheckInstructorVerificationAsync(currentUserService, identityClient);
+        if (!isVerified)
+        {
+            return Results.BadRequest(ApiResponse<bool>.FailureResponse(message));
+        }
+
         var result = await courseService.UnpublishCourseAsync(id, currentUserId);
         return result.IsSuccess
             ? Results.Ok(result)
             : Results.BadRequest(result);
     }
     private static async Task<IResult> UpdateCourseMetadataAsync(
-        Guid id,
+        [FromRoute] Guid id,
         [FromBody] UpdateCourseMetadataRequest request,
         [FromServices] ICourseService courseService,
         [FromServices] IValidator<UpdateCourseMetadataRequest> validator,
-        [FromServices] ICurrentUserService currentUserService)
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IIdentityClient identityClient)
     {
         if (!request.ValidateRequest(validator, out var validationResult))
             return validationResult!;
 
         var currentUserId = currentUserService.UserId;
+
+        // Check instructor verification before proceeding
+        var (isVerified, message) = await CheckInstructorVerificationAsync(currentUserService, identityClient);
+        if (!isVerified)
+        {
+            return Results.BadRequest(ApiResponse<CourseResponse>.FailureResponse(message));
+        }
+
         var result = await courseService.UpdateCourseMetadataAsync(id, currentUserId, request);
         return result.IsSuccess
             ? Results.Ok(result)
             : Results.BadRequest(result);
+    }
+
+    private static async Task<(bool IsVerified, string Message)> CheckInstructorVerificationAsync(
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IIdentityClient identityClient)
+    {
+        var currentUserId = currentUserService.UserId;
+        var verificationResponse = await identityClient.CheckInstructorProfileVerifiedAsync(currentUserId);
+        if (!verificationResponse.IsSuccess || !verificationResponse.Data)
+        {
+            return (false, "Hồ sơ giảng viên chưa được phê duyệt.");
+        }
+        return (true, string.Empty);
     }
 }

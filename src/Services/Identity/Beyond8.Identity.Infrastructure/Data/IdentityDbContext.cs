@@ -51,8 +51,8 @@ namespace Beyond8.Identity.Infrastructure.Data
                     entity.HasIndex(p => p.Code).IsUnique();
                     entity.Property(p => p.Price).HasPrecision(18, 2);
                     entity.Property(p => p.Includes).HasConversion(
-                        v => JsonSerializer.Serialize(v ?? new List<string>()),
-                        v => JsonSerializer.Deserialize<List<string>>(v) ?? new List<string>());
+                        v => SerializeIncludes(v),
+                        v => DeserializeIncludes(v));
                 });
             modelBuilder.Entity<UserSubscription>(entity =>
                 {
@@ -63,6 +63,16 @@ namespace Beyond8.Identity.Infrastructure.Data
                         .OnDelete(DeleteBehavior.Restrict);
                     entity.HasIndex(s => new { s.UserId, s.Status });
                 });
+        }
+
+        private static string SerializeIncludes(List<string>? value)
+        {
+            return JsonSerializer.Serialize(value ?? []);
+        }
+
+        private static List<string> DeserializeIncludes(string value)
+        {
+            return JsonSerializer.Deserialize<List<string>>(value) ?? [];
         }
     }
 }

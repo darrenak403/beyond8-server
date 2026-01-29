@@ -8,5 +8,5 @@ public interface ISubscriptionService
 {
     Task<ApiResponse<SubscriptionResponse>> GetMySubscriptionStatsAsync(Guid userId);
     Task<ApiResponse<List<SubscriptionPlanResponse>>> GetSubscriptionPlansAsync();
-    Task<ApiResponse<SubscriptionResponse>> UpdateSubscriptionAsync(Guid userId, UpdateSubscriptionRequest request);
+    Task<ApiResponse<SubscriptionResponse>> UpdateSubscriptionAsync(Guid userId, UpdateUsageQuotaRequest request);
 }

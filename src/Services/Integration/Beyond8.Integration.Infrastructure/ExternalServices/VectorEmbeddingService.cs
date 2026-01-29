@@ -3,8 +3,8 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Beyond8.Common.Utilities;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Embedding;
+using Beyond8.Integration.Application.Helpers.AiService;
 using Beyond8.Integration.Application.Mappings.AiIntegrationMappings;
 using Beyond8.Integration.Application.Services.Interfaces;
 using Beyond8.Integration.Infrastructure.Configuration;
@@ -27,7 +27,7 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
         private readonly HuggingFaceSettings _hfSettings = huggingFaceSettings.Value;
         private readonly QdrantSettings _qdrantSettings = qdrantSettings.Value;
 
-        public async Task<ApiResponse<List<DocumentEmbeddingResponse>>> EmbedAndSavePdfAsync(
+        public async Task<List<DocumentEmbeddingResponse>> EmbedAndSavePdfAsync(
             Stream pdfStream,
             Guid courseId,
             Guid documentId,
@@ -35,14 +35,10 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
         {
             var stopwatch = Stopwatch.StartNew();
 
-            try
-            {
-                // Chunk PDF
-                var chunkResult = pdfChunkService.ChunkPdf(pdfStream, courseId, documentId);
-                if (chunkResult.Count == 0)
-                {
-                    return ApiResponse<List<DocumentEmbeddingResponse>>.FailureResponse("Không có chunks để embed.");
-                }
+            // Chunk PDF
+            var chunkResult = pdfChunkService.ChunkPdf(pdfStream, courseId, documentId);
+            if (chunkResult.Count == 0)
+                throw new InvalidOperationException("Không có chunks để embed.");
 
                 // BƯỚC 1: Dedupe theo vị trí — giữ bản đầu tiên nếu chunking sinh ra 2 chunk cùng (Page, Index)
                 var uniqueChunks = chunkResult
@@ -84,40 +80,26 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                     }
                 }
 
-                if (embeddings.Count == 0)
-                {
-                    logger.LogWarning("Không thể embed bất kỳ chunk nào.");
-                    return ApiResponse<List<DocumentEmbeddingResponse>>.FailureResponse("Không thể embed bất kỳ chunk nào.");
-                }
-
-                await DeleteDocumentPointsAsync(courseId, documentId, lessonId);
-
-                // Lưu vào Qdrant
-                var upsertResult = await UpsertCourseDocumentsAsync(courseId, embeddings);
-                if (!upsertResult)
-                {
-                    return ApiResponse<List<DocumentEmbeddingResponse>>.FailureResponse("Không thể lưu chunks vào Qdrant.");
-                }
-
-                stopwatch.Stop();
-                logger.LogInformation(
-                    "Embedded and saved {Count} chunks from PDF to Qdrant for course {CourseId} in {ElapsedMs}ms",
-                    embeddings.Count,
-                    courseId,
-                    stopwatch.ElapsedMilliseconds);
-
-                var responses = embeddings.Select(e => e.ToDocumentEmbeddingResponse(Guid.NewGuid())).ToList();
-
-                return ApiResponse<List<DocumentEmbeddingResponse>>.SuccessResponse(
-                    responses,
-                    $"Đã embed và lưu {embeddings.Count} chunks từ PDF vào Qdrant.");
-            }
-            catch (Exception ex)
+            if (embeddings.Count == 0)
             {
-                stopwatch.Stop();
-                logger.LogError(ex, "Error embedding PDF for course {CourseId}", courseId);
-                return ApiResponse<List<DocumentEmbeddingResponse>>.FailureResponse("Đã xảy ra lỗi khi embed PDF.");
+                logger.LogWarning("Không thể embed bất kỳ chunk nào.");
+                throw new InvalidOperationException("Không thể embed bất kỳ chunk nào.");
             }
+
+            await DeleteDocumentPointsAsync(courseId, documentId, lessonId);
+
+            var upsertResult = await UpsertCourseDocumentsAsync(courseId, embeddings);
+            if (!upsertResult)
+                throw new InvalidOperationException("Không thể lưu chunks vào Qdrant.");
+
+            stopwatch.Stop();
+            logger.LogInformation(
+                "Embedded and saved {Count} chunks from PDF to Qdrant for course {CourseId} in {ElapsedMs}ms",
+                embeddings.Count,
+                courseId,
+                stopwatch.ElapsedMilliseconds);
+
+            return embeddings.Select(e => e.ToDocumentEmbeddingResponse(Guid.NewGuid())).ToList();
         }
 
         public async Task<List<VectorSearchResult>> SearchAsync(VectorSearchRequest request)
@@ -465,47 +447,41 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
             }
         }
 
-        public async Task<ApiResponse<bool>> CheckHealthAsync()
+        public async Task<bool> CheckHealthAsync()
         {
             try
             {
-                // Check Qdrant connection
-                try
-                {
-                    var collections = await qdrantClient.ListCollectionsAsync();
-                    logger.LogDebug("Qdrant health check: Successfully listed {Count} collections", collections?.Count ?? 0);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Qdrant health check failed");
-                    return ApiResponse<bool>.FailureResponse("Không thể kết nối đến Qdrant.");
-                }
-
-                // Check Hugging Face API
-                try
-                {
-                    var testText = "health check";
-                    var embeddingResult = await EmbedTextAsync(testText);
-                    if (embeddingResult == null || embeddingResult.Vector.Length == 0)
-                    {
-                        logger.LogWarning("Hugging Face health check: Failed to embed test text");
-                        return ApiResponse<bool>.FailureResponse("Không thể embed test text.");
-                    }
-                    logger.LogDebug("Hugging Face health check: Successfully embedded test text, vector dimension: {Dimension}", embeddingResult.Dimension);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Hugging Face health check failed");
-                    return ApiResponse<bool>.FailureResponse("Không thể kết nối đến Hugging Face.");
-                }
-
-                return ApiResponse<bool>.SuccessResponse(true, "Dịch vụ embedding khỏe mạnh.");
+                await qdrantClient.ListCollectionsAsync();
+                logger.LogDebug("Qdrant health check: Successfully listed collections");
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error checking embedding service health");
-                return ApiResponse<bool>.FailureResponse("Không thể kiểm tra tình trạng dịch vụ embedding.");
+                logger.LogError(ex, "Qdrant health check failed");
+                throw new InvalidOperationException("Không thể kết nối đến Qdrant.", ex);
             }
+
+            try
+            {
+                var testText = "health check";
+                var embeddingResult = await EmbedTextAsync(testText);
+                if (embeddingResult == null || embeddingResult.Vector.Length == 0)
+                {
+                    logger.LogWarning("Hugging Face health check: Failed to embed test text");
+                    throw new InvalidOperationException("Không thể embed test text.");
+                }
+                logger.LogDebug("Hugging Face health check: Successfully embedded test text, vector dimension: {Dimension}", embeddingResult.Dimension);
+            }
+            catch (InvalidOperationException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Hugging Face health check failed");
+                throw new InvalidOperationException("Không thể kết nối đến Hugging Face.", ex);
+            }
+
+            return true;
         }
 
         private async Task<bool> CourseCollectionExistsAsync(Guid courseId)

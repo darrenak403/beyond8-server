@@ -8,16 +8,16 @@ namespace Beyond8.Catalog.Application.Clients.Identity;
 
 public class IdentityClient(HttpClient httpClient, IHttpContextAccessor httpContextAccessor, ILogger<IdentityClient> logger) : BaseClient(httpClient, httpContextAccessor), IIdentityClient
 {
-    public async Task<ApiResponse<bool>> CheckInstructorProfileVerifiedAsync(Guid instructorId)
+    public async Task<ApiResponse<bool>> CheckInstructorProfileVerifiedAsync(Guid userId)
     {
         try
         {
-            var data = await GetAsync<bool>($"/api/v1/instructors/{instructorId}/verified");
+            var data = await GetAsync<bool>($"/api/v1/instructors/{userId}/verified");
             return ApiResponse<bool>.SuccessResponse(data, "OK");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "CheckInstructorProfileVerifiedAsync failed for instructor {InstructorId}", instructorId);
+            logger.LogError(ex, "CheckInstructorProfileVerifiedAsync failed for user {UserId}", userId);
             return ApiResponse<bool>.FailureResponse(ex.Message);
         }
     }

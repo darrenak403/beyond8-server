@@ -36,12 +36,13 @@ public class SubscriptionService(
         try
         {
             var subscriptionPlans = await unitOfWork.SubscriptionPlanRepository.GetAllAsync();
-            if (subscriptionPlans == null)
+            var orderedSubscriptionPlans = subscriptionPlans.OrderBy(p => p.Price).ToList();
+            if (orderedSubscriptionPlans == null)
             {
                 logger.LogWarning("No subscription plans found");
                 return ApiResponse<List<SubscriptionPlanResponse>>.FailureResponse("Không tìm thấy gói đăng ký.");
             }
-            return ApiResponse<List<SubscriptionPlanResponse>>.SuccessResponse([.. subscriptionPlans.Select(p => p.ToSubscriptionPlanResponse())], "Lấy danh sách gói đăng ký thành công.");
+            return ApiResponse<List<SubscriptionPlanResponse>>.SuccessResponse([.. orderedSubscriptionPlans.Select(p => p.ToSubscriptionPlanResponse())], "Lấy danh sách gói đăng ký thành công.");
         }
         catch (Exception ex)
         {
@@ -50,7 +51,7 @@ public class SubscriptionService(
         }
     }
 
-    public async Task<ApiResponse<SubscriptionResponse>> UpdateSubscriptionAsync(Guid userId, UpdateSubscriptionRequest request)
+    public async Task<ApiResponse<SubscriptionResponse>> UpdateSubscriptionAsync(Guid userId, UpdateUsageQuotaRequest request)
     {
         try
         {
@@ -60,7 +61,7 @@ public class SubscriptionService(
                 logger.LogWarning("User {UserId} has no active subscription", userId);
                 return ApiResponse<SubscriptionResponse>.FailureResponse("Người dùng không có gói đăng ký hoạt động.");
             }
-            subscription.UpdateSubscriptionRequest(request);
+            subscription.UpdateUsageQuotaRequest(request);
             await unitOfWork.UserSubscriptionRepository.UpdateAsync(subscription.Id, subscription);
             await unitOfWork.SaveChangesAsync();
             return ApiResponse<SubscriptionResponse>.SuccessResponse(subscription.ToSubscriptionResponse(), "Cập nhật gói đăng ký thành công.");

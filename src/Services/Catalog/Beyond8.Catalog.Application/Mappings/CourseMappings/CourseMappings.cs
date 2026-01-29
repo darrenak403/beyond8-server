@@ -8,7 +8,7 @@ namespace Beyond8.Catalog.Application.Mappings.CourseMappings;
 
 public static class CourseMappings
 {
-    public static Course ToEntity(this CreateCourseRequest request)
+    public static Course ToEntity(this CreateCourseRequest request, Guid instructorId)
     {
         var slug = request.Title.ToSlug();
         var course = new Course
@@ -18,7 +18,6 @@ public static class CourseMappings
             Description = request.Description,
             ShortDescription = request.ShortDescription,
             CategoryId = request.CategoryId,
-            InstructorId = request.InstructorId,
             Level = request.Level,
             Language = request.Language,
             Price = request.Price,
@@ -27,7 +26,8 @@ public static class CourseMappings
             Requirements = request.Requirements != null ? JsonSerializer.Serialize(request.Requirements) : null,
             TargetAudience = request.TargetAudience != null ? JsonSerializer.Serialize(request.TargetAudience) : null,
             Status = CourseStatus.Draft,
-            IsActive = true
+            IsActive = true,
+            InstructorId = instructorId
         };
 
         return course;
@@ -37,6 +37,7 @@ public static class CourseMappings
     {
         entity.Title = request.Title;
         entity.Slug = request.Title.ToSlug();
+        entity.Description = request.Description;
         entity.ShortDescription = request.ShortDescription;
         entity.CategoryId = request.CategoryId;
         entity.Level = request.Level;

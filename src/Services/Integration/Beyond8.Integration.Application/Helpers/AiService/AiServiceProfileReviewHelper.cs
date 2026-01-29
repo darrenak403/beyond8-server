@@ -4,16 +4,9 @@ using Beyond8.Integration.Application.Dtos.Ai;
 
 namespace Beyond8.Integration.Application.Helpers.AiService
 {
-    /// <summary>
-    /// Helper xây nội dung text cho profile review và parse kết quả AI.
-    /// </summary>
     public static class AiServiceProfileReviewHelper
     {
-        /// <summary>
-        /// Xây chuỗi mô tả hồ sơ (Bio, Headline, Education, Work, Certificates, TeachingLanguages).
-        /// Phần "Các ảnh đính kèm" do caller bổ sung sau khi tải ảnh.
-        /// </summary>
-        public static string BuildProfileReviewText(ProfileReviewRequest r)
+        public static (string ProfileReviewText, List<(string Descriptor, string Url)> ImageItems) BuildProfileReviewText(ProfileReviewRequest r)
         {
             var sb = new StringBuilder();
             sb.AppendLine("## Bio\n" + (string.IsNullOrWhiteSpace(r.Bio) ? "(trống)" : r.Bio));
@@ -52,12 +45,14 @@ namespace Beyond8.Integration.Application.Helpers.AiService
             sb.AppendLine("\n## Teaching Languages");
             sb.AppendLine(r.TeachingLanguages?.Count > 0 ? string.Join(", ", r.TeachingLanguages) : "(trống)");
 
-            return sb.ToString();
+            var imageItems = new List<(string Descriptor, string Url)>();
+            foreach (var c in r.Certificates ?? [])
+                if (!string.IsNullOrWhiteSpace(c.Url))
+                    imageItems.Add(($"Chứng chỉ {c.Name}", c.Url));
+
+            return (sb.ToString(), imageItems);
         }
 
-        /// <summary>
-        /// Parse nội dung AI thành AiProfileReviewResponse. Trả về null nếu không trích được JSON hoặc deserialize thất bại.
-        /// </summary>
         public static AiProfileReviewResponse? TryParseReviewResponse(string content, JsonSerializerOptions options)
         {
             var json = AiServiceJsonHelper.ExtractJson(content);

@@ -33,9 +33,10 @@ namespace Beyond8.Identity.Infrastructure.Data.Seeders
                     MaxRequestsPerWeek = 35,
                     Includes =
                     [
-                        "35 request AI trong 7 ngày",
-                        "Đánh giá hồ sơ giảng viên",
-                        "Tạo quiz từ AI (cơ bản)"
+                        "Không yêu cầu thanh toán",
+                        "Giới hạn 35 request/tuần đầu tiên",
+                        "Tất cả các tính năng AI cơ bản",
+                        "Hỗ trợ email 24/7",
                     ],
                     IsActive = true,
                     CreatedAt = now,
@@ -47,7 +48,7 @@ namespace Beyond8.Identity.Infrastructure.Data.Seeders
                     Code = CodePlus,
                     Name = "Plus",
                     Description = "Gói theo tháng, 200 request/tháng, tối đa 50 request/tuần.",
-                    Price = 299, // Set actual price when integrating Sales
+                    Price = 299,
                     Currency = "VND",
                     DurationDays = 30,
                     TotalRequestsInPeriod = 200,
@@ -56,9 +57,8 @@ namespace Beyond8.Identity.Infrastructure.Data.Seeders
                     [
                         "200 request AI/tháng",
                         "Tối đa 50 request/tuần",
-                        "Đánh giá hồ sơ giảng viên",
-                        "Tạo quiz từ AI",
-                        "Hỗ trợ ưu tiên"
+                        "Mở rộng thêm các tính năng AI",
+                        "Hỗ trợ ưu tiên 24/7"
                     ],
                     IsActive = true,
                     CreatedAt = now,
@@ -70,7 +70,7 @@ namespace Beyond8.Identity.Infrastructure.Data.Seeders
                     Code = CodePro,
                     Name = "Pro",
                     Description = "Gói theo tháng, 400 request/tháng, tối đa 100 request/tuần.",
-                    Price = 499, // Set actual price when integrating Sales
+                    Price = 499,
                     Currency = "VND",
                     DurationDays = 30,
                     TotalRequestsInPeriod = 400,
@@ -79,10 +79,8 @@ namespace Beyond8.Identity.Infrastructure.Data.Seeders
                     [
                         "400 request AI/tháng",
                         "Tối đa 100 request/tuần",
-                        "Đánh giá hồ sơ giảng viên",
-                        "Tạo quiz từ AI",
-                        "Hỗ trợ ưu tiên",
-                        "Xuất báo cáo"
+                        "Tất cả tính năng Plus",
+                        "Hỗ trợ ưu tiên 24/7"
                     ],
                     IsActive = true,
                     CreatedAt = now,
@@ -94,7 +92,7 @@ namespace Beyond8.Identity.Infrastructure.Data.Seeders
                     Code = CodeUltra,
                     Name = "Ultra",
                     Description = "Gói theo tháng, 800 request/tháng, tối đa 200 request/tuần.",
-                    Price = 899, // Set actual price when integrating Sales
+                    Price = 899,
                     Currency = "VND",
                     DurationDays = 30,
                     TotalRequestsInPeriod = 800,
@@ -104,8 +102,7 @@ namespace Beyond8.Identity.Infrastructure.Data.Seeders
                         "800 request AI/tháng",
                         "Tối đa 200 request/tuần",
                         "Tất cả tính năng Pro",
-                        "Hỗ trợ chuyên biệt",
-                        "API riêng (khi có)"
+                        "Hỗ trợ ưu tiên 24/7"
                     ],
                     IsActive = true,
                     CreatedAt = now,

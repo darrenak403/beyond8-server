@@ -22,7 +22,7 @@ public class IdentityClient(HttpClient httpClient, IHttpContextAccessor httpCont
         }
     }
 
-    public async Task<ApiResponse<SubscriptionResponse>> UpdateUserSubscriptionAsync(Guid userId, UpdateSubscriptionRequest request)
+    public async Task<ApiResponse<SubscriptionResponse>> UpdateUserSubscriptionAsync(Guid userId, UpdateUsageQuotaRequest request)
     {
         try
         {

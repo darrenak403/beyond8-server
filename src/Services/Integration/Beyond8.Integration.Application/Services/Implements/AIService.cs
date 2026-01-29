@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Beyond8.Common.Utilities;
+using Beyond8.Integration.Application.Clients;
 using Beyond8.Integration.Application.Dtos.Ai;
 using Beyond8.Integration.Application.Dtos.AiIntegration.GenerativeAi;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Quiz;
@@ -18,7 +19,8 @@ namespace Beyond8.Integration.Application.Services.Implements
         IAiPromptService aiPromptService,
         IUrlContentDownloader urlContentDownloader,
         IStorageService storageService,
-        IVectorEmbeddingService vectorEmbeddingService) : IAiService
+        IVectorEmbeddingService vectorEmbeddingService,
+        IIdentityClient identityClient) : IAiService
     {
         private const int DefaultTopK = 15;
         private const string InstructorProfileReviewPromptName = "Instructor Profile Review";
@@ -38,8 +40,7 @@ namespace Beyond8.Integration.Application.Services.Implements
             {
                 var promptRes = await aiPromptService.GetPromptByNameAsync(InstructorProfileReviewPromptName);
                 if (!promptRes.IsSuccess || promptRes.Data == null)
-                    return ApiResponse<AiProfileReviewResponse>.FailureResponse(
-                        promptRes.Message ?? "Không tìm thấy prompt đánh giá hồ sơ.");
+                    return ApiResponse<AiProfileReviewResponse>.FailureResponse(promptRes.Message ?? "Không tìm thấy prompt đánh giá hồ sơ.");
 
                 var t = promptRes.Data;
                 var (profileReviewText, imageParts) = await BuildProfileReviewTextAndImagesAsync(request);
@@ -57,27 +58,25 @@ namespace Beyond8.Integration.Application.Services.Implements
                     topP: t.TopP,
                     inlineImages: imageParts.Count > 0 ? imageParts : null);
 
+                await SubscriptionHelper.UpdateUsageQuotaAsync(identityClient, userId);
+
                 if (!geminiResult.IsSuccess || geminiResult.Data == null)
-                    return ApiResponse<AiProfileReviewResponse>.FailureResponse(
-                        geminiResult.Message ?? "Đã xảy ra lỗi khi đánh giá hồ sơ.");
+                    return ApiResponse<AiProfileReviewResponse>.FailureResponse(geminiResult.Message ?? "Đã xảy ra lỗi khi đánh giá hồ sơ.");
 
                 var parsed = AiServiceProfileReviewHelper.TryParseReviewResponse(geminiResult.Data.Content, JsonOptions);
                 if (parsed == null)
                 {
                     var raw = geminiResult.Data.Content?.Length > 800 ? geminiResult.Data.Content[..800] : geminiResult.Data.Content ?? "";
                     logger.LogWarning("Failed to parse review response for user {UserId}: no valid JSON. Raw (first 800): {Raw}", userId, raw);
-                    return ApiResponse<AiProfileReviewResponse>.FailureResponse(
-                        "Không thể phân tích kết quả đánh giá từ AI. Vui lòng thử lại.");
+                    return ApiResponse<AiProfileReviewResponse>.FailureResponse("Không thể phân tích kết quả đánh giá từ AI. Vui lòng thử lại.");
                 }
 
-                return ApiResponse<AiProfileReviewResponse>.SuccessResponse(
-                    parsed, "Đánh giá hồ sơ giảng viên thành công.");
+                return ApiResponse<AiProfileReviewResponse>.SuccessResponse(parsed, "Đánh giá hồ sơ giảng viên thành công.");
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error in InstructorApplicationReview for user {UserId}", userId);
-                return ApiResponse<AiProfileReviewResponse>.FailureResponse(
-                    "Đã xảy ra lỗi khi đánh giá hồ sơ giảng viên.");
+                return ApiResponse<AiProfileReviewResponse>.FailureResponse("Đã xảy ra lỗi khi đánh giá hồ sơ giảng viên.");
             }
         }
 
@@ -90,14 +89,12 @@ namespace Beyond8.Integration.Application.Services.Implements
             {
                 var promptRes = await aiPromptService.GetPromptByNameAsync(QuizGenerationPromptName);
                 if (!promptRes.IsSuccess || promptRes.Data == null)
-                    return ApiResponse<GenQuizResponse>.FailureResponse(
-                        promptRes.Message ?? "Không tìm thấy prompt tạo câu hỏi tự động.");
+                    return ApiResponse<GenQuizResponse>.FailureResponse(promptRes.Message ?? "Không tìm thấy prompt tạo câu hỏi tự động.");
 
                 var searchRequest = request.ToVectorSearchRequest(DefaultTopK);
                 var contextChunks = await vectorEmbeddingService.SearchAsync(searchRequest);
                 if (contextChunks == null || contextChunks.Count == 0)
-                    return ApiResponse<GenQuizResponse>.FailureResponse(
-                        "Không tìm thấy ngữ cảnh phù hợp cho khóa học này. Vui lòng thêm tài liệu vào khóa học trước.");
+                    return ApiResponse<GenQuizResponse>.FailureResponse("Không tìm thấy ngữ cảnh phù hợp cho khóa học này. Vui lòng thêm tài liệu vào khóa học trước.");
 
                 var contextText = AiServiceQuizHelper.BuildQuizContextText(contextChunks);
                 var distribution = request.Distribution ?? new DifficultyDistribution();
@@ -106,7 +103,14 @@ namespace Beyond8.Integration.Application.Services.Implements
 
                 var prompt = promptRes.Data;
                 var userPrompt = AiServiceQuizHelper.BuildQuizPromptFromTemplate(
-                    prompt.Template, prompt.SystemPrompt, contextText, queryPart, easyCount, mediumCount, hardCount, request.MaxPoints);
+                    prompt.Template,
+                    prompt.SystemPrompt,
+                    contextText,
+                    queryPart,
+                    easyCount,
+                    mediumCount,
+                    hardCount,
+                    request.MaxPoints);
 
                 logger.LogInformation("User prompt: {UserPrompt}", userPrompt);
 
@@ -119,6 +123,8 @@ namespace Beyond8.Integration.Application.Services.Implements
                     temperature: prompt.Temperature,
                     topP: prompt.TopP);
 
+                await SubscriptionHelper.UpdateUsageQuotaAsync(identityClient, userId);
+
                 if (!aiResult.IsSuccess || aiResult.Data == null)
                     return ApiResponse<GenQuizResponse>.FailureResponse(
                         aiResult.Message ?? "Không thể sinh quiz. Vui lòng thử lại.");
@@ -128,12 +134,10 @@ namespace Beyond8.Integration.Application.Services.Implements
                 {
                     var preview = aiResult.Data.Content?.Length > 500 ? aiResult.Data.Content[..500] + "..." : aiResult.Data.Content ?? "";
                     logger.LogWarning("ParseQuizResponse failed for CourseId {CourseId}. AI content preview: {Preview}", request.CourseId, preview);
-                    return ApiResponse<GenQuizResponse>.FailureResponse(
-                        "Không thể phân tích kết quả quiz từ AI. Kiểm tra lại thông tin.");
+                    return ApiResponse<GenQuizResponse>.FailureResponse("Không thể phân tích kết quả quiz từ AI. Kiểm tra lại thông tin.");
                 }
 
-                return ApiResponse<GenQuizResponse>.SuccessResponse(
-                    parsed, "Tạo quiz từ AI thành công.");
+                return ApiResponse<GenQuizResponse>.SuccessResponse(parsed, "Tạo quiz từ AI thành công.");
             }
             catch (Exception ex)
             {
@@ -146,11 +150,7 @@ namespace Beyond8.Integration.Application.Services.Implements
 
         private async Task<(string ProfileReviewText, List<GenerativeAiImagePart> ImageParts)> BuildProfileReviewTextAndImagesAsync(ProfileReviewRequest r)
         {
-            var profileText = AiServiceProfileReviewHelper.BuildProfileReviewText(r);
-
-            var imageItems = new List<(string Descriptor, string Url)>();
-            foreach (var c in r.Certificates ?? [])
-                if (!string.IsNullOrWhiteSpace(c.Url)) imageItems.Add(($"Chứng chỉ {c.Name}", c.Url));
+            var (profileText, imageItems) = AiServiceProfileReviewHelper.BuildProfileReviewText(r);
 
             var imageParts = new List<GenerativeAiImagePart>();
             var succeededDescriptors = new List<string>();
@@ -199,6 +199,5 @@ namespace Beyond8.Integration.Application.Services.Implements
             var (data2, ct) = await storageService.GetObjectAsync(urlOrKey);
             return (data2, ct ?? "image/jpeg");
         }
-
     }
 }

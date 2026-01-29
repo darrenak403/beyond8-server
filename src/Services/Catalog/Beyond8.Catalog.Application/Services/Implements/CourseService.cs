@@ -1,10 +1,8 @@
-using Beyond8.Catalog.Application.Clients.Identity;
 using Beyond8.Catalog.Application.Dtos.Courses;
 using Beyond8.Catalog.Application.Mappings.CourseMappings;
 using Beyond8.Catalog.Application.Services.Interfaces;
 using Beyond8.Catalog.Domain.Enums;
 using Beyond8.Catalog.Domain.Repositories.Interfaces;
-using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -13,37 +11,61 @@ namespace Beyond8.Catalog.Application.Services.Implements;
 
 public class CourseService(
     ILogger<CourseService> logger,
-    IUnitOfWork unitOfWork,
-    IIdentityClient identityClient) : ICourseService
+    IUnitOfWork unitOfWork) : ICourseService
 {
-    public async Task<ApiResponse<CourseResponse>> CreateCourseAsync(CreateCourseRequest request)
+
+    public async Task<ApiResponse<List<CourseResponse>>> GetAllCoursesAsync(PaginationCourseSearchRequest request)
     {
         try
         {
-            var verificationResponse = await identityClient.CheckInstructorProfileVerifiedAsync(request.InstructorId);
-            if (!verificationResponse.IsSuccess || !verificationResponse.Data)
-            {
-                logger.LogWarning("Instructor {InstructorId} is not verified", request.InstructorId);
-                return ApiResponse<CourseResponse>.FailureResponse("Giảng viên chưa được xác minh.");
-            }
+            var (courses, totalCount) = await unitOfWork.CourseRepository.SearchCoursesAsync(
+                pageNumber: request.PageNumber,
+                pageSize: request.PageSize,
+                keyword: request.Keyword,
+                categoryId: request.CategoryId,
+                instructorId: request.InstructorId,
+                status: request.Status,
+                level: request.Level,
+                language: request.Language,
+                minPrice: request.MinPrice,
+                maxPrice: request.MaxPrice,
+                minRating: request.MinRating,
+                minStudents: request.MinStudents,
+                isActive: request.IsActive,
+                isDescending: request.IsDescending,
+                isRandom: request.IsRandom
+            );
 
+            var courseResponses = courses.Select(c => c.ToResponse()).ToList();
+
+            return ApiResponse<List<CourseResponse>>.SuccessPagedResponse(
+                courseResponses,
+                totalCount,
+                request.PageNumber,
+                request.PageSize,
+                "Lấy danh sách khóa học thành công."
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting all courses");
+            return ApiResponse<List<CourseResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách khóa học.");
+        }
+    }
+
+    public async Task<ApiResponse<CourseResponse>> CreateCourseAsync(CreateCourseRequest request, Guid currentUserId)
+    {
+        try
+        {
             // Validate category exists
-            var category = await unitOfWork.CategoryRepository.FindOneAsync(c => c.Id == request.CategoryId && c.IsActive);
+            var category = await unitOfWork.CategoryRepository.FindOneAsync(c => c.Id == request.CategoryId && c.IsActive && !c.IsRoot);
             if (category == null)
             {
                 logger.LogWarning("Category not found or inactive: {CategoryId}", request.CategoryId);
                 return ApiResponse<CourseResponse>.FailureResponse("Danh mục không tồn tại hoặc không hoạt động.");
             }
 
-            // Check if course title already exists
-            var existingCourse = await unitOfWork.CourseRepository.FindOneAsync(c => c.Title == request.Title);
-            if (existingCourse != null)
-            {
-                logger.LogWarning("Course with title already exists: {Title}", request.Title);
-                return ApiResponse<CourseResponse>.FailureResponse("Khóa học với tiêu đề này đã tồn tại.");
-            }
-
-            var course = request.ToEntity();
+            var course = request.ToEntity(currentUserId);
             await unitOfWork.CourseRepository.AddAsync(course);
             await unitOfWork.SaveChangesAsync();
 
@@ -64,27 +86,12 @@ public class CourseService(
             var course = await unitOfWork.CourseRepository
                 .AsQueryable()
                 .Include(c => c.Category)
-                .FirstOrDefaultAsync(c => c.Id == id && c.IsActive);
+                .FirstOrDefaultAsync(c => c.Id == id && c.IsActive && c.InstructorId == currentUserId);
 
             if (course == null)
             {
                 logger.LogWarning("Course not found: {CourseId}", id);
                 return ApiResponse<CourseResponse>.FailureResponse("Khóa học không tồn tại.");
-            }
-
-            // Authorization check: Only the instructor who owns the course can update it
-            if (course.InstructorId != currentUserId)
-            {
-                logger.LogWarning("Unauthorized update attempt: User {UserId} tried to update course {CourseId} owned by {OwnerId}", currentUserId, id, course.InstructorId);
-                return ApiResponse<CourseResponse>.FailureResponse("Bạn không có quyền cập nhật khóa học này.");
-            }
-
-            // Check instructor verification status
-            var verificationResponse = await identityClient.CheckInstructorProfileVerifiedAsync(course.InstructorId);
-            if (!verificationResponse.IsSuccess || !verificationResponse.Data)
-            {
-                logger.LogWarning("Instructor {UserId} is not verified", currentUserId);
-                return ApiResponse<CourseResponse>.FailureResponse("Giảng viên chưa được xác minh.");
             }
 
             // Status validation: Prevent updates on suspended or archived courses
@@ -94,23 +101,12 @@ public class CourseService(
                 return ApiResponse<CourseResponse>.FailureResponse("Không thể cập nhật khóa học ở trạng thái này.");
             }
 
-            // Allow metadata updates for any active status (Draft, PendingApproval, Approved, Published, etc.)
-            // Status remains unchanged - no re-approval needed for metadata changes
-
             // Validate category exists
-            var category = await unitOfWork.CategoryRepository.FindOneAsync(c => c.Id == request.CategoryId && c.IsActive);
+            var category = await unitOfWork.CategoryRepository.FindOneAsync(c => c.Id == request.CategoryId && c.IsActive && !c.IsRoot);
             if (category == null)
             {
                 logger.LogWarning("Category not found or inactive: {CategoryId}", request.CategoryId);
                 return ApiResponse<CourseResponse>.FailureResponse("Danh mục không tồn tại hoặc không hoạt động.");
-            }
-
-            // Check if new title conflicts with existing courses (excluding current)
-            var existingCourse = await unitOfWork.CourseRepository.FindOneAsync(c => c.Title == request.Title && c.Id != id);
-            if (existingCourse != null)
-            {
-                logger.LogWarning("Course with title already exists: {Title}", request.Title);
-                return ApiResponse<CourseResponse>.FailureResponse("Khóa học với tiêu đề này đã tồn tại.");
             }
 
             course.UpdateMetadataFromRequest(request);
@@ -133,19 +129,12 @@ public class CourseService(
             var course = await unitOfWork.CourseRepository
                 .AsQueryable()
                 .Include(c => c.Category)
-                .FirstOrDefaultAsync(c => c.Id == id && c.IsActive);
+                .FirstOrDefaultAsync(c => c.Id == id && c.IsActive && c.InstructorId == currentUserId);
 
             if (course == null)
             {
                 logger.LogWarning("Course not found: {CourseId}", id);
                 return ApiResponse<CourseResponse>.FailureResponse("Khóa học không tồn tại.");
-            }
-
-            // Authorization check: Only the instructor who owns the course can view it
-            if (course.InstructorId != currentUserId)
-            {
-                logger.LogWarning("Unauthorized access attempt: User {UserId} tried to view course {CourseId} owned by {OwnerId}", currentUserId, id, course.InstructorId);
-                return ApiResponse<CourseResponse>.FailureResponse("Bạn không có quyền xem khóa học này.");
             }
 
             return ApiResponse<CourseResponse>.SuccessResponse(course.ToResponse(), "Lấy thông tin khóa học thành công.");
@@ -161,40 +150,19 @@ public class CourseService(
     {
         try
         {
-            var course = await unitOfWork.CourseRepository.FindOneAsync(c => c.Id == id);
+            var course = await unitOfWork.CourseRepository.FindOneAsync(c => c.Id == id && c.IsActive && c.InstructorId == currentUserId);
             if (course == null)
             {
                 logger.LogWarning("Course not found: {CourseId}", id);
                 return ApiResponse<bool>.FailureResponse("Khóa học không tồn tại.");
             }
 
-            // Authorization check: Only the instructor who owns the course can delete it
-            if (course.InstructorId != currentUserId)
-            {
-                logger.LogWarning("Unauthorized delete attempt: User {UserId} tried to delete course {CourseId} owned by {OwnerId}", currentUserId, id, course.InstructorId);
-                return ApiResponse<bool>.FailureResponse("Bạn không có quyền xóa khóa học này.");
-            }
-
-            // Check instructor verification status
-            var verificationResponse = await identityClient.CheckInstructorProfileVerifiedAsync(course.InstructorId);
-            if (!verificationResponse.IsSuccess || !verificationResponse.Data)
-            {
-                logger.LogWarning("Instructor {UserId} is not verified", currentUserId);
-                return ApiResponse<bool>.FailureResponse("Giảng viên chưa được xác minh.");
-            }
-
-            // Status validation: Prevent deletion of published courses with active enrollments
             if (course.Status == CourseStatus.Published)
             {
-                // TODO: Check for active enrollments
                 logger.LogWarning("Cannot delete published course: {CourseId}", id);
                 return ApiResponse<bool>.FailureResponse("Không thể xóa khóa học đã xuất bản.");
             }
 
-            // Check if course has enrollments
-            // TODO: Check enrollments when enrollment service is implemented
-
-            // Soft delete - set IsActive flag to false
             course.IsActive = false;
             await unitOfWork.CourseRepository.UpdateAsync(id, course);
             await unitOfWork.SaveChangesAsync();
@@ -277,27 +245,12 @@ public class CourseService(
                 .AsQueryable()
                 .Include(c => c.Sections)
                 .ThenInclude(s => s.Lessons)
-                .FirstOrDefaultAsync(c => c.Id == courseId && c.IsActive);
+                .FirstOrDefaultAsync(c => c.Id == courseId && c.IsActive && c.InstructorId == currentUserId);
 
             if (course == null)
             {
                 logger.LogWarning("Course not found: {CourseId}", courseId);
                 return ApiResponse<bool>.FailureResponse("Khóa học không tồn tại.");
-            }
-
-            // Authorization check: Only the instructor who owns the course can submit for approval
-            if (course.InstructorId != currentUserId)
-            {
-                logger.LogWarning("Unauthorized submit attempt: User {UserId} tried to submit course {CourseId} owned by {OwnerId}", currentUserId, courseId, course.InstructorId);
-                return ApiResponse<bool>.FailureResponse("Bạn không có quyền nộp duyệt khóa học này.");
-            }
-
-            // Check instructor verification status
-            var verificationResponse = await identityClient.CheckInstructorProfileVerifiedAsync(course.InstructorId);
-            if (!verificationResponse.IsSuccess || !verificationResponse.Data)
-            {
-                logger.LogWarning("Instructor {UserId} is not verified", currentUserId);
-                return ApiResponse<bool>.FailureResponse("Giảng viên chưa được xác minh.");
             }
 
             // Validate course can be submitted
@@ -442,14 +395,6 @@ public class CourseService(
                 return ApiResponse<bool>.FailureResponse("Bạn không có quyền công bố khóa học này.");
             }
 
-            // Check instructor verification status
-            var verificationResponse = await identityClient.CheckInstructorProfileVerifiedAsync(course.InstructorId);
-            if (!verificationResponse.IsSuccess || !verificationResponse.Data)
-            {
-                logger.LogWarning("Instructor {UserId} is not verified", currentUserId);
-                return ApiResponse<bool>.FailureResponse("Giảng viên chưa được xác minh.");
-            }
-
             if (course.Status != CourseStatus.Approved)
             {
                 return ApiResponse<bool>.FailureResponse("Chỉ có thể công bố khóa học đã được phê duyệt.");
@@ -485,14 +430,6 @@ public class CourseService(
             {
                 logger.LogWarning("Unauthorized unpublish attempt: User {UserId} tried to unpublish course {CourseId} owned by {OwnerId}", currentUserId, courseId, course.InstructorId);
                 return ApiResponse<bool>.FailureResponse("Bạn không có quyền gỡ bỏ công bố khóa học này.");
-            }
-
-            // Check instructor verification status
-            var verificationResponse = await identityClient.CheckInstructorProfileVerifiedAsync(course.InstructorId);
-            if (!verificationResponse.IsSuccess || !verificationResponse.Data)
-            {
-                logger.LogWarning("Instructor {UserId} is not verified", currentUserId);
-                return ApiResponse<bool>.FailureResponse("Giảng viên chưa được xác minh.");
             }
 
             if (course.Status != CourseStatus.Published)
