@@ -195,34 +195,46 @@ public class CourseService(
         }
     }
 
-    public async Task<ApiResponse<List<CourseResponse>>> GetCoursesByInstructorAsync(Guid instructorId, PaginationCourseSearchRequest pagination)
+    public async Task<ApiResponse<List<CourseResponse>>> GetCoursesByInstructorAsync(Guid instructorId, PaginationCourseSearchRequest request)
     {
         try
         {
             logger.LogInformation("Getting courses for instructor: {InstructorId}", instructorId);
 
-            var query = unitOfWork.CourseRepository
-                .AsQueryable()
-                .Include(c => c.Category)
-                .Where(c => c.InstructorId == instructorId);
+            var pageNumber = request.PageNumber < 1 ? 1 : request.PageNumber;
+            var pageSize = request.PageSize switch
+            {
+                < 1 => 10,
+                > 100 => 100,
+                _ => request.PageSize
+            };
 
-            var totalCount = await query.CountAsync();
+            var (courses, totalCount) = await unitOfWork.CourseRepository.SearchCoursesAsync(
+                pageNumber,
+                pageSize,
+                keyword: request.Keyword,
+                categoryName: request.CategoryName,
+                instructorName: request.InstructorName,
+                status: request.Status,
+                level: request.Level,
+                language: request.Language,
+                minPrice: request.MinPrice,
+                maxPrice: request.MaxPrice,
+                minRating: request.MinRating,
+                minStudents: request.MinStudents,
+                isActive: request.IsActive,
+                isDescending: request.IsDescending,
+                isRandom: request.IsRandom,
+                instructorId: instructorId
+            );
 
-            var items = await query
-                .OrderByDescending(c => c.CreatedAt)
-                .Skip((pagination.PageNumber - 1) * pagination.PageSize)
-                .Take(pagination.PageSize)
-                .ToListAsync();
-
-            logger.LogInformation("Found {Count} courses for instructor: {InstructorId}", totalCount, instructorId);
-
-            var courseResponses = items.Select(c => c.ToResponse()).ToList();
+            var courseResponses = courses.Select(c => c.ToResponse()).ToList();
 
             return ApiResponse<List<CourseResponse>>.SuccessPagedResponse(
                 courseResponses,
                 totalCount,
-                pagination.PageNumber,
-                pagination.PageSize,
+                pageNumber,
+                pageSize,
                 "Lấy danh sách khóa học thành công."
             );
         }

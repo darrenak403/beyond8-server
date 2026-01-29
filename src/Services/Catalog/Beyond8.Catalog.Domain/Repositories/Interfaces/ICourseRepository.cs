@@ -21,6 +21,7 @@ namespace Beyond8.Catalog.Domain.Repositories.Interfaces
             int? minStudents,
             bool? isActive,
             bool? isDescending,
-            bool? isRandom);
+            bool? isRandom,
+            Guid? instructorId = null);
     }
 }

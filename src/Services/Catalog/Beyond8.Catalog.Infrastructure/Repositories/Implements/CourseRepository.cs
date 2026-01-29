@@ -24,14 +24,23 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
             int? minStudents,
             bool? isActive,
             bool? isDescending,
-            bool? isRandom)
+            bool? isRandom,
+            Guid? instructorId = null)
         {
-            var effectiveStatus = status ?? CourseStatus.Published;
-
             var query = context.Courses
                 .Include(c => c.Category)
-                .Where(c => c.InstructorVerificationStatus == InstructorVerificationStatus.Verified)
-                .Where(c => c.Status == effectiveStatus);
+                .AsQueryable();
+
+            if (instructorId.HasValue)
+            {
+                query = query.Where(c => c.InstructorId == instructorId.Value);
+            }
+            else
+            {
+                query = query.Where(c => c.InstructorVerificationStatus == InstructorVerificationStatus.Verified);
+                var effectiveStatus = status ?? CourseStatus.Published;
+                query = query.Where(c => c.Status == effectiveStatus);
+            }
 
             if (!string.IsNullOrWhiteSpace(keyword))
             {
@@ -50,6 +59,11 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
             if (!string.IsNullOrWhiteSpace(instructorName))
             {
                 query = query.Where(c => c.InstructorName == instructorName);
+            }
+
+            if (status.HasValue && !instructorId.HasValue)
+            {
+                query = query.Where(c => c.Status == status.Value);
             }
 
             if (level.HasValue)
