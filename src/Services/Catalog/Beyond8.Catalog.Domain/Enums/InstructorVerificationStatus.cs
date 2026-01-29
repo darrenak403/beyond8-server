@@ -1,8 +1,10 @@
-namespace Beyond8.Catalog.Domain.Enums
+namespace Beyond8.Catalog.Domain.Enums;
+
+public enum InstructorVerificationStatus
 {
-    public enum InstructorVerificationStatus
-    {
-        Verified = 1,
-        Hidden = 2
-    }
+    Pending = 0,
+    Verified = 1,
+    RequestUpdate = 2,
+    Hidden = 3,
+    Recovering = 4
 }

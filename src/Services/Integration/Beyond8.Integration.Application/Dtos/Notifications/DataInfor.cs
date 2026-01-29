@@ -1,9 +1,8 @@
-namespace Beyond8.Integration.Application.Dtos.Notifications
+namespace Beyond8.Integration.Application.Dtos.Notifications;
+
+public class DataInfor
 {
-    public class DataInfor
-    {
-        public string Title { get; set; } = string.Empty;
-        public string Message { get; set; } = string.Empty;
-        public object? Metadata { get; set; }
-    }
+    public string Title { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+    public object? Metadata { get; set; }
 }

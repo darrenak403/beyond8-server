@@ -1,8 +1,7 @@
-namespace Beyond8.Identity.Application.Dtos.Auth
+namespace Beyond8.Identity.Application.Dtos.Auth;
+
+public class VerifyOtpRequest
 {
-    public class VerifyOtpRequest
-    {
-        public string Email { get; set; } = string.Empty;
-        public string OtpCode { get; set; } = string.Empty;
-    }
+    public string Email { get; set; } = string.Empty;
+    public string OtpCode { get; set; } = string.Empty;
 }

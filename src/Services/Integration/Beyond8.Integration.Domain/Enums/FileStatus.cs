@@ -1,10 +1,9 @@
-namespace Beyond8.Integration.Domain.Enums
+namespace Beyond8.Integration.Domain.Enums;
+
+public enum FileStatus
 {
-    public enum FileStatus
-    {
-        Pending,
-        Uploaded,
-        Failed,
-        Deleted
-    }
+    Pending,
+    Uploaded,
+    Failed,
+    Deleted
 }

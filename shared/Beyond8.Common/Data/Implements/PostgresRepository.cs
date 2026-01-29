@@ -2,111 +2,110 @@ using Beyond8.Common.Data.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 
-namespace Beyond8.Common.Data.Implements
+namespace Beyond8.Common.Data.Implements;
+
+public class PostgresRepository<T>(DbContext context) : IGenericRepository<T> where T : class, IEntity
 {
-    public class PostgresRepository<T>(DbContext context) : IGenericRepository<T> where T : class, IEntity
+    protected readonly DbSet<T> _dbSet = context.Set<T>();
+    protected readonly DbContext _context = context;
+
+    public async Task<T> AddAsync(T entity)
     {
-        protected readonly DbSet<T> _dbSet = context.Set<T>();
-        protected readonly DbContext _context = context;
+        await _dbSet.AddAsync(entity);
+        return entity;
+    }
 
-        public async Task<T> AddAsync(T entity)
+    public async Task<long> CountAsync(Expression<Func<T, bool>> expression)
+    {
+        var count = await _dbSet.CountAsync(expression);
+        return count;
+    }
+
+    public Task DeleteAsync(Guid id)
+    {
+        var entity = _dbSet.Find(id);
+        if (entity != null)
         {
-            await _dbSet.AddAsync(entity);
-            return entity;
+            _dbSet.Remove(entity);
         }
+        return Task.CompletedTask;
+    }
 
-        public async Task<long> CountAsync(Expression<Func<T, bool>> expression)
-        {
-            var count = await _dbSet.CountAsync(expression);
-            return count;
-        }
+    public async Task<T?> FindOneAsync(Expression<Func<T, bool>> expression)
+    {
+        return await _dbSet.AsNoTracking().FirstOrDefaultAsync(expression);
+    }
 
-        public Task DeleteAsync(Guid id)
+    public async Task<IReadOnlyCollection<T>> GetAllAsync()
+    {
+        return await _dbSet.AsNoTracking().ToListAsync();
+    }
+
+    public async Task<IReadOnlyCollection<T>> GetAllAsync(Expression<Func<T, bool>> expression)
+    {
+        return await _dbSet.Where(expression).AsNoTracking().ToListAsync();
+    }
+
+    public async Task<T?> GetByIdAsync(Guid id, Expression<Func<T, bool>> expression)
+    {
+        return await _dbSet.Where(expression).AsNoTracking().FirstOrDefaultAsync(e => e.Id == id);
+    }
+
+    public async Task<T?> GetByIdAsync(Guid id)
+    {
+        return await _dbSet.FindAsync(id);
+    }
+
+    public Task UpdateAsync(Guid id, T entity)
+    {
+        var existingEntity = _dbSet.Find(id);
+        if (existingEntity != null)
         {
-            var entity = _dbSet.Find(id);
-            if (entity != null)
+            if (!ReferenceEquals(existingEntity, entity))
             {
-                _dbSet.Remove(entity);
+                _context.Entry(existingEntity).CurrentValues.SetValues(entity);
             }
-            return Task.CompletedTask;
         }
+        return Task.CompletedTask;
+    }
 
-        public async Task<T?> FindOneAsync(Expression<Func<T, bool>> expression)
+    public IQueryable<T> AsQueryable()
+    {
+        return _dbSet.AsQueryable();
+    }
+
+    public async Task<(List<T> Items, int TotalCount)> GetPagedAsync(
+        int pageNumber,
+        int pageSize,
+        Expression<Func<T, bool>>? filter = null,
+        Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = null,
+        Func<IQueryable<T>, IQueryable<T>>? includes = null)
+    {
+        IQueryable<T> query = _dbSet;
+
+        if (includes != null)
         {
-            return await _dbSet.AsNoTracking().FirstOrDefaultAsync(expression);
+            query = includes(query);
         }
 
-        public async Task<IReadOnlyCollection<T>> GetAllAsync()
+        if (filter != null)
         {
-            return await _dbSet.AsNoTracking().ToListAsync();
+            query = query.Where(filter);
         }
 
-        public async Task<IReadOnlyCollection<T>> GetAllAsync(Expression<Func<T, bool>> expression)
+        int totalCount = await query.CountAsync();
+
+        if (orderBy != null)
         {
-            return await _dbSet.Where(expression).AsNoTracking().ToListAsync();
+            query = orderBy(query);
         }
 
-        public async Task<T?> GetByIdAsync(Guid id, Expression<Func<T, bool>> expression)
-        {
-            return await _dbSet.Where(expression).AsNoTracking().FirstOrDefaultAsync(e => e.Id == id);
-        }
+        var items = await query
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .AsNoTracking()
+            .ToListAsync();
 
-        public async Task<T?> GetByIdAsync(Guid id)
-        {
-            return await _dbSet.FindAsync(id);
-        }
-
-        public Task UpdateAsync(Guid id, T entity)
-        {
-            var existingEntity = _dbSet.Find(id);
-            if (existingEntity != null)
-            {
-                if (!ReferenceEquals(existingEntity, entity))
-                {
-                    _context.Entry(existingEntity).CurrentValues.SetValues(entity);
-                }
-            }
-            return Task.CompletedTask;
-        }
-
-        public IQueryable<T> AsQueryable()
-        {
-            return _dbSet.AsQueryable();
-        }
-
-        public async Task<(List<T> Items, int TotalCount)> GetPagedAsync(
-            int pageNumber,
-            int pageSize,
-            Expression<Func<T, bool>>? filter = null,
-            Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = null,
-            Func<IQueryable<T>, IQueryable<T>>? includes = null)
-        {
-            IQueryable<T> query = _dbSet;
-
-            if (includes != null)
-            {
-                query = includes(query);
-            }
-
-            if (filter != null)
-            {
-                query = query.Where(filter);
-            }
-
-            int totalCount = await query.CountAsync();
-
-            if (orderBy != null)
-            {
-                query = orderBy(query);
-            }
-
-            var items = await query
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .AsNoTracking()
-                .ToListAsync();
-
-            return (items, totalCount);
-        }
+        return (items, totalCount);
     }
 }

@@ -1,10 +1,9 @@
-namespace Beyond8.Integration.Application.Dtos.Emails
+namespace Beyond8.Integration.Application.Dtos.Emails;
+
+public class SendEmailRequest
 {
-    public class SendEmailRequest
-    {
-        public string To { get; set; } = string.Empty;
-        public string Subject { get; set; } = string.Empty;
-        public string Body { get; set; } = string.Empty;
-        public string? From { get; set; } = null;
-    }
+    public string To { get; set; } = string.Empty;
+    public string Subject { get; set; } = string.Empty;
+    public string Body { get; set; } = string.Empty;
+    public string? From { get; set; } = null;
 }

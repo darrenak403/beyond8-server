@@ -1,13 +1,10 @@
-namespace Beyond8.Catalog.Domain.Enums
+namespace Beyond8.Catalog.Domain.Enums;
+
+public enum CourseStatus
 {
-    public enum CourseStatus
-    {
-        Draft = 0,
-        PendingApproval = 1,
-        Approved = 2,
-        Rejected = 3,
-        Published = 4,
-        Archived = 5,
-        Suspended = 6
-    }
+    Draft = 0,
+    UnderReview = 1,
+    Published = 2,
+    Archived = 3,
+    Suspended = 4
 }

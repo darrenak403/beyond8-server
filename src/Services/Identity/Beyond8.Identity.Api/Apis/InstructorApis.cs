@@ -115,14 +115,6 @@ namespace Beyond8.Identity.Api.Apis
                 .Produces(StatusCodes.Status401Unauthorized)
                 .Produces(StatusCodes.Status403Forbidden);
 
-
-            group.MapGet("/{id:Guid}/verified", CheckInstructorProfileVerifiedAsync)
-                .WithName("CheckInstructorProfileVerified")
-                .WithDescription("Kiểm tra trạng thái hồ sơ giảng viên có được xác minh hay không")
-                .AllowAnonymous()
-                .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
-                .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest);
-
             return group;
         }
 
@@ -202,16 +194,6 @@ namespace Beyond8.Identity.Api.Apis
             return response.IsSuccess
                             ? Results.Ok(response)
                             : Results.NotFound(response);
-        }
-
-        private static async Task<IResult> CheckInstructorProfileVerifiedAsync(
-            [FromServices] ICurrentUserService currentUserService,
-            [FromServices] IInstructorService instructorService)
-        {
-            var response = await instructorService.CheckInstructorProfileVerifiedAsync(currentUserService.UserId);
-            return response.IsSuccess
-                            ? Results.Ok(response)
-                            : Results.BadRequest(response);
         }
 
         private static async Task<IResult> GetInstructorProfilesForAdminAsync(

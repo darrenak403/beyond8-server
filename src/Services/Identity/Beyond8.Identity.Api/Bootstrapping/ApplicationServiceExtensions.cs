@@ -11,58 +11,54 @@ using FluentValidation;
 using Microsoft.AspNetCore.Identity;
 using Scalar.AspNetCore;
 
-namespace Beyond8.Identity.Api.Bootstrapping
+namespace Beyond8.Identity.Api.Bootstrapping;
+
+public static class Bootstrapper
 {
-    public static class Bootstrapper
+    public static IHostApplicationBuilder AddApplicationServices(this IHostApplicationBuilder builder)
     {
-        public static IHostApplicationBuilder AddApplicationServices(this IHostApplicationBuilder builder)
+
+        builder.Services.AddOpenApi();
+
+        builder.AddCommonExtensions();
+
+        builder.AddPostgresDatabase<IdentityDbContext>(Const.IdentityServiceDatabase);
+
+        builder.AddServiceRedis(nameof(Identity), connectionName: Const.Redis);
+
+        builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+        // Configure MassTransit with RabbitMQ 
+        builder.AddMassTransitWithRabbitMq();
+
+        // Register services
+        builder.Services.AddScoped<PasswordHasher<User>>();
+        builder.Services.AddScoped<IAuthService, AuthService>();
+        builder.Services.AddScoped<ITokenService, TokenService>();
+        builder.Services.AddScoped<IUserService, UserService>();
+        builder.Services.AddScoped<IInstructorService, InstructorService>();
+
+        // Add FluentValidation validators
+        builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequest>();
+
+        return builder;
+    }
+
+    public static WebApplication UseApplicationServices(this WebApplication app)
+    {
+        app.UseCommonService();
+
+        if (app.Environment.IsDevelopment())
         {
-
-            builder.Services.AddOpenApi();
-
-            builder.AddCommonExtensions();
-
-            builder.AddPostgresDatabase<IdentityDbContext>(Const.IdentityServiceDatabase);
-
-            builder.AddServiceRedis(nameof(Identity), connectionName: Const.Redis);
-
-            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-
-            // Configure MassTransit with RabbitMQ 
-            builder.AddMassTransitWithRabbitMq();
-
-            // Register services
-            builder.Services.AddScoped<PasswordHasher<User>>();
-            builder.Services.AddScoped<IAuthService, AuthService>();
-            builder.Services.AddScoped<ITokenService, TokenService>();
-            builder.Services.AddScoped<IUserService, UserService>();
-            builder.Services.AddScoped<IInstructorService, InstructorService>();
-            builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
-
-            // Add FluentValidation validators
-            builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequest>();
-
-            return builder;
+            app.MapOpenApi();
+            app.MapScalarApiReference();
         }
 
-        public static WebApplication UseApplicationServices(this WebApplication app)
-        {
-            app.UseCommonService();
+        app.UseHttpsRedirection();
 
-            if (app.Environment.IsDevelopment())
-            {
-                app.MapOpenApi();
-                app.MapScalarApiReference();
-            }
-
-            app.UseHttpsRedirection();
-
-            app.MapAuthApi();
-            app.MapUserApi();
-            app.MapInstructorApi();
-            app.MapSubscriptionApi();
-
-            return app;
-        }
+        app.MapAuthApi();
+        app.MapUserApi();
+        app.MapInstructorApi();
+        return app;
     }
 }

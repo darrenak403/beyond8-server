@@ -10,11 +10,4 @@
     <ProjectReference Include="..\Beyond8.Catalog.Domain\Beyond8.Catalog.Domain.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Clients/" />
-    <Folder Include="Clients/Identity/" />
-    <Folder Include="Dtos\Users\" />
-    <Folder Include="Validators\Course\" />
-  </ItemGroup>
-
 </Project>

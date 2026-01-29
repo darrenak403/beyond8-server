@@ -1,9 +1,8 @@
-namespace Beyond8.Catalog.Domain.Enums
+namespace Beyond8.Catalog.Domain.Enums;
+
+public enum LessonType
 {
-    public enum LessonType
-    {
-        Video = 0,
-        Text = 1,
-        Quiz = 2
-    }
+    Video = 0,
+    Text = 1,
+    Quiz = 2
 }

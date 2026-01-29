@@ -1,10 +1,9 @@
 using Beyond8.Catalog.Domain.Entities;
 using Beyond8.Common.Data.Interfaces;
 
-namespace Beyond8.Catalog.Domain.Repositories.Interfaces
-{
-    public interface ILessonDocumentRepository : IGenericRepository<LessonDocument>
-    {
+namespace Beyond8.Catalog.Domain.Repositories.Interfaces;
 
-    }
+public interface ILessonDocumentRepository : IGenericRepository<LessonDocument>
+{
+
 }

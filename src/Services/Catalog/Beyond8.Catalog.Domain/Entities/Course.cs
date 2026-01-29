@@ -3,80 +3,73 @@ using System.ComponentModel.DataAnnotations.Schema;
 using Beyond8.Catalog.Domain.Enums;
 using Beyond8.Common.Data.Base;
 
-namespace Beyond8.Catalog.Domain.Entities
+namespace Beyond8.Catalog.Domain.Entities;
+
+public class Course : BaseEntity
 {
-    public class Course : BaseEntity
-    {
-        public Guid InstructorId { get; set; }
-        public virtual InstructorVerificationStatus InstructorVerificationStatus { get; set; } = InstructorVerificationStatus.Verified;
+    public Guid InstructorId { get; set; }
 
-        public Guid CategoryId { get; set; }
-        [ForeignKey(nameof(CategoryId))]
-        public virtual Category Category { get; set; } = null!;
+    public InstructorVerificationStatus InstructorStatus { get; set; } = InstructorVerificationStatus.Verified;
 
-        // Basic Info
-        [Required, MaxLength(200)]
-        public string Title { get; set; } = string.Empty;
+    // Category
+    public Guid CategoryId { get; set; }
+    [ForeignKey(nameof(CategoryId))]
+    public virtual Category Category { get; set; } = null!;
 
-        [Required, MaxLength(220)]
-        public string Slug { get; set; } = string.Empty;
+    // Basic Info
+    [Required, MaxLength(200)]
+    public string Title { get; set; } = string.Empty;
 
-        [Required]
-        public string Description { get; set; } = string.Empty;
+    [Required, MaxLength(220)]
+    public string Slug { get; set; } = string.Empty;
 
-        [MaxLength(1000)]
-        public string? ShortDescription { get; set; }
+    [Required]
+    public string Description { get; set; } = string.Empty;
 
-        // Pricing
-        [Column(TypeName = "decimal(18, 2)")]
-        public decimal Price { get; set; } = 0;
+    [MaxLength(1000)]
+    public string? ShortDescription { get; set; }
 
-        // Status & Visibility
-        public CourseStatus Status { get; set; } = CourseStatus.Draft;
-        public CourseLevel Level { get; set; } = CourseLevel.Beginner;
+    // Pricing
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal Price { get; set; } = 0;
 
-        [MaxLength(10)]
-        public string Language { get; set; } = "vi-VN";
+    // Status & Visibility
+    public CourseStatus Status { get; set; } = CourseStatus.Draft;
+    public CourseLevel Level { get; set; } = CourseLevel.Beginner;
 
-        // Media
-        [Required]
-        public string ThumbnailUrl { get; set; } = string.Empty;
+    [MaxLength(10)]
+    public string Language { get; set; } = "vi-VN";
 
-        // Learning Outcomes (JSONB)
-        [Column(TypeName = "jsonb")]
-        public string Outcomes { get; set; } = "[]";  // ["outcome 1", "outcome 2"]
+    // Media
+    [Required]
+    public string ThumbnailUrl { get; set; } = string.Empty;
 
-        [Column(TypeName = "jsonb")]
-        public string? Requirements { get; set; }  // ["requirement 1"]
+    // Learning Outcomes (JSONB)
+    [Column(TypeName = "jsonb")]
+    public string Outcomes { get; set; } = "[]";  // ["outcome 1", "outcome 2"]
 
-        [Column(TypeName = "jsonb")]
-        public string? TargetAudience { get; set; }  // ["student type 1"]
+    [Column(TypeName = "jsonb")]
+    public string? Requirements { get; set; }  // ["requirement 1"]
 
-        // Statistics
-        public int TotalStudents { get; set; } = 0;
-        public int TotalSections { get; set; } = 0;
-        public int TotalLessons { get; set; } = 0;
-        public int TotalDurationMinutes { get; set; } = 0;
+    [Column(TypeName = "jsonb")]
+    public string? TargetAudience { get; set; }  // ["student type 1"]
 
-        [Column(TypeName = "decimal(3, 2)")]
-        public decimal? AvgRating { get; set; }
+    // Statistics
+    public int TotalStudents { get; set; } = 0;
+    public int TotalSections { get; set; } = 0;
+    public int TotalLessons { get; set; } = 0;
+    public int TotalDurationMinutes { get; set; } = 0;
 
-        public int TotalReviews { get; set; } = 0;
-        public int TotalRatings { get; set; } = 0;
+    [Column(TypeName = "decimal(3, 2)")]
+    public decimal? AvgRating { get; set; }
 
-        public Guid? ApprovedBy { get; set; }
-        public DateTime? ApprovedAt { get; set; }
+    public int TotalReviews { get; set; } = 0;
+    public int TotalRatings { get; set; } = 0;
 
-        [MaxLength(1000)]
-        public string? ApprovalNotes { get; set; }
+    public Guid? ApprovedBy { get; set; }
+    public DateTime? ApprovedAt { get; set; }
 
-        [MaxLength(1000)]
-        public string? RejectionReason { get; set; }
-
-        public bool IsActive { get; set; } = true;
-
-        // Relationships
-        public virtual ICollection<Section> Sections { get; set; } = [];
-        public virtual ICollection<CourseDocument> Documents { get; set; } = [];
-    }
+    // Relationships
+    public virtual ICollection<Section> Sections { get; set; } = [];
+    public virtual ICollection<CourseDocument> Documents { get; set; } = [];
 }

@@ -107,6 +107,7 @@ namespace Beyond8.Identity.Api.Apis
                 .Produces<ApiResponse<string>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<string>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
+
             return group;
         }
 

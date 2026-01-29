@@ -1,26 +1,9 @@
 using Beyond8.Catalog.Domain.Entities;
-using Beyond8.Catalog.Domain.Enums;
 using Beyond8.Common.Data.Interfaces;
 
-namespace Beyond8.Catalog.Domain.Repositories.Interfaces
+namespace Beyond8.Catalog.Domain.Repositories.Interfaces;
+
+public interface ICourseRepository : IGenericRepository<Course>
 {
-    public interface ICourseRepository : IGenericRepository<Course>
-    {
-        Task<(List<Course> Items, int TotalCount)> SearchCoursesAsync(
-            int pageNumber,
-            int pageSize,
-            string? keyword,
-            Guid? categoryId,
-            Guid? instructorId,
-            CourseStatus? status,
-            CourseLevel? level,
-            string? language,
-            decimal? minPrice,
-            decimal? maxPrice,
-            decimal? minRating,
-            int? minStudents,
-            bool? isActive,
-            bool? isDescending,
-            bool? isRandom);
-    }
+
 }

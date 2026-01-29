@@ -3,9 +3,8 @@ using Beyond8.Integration.Domain.Entities;
 using Beyond8.Integration.Domain.Repositories.Interfaces;
 using Beyond8.Integration.Infrastructure.Data;
 
-namespace Beyond8.Integration.Infrastructure.Repositories.Implements
+namespace Beyond8.Integration.Infrastructure.Repositories.Implements;
+
+public class MediaFileRepository(IntegrationDbContext context) : PostgresRepository<MediaFile>(context), IMediaFileRepository
 {
-    public class MediaFileRepository(IntegrationDbContext context) : PostgresRepository<MediaFile>(context), IMediaFileRepository
-    {
-    }
 }

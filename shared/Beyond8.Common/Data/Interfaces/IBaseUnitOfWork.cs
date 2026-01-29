@@ -1,10 +1,9 @@
-namespace Beyond8.Common.Data.Interfaces
+namespace Beyond8.Common.Data.Interfaces;
+
+public interface IBaseUnitOfWork
 {
-    public interface IBaseUnitOfWork
-    {
-        Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
-        Task BeginTransactionAsync();
-        Task CommitTransactionAsync();
-        Task RollbackTransactionAsync();
-    }
+    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+    Task BeginTransactionAsync();
+    Task CommitTransactionAsync();
+    Task RollbackTransactionAsync();
 }

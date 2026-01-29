@@ -1,11 +1,10 @@
-namespace Beyond8.Common.Security
+namespace Beyond8.Common.Security;
+
+public interface ICurrentUserService
 {
-    public interface ICurrentUserService
-    {
-        Guid UserId { get; }
-        string? Email { get; }
-        string? Claim(string claimType);
-        bool IsInRole(string role);
-        bool IsInAnyRole(params string[] roles);
-    }
+    Guid UserId { get; }
+    string? Email { get; }
+    string? Claim(string claimType);
+    bool IsInRole(string role);
+    bool IsInAnyRole(params string[] roles);
 }

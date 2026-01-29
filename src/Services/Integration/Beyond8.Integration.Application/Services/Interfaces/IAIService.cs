@@ -1,16 +1,9 @@
 using Beyond8.Common.Utilities;
 using Beyond8.Integration.Application.Dtos.Ai;
-using Beyond8.Integration.Application.Dtos.AiIntegration.Quiz;
 
-namespace Beyond8.Integration.Application.Services.Interfaces
+namespace Beyond8.Integration.Application.Services.Interfaces;
+
+public interface IAiService
 {
-    public interface IAiService
-    {
-        Task<ApiResponse<AiProfileReviewResponse>> InstructorProfileReviewAsync(ProfileReviewRequest request, Guid userId);
-
-        Task<ApiResponse<GenQuizResponse>> GenerateQuizAsync(
-            GenQuizRequest request,
-            Guid userId,
-            CancellationToken cancellationToken = default);
-    }
+    Task<ApiResponse<AiProfileReviewResponse>> InstructorProfileReviewAsync(ProfileReviewRequest request, Guid userId);
 }

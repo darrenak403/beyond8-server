@@ -1,19 +1,18 @@
 using System.Text.Json.Serialization;
 
-namespace Beyond8.Integration.Application.Dtos.VnptEkyc
+namespace Beyond8.Integration.Application.Dtos.VnptEkyc;
+
+public class ClassifyErrorResponse
 {
-    public class ClassifyErrorResponse
-    {
-        [JsonPropertyName("status")]
-        public string Status { get; set; } = string.Empty;
+    [JsonPropertyName("status")]
+    public string Status { get; set; } = string.Empty;
 
-        [JsonPropertyName("message")]
-        public string Message { get; set; } = string.Empty;
+    [JsonPropertyName("message")]
+    public string Message { get; set; } = string.Empty;
 
-        [JsonPropertyName("statusCode")]
-        public string StatusCode { get; set; } = string.Empty;
+    [JsonPropertyName("statusCode")]
+    public string StatusCode { get; set; } = string.Empty;
 
-        [JsonPropertyName("errors")]
-        public List<string> Errors { get; set; } = [];
-    }
+    [JsonPropertyName("errors")]
+    public List<string> Errors { get; set; } = [];
 }

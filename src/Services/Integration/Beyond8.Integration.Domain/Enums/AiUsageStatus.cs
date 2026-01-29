@@ -1,12 +1,11 @@
-namespace Beyond8.Integration.Domain.Enums
+namespace Beyond8.Integration.Domain.Enums;
+
+public enum AiUsageStatus
 {
-    public enum AiUsageStatus
-    {
-        Success = 0,
-        Failed = 1,
-        RateLimited = 2,
-        InvalidRequest = 3,
-        InsufficientQuota = 4,
-        Timeout = 5
-    }
+    Success = 0,
+    Failed = 1,
+    RateLimited = 2,
+    InvalidRequest = 3,
+    InsufficientQuota = 4,
+    Timeout = 5
 }

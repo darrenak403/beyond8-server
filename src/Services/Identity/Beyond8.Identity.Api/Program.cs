@@ -15,8 +15,6 @@ await app.MigrateDbContextAsync<IdentityDbContext>(async (database, cancellation
     using var scope = app.Services.CreateScope();
     var context = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
     await UserWithRoleSeedData.SeedUserWithRoleAsync(context);
-    await SubscriptionPlanSeedData.SeedSubscriptionPlansAsync(context);
-    await UserSubscriptionSeedData.SeedUserSubscriptionsAsync(context);
 });
 
 app.UseApplicationServices();

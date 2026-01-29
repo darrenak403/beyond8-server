@@ -42,6 +42,5 @@ namespace Beyond8.Identity.Domain.Entities
         public DateTime? RevokedAt { get; set; }
         public UserStatus Status { get; set; } = UserStatus.Active;
         public virtual InstructorProfile? InstructorProfile { get; set; }
-        public virtual ICollection<UserSubscription> UserSubscriptions { get; set; } = [];
     }
 }

@@ -1,41 +1,40 @@
 using StackExchange.Redis;
 using System.Text.Json;
 
-namespace Beyond8.Common.Caching
+namespace Beyond8.Common.Caching;
+
+public class CacheService(IDatabase database, string serviceName) : ICacheService
 {
-    public class CacheService(IDatabase database, string serviceName) : ICacheService
+    private readonly IDatabase _database = database;
+    private readonly string _prefix = $"{serviceName}:";
+
+    private string GetFullKey(string key) => $"{_prefix}{key}";
+
+    public async Task<T?> GetAsync<T>(string key)
     {
-        private readonly IDatabase _database = database;
-        private readonly string _prefix = $"{serviceName}:";
+        var fullKey = GetFullKey(key);
+        var value = await _database.StringGetAsync(fullKey);
 
-        private string GetFullKey(string key) => $"{_prefix}{key}";
-
-        public async Task<T?> GetAsync<T>(string key)
+        if (value.IsNullOrEmpty)
         {
-            var fullKey = GetFullKey(key);
-            var value = await _database.StringGetAsync(fullKey);
-
-            if (value.IsNullOrEmpty)
-            {
-                return default;
-            }
-
-            return JsonSerializer.Deserialize<T>(value.ToString() ?? string.Empty);
+            return default;
         }
 
-        public async Task SetAsync<T>(string key, T value, TimeSpan? expiry = null)
-        {
-            var fullKey = GetFullKey(key);
+        return JsonSerializer.Deserialize<T>(value.ToString() ?? string.Empty);
+    }
 
-            var jsonValue = JsonSerializer.Serialize(value);
+    public async Task SetAsync<T>(string key, T value, TimeSpan? expiry = null)
+    {
+        var fullKey = GetFullKey(key);
 
-            await _database.StringSetAsync(fullKey, jsonValue, expiry);
-        }
+        var jsonValue = JsonSerializer.Serialize(value);
 
-        public async Task RemoveAsync(string key)
-        {
-            var fullKey = GetFullKey(key);
-            await _database.KeyDeleteAsync(fullKey);
-        }
+        await _database.StringSetAsync(fullKey, jsonValue, expiry);
+    }
+
+    public async Task RemoveAsync(string key)
+    {
+        var fullKey = GetFullKey(key);
+        await _database.KeyDeleteAsync(fullKey);
     }
 }
