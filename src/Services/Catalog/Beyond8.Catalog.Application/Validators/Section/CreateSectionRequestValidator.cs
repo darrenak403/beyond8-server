@@ -19,5 +19,9 @@ public class CreateSectionRequestValidator : AbstractValidator<CreateSectionRequ
 
         RuleFor(x => x.OrderIndex)
             .GreaterThanOrEqualTo(0).WithMessage("Thứ tự phải lớn hơn hoặc bằng 0");
+
+        RuleFor(x => x.AssignmentId)
+            .NotEmpty().When(x => x.AssignmentId.HasValue)
+            .WithMessage("AssignmentId phải là GUID hợp lệ nếu được cung cấp");
     }
 }

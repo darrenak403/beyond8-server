@@ -33,4 +33,47 @@ public static class LessonMappings
             UpdatedAt = lesson.UpdatedAt
         };
     }
+
+    public static Lesson ToEntity(this CreateLessonRequest request)
+    {
+        return new Lesson
+        {
+            SectionId = request.SectionId,
+            Title = request.Title,
+            Description = request.Description,
+            Type = request.Type,
+            OrderIndex = request.OrderIndex,
+            IsPreview = request.IsPreview,
+            IsPublished = true, // Default value
+            HlsVariants = request.HlsVariants,
+            VideoOriginalUrl = request.VideoOriginalUrl,
+            VideoThumbnailUrl = request.VideoThumbnailUrl,
+            DurationSeconds = request.DurationSeconds,
+            VideoQualities = request.VideoQualities,
+            IsDownloadable = request.IsDownloadable,
+            TextContent = request.TextContent,
+            QuizId = request.QuizId,
+            MinCompletionSeconds = request.MinCompletionSeconds,
+            RequiredScore = request.RequiredScore
+        };
+    }
+
+    public static void UpdateFrom(this Lesson lesson, UpdateLessonRequest request)
+    {
+        lesson.Title = request.Title;
+        lesson.Description = request.Description;
+        lesson.Type = request.Type;
+        lesson.IsPreview = request.IsPreview;
+        lesson.IsPublished = request.IsPublished;
+        lesson.HlsVariants = request.HlsVariants;
+        lesson.VideoOriginalUrl = request.VideoOriginalUrl;
+        lesson.VideoThumbnailUrl = request.VideoThumbnailUrl;
+        lesson.DurationSeconds = request.DurationSeconds;
+        lesson.VideoQualities = request.VideoQualities;
+        lesson.IsDownloadable = request.IsDownloadable;
+        lesson.TextContent = request.TextContent;
+        lesson.QuizId = request.QuizId;
+        lesson.MinCompletionSeconds = request.MinCompletionSeconds;
+        lesson.RequiredScore = request.RequiredScore;
+    }
 }

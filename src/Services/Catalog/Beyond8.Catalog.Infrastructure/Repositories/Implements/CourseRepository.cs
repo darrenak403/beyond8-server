@@ -30,7 +30,7 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
                 .Include(c => c.Category)
                 .AsQueryable()
                 .Where(c => c.InstructorVerificationStatus == InstructorVerificationStatus.Verified)
-                .Where(c => c.Status == CourseStatus.Published);
+                .Where(c => c.IsActive); // Temporarily remove Status == Published filter for testing
 
             if (!string.IsNullOrWhiteSpace(keyword))
             {

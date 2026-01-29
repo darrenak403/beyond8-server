@@ -8,6 +8,8 @@ namespace Beyond8.Catalog.Domain.Entities
     public class Course : BaseEntity
     {
         public Guid InstructorId { get; set; }
+        [MaxLength(100)]
+        public string InstructorName { get; set; } = string.Empty;
         public virtual InstructorVerificationStatus InstructorVerificationStatus { get; set; } = InstructorVerificationStatus.Verified;
 
         public Guid CategoryId { get; set; }

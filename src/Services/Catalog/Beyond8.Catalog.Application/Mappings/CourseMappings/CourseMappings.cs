@@ -8,7 +8,7 @@ namespace Beyond8.Catalog.Application.Mappings.CourseMappings;
 
 public static class CourseMappings
 {
-    public static Course ToEntity(this CreateCourseRequest request, Guid instructorId)
+    public static Course ToEntity(this CreateCourseRequest request, Guid instructorId, string instructorName)
     {
         var slug = request.Title.ToSlug();
         var course = new Course
@@ -27,7 +27,8 @@ public static class CourseMappings
             TargetAudience = request.TargetAudience != null ? JsonSerializer.Serialize(request.TargetAudience) : null,
             Status = CourseStatus.Draft,
             IsActive = true,
-            InstructorId = instructorId
+            InstructorId = instructorId,
+            InstructorName = instructorName
         };
 
         return course;
@@ -49,7 +50,7 @@ public static class CourseMappings
         entity.TargetAudience = request.TargetAudience != null ? JsonSerializer.Serialize(request.TargetAudience) : null;
     }
 
-    public static CourseResponse ToResponse(this Course entity, string instructorName = "")
+    public static CourseResponse ToResponse(this Course entity)
     {
         return new CourseResponse
         {
@@ -60,7 +61,7 @@ public static class CourseMappings
             CategoryId = entity.CategoryId,
             CategoryName = entity.Category?.Name ?? string.Empty,
             InstructorId = entity.InstructorId,
-            InstructorName = instructorName,
+            InstructorName = entity.InstructorName,
             Status = entity.Status,
             Level = entity.Level,
             Language = entity.Language,

@@ -85,14 +85,8 @@ public class SectionService(
                 .Where(s => s.CourseId == request.CourseId)
                 .MaxAsync(s => (int?)s.OrderIndex) ?? 0;
 
-            var section = new Section
-            {
-                CourseId = request.CourseId,
-                Title = request.Title,
-                Description = request.Description,
-                OrderIndex = request.OrderIndex > 0 ? request.OrderIndex : maxOrder + 1,
-                IsPublished = true
-            };
+            var section = request.ToEntity();
+            section.OrderIndex = request.OrderIndex > 0 ? request.OrderIndex : maxOrder + 1;
 
             await unitOfWork.SectionRepository.AddAsync(section);
             await unitOfWork.SaveChangesAsync();
@@ -128,9 +122,7 @@ public class SectionService(
                 return ApiResponse<SectionResponse>.FailureResponse("Bạn không có quyền chỉnh sửa chương này.");
             }
 
-            section.Title = request.Title;
-            section.Description = request.Description;
-            section.IsPublished = request.IsPublished;
+            section.UpdateFrom(request);
 
             await unitOfWork.SectionRepository.UpdateAsync(sectionId, section);
             await unitOfWork.SaveChangesAsync();

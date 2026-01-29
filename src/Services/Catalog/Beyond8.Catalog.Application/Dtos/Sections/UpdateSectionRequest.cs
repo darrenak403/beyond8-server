@@ -11,4 +11,6 @@ public class UpdateSectionRequest
     public string? Description { get; set; }
 
     public bool IsPublished { get; set; } = true;
+
+    public Guid? AssignmentId { get; set; }
 }
