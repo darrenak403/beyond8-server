@@ -38,35 +38,18 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
             else
             {
                 query = query.Where(c => c.InstructorVerificationStatus == InstructorVerificationStatus.Verified);
-                var effectiveStatus = status ?? CourseStatus.Published;
-                query = query.Where(c => c.Status == effectiveStatus);
             }
 
-            if (!string.IsNullOrWhiteSpace(keyword))
-            {
-                var lowerKeyword = keyword.Trim().ToLowerInvariant();
-                query = query.Where(c =>
-                    c.Title.ToLower().Contains(lowerKeyword) ||
-                    c.Description.ToLower().Contains(lowerKeyword) ||
-                    (c.ShortDescription != null && c.ShortDescription.ToLower().Contains(lowerKeyword)));
-            }
-
-            if (!string.IsNullOrWhiteSpace(categoryName))
-            {
-                query = query.Where(c => c.Category.Name == categoryName);
-            }
-
-            if (!string.IsNullOrWhiteSpace(instructorName))
-            {
-                query = query.Where(c => c.InstructorName == instructorName);
-            }
-
-            if (status.HasValue && !instructorId.HasValue)
+            if (status.HasValue)
             {
                 query = query.Where(c => c.Status == status.Value);
             }
+            else if (!instructorId.HasValue)
+            {
+                query = query.Where(c => c.Status == CourseStatus.Published);
+            }
 
-            if (level.HasValue)
+            if (level.HasValue && level.Value != CourseLevel.All)
             {
                 query = query.Where(c => c.Level == level.Value);
             }
