@@ -26,18 +26,20 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
             bool? isDescending,
             bool? isRandom)
         {
+            var effectiveStatus = status ?? CourseStatus.Published;
+
             var query = context.Courses
                 .Include(c => c.Category)
-                .AsQueryable()
                 .Where(c => c.InstructorVerificationStatus == InstructorVerificationStatus.Verified)
-                .Where(c => c.Status == CourseStatus.Published);
+                .Where(c => c.Status == effectiveStatus);
 
             if (!string.IsNullOrWhiteSpace(keyword))
             {
+                var lowerKeyword = keyword.Trim().ToLowerInvariant();
                 query = query.Where(c =>
-                    c.Title.Contains(keyword) ||
-                    c.Description.Contains(keyword) ||
-                    (c.ShortDescription != null && c.ShortDescription.Contains(keyword)));
+                    c.Title.ToLower().Contains(lowerKeyword) ||
+                    c.Description.ToLower().Contains(lowerKeyword) ||
+                    (c.ShortDescription != null && c.ShortDescription.ToLower().Contains(lowerKeyword)));
             }
 
             if (categoryId.HasValue)
@@ -48,11 +50,6 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
             if (instructorId.HasValue)
             {
                 query = query.Where(c => c.InstructorId == instructorId.Value);
-            }
-
-            if (status.HasValue)
-            {
-                query = query.Where(c => c.Status == status.Value);
             }
 
             if (level.HasValue)
@@ -95,10 +92,12 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
             List<Course> items;
             if (isRandom.HasValue && isRandom.Value)
             {
-                var allItems = await query.ToListAsync();
-                var random = new Random();
-                allItems = allItems.OrderBy(x => random.Next()).ToList();
-                items = allItems.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+                // Dùng random() trên DB thay vì load hết vào memory
+                items = await query
+                    .OrderBy(_ => EF.Functions.Random())
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
             }
             else
             {

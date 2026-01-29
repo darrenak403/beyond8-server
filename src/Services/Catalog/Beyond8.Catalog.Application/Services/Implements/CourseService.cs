@@ -20,9 +20,17 @@ public class CourseService(
     {
         try
         {
+            var pageNumber = request.PageNumber < 1 ? 1 : request.PageNumber;
+            var pageSize = request.PageSize switch
+            {
+                < 1 => 10,
+                > 100 => 100,
+                _ => request.PageSize
+            };
+
             var (courses, totalCount) = await unitOfWork.CourseRepository.SearchCoursesAsync(
-                pageNumber: request.PageNumber,
-                pageSize: request.PageSize,
+                pageNumber,
+                pageSize,
                 keyword: request.Keyword,
                 categoryId: request.CategoryId,
                 instructorId: request.InstructorId,
@@ -69,8 +77,8 @@ public class CourseService(
             return ApiResponse<List<CourseResponse>>.SuccessPagedResponse(
                 courseResponses,
                 totalCount,
-                request.PageNumber,
-                request.PageSize,
+                pageNumber,
+                pageSize,
                 "Lấy danh sách khóa học thành công."
             );
         }

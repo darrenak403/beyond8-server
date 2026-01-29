@@ -21,11 +21,9 @@ public class CreateLessonRequest
     public bool IsPreview { get; set; } = false;
 
     // Video fields
-    public string? HlsVariants { get; set; }
     public string? VideoOriginalUrl { get; set; }
     public string? VideoThumbnailUrl { get; set; }
     public int? DurationSeconds { get; set; }
-    public string? VideoQualities { get; set; }
     public bool IsDownloadable { get; set; } = false;
 
     // Text fields
