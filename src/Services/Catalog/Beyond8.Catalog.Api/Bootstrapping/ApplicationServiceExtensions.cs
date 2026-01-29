@@ -1,5 +1,6 @@
 using Beyond8.Catalog.Api.Apis;
 using Beyond8.Catalog.Application.Clients.Identity;
+using Beyond8.Catalog.Application.Consumers.Identity;
 using Beyond8.Catalog.Application.Dtos.Categories;
 using Beyond8.Catalog.Application.Dtos.Courses;
 using Beyond8.Catalog.Application.Services.Implements;
@@ -26,7 +27,11 @@ namespace Beyond8.Catalog.Api.Bootstrapping
 
             builder.AddServiceRedis(nameof(Catalog), connectionName: Const.Redis);
 
-            builder.AddMassTransitWithRabbitMq();
+            builder.AddMassTransitWithRabbitMq(config =>
+            {
+                config.AddConsumer<InstructorHiddenEventConsumer>();
+                config.AddConsumer<InstructorApprovalEventConsumer>();
+            });
 
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 

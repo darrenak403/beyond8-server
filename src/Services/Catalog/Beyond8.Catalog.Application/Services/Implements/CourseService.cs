@@ -1,10 +1,8 @@
-using Beyond8.Catalog.Application.Clients.Identity;
 using Beyond8.Catalog.Application.Dtos.Courses;
 using Beyond8.Catalog.Application.Mappings.CourseMappings;
 using Beyond8.Catalog.Application.Services.Interfaces;
 using Beyond8.Catalog.Domain.Enums;
 using Beyond8.Catalog.Domain.Repositories.Interfaces;
-using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -60,23 +58,14 @@ public class CourseService(
         try
         {
             // Validate category exists
-            var category = await unitOfWork.CategoryRepository.FindOneAsync(c => c.Id == request.CategoryId && c.IsActive);
+            var category = await unitOfWork.CategoryRepository.FindOneAsync(c => c.Id == request.CategoryId && c.IsActive && !c.IsRoot);
             if (category == null)
             {
                 logger.LogWarning("Category not found or inactive: {CategoryId}", request.CategoryId);
                 return ApiResponse<CourseResponse>.FailureResponse("Danh mục không tồn tại hoặc không hoạt động.");
             }
 
-            // Check if course title already exists
-            var existingCourse = await unitOfWork.CourseRepository.FindOneAsync(c => c.Title == request.Title);
-            if (existingCourse != null)
-            {
-                logger.LogWarning("Course with title already exists: {Title}", request.Title);
-                return ApiResponse<CourseResponse>.FailureResponse("Khóa học với tiêu đề này đã tồn tại.");
-            }
-
-            var course = request.ToEntity();
-            course.InstructorId = currentUserId;
+            var course = request.ToEntity(currentUserId);
             await unitOfWork.CourseRepository.AddAsync(course);
             await unitOfWork.SaveChangesAsync();
 
@@ -97,19 +86,12 @@ public class CourseService(
             var course = await unitOfWork.CourseRepository
                 .AsQueryable()
                 .Include(c => c.Category)
-                .FirstOrDefaultAsync(c => c.Id == id && c.IsActive);
+                .FirstOrDefaultAsync(c => c.Id == id && c.IsActive && c.InstructorId == currentUserId);
 
             if (course == null)
             {
                 logger.LogWarning("Course not found: {CourseId}", id);
                 return ApiResponse<CourseResponse>.FailureResponse("Khóa học không tồn tại.");
-            }
-
-            // Authorization check: Only the instructor who owns the course can update it
-            if (course.InstructorId != currentUserId)
-            {
-                logger.LogWarning("Unauthorized update attempt: User {UserId} tried to update course {CourseId} owned by {OwnerId}", currentUserId, id, course.InstructorId);
-                return ApiResponse<CourseResponse>.FailureResponse("Bạn không có quyền cập nhật khóa học này.");
             }
 
             // Status validation: Prevent updates on suspended or archived courses
@@ -119,23 +101,12 @@ public class CourseService(
                 return ApiResponse<CourseResponse>.FailureResponse("Không thể cập nhật khóa học ở trạng thái này.");
             }
 
-            // Allow metadata updates for any active status (Draft, PendingApproval, Approved, Published, etc.)
-            // Status remains unchanged - no re-approval needed for metadata changes
-
             // Validate category exists
-            var category = await unitOfWork.CategoryRepository.FindOneAsync(c => c.Id == request.CategoryId && c.IsActive);
+            var category = await unitOfWork.CategoryRepository.FindOneAsync(c => c.Id == request.CategoryId && c.IsActive && !c.IsRoot);
             if (category == null)
             {
                 logger.LogWarning("Category not found or inactive: {CategoryId}", request.CategoryId);
                 return ApiResponse<CourseResponse>.FailureResponse("Danh mục không tồn tại hoặc không hoạt động.");
-            }
-
-            // Check if new title conflicts with existing courses (excluding current)
-            var existingCourse = await unitOfWork.CourseRepository.FindOneAsync(c => c.Title == request.Title && c.Id != id);
-            if (existingCourse != null)
-            {
-                logger.LogWarning("Course with title already exists: {Title}", request.Title);
-                return ApiResponse<CourseResponse>.FailureResponse("Khóa học với tiêu đề này đã tồn tại.");
             }
 
             course.UpdateMetadataFromRequest(request);
@@ -158,19 +129,12 @@ public class CourseService(
             var course = await unitOfWork.CourseRepository
                 .AsQueryable()
                 .Include(c => c.Category)
-                .FirstOrDefaultAsync(c => c.Id == id && c.IsActive);
+                .FirstOrDefaultAsync(c => c.Id == id && c.IsActive && c.InstructorId == currentUserId);
 
             if (course == null)
             {
                 logger.LogWarning("Course not found: {CourseId}", id);
                 return ApiResponse<CourseResponse>.FailureResponse("Khóa học không tồn tại.");
-            }
-
-            // Authorization check: Only the instructor who owns the course can view it
-            if (course.InstructorId != currentUserId)
-            {
-                logger.LogWarning("Unauthorized access attempt: User {UserId} tried to view course {CourseId} owned by {OwnerId}", currentUserId, id, course.InstructorId);
-                return ApiResponse<CourseResponse>.FailureResponse("Bạn không có quyền xem khóa học này.");
             }
 
             return ApiResponse<CourseResponse>.SuccessResponse(course.ToResponse(), "Lấy thông tin khóa học thành công.");
@@ -186,32 +150,19 @@ public class CourseService(
     {
         try
         {
-            var course = await unitOfWork.CourseRepository.FindOneAsync(c => c.Id == id);
+            var course = await unitOfWork.CourseRepository.FindOneAsync(c => c.Id == id && c.IsActive && c.InstructorId == currentUserId);
             if (course == null)
             {
                 logger.LogWarning("Course not found: {CourseId}", id);
                 return ApiResponse<bool>.FailureResponse("Khóa học không tồn tại.");
             }
 
-            // Authorization check: Only the instructor who owns the course can delete it
-            if (course.InstructorId != currentUserId)
-            {
-                logger.LogWarning("Unauthorized delete attempt: User {UserId} tried to delete course {CourseId} owned by {OwnerId}", currentUserId, id, course.InstructorId);
-                return ApiResponse<bool>.FailureResponse("Bạn không có quyền xóa khóa học này.");
-            }
-
-            // Status validation: Prevent deletion of published courses with active enrollments
             if (course.Status == CourseStatus.Published)
             {
-                // TODO: Check for active enrollments
                 logger.LogWarning("Cannot delete published course: {CourseId}", id);
                 return ApiResponse<bool>.FailureResponse("Không thể xóa khóa học đã xuất bản.");
             }
 
-            // Check if course has enrollments
-            // TODO: Check enrollments when enrollment service is implemented
-
-            // Soft delete - set IsActive flag to false
             course.IsActive = false;
             await unitOfWork.CourseRepository.UpdateAsync(id, course);
             await unitOfWork.SaveChangesAsync();
@@ -294,19 +245,12 @@ public class CourseService(
                 .AsQueryable()
                 .Include(c => c.Sections)
                 .ThenInclude(s => s.Lessons)
-                .FirstOrDefaultAsync(c => c.Id == courseId && c.IsActive);
+                .FirstOrDefaultAsync(c => c.Id == courseId && c.IsActive && c.InstructorId == currentUserId);
 
             if (course == null)
             {
                 logger.LogWarning("Course not found: {CourseId}", courseId);
                 return ApiResponse<bool>.FailureResponse("Khóa học không tồn tại.");
-            }
-
-            // Authorization check: Only the instructor who owns the course can submit for approval
-            if (course.InstructorId != currentUserId)
-            {
-                logger.LogWarning("Unauthorized submit attempt: User {UserId} tried to submit course {CourseId} owned by {OwnerId}", currentUserId, courseId, course.InstructorId);
-                return ApiResponse<bool>.FailureResponse("Bạn không có quyền nộp duyệt khóa học này.");
             }
 
             // Validate course can be submitted

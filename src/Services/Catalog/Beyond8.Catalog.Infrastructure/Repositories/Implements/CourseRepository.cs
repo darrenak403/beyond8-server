@@ -26,9 +26,8 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
             bool? isDescending,
             bool? isRandom)
         {
-            var query = ((CatalogDbContext)_context).Courses.AsQueryable();
+            var query = context.Courses.AsQueryable().Where(c => c.InstructorVerificationStatus == InstructorVerificationStatus.Verified);
 
-            // Apply filters
             if (!string.IsNullOrWhiteSpace(keyword))
             {
                 query = query.Where(c =>
@@ -95,7 +94,6 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
                 var allItems = await query.ToListAsync();
                 var random = new Random();
                 allItems = allItems.OrderBy(x => random.Next()).ToList();
-                // Apply pagination on shuffled list
                 items = allItems.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
             }
             else
@@ -104,7 +102,6 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
                     ? query.OrderByDescending(c => c.CreatedAt)
                     : query.OrderBy(c => c.CreatedAt);
 
-                // Apply pagination
                 items = await query
                     .Skip((pageNumber - 1) * pageSize)
                     .Take(pageSize)

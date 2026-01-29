@@ -487,6 +487,8 @@ namespace Beyond8.Identity.Application.Services.Implements
                     }
                 }
 
+                await publishEndpoint.Publish(new InstructorHiddenEvent(userId));
+
                 await unitOfWork.InstructorProfileRepository.UpdateAsync(profileId, profile);
                 await unitOfWork.SaveChangesAsync();
 
@@ -574,6 +576,5 @@ namespace Beyond8.Identity.Application.Services.Implements
                 return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi kiểm tra trạng thái hồ sơ giảng viên.");
             }
         }
-
     }
 }

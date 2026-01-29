@@ -8,6 +8,7 @@ namespace Beyond8.Catalog.Domain.Entities
     public class Course : BaseEntity
     {
         public Guid InstructorId { get; set; }
+        public virtual InstructorVerificationStatus InstructorVerificationStatus { get; set; } = InstructorVerificationStatus.Verified;
 
         public Guid CategoryId { get; set; }
         [ForeignKey(nameof(CategoryId))]
