@@ -8,61 +8,25 @@ namespace Beyond8.Catalog.Infrastructure.Data.Seeders
     {
         public static async Task SeedCategoriesAsync(CatalogDbContext context)
         {
-            // Kiểm tra xem đã có dữ liệu chưa
-            if (await context.Categories.AnyAsync())
-            {
-                return;
-            }
+            // Seed data đã bị tắt để test bằng API
+            // if (await context.Categories.AnyAsync())
+            // {
+            //     return;
+            // }
 
-            var categories = new List<Category>();
+            // var categories = new List<Category>();
+            // ... rest of seed data commented out
+        }
 
-            // --- 1. LẬP TRÌNH ---
-            var devRoot = CreateCategory("Lập trình", "lap-trinh", "Các khóa học về tư duy và kỹ thuật phần mềm.", CategoryType.Technology);
-            categories.Add(devRoot);
-            categories.AddRange(CreateSubCategories(devRoot,
-            [
-                ("Lập trình Web", "lap-trinh-web", "Frontend, Backend, Fullstack."),
-                ("Lập trình Mobile", "lap-trinh-mobile", "iOS, Android, React Native, Flutter.")
-            ]));
+        public static async Task SeedCoursesAsync(CatalogDbContext context)
+        {
+            // Seed data đã bị tắt để test bằng API
+            // if (await context.Courses.AnyAsync())
+            // {
+            //     return;
+            // }
 
-            // --- 2. THIẾT KẾ ---
-            var designRoot = CreateCategory("Thiết kế", "thiet-ke", "Tư duy thẩm mỹ và công cụ sáng tạo.", CategoryType.Design);
-            categories.Add(designRoot);
-            categories.AddRange(CreateSubCategories(designRoot,
-            [
-                ("Thiết kế UI/UX", "thiet-ke-ui-ux", "Trải nghiệm và giao diện người dùng."),
-                ("Thiết kế Đồ họa", "thiet-ke-do-hoa", "Photoshop, AI, Branding.")
-            ]));
-
-            // --- 3. NGÔN NGỮ ---
-            var langRoot = CreateCategory("Ngôn ngữ", "ngon-ngu", "Đào tạo ngoại ngữ các cấp độ.", CategoryType.Language);
-            categories.Add(langRoot);
-            categories.AddRange(CreateSubCategories(langRoot,
-            [
-                ("Tiếng Anh", "tieng-anh", "Giao tiếp, TOEIC, IELTS."),
-                ("Tiếng Nhật", "tieng-nhat", "Sơ cấp N5 đến Cao cấp N1.")
-            ]));
-
-            // --- 4. KINH DOANH ---
-            var bizRoot = CreateCategory("Kinh doanh", "kinh-doanh", "Kiến thức quản trị và khởi nghiệp.", CategoryType.Business);
-            categories.Add(bizRoot);
-            categories.AddRange(CreateSubCategories(bizRoot,
-            [
-                ("Khởi nghiệp", "khoi-nghiep", "Xây dựng mô hình kinh doanh."),
-                ("Quản trị nhân sự", "quan-tri-nhan-su", "Tuyển dụng và đào tạo nhân tài.")
-            ]));
-
-            // --- 5. MARKETING ---
-            var mktRoot = CreateCategory("Marketing", "marketing", "Tiếp thị số và thương hiệu.", CategoryType.Marketing);
-            categories.Add(mktRoot);
-            categories.AddRange(CreateSubCategories(mktRoot,
-            [
-                ("Digital Marketing", "digital-marketing", "SEO, Google Ads, Social Media."),
-                ("Content Marketing", "content-marketing", "Copywriting và sáng tạo nội dung.")
-            ]));
-
-            await context.Categories.AddRangeAsync(categories);
-            await context.SaveChangesAsync();
+            // ... rest of seed data commented out
         }
 
         private static Category CreateCategory(

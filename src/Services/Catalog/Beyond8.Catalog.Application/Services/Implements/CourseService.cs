@@ -1,3 +1,4 @@
+using Beyond8.Catalog.Application.Clients.Identity;
 using Beyond8.Catalog.Application.Dtos.Courses;
 using Beyond8.Catalog.Application.Mappings.CourseMappings;
 using Beyond8.Catalog.Application.Services.Interfaces;
@@ -11,7 +12,8 @@ namespace Beyond8.Catalog.Application.Services.Implements;
 
 public class CourseService(
     ILogger<CourseService> logger,
-    IUnitOfWork unitOfWork) : ICourseService
+    IUnitOfWork unitOfWork,
+    IIdentityClient identityClient) : ICourseService
 {
 
     public async Task<ApiResponse<List<CourseResponse>>> GetAllCoursesAsync(PaginationCourseSearchRequest request)
@@ -36,7 +38,33 @@ public class CourseService(
                 isRandom: request.IsRandom
             );
 
-            var courseResponses = courses.Select(c => c.ToResponse()).ToList();
+            // Get unique instructor IDs
+            var instructorIds = courses.Select(c => c.InstructorId).Distinct().ToList();
+
+            // Batch get instructor names
+            var instructorNames = new Dictionary<Guid, string>();
+            foreach (var instructorId in instructorIds)
+            {
+                try
+                {
+                    var userResponse = await identityClient.GetUserByIdAsync(instructorId);
+                    if (userResponse.IsSuccess && userResponse.Data != null)
+                    {
+                        instructorNames[instructorId] = userResponse.Data.FullName;
+                    }
+                    else
+                    {
+                        instructorNames[instructorId] = "Unknown Instructor";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Failed to get instructor name for {InstructorId}", instructorId);
+                    instructorNames[instructorId] = "Unknown Instructor";
+                }
+            }
+
+            var courseResponses = courses.Select(c => c.ToResponse(instructorNames.GetValueOrDefault(c.InstructorId, "Unknown Instructor"))).ToList();
 
             return ApiResponse<List<CourseResponse>>.SuccessPagedResponse(
                 courseResponses,

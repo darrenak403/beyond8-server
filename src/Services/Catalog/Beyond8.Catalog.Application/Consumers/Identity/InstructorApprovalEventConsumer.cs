@@ -28,6 +28,10 @@ public class InstructorApprovalEventConsumer(
         foreach (var course in courses)
         {
             course.InstructorVerificationStatus = InstructorVerificationStatus.Verified;
+            if (course.Status == CourseStatus.Suspended)
+            {
+                course.Status = CourseStatus.Approved;
+            }
             await unitOfWork.CourseRepository.UpdateAsync(course.Id, course);
         }
 

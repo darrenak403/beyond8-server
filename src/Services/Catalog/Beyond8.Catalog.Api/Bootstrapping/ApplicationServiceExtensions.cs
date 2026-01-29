@@ -37,6 +37,7 @@ namespace Beyond8.Catalog.Api.Bootstrapping
 
             builder.Services.AddScoped<ICategoryService, CategoryService>();
             builder.Services.AddScoped<ICourseService, CourseService>();
+            builder.Services.AddScoped<ISectionService, SectionService>();
             builder.Services.AddScoped<ILessonService, LessonService>();
 
             builder.Services.AddValidatorsFromAssemblyContaining<CreateCategoryRequest>();
@@ -99,6 +100,7 @@ namespace Beyond8.Catalog.Api.Bootstrapping
 
             app.MapCategoryApi();
             app.MapCourseApi();
+            app.MapSectionApi();
             app.MapLessonApi();
 
             return app;
