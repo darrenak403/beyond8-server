@@ -127,7 +127,7 @@ public static class CourseApis
             .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
-            
+
         return group;
     }
 
