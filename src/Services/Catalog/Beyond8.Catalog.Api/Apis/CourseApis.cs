@@ -114,7 +114,7 @@ public static class CourseApis
         group.MapPost("/{id}/publish", PublishCourseAsync)
             .WithName("PublishCourse")
             .WithDescription("Công bố khóa học")
-            .RequireAuthorization()
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
             .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
@@ -122,7 +122,7 @@ public static class CourseApis
         group.MapPost("/{id}/unpublish", UnpublishCourseAsync)
             .WithName("UnpublishCourse")
             .WithDescription("Ẩn khóa học")
-            .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
             .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
