@@ -21,7 +21,7 @@ public class CreateLessonRequest
     public bool IsPreview { get; set; } = false;
 
     // Video fields
-    public string? VideoHlsUrl { get; set; }
+    public string? HlsVariants { get; set; }
     public string? VideoOriginalUrl { get; set; }
     public string? VideoThumbnailUrl { get; set; }
     public int? DurationSeconds { get; set; }

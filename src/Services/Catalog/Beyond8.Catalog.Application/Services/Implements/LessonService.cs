@@ -137,7 +137,7 @@ public class LessonService(
                 OrderIndex = request.OrderIndex > 0 ? request.OrderIndex : maxOrder + 1,
                 IsPreview = request.IsPreview,
                 IsPublished = true,
-                VideoHlsUrl = request.VideoHlsUrl,
+                HlsVariants = request.HlsVariants,
                 VideoOriginalUrl = request.VideoOriginalUrl,
                 VideoThumbnailUrl = request.VideoThumbnailUrl,
                 DurationSeconds = request.DurationSeconds,
@@ -192,7 +192,7 @@ public class LessonService(
             lesson.Type = request.Type;
             lesson.IsPreview = request.IsPreview;
             lesson.IsPublished = request.IsPublished;
-            lesson.VideoHlsUrl = request.VideoHlsUrl;
+            lesson.HlsVariants = request.HlsVariants;
             lesson.VideoOriginalUrl = request.VideoOriginalUrl;
             lesson.VideoThumbnailUrl = request.VideoThumbnailUrl;
             lesson.DurationSeconds = request.DurationSeconds;

@@ -3,7 +3,7 @@ using Beyond8.Catalog.Domain.Entities;
 
 namespace Beyond8.Catalog.Application.Mappings.LessonMappings;
 
-public static class LessonMappingExtensions
+public static class LessonMappings
 {
     public static LessonResponse ToResponse(this Lesson lesson)
     {
@@ -17,7 +17,7 @@ public static class LessonMappingExtensions
             OrderIndex = lesson.OrderIndex,
             IsPreview = lesson.IsPreview,
             IsPublished = lesson.IsPublished,
-            VideoHlsUrl = lesson.VideoHlsUrl,
+            HlsVariants = lesson.HlsVariants,
             VideoOriginalUrl = lesson.VideoOriginalUrl,
             VideoThumbnailUrl = lesson.VideoThumbnailUrl,
             DurationSeconds = lesson.DurationSeconds,
