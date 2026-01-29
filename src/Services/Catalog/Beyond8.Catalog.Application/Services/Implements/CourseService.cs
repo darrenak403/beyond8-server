@@ -46,33 +46,7 @@ public class CourseService(
                 isRandom: request.IsRandom
             );
 
-            // Get unique instructor IDs
-            var instructorIds = courses.Select(c => c.InstructorId).Distinct().ToList();
-
-            // Batch get instructor names
-            var instructorNames = new Dictionary<Guid, string>();
-            foreach (var instructorId in instructorIds)
-            {
-                try
-                {
-                    var userResponse = await identityClient.GetUserByIdAsync(instructorId);
-                    if (userResponse.IsSuccess && userResponse.Data != null)
-                    {
-                        instructorNames[instructorId] = userResponse.Data.FullName;
-                    }
-                    else
-                    {
-                        instructorNames[instructorId] = "Unknown Instructor";
-                    }
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex, "Failed to get instructor name for {InstructorId}", instructorId);
-                    instructorNames[instructorId] = "Unknown Instructor";
-                }
-            }
-
-            var courseResponses = courses.Select(c => c.ToResponse(instructorNames.GetValueOrDefault(c.InstructorId, "Unknown Instructor"))).ToList();
+            var courseResponses = courses.Select(c => c.ToResponse()).ToList();
 
             return ApiResponse<List<CourseResponse>>.SuccessPagedResponse(
                 courseResponses,
@@ -101,7 +75,15 @@ public class CourseService(
                 return ApiResponse<CourseResponse>.FailureResponse("Danh mục không tồn tại hoặc không hoạt động.");
             }
 
-            var course = request.ToEntity(currentUserId);
+            // Get instructor name
+            var instructorResponse = await identityClient.GetUserByIdAsync(currentUserId);
+            if (!instructorResponse.IsSuccess || instructorResponse.Data == null)
+            {
+                logger.LogWarning("Failed to get instructor info for user: {UserId}", currentUserId);
+                return ApiResponse<CourseResponse>.FailureResponse("Không thể lấy thông tin giảng viên.");
+            }
+
+            var course = request.ToEntity(currentUserId, instructorResponse.Data.FullName);
             await unitOfWork.CourseRepository.AddAsync(course);
             await unitOfWork.SaveChangesAsync();
 
@@ -221,7 +203,8 @@ public class CourseService(
                 pageNumber: pagination.PageNumber,
                 pageSize: pagination.PageSize,
                 filter: c => c.InstructorId == instructorId && c.IsActive,
-                orderBy: query => query.OrderByDescending(c => c.CreatedAt)
+                orderBy: query => query.OrderByDescending(c => c.CreatedAt),
+                includes: query => query.Include(c => c.Category)
             );
 
             var courseResponses = courses.Items.Select(c => c.ToResponse()).ToList();
@@ -393,7 +376,8 @@ public class CourseService(
                 pageNumber: pagination.PageNumber,
                 pageSize: pagination.PageSize,
                 filter: c => c.Status == CourseStatus.PendingApproval && c.IsActive,
-                orderBy: query => query.OrderBy(c => c.CreatedAt)
+                orderBy: query => query.OrderBy(c => c.CreatedAt),
+                includes: query => query.Include(c => c.Category)
             );
 
             var courseResponses = courses.Items.Select(c => c.ToResponse()).ToList();

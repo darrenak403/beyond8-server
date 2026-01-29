@@ -13,6 +13,7 @@ namespace Beyond8.Integration.Application.Services.Interfaces
         Task<ApiResponse<InstructorNotificationResponse>> GetInstructorNotificationsAsync(
             Guid userId,
             PaginationNotificationRequest pagination);
+
         Task<ApiResponse<bool>> UnreadNotificationAsync(Guid id, Guid userId);
         Task<ApiResponse<bool>> ReadNotificationAsync(Guid userId);
     }

@@ -1,4 +1,5 @@
 using Beyond8.Common.Events.Identity;
+using Beyond8.Integration.Application.Dtos.Notifications;
 using Beyond8.Integration.Domain.Entities;
 using Beyond8.Integration.Domain.Enums;
 
@@ -6,6 +7,25 @@ namespace Beyond8.Integration.Application.Mappings.NotificationMappings
 {
     public static class NotificationMappings
     {
+
+        public static NotificationResponse ToNotificationResponse(this Notification notification, Guid userId)
+        {
+            return new NotificationResponse
+            {
+                Id = notification.Id,
+                Title = notification.Title,
+                Message = notification.Message,
+                UserId = notification.UserId == Guid.Empty ? userId : notification.UserId,
+                Target = notification.Target,
+                Status = notification.Status,
+                Channels = notification.Channels,
+                ReadAt = notification.ReadAt,
+                IsRead = notification.IsRead,
+                CreatedAt = notification.CreatedAt,
+                UpdatedAt = notification.UpdatedAt
+            };
+        }
+
         public static Notification OtpEmailEventToNotification(this OtpEmailEvent @event, NotificationStatus status)
         {
             return new Notification
