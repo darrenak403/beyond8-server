@@ -164,5 +164,46 @@ namespace Beyond8.Integration.Application.Services.Implements
 
             return targets;
         }
+
+        public async Task<ApiResponse<bool>> UnreadNotificationAsync(Guid id, Guid userId)
+        {
+            try
+            {
+                var notification = await unitOfWork.NotificationRepository.FindOneAsync(n => n.Id == id && n.UserId == userId);
+                if (notification == null)
+                {
+                    return ApiResponse<bool>.FailureResponse("Thông báo không tồn tại");
+                }
+                notification.IsRead = false;
+                await unitOfWork.NotificationRepository.UpdateAsync(notification.Id, notification);
+                await unitOfWork.SaveChangesAsync();
+                return ApiResponse<bool>.SuccessResponse(true, "Đánh dấu thông báo chưa đọc thành công.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error unreading notification {Id} for user {UserId}", id, userId);
+                return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi đánh dấu thông báo chưa đọc.");
+            }
+        }
+
+        public async Task<ApiResponse<bool>> ReadNotificationAsync(Guid userId)
+        {
+            try
+            {
+                var notifications = await unitOfWork.NotificationRepository.GetAllAsync(n => n.UserId == userId);
+                foreach (var n in notifications)
+                {
+                    n.IsRead = true;
+                    await unitOfWork.NotificationRepository.UpdateAsync(n.Id, n);
+                }
+                await unitOfWork.SaveChangesAsync();
+                return ApiResponse<bool>.SuccessResponse(true, "Đánh dấu thông báo đã đọc thành công.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error reading notification for user {UserId}", userId);
+                return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi đánh dấu thông báo đã đọc.");
+            }
+        }
     }
 }
