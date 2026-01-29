@@ -1,12 +1,16 @@
 using Beyond8.Integration.Application.Clients;
+using Beyond8.Integration.Application.Dtos.Clients.Identity;
 
 namespace Beyond8.Integration.Application.Helpers.AiService
 {
     public static class SubscriptionHelper
     {
-        public static async Task<(bool IsAllowed, string Message, object? Metadata)> CheckSubscriptionStatusAsync(
-                    IIdentityClient identityClient,
-                    Guid userId)
+        /// <summary>
+        /// Kiểm tra quyền sử dụng AI theo gói đăng ký của user.
+        /// </summary>
+        public static async Task<SubscriptionCheckResult> CheckSubscriptionStatusAsync(
+            IIdentityClient identityClient,
+            Guid userId)
         {
             try
             {
@@ -14,7 +18,11 @@ namespace Beyond8.Integration.Application.Helpers.AiService
 
                 if (!response.IsSuccess || response.Data == null)
                 {
-                    return (false, "Không thể lấy thông tin gói đăng ký hoặc dữ liệu trống.", null);
+                    return new SubscriptionCheckResult
+                    {
+                        IsAllowed = false,
+                        Message = "Không thể lấy thông tin gói đăng ký hoặc dữ liệu trống."
+                    };
                 }
 
                 var data = response.Data;
@@ -22,24 +30,53 @@ namespace Beyond8.Integration.Application.Helpers.AiService
 
                 if (!data.IsRequestLimitedReached)
                 {
-                    return (true, "Gói đăng ký hợp lệ.", null);
+                    return new SubscriptionCheckResult
+                    {
+                        IsAllowed = true,
+                        Message = "Gói đăng ký hợp lệ."
+                    };
                 }
 
-                bool isFreePlan = string.Equals(planName, "FREE", StringComparison.OrdinalIgnoreCase);
+                var isFreePlan = string.Equals(planName, "FREE", StringComparison.OrdinalIgnoreCase);
 
                 if (isFreePlan)
                 {
-                    return (false, "Bạn đã hết số lần sử dụng AI miễn phí. Vui lòng đăng ký gói dịch vụ để tiếp tục.", null);
+                    return new SubscriptionCheckResult
+                    {
+                        IsAllowed = false,
+                        Message = "Bạn đã hết số lần sử dụng AI miễn phí. Vui lòng đăng ký gói dịch vụ để tiếp tục."
+                    };
                 }
 
-                return (false,
-                    $"Bạn đã hết số lần sử dụng AI với gói {planName}. Vui lòng gia hạn hoặc mua thêm.",
-                    new { RecoverTime = data.RequestLimitedEndsAt });
+                return new SubscriptionCheckResult
+                {
+                    IsAllowed = false,
+                    Message = $"Bạn đã hết số lần sử dụng AI với gói {planName}. Vui lòng gia hạn hoặc mua thêm.",
+                    RequestLimitedEndsAt = data.RequestLimitedEndsAt,
+                    Metadata = data.RequestLimitedEndsAt != null ? new { RecoverTime = data.RequestLimitedEndsAt } : null
+                };
             }
             catch (Exception ex)
             {
-                return (false, "Lỗi hệ thống khi kiểm tra quyền truy cập.", new { ErrorDetail = ex.Message });
+                return new SubscriptionCheckResult
+                {
+                    IsAllowed = false,
+                    Message = "Lỗi hệ thống khi kiểm tra quyền truy cập.",
+                    Metadata = new { ErrorDetail = ex.Message }
+                };
             }
+        }
+
+        public const int UsageQuotaPerRequest = 1;
+        public static async Task UpdateUsageQuotaAsync(
+            IIdentityClient identityClient,
+            Guid userId,
+            int numberOfRequests = UsageQuotaPerRequest)
+        {
+            await identityClient.UpdateUserSubscriptionAsync(userId, new UpdateUsageQuotaRequest
+            {
+                NumberOfRequests = numberOfRequests
+            });
         }
     }
 }

@@ -9,5 +9,5 @@ public interface IIdentityClient : IBaseClient
 {
     Task<ApiResponse<SubscriptionResponse>> GetUserSubscriptionAsync(Guid userId);
 
-    Task<ApiResponse<SubscriptionResponse>> UpdateUserSubscriptionAsync(Guid userId, UpdateSubscriptionRequest request);
+    Task<ApiResponse<SubscriptionResponse>> UpdateUserSubscriptionAsync(Guid userId, UpdateUsageQuotaRequest request);
 }

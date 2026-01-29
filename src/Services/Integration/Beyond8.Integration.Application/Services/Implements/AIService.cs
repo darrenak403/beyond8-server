@@ -1,9 +1,11 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Beyond8.Common.Utilities;
+using Beyond8.Integration.Application.Clients;
 using Beyond8.Integration.Application.Dtos.Ai;
 using Beyond8.Integration.Application.Dtos.AiIntegration.GenerativeAi;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Quiz;
+using Beyond8.Integration.Application.Dtos.Clients.Identity;
 using Beyond8.Integration.Application.Helpers.AiService;
 using Beyond8.Integration.Application.Mappings.AiIntegrationMappings;
 using Beyond8.Integration.Application.Services.Interfaces;
@@ -18,7 +20,8 @@ namespace Beyond8.Integration.Application.Services.Implements
         IAiPromptService aiPromptService,
         IUrlContentDownloader urlContentDownloader,
         IStorageService storageService,
-        IVectorEmbeddingService vectorEmbeddingService) : IAiService
+        IVectorEmbeddingService vectorEmbeddingService,
+        IIdentityClient identityClient) : IAiService
     {
         private const int DefaultTopK = 15;
         private const string InstructorProfileReviewPromptName = "Instructor Profile Review";
@@ -57,6 +60,8 @@ namespace Beyond8.Integration.Application.Services.Implements
                     topP: t.TopP,
                     inlineImages: imageParts.Count > 0 ? imageParts : null);
 
+                await SubscriptionHelper.UpdateUsageQuotaAsync(identityClient, userId);
+
                 if (!geminiResult.IsSuccess || geminiResult.Data == null)
                     return ApiResponse<AiProfileReviewResponse>.FailureResponse(
                         geminiResult.Message ?? "Đã xảy ra lỗi khi đánh giá hồ sơ.");
@@ -70,8 +75,7 @@ namespace Beyond8.Integration.Application.Services.Implements
                         "Không thể phân tích kết quả đánh giá từ AI. Vui lòng thử lại.");
                 }
 
-                return ApiResponse<AiProfileReviewResponse>.SuccessResponse(
-                    parsed, "Đánh giá hồ sơ giảng viên thành công.");
+                return ApiResponse<AiProfileReviewResponse>.SuccessResponse(parsed, "Đánh giá hồ sơ giảng viên thành công.");
             }
             catch (Exception ex)
             {
@@ -118,6 +122,8 @@ namespace Beyond8.Integration.Application.Services.Implements
                     maxTokens: prompt.MaxTokens,
                     temperature: prompt.Temperature,
                     topP: prompt.TopP);
+
+                await SubscriptionHelper.UpdateUsageQuotaAsync(identityClient, userId);
 
                 if (!aiResult.IsSuccess || aiResult.Data == null)
                     return ApiResponse<GenQuizResponse>.FailureResponse(
@@ -199,6 +205,5 @@ namespace Beyond8.Integration.Application.Services.Implements
             var (data2, ct) = await storageService.GetObjectAsync(urlOrKey);
             return (data2, ct ?? "image/jpeg");
         }
-
     }
 }

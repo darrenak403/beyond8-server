@@ -51,7 +51,7 @@ public class SubscriptionService(
         }
     }
 
-    public async Task<ApiResponse<SubscriptionResponse>> UpdateSubscriptionAsync(Guid userId, UpdateSubscriptionRequest request)
+    public async Task<ApiResponse<SubscriptionResponse>> UpdateSubscriptionAsync(Guid userId, UpdateUsageQuotaRequest request)
     {
         try
         {
@@ -61,7 +61,7 @@ public class SubscriptionService(
                 logger.LogWarning("User {UserId} has no active subscription", userId);
                 return ApiResponse<SubscriptionResponse>.FailureResponse("Người dùng không có gói đăng ký hoạt động.");
             }
-            subscription.UpdateSubscriptionRequest(request);
+            subscription.UpdateUsageQuotaRequest(request);
             await unitOfWork.UserSubscriptionRepository.UpdateAsync(subscription.Id, subscription);
             await unitOfWork.SaveChangesAsync();
             return ApiResponse<SubscriptionResponse>.SuccessResponse(subscription.ToSubscriptionResponse(), "Cập nhật gói đăng ký thành công.");

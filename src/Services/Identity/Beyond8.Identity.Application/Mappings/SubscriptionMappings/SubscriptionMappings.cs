@@ -33,7 +33,7 @@ public static class SubscriptionMappings
         };
     }
 
-    public static void UpdateSubscriptionRequest(this UserSubscription subscription, UpdateSubscriptionRequest request)
+    public static void UpdateUsageQuotaRequest(this UserSubscription subscription, UpdateUsageQuotaRequest request)
     {
         if (request.NumberOfRequests > 0)
         {

@@ -150,6 +150,7 @@ namespace Beyond8.Integration.Api.Bootstrapping
             builder.Services.AddScoped<IEmailService, EmailService>();
             builder.Services.AddScoped<IVnptEkycService, VnptEkycService>();
             builder.Services.AddScoped<IAiService, AiService>();
+            builder.Services.AddScoped<IEmbeddingService, EmbeddingService>();
             builder.Services.AddScoped<IPdfChunkService, PdfChunkService>();
             builder.Services.AddScoped<IVectorEmbeddingService, VectorEmbeddingService>();
 
@@ -221,7 +222,6 @@ namespace Beyond8.Integration.Api.Bootstrapping
             app.MapAiPromptApi();
             app.MapVnptEkycApi();
             app.MapNotificationApi();
-            app.MapEmbeddingApi();
 
             return app;
         }
