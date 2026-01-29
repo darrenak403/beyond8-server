@@ -35,9 +35,16 @@ namespace Beyond8.Integration.Api.Apis
                 .Produces<ApiResponse<InstructorNotificationResponse>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
-            group.MapPut("/read", ReadNotification)
+            group.MapPut("/{id:guid}/read", ReadNotification)
                 .WithName("ReadNotification")
                 .WithDescription("Đánh dấu thông báo đã đọc")
+                .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
+            group.MapPut("/read-all", ReadAllNotifications)
+                .WithName("ReadAllNotification")
+                .WithDescription("Đánh dấu tất cả thông báo đã đọc")
                 .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
@@ -49,7 +56,38 @@ namespace Beyond8.Integration.Api.Apis
                 .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
+            group.MapDelete("/{id:guid}", DeleteNotification)
+                .WithName("DeleteNotification")
+                .WithDescription("Xóa thông báo")
+                .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
+            group.MapDelete("/delete-all", DeleteAllNotifications)
+                .WithName("DeleteAllNotification")
+                .WithDescription("Xóa tất cả thông báo")
+                .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
             return group;
+        }
+
+        private static async Task<IResult> DeleteAllNotifications(
+            [FromServices] INotificationHistoryService notificationHistoryService,
+            [FromServices] ICurrentUserService currentUserService)
+        {
+            var result = await notificationHistoryService.DeleteAllNotificationAsync(currentUserService.UserId);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
+
+        private static async Task<IResult> DeleteNotification(
+            [FromRoute] Guid id,
+            [FromServices] INotificationHistoryService notificationHistoryService,
+            [FromServices] ICurrentUserService currentUserService)
+        {
+            var result = await notificationHistoryService.DeleteNotificationAsync(id, currentUserService.UserId);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
 
         private static async Task<IResult> UnreadNotification(
@@ -61,11 +99,20 @@ namespace Beyond8.Integration.Api.Apis
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
 
-        private static async Task<IResult> ReadNotification(
+        private static async Task<IResult> ReadAllNotifications(
             [FromServices] INotificationHistoryService notificationHistoryService,
             [FromServices] ICurrentUserService currentUserService)
         {
-            var result = await notificationHistoryService.ReadNotificationAsync(currentUserService.UserId);
+            var result = await notificationHistoryService.ReadAllNotificationAsync(currentUserService.UserId);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
+
+        private static async Task<IResult> ReadNotification(
+            [FromRoute] Guid id,
+            [FromServices] INotificationHistoryService notificationHistoryService,
+            [FromServices] ICurrentUserService currentUserService)
+        {
+            var result = await notificationHistoryService.ReadNotificationAsync(id, currentUserService.UserId);
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
 

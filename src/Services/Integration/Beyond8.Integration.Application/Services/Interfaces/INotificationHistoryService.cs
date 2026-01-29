@@ -15,6 +15,9 @@ namespace Beyond8.Integration.Application.Services.Interfaces
             PaginationNotificationRequest pagination);
 
         Task<ApiResponse<bool>> UnreadNotificationAsync(Guid id, Guid userId);
-        Task<ApiResponse<bool>> ReadNotificationAsync(Guid userId);
+        Task<ApiResponse<bool>> ReadNotificationAsync(Guid id, Guid userId);
+        Task<ApiResponse<bool>> ReadAllNotificationAsync(Guid userId);
+        Task<ApiResponse<bool>> DeleteAllNotificationAsync(Guid userId);
+        Task<ApiResponse<bool>> DeleteNotificationAsync(Guid id, Guid userId);
     }
 }

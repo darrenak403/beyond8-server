@@ -154,7 +154,28 @@ namespace Beyond8.Integration.Application.Services.Implements
             }
         }
 
-        public async Task<ApiResponse<bool>> ReadNotificationAsync(Guid userId)
+        public async Task<ApiResponse<bool>> ReadNotificationAsync(Guid id, Guid userId)
+        {
+            try
+            {
+                var notification = await unitOfWork.NotificationRepository.FindOneAsync(n => n.Id == id && n.UserId == userId);
+                if (notification == null)
+                {
+                    return ApiResponse<bool>.FailureResponse("Thông báo không tồn tại");
+                }
+                notification.IsRead = true;
+                await unitOfWork.NotificationRepository.UpdateAsync(notification.Id, notification);
+                await unitOfWork.SaveChangesAsync();
+                return ApiResponse<bool>.SuccessResponse(true, "Đánh dấu thông báo đã đọc thành công.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error reading notification for user {UserId}", userId);
+                return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi đánh dấu thông báo đã đọc.");
+            }
+        }
+
+        public async Task<ApiResponse<bool>> ReadAllNotificationAsync(Guid userId)
         {
             try
             {
@@ -165,12 +186,53 @@ namespace Beyond8.Integration.Application.Services.Implements
                     await unitOfWork.NotificationRepository.UpdateAsync(n.Id, n);
                 }
                 await unitOfWork.SaveChangesAsync();
-                return ApiResponse<bool>.SuccessResponse(true, "Đánh dấu thông báo đã đọc thành công.");
+                return ApiResponse<bool>.SuccessResponse(true, "Đánh dấu tất cả thông báo đã đọc thành công.");
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error reading notification for user {UserId}", userId);
-                return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi đánh dấu thông báo đã đọc.");
+                logger.LogError(ex, "Error reading all notifications for user {UserId}", userId);
+                return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi đánh dấu tất cả thông báo đã đọc.");
+            }
+        }
+
+        public async Task<ApiResponse<bool>> DeleteAllNotificationAsync(Guid userId)
+        {
+            try
+            {
+                var notifications = await unitOfWork.NotificationRepository.GetAllAsync(n => n.UserId == userId);
+                foreach (var n in notifications)
+                {
+                    n.Status = NotificationStatus.Deleted;
+                    await unitOfWork.NotificationRepository.UpdateAsync(n.Id, n);
+                }
+                await unitOfWork.SaveChangesAsync();
+                return ApiResponse<bool>.SuccessResponse(true, "Xóa tất cả thông báo thành công.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error deleting all notifications for user {UserId}", userId);
+                return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi xóa tất cả thông báo.");
+            }
+        }
+
+        public async Task<ApiResponse<bool>> DeleteNotificationAsync(Guid id, Guid userId)
+        {
+            try
+            {
+                var notification = await unitOfWork.NotificationRepository.FindOneAsync(n => n.Id == id && n.UserId == userId);
+                if (notification == null)
+                {
+                    return ApiResponse<bool>.FailureResponse("Thông báo không tồn tại");
+                }
+                notification.Status = NotificationStatus.Deleted;
+                await unitOfWork.NotificationRepository.UpdateAsync(notification.Id, notification);
+                await unitOfWork.SaveChangesAsync();
+                return ApiResponse<bool>.SuccessResponse(true, "Xóa thông báo thành công.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error deleting notification {Id} for user {UserId}", id, userId);
+                return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi xóa thông báo.");
             }
         }
     }
