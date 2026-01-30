@@ -3,9 +3,6 @@ using Beyond8.Common.Data.Base;
 
 namespace Beyond8.Assessment.Domain.Entities;
 
-/// <summary>
-/// Junction table linking Quiz and Question with ordering
-/// </summary>
 public class QuizQuestion : BaseEntity
 {
     public Guid QuizId { get; set; }
@@ -18,13 +15,7 @@ public class QuizQuestion : BaseEntity
     [ForeignKey(nameof(QuestionId))]
     public virtual Question Question { get; set; } = null!;
 
-    /// <summary>
-    /// Order of question in the quiz (1-based)
-    /// </summary>
     public int OrderIndex { get; set; }
-
-    /// <summary>
-    /// Override points for this question in this quiz (null = use question's default)
-    /// </summary>
+    
     public int? PointsOverride { get; set; }
 }
