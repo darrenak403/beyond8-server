@@ -21,7 +21,44 @@ namespace Beyond8.Catalog.Domain.Repositories.Interfaces
             int? minStudents,
             bool? isActive,
             bool? isDescending,
+            bool? isDescendingPrice,
+            bool? isRandom);
+
+        Task<(List<Course> Items, int TotalCount)> SearchCoursesInstructorAsync(
+            int pageNumber,
+            int pageSize,
+            string? keyword,
+            string? categoryName,
+            string? instructorName,
+            CourseStatus? status,
+            CourseLevel? level,
+            string? language,
+            decimal? minPrice,
+            decimal? maxPrice,
+            decimal? minRating,
+            int? minStudents,
+            bool? isActive,
+            bool? isDescending,
+            bool? isDescendingPrice,
             bool? isRandom,
             Guid? instructorId = null);
+
+        Task<(List<Course> Items, int TotalCount)> SearchCoursesAdminAsync(
+                int pageNumber,
+                int pageSize,
+                string? keyword,
+                string? categoryName,
+                string? instructorName,
+                CourseStatus? status,
+                CourseLevel? level,
+                string? language,
+                decimal? minPrice,
+                decimal? maxPrice,
+                decimal? minRating,
+                int? minStudents,
+                bool? isActive,
+                bool? isDescending,
+                bool? isDescendingPrice,
+                bool? isRandom);
     }
 }
