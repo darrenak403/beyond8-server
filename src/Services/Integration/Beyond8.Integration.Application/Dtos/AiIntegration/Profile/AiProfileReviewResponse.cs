@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Beyond8.Integration.Application.Dtos.Ai
+namespace Beyond8.Integration.Application.Dtos.AiIntegration.Profile
 {
     public class AiProfileReviewResponse
     {

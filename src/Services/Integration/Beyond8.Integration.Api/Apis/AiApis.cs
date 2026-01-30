@@ -2,7 +2,7 @@ using Beyond8.Common.Extensions;
 using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
 using Beyond8.Integration.Application.Clients;
-using Beyond8.Integration.Application.Dtos.Ai;
+using Beyond8.Integration.Application.Dtos.AiIntegration.Profile;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Embedding;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Quiz;
 using Beyond8.Integration.Application.Helpers.AiService;
@@ -41,6 +41,14 @@ namespace Beyond8.Integration.Api.Apis
                 .Produces<ApiResponse<GenQuizResponse>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<GenQuizResponse>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
+
+            // group.MapPost("/quiz/explain", ExplainQuiz)
+            //     .WithName("ExplainQuiz")
+            //     .WithDescription("Giải thích quiz từ câu hỏi và đáp án cho sinh viên.")
+            //     .RequireAuthorization()
+            //     .Produces<ApiResponse<ExplainQuizResponse>>(StatusCodes.Status200OK)
+            //     .Produces<ApiResponse<ExplainQuizResponse>>(StatusCodes.Status400BadRequest)
+            //     .Produces(StatusCodes.Status401Unauthorized);
 
             group.MapGet("/health", HealthCheck)
                 .WithName("HealthCheck")

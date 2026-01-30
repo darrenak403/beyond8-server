@@ -40,45 +40,45 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
             if (chunkResult.Count == 0)
                 throw new InvalidOperationException("Không có chunks để embed.");
 
-                // BƯỚC 1: Dedupe theo vị trí — giữ bản đầu tiên nếu chunking sinh ra 2 chunk cùng (Page, Index)
-                var uniqueChunks = chunkResult
-                    .GroupBy(c => new { c.DocumentId, c.PageNumber, c.ChunkIndex })
-                    .Select(g => g.First())
-                    .ToList();
+            // BƯỚC 1: Dedupe theo vị trí — giữ bản đầu tiên nếu chunking sinh ra 2 chunk cùng (Page, Index)
+            var uniqueChunks = chunkResult
+                .GroupBy(c => new { c.DocumentId, c.PageNumber, c.ChunkIndex })
+                .Select(g => g.First())
+                .ToList();
 
-                if (uniqueChunks.Count < chunkResult.Count)
+            if (uniqueChunks.Count < chunkResult.Count)
+            {
+                logger.LogInformation(
+                    "Deduped chunks by position for document {DocumentId}: {OriginalCount} -> {UniqueCount}",
+                    documentId,
+                    chunkResult.Count,
+                    uniqueChunks.Count);
+            }
+
+            // BƯỚC 2: Subset dedupe — loại chunk nằm trọn trong chunk khác (cùng trang), giữ chunk dài hơn
+            var finalChunks = ProcessAndDeduplicateChunks(uniqueChunks, documentId);
+
+            const int batchSize = 20; // Số chunks gom lại mỗi batch
+            var embeddings = new List<DocumentEmbedding>();
+
+            for (int i = 0; i < finalChunks.Count; i += batchSize)
+            {
+                var batch = finalChunks.Skip(i).Take(batchSize).ToList();
+                var texts = batch.Select(c => c.Text).ToArray();
+
+                var batchResult = await EmbedTextsBatchAsync(texts);
+                if (batchResult == null || batchResult.Count == 0)
                 {
-                    logger.LogInformation(
-                        "Deduped chunks by position for document {DocumentId}: {OriginalCount} -> {UniqueCount}",
-                        documentId,
-                        chunkResult.Count,
-                        uniqueChunks.Count);
+                    logger.LogWarning("Failed to embed batch starting at index {StartIndex} for document {DocumentId}", i, documentId);
+                    continue;
                 }
 
-                // BƯỚC 2: Subset dedupe — loại chunk nằm trọn trong chunk khác (cùng trang), giữ chunk dài hơn
-                var finalChunks = ProcessAndDeduplicateChunks(uniqueChunks, documentId);
-
-                const int batchSize = 20; // Số chunks gom lại mỗi batch
-                var embeddings = new List<DocumentEmbedding>();
-
-                for (int i = 0; i < finalChunks.Count; i += batchSize)
+                var vectors = batchResult;
+                for (int j = 0; j < batch.Count && j < vectors.Count(); j++)
                 {
-                    var batch = finalChunks.Skip(i).Take(batchSize).ToList();
-                    var texts = batch.Select(c => c.Text).ToArray();
-
-                    var batchResult = await EmbedTextsBatchAsync(texts);
-                    if (batchResult == null || batchResult.Count == 0)
-                    {
-                        logger.LogWarning("Failed to embed batch starting at index {StartIndex} for document {DocumentId}", i, documentId);
-                        continue;
-                    }
-
-                    var vectors = batchResult;
-                    for (int j = 0; j < batch.Count && j < vectors.Count(); j++)
-                    {
-                        embeddings.Add(batch[j].ToDocumentEmbedding(vectors[j], courseId, lessonId));
-                    }
+                    embeddings.Add(batch[j].ToDocumentEmbedding(vectors[j], courseId, lessonId));
                 }
+            }
 
             if (embeddings.Count == 0)
             {
@@ -102,20 +102,20 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
             return embeddings.Select(e => e.ToDocumentEmbeddingResponse(Guid.NewGuid())).ToList();
         }
 
+
         public async Task<List<VectorSearchResult>> SearchAsync(VectorSearchRequest request)
         {
             var stopwatch = Stopwatch.StartNew();
 
             try
             {
-                if (string.IsNullOrWhiteSpace(request.Query))
+                var queryText = request.Query?.Trim();
+                if (string.IsNullOrWhiteSpace(queryText))
                 {
-                    logger.LogWarning("Query cannot be empty.");
-                    return [];
+                    queryText = request.LessonId.HasValue ? "nội dung bài học" : "nội dung khóa học";
                 }
 
-                // Embed query text
-                var embeddingResult = await EmbedTextAsync(request.Query);
+                var embeddingResult = await EmbedTextAsync(queryText);
                 if (embeddingResult == null)
                 {
                     logger.LogWarning("Failed to embed query text.");
@@ -125,59 +125,39 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                 List<VectorSearchResult> searchResult;
                 if (request.LessonId.HasValue)
                 {
-                    var lessonChunks = await SearchInCourseAsync(
+                    // Chỉ search trong đúng lesson: đảm bảo context đúng (vd. chương 1, bài 13 → chỉ nội dung bài 13)
+                    searchResult = await SearchInCourseAsync(
                         request.CourseId,
-                        embeddingResult!.Vector,
+                        embeddingResult.Vector,
                         request.TopK,
                         request.ScoreThreshold,
                         request.LessonId);
-
-                    var courseChunks = await SearchInCourseAsync(
-                        request.CourseId,
-                        embeddingResult!.Vector,
-                        request.TopK,
-                        request.ScoreThreshold,
-                        lessonId: null);
-
-                    var seen = new HashSet<(Guid?, int?, int)>(
-                        lessonChunks.Select(r => (r.DocumentId, r.PageNumber, r.ChunkIndex)));
-
-                    var combined = new List<VectorSearchResult>(lessonChunks);
-
-                    foreach (var r in courseChunks)
-                    {
-                        if (combined.Count >= request.TopK) break;
-                        if (seen.Add((r.DocumentId, r.PageNumber, r.ChunkIndex)))
-                            combined.Add(r);
-                    }
-
-                    searchResult = combined.Take(request.TopK).ToList();
                 }
                 else
                 {
                     searchResult = await SearchInCourseAsync(
                         request.CourseId,
-                        embeddingResult!.Vector,
+                        embeddingResult.Vector,
                         request.TopK,
                         request.ScoreThreshold,
                         lessonId: null);
                 }
 
                 stopwatch.Stop();
-                var lessonPart = request.LessonId.HasValue ? $" (lesson {request.LessonId})" : "";
+                var scope = request.LessonId.HasValue ? $"lesson {request.LessonId}" : "course";
                 logger.LogInformation(
-                    "Searched course {CourseId}{LessonPart} with query in {ElapsedMs}ms, found {Count} results",
-                    request.CourseId,
-                    lessonPart,
-                    stopwatch.ElapsedMilliseconds,
-                    searchResult?.Count ?? 0);
+                    "Vector search {Scope}, query: \"{Query}\", {Count} results in {ElapsedMs}ms",
+                    scope,
+                    queryText.Length > 50 ? queryText[..50] + "..." : queryText,
+                    searchResult.Count,
+                    stopwatch.ElapsedMilliseconds);
 
-                return searchResult ?? [];
+                return searchResult;
             }
             catch (Exception ex)
             {
                 stopwatch.Stop();
-                logger.LogError(ex, "Error searching with query for course {CourseId}", request.CourseId);
+                logger.LogError(ex, "Error searching for course {CourseId}", request.CourseId);
                 return [];
             }
         }
