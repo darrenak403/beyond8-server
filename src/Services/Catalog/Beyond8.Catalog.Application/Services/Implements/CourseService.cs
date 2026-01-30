@@ -32,8 +32,8 @@ public class CourseService(
                 pageNumber,
                 pageSize,
                 keyword: request.Keyword,
-                categoryId: request.CategoryId,
-                instructorId: request.InstructorId,
+                categoryName: request.CategoryName,
+                instructorName: request.InstructorName,
                 status: request.Status,
                 level: request.Level,
                 language: request.Language,
@@ -43,6 +43,7 @@ public class CourseService(
                 minStudents: request.MinStudents,
                 isActive: request.IsActive,
                 isDescending: request.IsDescending,
+                isDescendingPrice: request.IsDescendingPrice,
                 isRandom: request.IsRandom
             );
 
@@ -195,25 +196,47 @@ public class CourseService(
         }
     }
 
-    public async Task<ApiResponse<List<CourseResponse>>> GetCoursesByInstructorAsync(Guid instructorId, PaginationRequest pagination)
+    public async Task<ApiResponse<List<CourseResponse>>> GetCoursesByInstructorAsync(Guid instructorId, PaginationCourseSearchRequest request)
     {
         try
         {
-            var courses = await unitOfWork.CourseRepository.GetPagedAsync(
-                pageNumber: pagination.PageNumber,
-                pageSize: pagination.PageSize,
-                filter: c => c.InstructorId == instructorId && c.IsActive,
-                orderBy: query => query.OrderByDescending(c => c.CreatedAt),
-                includes: query => query.Include(c => c.Category)
+            logger.LogInformation("Getting courses for instructor: {InstructorId}", instructorId);
+
+            var pageNumber = request.PageNumber < 1 ? 1 : request.PageNumber;
+            var pageSize = request.PageSize switch
+            {
+                < 1 => 10,
+                > 100 => 100,
+                _ => request.PageSize
+            };
+
+            var (courses, totalCount) = await unitOfWork.CourseRepository.SearchCoursesInstructorAsync(
+                pageNumber,
+                pageSize,
+                keyword: request.Keyword,
+                categoryName: request.CategoryName,
+                instructorName: request.InstructorName,
+                status: request.Status,
+                level: request.Level,
+                language: request.Language,
+                minPrice: request.MinPrice,
+                maxPrice: request.MaxPrice,
+                minRating: request.MinRating,
+                minStudents: request.MinStudents,
+                isActive: request.IsActive,
+                isDescendingPrice: request.IsDescendingPrice,
+                isDescending: request.IsDescending,
+                isRandom: request.IsRandom,
+                instructorId: instructorId
             );
 
-            var courseResponses = courses.Items.Select(c => c.ToResponse()).ToList();
+            var courseResponses = courses.Select(c => c.ToResponse()).ToList();
 
             return ApiResponse<List<CourseResponse>>.SuccessPagedResponse(
                 courseResponses,
-                courses.TotalCount,
-                pagination.PageNumber,
-                pagination.PageSize,
+                totalCount,
+                pageNumber,
+                pageSize,
                 "Lấy danh sách khóa học thành công."
             );
         }
@@ -368,32 +391,51 @@ public class CourseService(
         }
     }
 
-    public async Task<ApiResponse<List<CourseResponse>>> GetPendingApprovalCoursesAsync(PaginationRequest pagination)
+    public async Task<ApiResponse<List<CourseResponse>>> GetAllCoursesForAdminAsync(PaginationCourseSearchRequest request)
     {
         try
         {
-            var courses = await unitOfWork.CourseRepository.GetPagedAsync(
-                pageNumber: pagination.PageNumber,
-                pageSize: pagination.PageSize,
-                filter: c => c.Status == CourseStatus.PendingApproval && c.IsActive,
-                orderBy: query => query.OrderBy(c => c.CreatedAt),
-                includes: query => query.Include(c => c.Category)
+            var pageNumber = request.PageNumber < 1 ? 1 : request.PageNumber;
+            var pageSize = request.PageSize switch
+            {
+                < 1 => 10,
+                > 100 => 100,
+                _ => request.PageSize
+            };
+
+            var (courses, totalCount) = await unitOfWork.CourseRepository.SearchCoursesAdminAsync(
+                pageNumber,
+                pageSize,
+                keyword: request.Keyword,
+                categoryName: request.CategoryName,
+                instructorName: request.InstructorName,
+                status: request.Status,
+                level: request.Level,
+                language: request.Language,
+                minPrice: request.MinPrice,
+                maxPrice: request.MaxPrice,
+                minRating: request.MinRating,
+                minStudents: request.MinStudents,
+                isActive: request.IsActive,
+                isDescendingPrice: request.IsDescendingPrice,
+                isDescending: request.IsDescending,
+                isRandom: request.IsRandom
             );
 
-            var courseResponses = courses.Items.Select(c => c.ToResponse()).ToList();
+            var courseResponses = courses.Select(c => c.ToResponse()).ToList();
 
             return ApiResponse<List<CourseResponse>>.SuccessPagedResponse(
                 courseResponses,
-                courses.TotalCount,
-                pagination.PageNumber,
-                pagination.PageSize,
-                "Lấy danh sách khóa học chờ phê duyệt thành công."
+                totalCount,
+                pageNumber,
+                pageSize,
+                "Lấy danh sách khóa học thành công."
             );
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error getting pending approval courses");
-            return ApiResponse<List<CourseResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách khóa học chờ phê duyệt.");
+            logger.LogError(ex, "Error getting courses for admin");
+            return ApiResponse<List<CourseResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách khóa học.");
         }
     }
 
