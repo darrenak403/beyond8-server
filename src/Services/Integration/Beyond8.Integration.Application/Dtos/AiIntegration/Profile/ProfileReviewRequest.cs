@@ -1,4 +1,4 @@
-namespace Beyond8.Integration.Application.Dtos.Ai
+namespace Beyond8.Integration.Application.Dtos.AiIntegration.Profile
 {
     public class ProfileReviewRequest
     {

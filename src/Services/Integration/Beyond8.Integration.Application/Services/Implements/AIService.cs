@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Beyond8.Common.Utilities;
 using Beyond8.Integration.Application.Clients;
-using Beyond8.Integration.Application.Dtos.Ai;
+using Beyond8.Integration.Application.Dtos.AiIntegration.Profile;
 using Beyond8.Integration.Application.Dtos.AiIntegration.GenerativeAi;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Quiz;
 using Beyond8.Integration.Application.Helpers.AiService;

@@ -1,5 +1,5 @@
 using Beyond8.Common.Utilities;
-using Beyond8.Integration.Application.Dtos.Ai;
+using Beyond8.Integration.Application.Dtos.AiIntegration.Profile;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Quiz;
 
 namespace Beyond8.Integration.Application.Services.Interfaces
