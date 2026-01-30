@@ -126,12 +126,9 @@ namespace Beyond8.Integration.Application.Helpers.AiService
             if (el.TryGetProperty("difficulty", out var dEl) && dEl.TryGetInt32(out var d))
                 difficulty = (DifficultyLevel)Math.Clamp(d, 0, 2);
 
-            var points = 1;
-            if (el.TryGetProperty("points", out var pEl))
-            {
-                if (pEl.ValueKind == JsonValueKind.Number && pEl.TryGetDouble(out var pd))
-                    points = Math.Max(1, (int)Math.Round(pd));
-            }
+            var points = 1m;
+            if (el.TryGetProperty("points", out var pEl) && pEl.ValueKind == JsonValueKind.Number && pEl.TryGetDecimal(out var pd))
+                points = Math.Max(0.5m, pd);
 
             return new QuizQuestionDto
             {
@@ -143,6 +140,40 @@ namespace Beyond8.Integration.Application.Helpers.AiService
                 Difficulty = difficulty,
                 Points = points
             };
+        }
+
+        /// <summary>
+        /// Chuẩn hóa điểm từng câu sao cho tổng điểm đúng bằng maxPoints (khắc phục AI trả về tổng lệch).
+        /// </summary>
+        public static void NormalizePointsToMaxPoints(GenQuizResponse response, int maxPoints)
+        {
+            var all = new List<QuizQuestionDto>();
+            all.AddRange(response.Easy);
+            all.AddRange(response.Medium);
+            all.AddRange(response.Hard);
+            if (all.Count == 0) return;
+
+            var currentSum = all.Sum(q => q.Points);
+            if (currentSum <= 0)
+            {
+                var perQuestion = (decimal)maxPoints / all.Count;
+                var rounded = Math.Round(perQuestion, 1);
+                foreach (var q in all)
+                    q.Points = rounded;
+                var diff = maxPoints - all.Sum(q => q.Points);
+                if (diff != 0 && all.Count > 0)
+                    all[0].Points += diff;
+                return;
+            }
+
+            var factor = (decimal)maxPoints / currentSum;
+            foreach (var q in all)
+                q.Points = Math.Max(0.5m, Math.Round(q.Points * factor, 1));
+
+            var total = all.Sum(q => q.Points);
+            var delta = maxPoints - total;
+            if (delta == 0) return;
+            all[0].Points = Math.Max(0.5m, all[0].Points + delta);
         }
     }
 }

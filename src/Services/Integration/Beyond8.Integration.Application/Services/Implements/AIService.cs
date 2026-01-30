@@ -137,6 +137,8 @@ namespace Beyond8.Integration.Application.Services.Implements
                     return ApiResponse<GenQuizResponse>.FailureResponse("Không thể phân tích kết quả quiz từ AI. Kiểm tra lại thông tin.");
                 }
 
+                AiServiceQuizHelper.NormalizePointsToMaxPoints(parsed, request.MaxPoints);
+
                 return ApiResponse<GenQuizResponse>.SuccessResponse(parsed, "Tạo quiz từ AI thành công.");
             }
             catch (Exception ex)
