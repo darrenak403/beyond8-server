@@ -16,13 +16,11 @@ public class CreateLessonRequestValidator : AbstractValidator<CreateLessonReques
             .MaximumLength(200).WithMessage("Tiêu đề bài học không được vượt quá 200 ký tự");
 
         RuleFor(x => x.Description)
-            .MaximumLength(1000).WithMessage("Mô tả bài học không được vượt quá 1000 ký tự");
+            .MaximumLength(1000).WithMessage("Mô tả bài học không được vượt quá 1000 ký tự")
+            .When(x => !string.IsNullOrEmpty(x.Description));
 
         RuleFor(x => x.Type)
             .IsInEnum().WithMessage("Loại bài học không hợp lệ");
-
-        RuleFor(x => x.OrderIndex)
-            .GreaterThanOrEqualTo(0).WithMessage("Thứ tự phải lớn hơn hoặc bằng 0");
 
         RuleFor(x => x.DurationSeconds)
             .GreaterThanOrEqualTo(0).When(x => x.DurationSeconds.HasValue)

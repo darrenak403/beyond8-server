@@ -15,14 +15,14 @@ public static class CourseMappings
         {
             Title = request.Title,
             Slug = slug,
-            Description = request.Description,
+            Description = request.Description ?? string.Empty,
             ShortDescription = request.ShortDescription,
-            CategoryId = request.CategoryId,
-            Level = request.Level,
-            Language = request.Language,
-            Price = request.Price,
-            ThumbnailUrl = request.ThumbnailUrl,
-            Outcomes = JsonSerializer.Serialize(request.Outcomes),
+            CategoryId = request.CategoryId ?? Guid.Empty, // Or handle null category
+            Level = request.Level ?? CourseLevel.Beginner,
+            Language = request.Language ?? "vi-VN",
+            Price = request.Price ?? 0,
+            ThumbnailUrl = request.ThumbnailUrl ?? string.Empty,
+            Outcomes = request.Outcomes != null ? JsonSerializer.Serialize(request.Outcomes) : "[]",
             Requirements = request.Requirements != null ? JsonSerializer.Serialize(request.Requirements) : null,
             TargetAudience = request.TargetAudience != null ? JsonSerializer.Serialize(request.TargetAudience) : null,
             Status = CourseStatus.Draft,
@@ -38,16 +38,16 @@ public static class CourseMappings
     {
         entity.Title = request.Title;
         entity.Slug = request.Title.ToSlug();
-        entity.Description = request.Description;
+        entity.Description = request.Description ?? string.Empty;
         entity.ShortDescription = request.ShortDescription;
-        entity.CategoryId = request.CategoryId;
-        entity.Level = request.Level;
-        entity.Language = request.Language;
-        entity.Price = request.Price;
-        entity.ThumbnailUrl = request.ThumbnailUrl;
-        entity.Outcomes = JsonSerializer.Serialize(request.Outcomes);
-        entity.Requirements = request.Requirements != null ? JsonSerializer.Serialize(request.Requirements) : null;
-        entity.TargetAudience = request.TargetAudience != null ? JsonSerializer.Serialize(request.TargetAudience) : null;
+        entity.CategoryId = request.CategoryId ?? entity.CategoryId; // Keep existing if null
+        entity.Level = request.Level ?? entity.Level;
+        entity.Language = request.Language ?? entity.Language;
+        entity.Price = request.Price ?? entity.Price;
+        entity.ThumbnailUrl = request.ThumbnailUrl ?? entity.ThumbnailUrl;
+        entity.Outcomes = request.Outcomes != null ? JsonSerializer.Serialize(request.Outcomes) : entity.Outcomes;
+        entity.Requirements = request.Requirements != null ? JsonSerializer.Serialize(request.Requirements) : entity.Requirements;
+        entity.TargetAudience = request.TargetAudience != null ? JsonSerializer.Serialize(request.TargetAudience) : entity.TargetAudience;
     }
 
     public static CourseResponse ToResponse(this Course entity)

@@ -13,7 +13,8 @@ public class UpdateLessonRequestValidator : AbstractValidator<UpdateLessonReques
             .MaximumLength(200).WithMessage("Tiêu đề bài học không được vượt quá 200 ký tự");
 
         RuleFor(x => x.Description)
-            .MaximumLength(1000).WithMessage("Mô tả bài học không được vượt quá 1000 ký tự");
+            .MaximumLength(1000).WithMessage("Mô tả bài học không được vượt quá 1000 ký tự")
+            .When(x => !string.IsNullOrEmpty(x.Description));
 
         RuleFor(x => x.Type)
             .IsInEnum().WithMessage("Loại bài học không hợp lệ");

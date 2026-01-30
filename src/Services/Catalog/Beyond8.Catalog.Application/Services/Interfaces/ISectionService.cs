@@ -10,5 +10,4 @@ public interface ISectionService
     Task<ApiResponse<SectionResponse>> CreateSectionAsync(CreateSectionRequest request, Guid currentUserId);
     Task<ApiResponse<SectionResponse>> UpdateSectionAsync(Guid sectionId, UpdateSectionRequest request, Guid currentUserId);
     Task<ApiResponse<bool>> DeleteSectionAsync(Guid sectionId, Guid currentUserId);
-    Task<ApiResponse<bool>> ReorderSectionsAsync(Guid courseId, List<ReorderSectionRequest> requests, Guid currentUserId);
 }

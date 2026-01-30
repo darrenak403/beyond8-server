@@ -30,7 +30,6 @@ public static class SectionMappingExtensions
             CourseId = request.CourseId,
             Title = request.Title,
             Description = request.Description,
-            OrderIndex = request.OrderIndex,
             IsPublished = true, // Default value
             AssignmentId = request.AssignmentId
         };
