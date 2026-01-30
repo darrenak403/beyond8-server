@@ -42,7 +42,6 @@ public static class LessonMappings
             Title = request.Title,
             Description = request.Description,
             Type = request.Type,
-            OrderIndex = request.OrderIndex,
             IsPreview = request.IsPreview,
             IsPublished = true,
             VideoOriginalUrl = request.VideoOriginalUrl,

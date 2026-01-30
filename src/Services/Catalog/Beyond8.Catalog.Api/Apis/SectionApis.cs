@@ -66,16 +66,6 @@ public static class SectionApis
             .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
-
-        // Reorder sections
-        group.MapPost("/reorder", ReorderSectionsAsync)
-            .WithName("ReorderSections")
-            .WithDescription("Sắp xếp lại thứ tự các chương")
-            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
-            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized);
-
         return group;
     }
 
@@ -136,19 +126,5 @@ public static class SectionApis
         var currentUserId = currentUserService.UserId;
         var result = await sectionService.DeleteSectionAsync(id, currentUserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
-    }
-
-    private static async Task<IResult> ReorderSectionsAsync(
-        [FromBody] ReorderSectionsRequest request,
-        [FromServices] ISectionService sectionService,
-        [FromServices] ICurrentUserService currentUserService,
-        [FromServices] IValidator<ReorderSectionsRequest> validator)
-    {
-        if (!request.ValidateRequest(validator, out var result))
-            return result!;
-
-        var currentUserId = currentUserService.UserId;
-        var apiResult = await sectionService.ReorderSectionsAsync(request.CourseId, request.Sections, currentUserId);
-        return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
     }
 }

@@ -74,15 +74,6 @@ public static class LessonApis
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
-        // Reorder lessons
-        group.MapPost("/reorder", ReorderLessonsAsync)
-            .WithName("ReorderLessons")
-            .WithDescription("Sắp xếp lại thứ tự các bài học")
-            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
-            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized);
-
         return group;
     }
     private static async Task<IResult> CallbackHlsAsync(VideoCallbackDto request, ILessonService lessonService)
@@ -148,19 +139,5 @@ public static class LessonApis
         var currentUserId = currentUserService.UserId;
         var result = await lessonService.DeleteLessonAsync(id, currentUserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
-    }
-
-    private static async Task<IResult> ReorderLessonsAsync(
-        [FromBody] ReorderLessonsRequest request,
-        [FromServices] ILessonService lessonService,
-        [FromServices] ICurrentUserService currentUserService,
-        [FromServices] IValidator<ReorderLessonsRequest> validator)
-    {
-        if (!request.ValidateRequest(validator, out var result))
-            return result!;
-
-        var currentUserId = currentUserService.UserId;
-        var apiResult = await lessonService.ReorderLessonsAsync(request.SectionId, request.Lessons, currentUserId);
-        return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
     }
 }

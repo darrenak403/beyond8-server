@@ -129,7 +129,7 @@ public class LessonService(
 
 
             var lesson = request.ToEntity();
-            lesson.OrderIndex = request.OrderIndex > 0 ? request.OrderIndex : maxOrder + 1;
+            lesson.OrderIndex = maxOrder + 1;
 
             await unitOfWork.LessonRepository.AddAsync(lesson);
             await unitOfWork.SaveChangesAsync();
@@ -223,58 +223,6 @@ public class LessonService(
         {
             logger.LogError(ex, "Error deleting lesson: {LessonId}", lessonId);
             return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi xóa bài học.");
-        }
-    }
-
-    public async Task<ApiResponse<bool>> ReorderLessonsAsync(Guid sectionId, List<ReorderLessonRequest> requests, Guid currentUserId)
-    {
-        try
-        {
-            // Validate section ownership through course
-            var section = await unitOfWork.SectionRepository.AsQueryable()
-                .Include(s => s.Course)
-                .FirstOrDefaultAsync(s => s.Id == sectionId);
-
-            if (section == null)
-            {
-                logger.LogWarning("Section not found: {SectionId}", sectionId);
-                return ApiResponse<bool>.FailureResponse("Chương không tồn tại.");
-            }
-
-            if (section.Course.InstructorId != currentUserId)
-            {
-                logger.LogWarning("Access denied for section {SectionId} by user {UserId}", sectionId, currentUserId);
-                return ApiResponse<bool>.FailureResponse("Bạn không có quyền truy cập chương này.");
-            }
-
-            // Validate all lesson IDs belong to the section
-            var lessonIds = requests.Select(r => r.LessonId).ToList();
-            var lessons = await unitOfWork.LessonRepository.GetAllAsync(l => l.SectionId == sectionId && lessonIds.Contains(l.Id));
-
-            if (lessons.Count != requests.Count)
-            {
-                logger.LogWarning("Some lessons not found or don't belong to section {SectionId}", sectionId);
-                return ApiResponse<bool>.FailureResponse("Một số bài học không tồn tại hoặc không thuộc chương này.");
-            }
-
-            // Update order indexes
-            foreach (var request in requests)
-            {
-                var lesson = lessons.First(l => l.Id == request.LessonId);
-                lesson.OrderIndex = request.NewOrderIndex;
-                await unitOfWork.LessonRepository.UpdateAsync(lesson.Id, lesson);
-            }
-
-            await unitOfWork.SaveChangesAsync();
-
-            logger.LogInformation("Lessons reordered for section {SectionId} by user {UserId}", sectionId, currentUserId);
-
-            return ApiResponse<bool>.SuccessResponse(true, "Sắp xếp lại bài học thành công.");
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error reordering lessons for section: {SectionId}", sectionId);
-            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi sắp xếp lại bài học.");
         }
     }
 

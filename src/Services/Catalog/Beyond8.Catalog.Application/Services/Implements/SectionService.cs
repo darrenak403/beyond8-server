@@ -86,7 +86,7 @@ public class SectionService(
                 .MaxAsync(s => (int?)s.OrderIndex) ?? 0;
 
             var section = request.ToEntity();
-            section.OrderIndex = request.OrderIndex > 0 ? request.OrderIndex : maxOrder + 1;
+            section.OrderIndex = maxOrder + 1;
 
             await unitOfWork.SectionRepository.AddAsync(section);
             await unitOfWork.SaveChangesAsync();
@@ -177,49 +177,6 @@ public class SectionService(
         {
             logger.LogError(ex, "Error deleting section: {SectionId}", sectionId);
             return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi xóa chương.");
-        }
-    }
-
-    public async Task<ApiResponse<bool>> ReorderSectionsAsync(Guid courseId, List<ReorderSectionRequest> requests, Guid currentUserId)
-    {
-        try
-        {
-            // Validate course ownership
-            var course = await unitOfWork.CourseRepository.FindOneAsync(c => c.Id == courseId && c.InstructorId == currentUserId);
-            if (course == null)
-            {
-                logger.LogWarning("Course not found or access denied: {CourseId} for user {UserId}", courseId, currentUserId);
-                return ApiResponse<bool>.FailureResponse("Khóa học không tồn tại hoặc bạn không có quyền truy cập.");
-            }
-
-            // Validate all section IDs belong to the course
-            var sectionIds = requests.Select(r => r.SectionId).ToList();
-            var sections = await unitOfWork.SectionRepository.GetAllAsync(s => s.CourseId == courseId && sectionIds.Contains(s.Id));
-
-            if (sections.Count != requests.Count)
-            {
-                logger.LogWarning("Some sections not found or don't belong to course {CourseId}", courseId);
-                return ApiResponse<bool>.FailureResponse("Một số chương không tồn tại hoặc không thuộc khóa học này.");
-            }
-
-            // Update order indexes
-            foreach (var request in requests)
-            {
-                var section = sections.First(s => s.Id == request.SectionId);
-                section.OrderIndex = request.NewOrderIndex;
-                await unitOfWork.SectionRepository.UpdateAsync(section.Id, section);
-            }
-
-            await unitOfWork.SaveChangesAsync();
-
-            logger.LogInformation("Sections reordered for course {CourseId} by user {UserId}", courseId, currentUserId);
-
-            return ApiResponse<bool>.SuccessResponse(true, "Sắp xếp lại chương thành công.");
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error reordering sections for course: {CourseId}", courseId);
-            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi sắp xếp lại chương.");
         }
     }
 }

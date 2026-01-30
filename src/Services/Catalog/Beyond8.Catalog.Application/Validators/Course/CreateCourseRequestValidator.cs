@@ -36,7 +36,6 @@ public class CreateCourseRequestValidator : AbstractValidator<CreateCourseReques
             .When(x => !string.IsNullOrEmpty(x.ThumbnailUrl));
 
         RuleForEach(x => x.Outcomes)
-            .NotEmpty().WithMessage("Mục tiêu học tập không được để trống")
             .MaximumLength(500).WithMessage("Mục tiêu học tập không được vượt quá 500 ký tự")
             .When(x => x.Outcomes != null);
 
@@ -49,8 +48,8 @@ public class CreateCourseRequestValidator : AbstractValidator<CreateCourseReques
             .When(x => x.TargetAudience != null);
     }
 
-    private bool BeValidUrl(string url)
+    private bool BeValidUrl(string? url)
     {
-        return Uri.TryCreate(url, UriKind.Absolute, out _);
+        return !string.IsNullOrEmpty(url) && Uri.TryCreate(url, UriKind.Absolute, out _);
     }
 }

@@ -11,5 +11,4 @@ public interface ILessonService
     Task<ApiResponse<LessonResponse>> CreateLessonAsync(CreateLessonRequest request, Guid currentUserId);
     Task<ApiResponse<LessonResponse>> UpdateLessonAsync(Guid lessonId, UpdateLessonRequest request, Guid currentUserId);
     Task<ApiResponse<bool>> DeleteLessonAsync(Guid lessonId, Guid currentUserId);
-    Task<ApiResponse<bool>> ReorderLessonsAsync(Guid sectionId, List<ReorderLessonRequest> requests, Guid currentUserId);
 }

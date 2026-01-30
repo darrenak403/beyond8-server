@@ -16,8 +16,6 @@ public class CreateLessonRequest
 
     public LessonType Type { get; set; } = LessonType.Video;
 
-    public int OrderIndex { get; set; }
-
     public bool IsPreview { get; set; } = false;
 
     // Video fields
