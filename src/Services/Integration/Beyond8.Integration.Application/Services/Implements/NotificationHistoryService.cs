@@ -58,18 +58,6 @@ namespace Beyond8.Integration.Application.Services.Implements
         {
             try
             {
-                // User notifications (AllUser)
-                var userTargets = new List<NotificationTarget> { NotificationTarget.AllUser };
-                var userResult = await unitOfWork.NotificationRepository.GetNotificationsByUserAndRolesAsync(
-                    userId,
-                    userTargets,
-                    pagination.PageNumber,
-                    pagination.PageSize,
-                    pagination.Status,
-                    pagination.Channel,
-                    pagination.IsRead);
-
-                // Instructor notifications (AllInstructor)
                 var instructorTargets = new List<NotificationTarget> { NotificationTarget.AllInstructor };
                 var instructorResult = await unitOfWork.NotificationRepository.GetNotificationsByUserAndRolesAsync(
                     userId,
@@ -82,13 +70,6 @@ namespace Beyond8.Integration.Application.Services.Implements
 
                 var response = new InstructorNotificationResponse
                 {
-                    UserNotifications = new NotificationSection
-                    {
-                        Items = [.. userResult.Items.Select(n => n.ToNotificationResponse(userId)).ToList()],
-                        TotalCount = userResult.TotalCount,
-                        PageNumber = pagination.PageNumber,
-                        PageSize = pagination.PageSize
-                    },
                     InstructorNotifications = new NotificationSection
                     {
                         Items = [.. instructorResult.Items.Select(n => n.ToNotificationResponse(userId)).ToList()],
@@ -98,8 +79,8 @@ namespace Beyond8.Integration.Application.Services.Implements
                     }
                 };
 
-                logger.LogInformation("Retrieved {UserCount} user notifications and {InstructorCount} instructor notifications for user {UserId}",
-                    response.UserNotifications.Items.Count, response.InstructorNotifications.Items.Count, userId);
+                logger.LogInformation("Retrieved {InstructorCount} instructor notifications for user {UserId}",
+                    response.InstructorNotifications.Items.Count, userId);
 
                 return ApiResponse<InstructorNotificationResponse>.SuccessResponse(
                     response,
@@ -241,8 +222,19 @@ namespace Beyond8.Integration.Application.Services.Implements
         {
             try
             {
-                var notifications = await unitOfWork.NotificationRepository.GetAllAsync(n => n.UserId == userId && n.IsRead == false);
-                return ApiResponse<NotificationStatusResponse>.SuccessResponse(new NotificationStatusResponse { IsRead = notifications.Count > 0, UnreadCount = notifications.Count }, "Lấy trạng thái thông báo thành công.");
+                var notifications = await unitOfWork.NotificationRepository.GetAllAsync(
+                    n => n.UserId == userId &&
+                    n.IsRead == false &&
+                    n.Channels.Contains(NotificationChannel.App) &&
+                    n.Status == NotificationStatus.Delivered);
+
+                var response = new NotificationStatusResponse
+                {
+                    IsRead = notifications.Any(n => n.IsRead == false),
+                    UnreadCount = notifications.Count
+                };
+
+                return ApiResponse<NotificationStatusResponse>.SuccessResponse(response, "Lấy trạng thái thông báo thành công.");
             }
             catch (Exception ex)
             {
