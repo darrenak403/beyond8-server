@@ -68,12 +68,15 @@ public class CourseService(
     {
         try
         {
-            // Validate category exists
-            var category = await unitOfWork.CategoryRepository.FindOneAsync(c => c.Id == request.CategoryId && c.IsActive && !c.IsRoot);
-            if (category == null)
+            // Validate category exists if provided
+            if (request.CategoryId.HasValue)
             {
-                logger.LogWarning("Category not found or inactive: {CategoryId}", request.CategoryId);
-                return ApiResponse<CourseResponse>.FailureResponse("Danh mục không tồn tại hoặc không hoạt động.");
+                var category = await unitOfWork.CategoryRepository.FindOneAsync(c => c.Id == request.CategoryId && c.IsActive && !c.IsRoot);
+                if (category == null)
+                {
+                    logger.LogWarning("Category not found or inactive: {CategoryId}", request.CategoryId);
+                    return ApiResponse<CourseResponse>.FailureResponse("Danh mục không tồn tại hoặc không hoạt động.");
+                }
             }
 
             // Get instructor name
@@ -120,12 +123,15 @@ public class CourseService(
                 return ApiResponse<CourseResponse>.FailureResponse("Không thể cập nhật khóa học ở trạng thái này.");
             }
 
-            // Validate category exists
-            var category = await unitOfWork.CategoryRepository.FindOneAsync(c => c.Id == request.CategoryId && c.IsActive && !c.IsRoot);
-            if (category == null)
+            // Validate category exists if provided
+            if (request.CategoryId.HasValue)
             {
-                logger.LogWarning("Category not found or inactive: {CategoryId}", request.CategoryId);
-                return ApiResponse<CourseResponse>.FailureResponse("Danh mục không tồn tại hoặc không hoạt động.");
+                var category = await unitOfWork.CategoryRepository.FindOneAsync(c => c.Id == request.CategoryId && c.IsActive && !c.IsRoot);
+                if (category == null)
+                {
+                    logger.LogWarning("Category not found or inactive: {CategoryId}", request.CategoryId);
+                    return ApiResponse<CourseResponse>.FailureResponse("Danh mục không tồn tại hoặc không hoạt động.");
+                }
             }
 
             course.UpdateMetadataFromRequest(request);
