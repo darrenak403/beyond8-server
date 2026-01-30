@@ -1,0 +1,43 @@
+using Beyond8.Assessment.Application.Dtos.Quizzes;
+using Beyond8.Assessment.Application.Services.Interfaces;
+using Beyond8.Common.Security;
+using Beyond8.Common.Utilities;
+using Microsoft.AspNetCore.Mvc;
+
+namespace Beyond8.Assessment.Api.Apis
+{
+    public static class QuizApis
+    {
+        public static IEndpointRouteBuilder MapQuizApi(this IEndpointRouteBuilder builder)
+        {
+            builder.MapGroup("/api/v1/quizzes")
+                .MapQuizRoutes()
+                .WithTags("Quiz Api")
+                .RequireRateLimiting("Fixed");
+
+            return builder;
+        }
+
+        private static RouteGroupBuilder MapQuizRoutes(this RouteGroupBuilder group)
+        {
+            group.MapPost("/", CreateQuizAsync)
+                .WithName("CreateQuiz")
+                .WithDescription("Tạo quiz mới (nhận danh sách QuestionId)")
+                .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+                .Produces<ApiResponse<QuizResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<QuizResponse>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
+            return group;
+        }
+
+        private static async Task<IResult> CreateQuizAsync(
+            [FromServices] ICurrentUserService currentUserService,
+            [FromBody] CreateQuizRequest request,
+            [FromServices] IQuizService quizService)
+        {
+            var result = await quizService.CreateQuizAsync(request, currentUserService.UserId);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
+    }
+}

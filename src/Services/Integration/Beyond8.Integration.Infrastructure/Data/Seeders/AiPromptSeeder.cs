@@ -42,62 +42,49 @@ namespace Beyond8.Integration.Infrastructure.Data.Seeders
           new AiPrompt
               {
                   Name = "Quiz Generation",
-                  Description = "Sinh câu hỏi trắc nghiệm (MCQ) chất lượng cao, phân loại theo thang đo Bloom và tự động tính trọng số điểm.",
+                  Description = "Sinh câu hỏi trắc nghiệm (MCQ) chất lượng cao, phân loại theo thang đo Bloom; điểm số tính đúng theo tổng MaxPoints người dùng nhập.",
                   Category = PromptCategory.Assessment,
-                  SystemPrompt = "Bạn là một chuyên gia khảo thí và thiết kế chương trình giảng dạy. Nhiệm vụ của bạn là tạo ra các câu hỏi trắc nghiệm khách quan, chính xác về kiến thức, tuân thủ cấu trúc JSON nghiêm ngặt, và tính toán điểm số hợp lý.",
-                  Version = "2.0.0",
+                  SystemPrompt = "Bạn là chuyên gia khảo thí. Nhiệm vụ: tạo câu hỏi trắc nghiệm khách quan từ context, tuân thủ cấu trúc JSON và quy tắc tính điểm bắt buộc (tổng điểm tất cả câu phải đúng bằng MaxPoints).",
+                  Version = "3.0.0",
                   IsActive = true,
                   MaxTokens = 4096,
                   Temperature = 0.3m,
                   TopP = 0.9m,
                   Tags = "assessment,quiz,multiple-choice,bloom-taxonomy",
-                  Template = @"INPUT DATA:
+                  Template = @"INPUT:
 ---
 CONTEXT (Nội dung khóa học):
 {Context}
 ---
-USER QUERY (Chủ đề trọng tâm): {Query}
+Chủ đề trọng tâm: {Query}
 
-CẤU HÌNH BÀI KIỂM TRA:
-1. Số lượng: Easy ({EasyCount}), Medium ({MediumCount}), Hard ({HardCount}).
-2. Tổng điểm tối đa (Total Max Points): {MaxPoints}.
+CẤU HÌNH (BẮT BUỘC TUÂN THỦ):
+- Số câu: Easy = {EasyCount}, Medium = {MediumCount}, Hard = {HardCount}.
+- Tổng điểm tối đa (MaxPoints) người dùng nhập: {MaxPoints}. Tổng điểm của tất cả câu hỏi trả về PHẢI đúng bằng {MaxPoints}.
 
-TIÊU CHUẨN CHẤT LƯỢNG CÂU HỎI (QUAN TRỌNG):
-- Độ khó Easy (Nhận biết/Thông hiểu): Hỏi về định nghĩa, khái niệm cơ bản có trong context.
-- Độ khó Medium (Vận dụng): Đưa ra tình huống giả định hoặc đoạn code nhỏ, yêu cầu xác định kết quả hoặc lỗi sai.
-- Độ khó Hard (Phân tích/Đánh giá): Yêu cầu so sánh các giải pháp, tìm nguyên nhân sâu xa của vấn đề phức tạp, hoặc tối ưu hóa.
-- Đáp án nhiễu (Distractors): Phải có vẻ hợp lý (plausible), tránh các đáp án quá ngây ngô. KHÔNG dùng ""Tất cả đáp án trên"" hoặc ""Không đáp án nào đúng"".
+TÍNH ĐIỂM TỪNG CÂU (QUAN TRỌNG – ĐỌC KỸ):
+Trọng số theo độ khó: Easy : Medium : Hard = 1 : 1.5 : 2 (mỗi câu).
+1) Tính: totalWeight = ({EasyCount} × 1) + ({MediumCount} × 1.5) + ({HardCount} × 2).
+2) Đơn vị: X = {MaxPoints} / totalWeight.
+3) Điểm mỗi câu: mỗi câu Easy = round(X, 1); mỗi câu Medium = round(1.5 × X, 1); mỗi câu Hard = round(2 × X, 1).
+4) Kiểm tra: (số câu Easy × điểm Easy) + (số câu Medium × điểm Medium) + (số câu Hard × điểm Hard) = {MaxPoints}. Nếu lệch do làm tròn, điều chỉnh 1 câu (cộng/bớt 0.5 hoặc 1) để tổng đúng bằng {MaxPoints}. Trường ""points"" trong JSON phải là số (có thể thập phân, ví dụ 3.5).
 
-CHIẾN LƯỢC PHÂN BỔ ĐIỂM SỐ:
-Hãy tính toán điểm số (points) cho từng câu dựa trên độ khó theo tỷ lệ trọng số:
-**Easy : Medium : Hard = 1 : 1.5 : 2**
-(Quy trình: Tính giá trị đơn vị X sao cho tổng điểm = {MaxPoints}, sau đó gán điểm Easy=X, Medium=1.5X, Hard=2X. Làm tròn điểm đến 1 chữ số thập phân).
+TIÊU CHUẨN CÂU HỎI:
+- Easy (nhận biết/thông hiểu): định nghĩa, khái niệm có trong context.
+- Medium (vận dụng): tình huống/đoạn code ngắn, yêu cầu xác định kết quả hoặc lỗi.
+- Hard (phân tích/đánh giá): so sánh giải pháp, nguyên nhân sâu, tối ưu hóa.
+- Đáp án nhiễu: hợp lý, dễ gây nhầm. KHÔNG dùng ""Tất cả đáp án trên"" / ""Không đáp án nào đúng"".
 
-OUTPUT FORMAT:
-- Chỉ trả về JSON thuần (Raw JSON).
-- KHÔNG bọc trong markdown block (```json).
-- KHÔNG thêm lời dẫn hay giải thích ngoài JSON.
+OUTPUT:
+- Chỉ trả về Raw JSON, KHÔNG markdown (```json), KHÔNG giải thích ngoài JSON.
 
-JSON SCHEMA MẪU:
+Schema:
 {{
   ""easy"": [
-    {{
-      ""content"": ""Câu hỏi mức độ nhớ/hiểu?"",
-      ""type"": 0,
-      ""options"": [
-        {{ ""id"": ""a"", ""text"": ""Đáp án sai 1"", ""isCorrect"": false }},
-        {{ ""id"": ""b"", ""text"": ""Đáp án ĐÚNG"", ""isCorrect"": true }},
-        {{ ""id"": ""c"", ""text"": ""Đáp án sai 2"", ""isCorrect"": false }},
-        {{ ""id"": ""d"", ""text"": ""Đáp án sai 3"", ""isCorrect"": false }}
-      ],
-      ""explanation"": ""Giải thích ngắn gọn tại sao đáp án đúng là đúng."",
-      ""tags"": [""keyword""],
-      ""difficulty"": 0,
-      ""points"": 1.5
-    }}
+    {{ ""content"": ""..."", ""type"": 0, ""options"": [{{ ""id"": ""a"", ""text"": ""..."", ""isCorrect"": false }}, ...], ""explanation"": ""..."", ""tags"": [], ""difficulty"": 0, ""points"": <số điểm đã tính cho câu Easy> }}
   ],
-  ""medium"": [ ...tương tự... ],
-  ""hard"": [ ...tương tự... ]
+  ""medium"": [ ... ],
+  ""hard"": [ ... ]
 }}"
         }
       ];

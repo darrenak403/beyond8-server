@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Beyond8.Assessment.Domain.Enums;
 using Beyond8.Common.Data.Base;
 
 namespace Beyond8.Assessment.Domain.Entities;

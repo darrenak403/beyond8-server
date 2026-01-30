@@ -22,7 +22,7 @@ public class Question : BaseEntity
 
     public DifficultyLevel Difficulty { get; set; } = DifficultyLevel.Medium;
 
-    public int Points { get; set; } = 1;
+    public decimal Points { get; set; } = 1.0m;
 
     [Column(TypeName = "jsonb")]
     public string Tags { get; set; } = "[]";

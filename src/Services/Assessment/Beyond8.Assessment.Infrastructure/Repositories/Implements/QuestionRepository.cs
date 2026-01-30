@@ -7,4 +7,9 @@ namespace Beyond8.Assessment.Infrastructure.Repositories.Implements;
 
 public class QuestionRepository(AssessmentDbContext context) : PostgresRepository<Question>(context), IQuestionRepository
 {
+    public async Task AddRangeAsync(List<Question> questions)
+    {
+        await _dbSet.AddRangeAsync(questions);
+        await context.SaveChangesAsync();
+    }
 }

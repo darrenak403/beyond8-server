@@ -26,6 +26,16 @@ Tạo **Assessment Service** mới để quản lý:
 
 **Mục tiêu:** Hoàn thành 1 luồng end-to-end: sinh câu hỏi bằng AI → đưa vào Question Bank → tạo Quiz → gắn Quiz vào Lesson (Catalog) trước khi triển khai Assignment / Gradebook.
 
+### Lesson có trước hay Quiz có trước?
+
+**Lesson có trước.** Tránh chicken-and-egg (Lesson cần QuizId, Quiz cần LessonId) bằng thứ tự sau:
+
+1. **Catalog:** Instructor tạo/sửa **Lesson** trước — lesson đã tồn tại với `LessonId`, có thể set `Type = Quiz` ngay nhưng **`QuizId = null`** (chưa có quiz).
+2. **Assessment:** Instructor tạo **Quiz** với **`LessonId = <id của lesson vừa có>`** (và CourseId, Title, questionIds…). Quiz tham chiếu tới lesson đã có.
+3. **Assessment → Catalog:** Khi **publish** quiz, Assessment gọi Catalog **PATCH lesson** để set **`Lesson.QuizId = quiz.Id`**. Lúc này hai chiều mới đủ: Lesson biết Quiz, Quiz đã biết Lesson từ lúc tạo.
+
+Tóm lại: **Lesson tồn tại trước (QuizId = null) → tạo Quiz với LessonId → publish → Catalog cập nhật Lesson.QuizId.**
+
 ### Sơ đồ luồng
 
 ```
@@ -65,7 +75,8 @@ Instructor (Course/Lesson)                    Integration          Assessment   
 
 | Bước | Service             | Hành động                                                                                                                                                                                                              |
 | ---- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | Frontend/Instructor | Gọi Integration `POST /api/v1/ai/quiz/generate` với `CourseId`, `LessonId?`, `TotalCount`, `Distribution`.                                                                                                             |
+| 0    | Catalog             | **Lesson đã tồn tại** (instructor tạo trước qua Catalog). Lesson có `LessonId`, `Type = Quiz` (hoặc chưa), **`QuizId = null`**.                                                                                         |
+| 1    | Frontend/Instructor | Gọi Integration `POST /api/v1/ai/quiz/generate` với `CourseId`, **`LessonId`** (của lesson bước 0), `TotalCount`, `Distribution`.                                                                                      |
 | 2    | Integration         | Vector search tài liệu khóa học, gọi Gemini với prompt "Quiz Generation", trả về `GenQuizResponse` (Easy/Medium/Hard list of `QuizQuestionDto`).                                                                       |
 | 3    | Frontend            | Nhận `GenQuizResponse`; có thể chỉnh sửa câu hỏi (optional).                                                                                                                                                           |
 | 4    | Assessment          | `POST /api/v1/questions/import-from-ai`: body chứa payload tương thích GenQuizResponse + InstructorId; lưu vào Question bank; trả về danh sách `QuestionId` (và optional tags).                                        |

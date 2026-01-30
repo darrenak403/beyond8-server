@@ -5,4 +5,5 @@ namespace Beyond8.Assessment.Domain.Repositories.Interfaces;
 
 public interface IQuestionRepository : IGenericRepository<Question>
 {
+    Task AddRangeAsync(List<Question> questions);
 }

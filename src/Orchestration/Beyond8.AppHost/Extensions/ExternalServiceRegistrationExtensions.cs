@@ -99,6 +99,9 @@ namespace Beyond8.AppHost.Extensions
                     config.AddRoute("/api/v1/lessons/{**catch-all}", catalogCluster);
 
                     var assessmentCluster = config.AddProjectCluster(assessmentService);
+                    config.AddRoute("/api/v1/questions/{**catch-all}", assessmentCluster);
+                    config.AddRoute("/api/v1/quizzes/{**catch-all}", assessmentCluster);
+
 
                     // SignalR hub route
                     config.AddRoute("/hubs/{**catch-all}", integrationCluster);
