@@ -19,5 +19,6 @@ namespace Beyond8.Integration.Application.Services.Interfaces
         Task<ApiResponse<bool>> ReadAllNotificationAsync(Guid userId);
         Task<ApiResponse<bool>> DeleteAllNotificationAsync(Guid userId);
         Task<ApiResponse<bool>> DeleteNotificationAsync(Guid id, Guid userId);
+        Task<ApiResponse<NotificationStatusResponse>> GetNotificationStatusAsync(Guid userId);
     }
 }

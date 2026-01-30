@@ -70,7 +70,22 @@ namespace Beyond8.Integration.Api.Apis
                 .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
+            group.MapGet("/status", GetNotificationStatus)
+                .WithName("GetNotificationStatus")
+                .WithDescription("Lấy trạng thái thông báo")
+                .Produces<ApiResponse<NotificationStatusResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<NotificationStatusResponse>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
             return group;
+        }
+
+        private static async Task<IResult> GetNotificationStatus(
+            [FromServices] INotificationHistoryService notificationHistoryService,
+            [FromServices] ICurrentUserService currentUserService)
+        {
+            var result = await notificationHistoryService.GetNotificationStatusAsync(currentUserService.UserId);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
 
         private static async Task<IResult> DeleteAllNotifications(

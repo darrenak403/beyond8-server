@@ -235,5 +235,20 @@ namespace Beyond8.Integration.Application.Services.Implements
                 return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi xóa thông báo.");
             }
         }
+
+
+        public async Task<ApiResponse<NotificationStatusResponse>> GetNotificationStatusAsync(Guid userId)
+        {
+            try
+            {
+                var notifications = await unitOfWork.NotificationRepository.GetAllAsync(n => n.UserId == userId && n.IsRead == false);
+                return ApiResponse<NotificationStatusResponse>.SuccessResponse(new NotificationStatusResponse { IsRead = notifications.Count > 0, UnreadCount = notifications.Count }, "Lấy trạng thái thông báo thành công.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error getting notification status for user {UserId}", userId);
+                return ApiResponse<NotificationStatusResponse>.FailureResponse("Đã xảy ra lỗi khi lấy trạng thái thông báo.");
+            }
+        }
     }
 }
