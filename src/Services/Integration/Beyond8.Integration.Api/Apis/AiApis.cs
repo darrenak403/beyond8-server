@@ -42,10 +42,11 @@ namespace Beyond8.Integration.Api.Apis
                 .Produces<ApiResponse<GenQuizResponse>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
-            group.MapPost("/lesson/quiz/format", FormatQuizQuestionsFromPdf)
+            group.MapPost("/quiz/format/questions", FormatQuizQuestionsFromPdf)
                 .WithName("FormatQuizQuestionsFromPdf")
                 .WithDescription("Format câu hỏi quiz từ file PDF. Trích text từ PDF, gửi AI đọc và trả về danh sách câu hỏi cấu trúc.")
                 .RequireAuthorization()
+                .DisableAntiforgery()
                 .Produces<ApiResponse<List<GenQuizResponse>>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<List<GenQuizResponse>>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);

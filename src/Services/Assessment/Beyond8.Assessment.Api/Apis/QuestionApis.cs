@@ -44,8 +44,9 @@ namespace Beyond8.Assessment.Api.Apis
                 .Produces<ApiResponse<List<Guid>>>(StatusCodes.Status400BadRequest);
 
             group.MapPost("/bulk", CreateQuestionsAsync)
-                .WithName("CreateQuestion")
-                .WithDescription("Tạo câu hỏi")
+                .WithName("CreateQuestions")
+                .WithDescription("Tạo nhiều câu hỏi")
+                .DisableAntiforgery()
                 .RequireAuthorization(x => x.RequireRole(Role.Instructor))
                 .Produces<ApiResponse<QuestionResponse>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<QuestionResponse>>(StatusCodes.Status400BadRequest);

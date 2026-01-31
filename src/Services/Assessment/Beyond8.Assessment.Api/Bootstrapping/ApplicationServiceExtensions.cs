@@ -39,6 +39,7 @@ namespace Beyond8.Assessment.Api.Bootstrapping
             app.UseHttpsRedirection();
             app.MapQuestionApi();
             app.MapQuizApi();
+
             return app;
         }
     }

@@ -40,79 +40,99 @@ namespace Beyond8.Integration.Infrastructure.Data.Seeders
       return
       [
           new AiPrompt
-              {
-                  Name = "Quiz Generation",
-                  Description = "Sinh câu hỏi trắc nghiệm (MCQ) chất lượng cao, phân loại theo thang đo Bloom; điểm số tính đúng theo tổng MaxPoints người dùng nhập.",
-                  Category = PromptCategory.Assessment,
-                  SystemPrompt = "Bạn là chuyên gia khảo thí. Nhiệm vụ: tạo câu hỏi trắc nghiệm khách quan từ context, tuân thủ cấu trúc JSON và quy tắc tính điểm bắt buộc (tổng điểm tất cả câu phải đúng bằng MaxPoints).",
-                  Version = "3.0.0",
-                  IsActive = true,
-                  MaxTokens = 4096,
-                  Temperature = 0.3m,
-                  TopP = 0.9m,
-                  Tags = "assessment,quiz,multiple-choice,bloom-taxonomy",
-                  Template = @"INPUT:
+        {
+            Name = "Quiz Generation",
+            Description = "Sinh câu hỏi trắc nghiệm Bloom. Hỗ trợ điểm thập phân, tự động bù trừ sai số để tổng điểm chính xác tuyệt đối.",
+            Category = PromptCategory.Assessment,
+            SystemPrompt = "Bạn là chuyên gia Khảo thí và Toán học. Nhiệm vụ: Tạo JSON câu hỏi trắc nghiệm. Nguyên tắc vàng: Tổng điểm (Sum of Points) PHẢI bằng chính xác 'MaxPoints' yêu cầu.",
+            Version = "3.3.0",
+            IsActive = true,
+            MaxTokens = 4096,
+            Temperature = 0.2m,
+            TopP = 0.9m,
+            Tags = "assessment,quiz,bloom,calculation,json",
+            Template = @"
+INPUT:
 ---
-CONTEXT (Nội dung khóa học):
-{Context}
+CONTEXT: {Context}
 ---
-Chủ đề trọng tâm: {Query}
+CHỦ ĐỀ: {Query}
 
-CẤU HÌNH (BẮT BUỘC TUÂN THỦ):
-- Số câu: Easy = {EasyCount}, Medium = {MediumCount}, Hard = {HardCount}.
-- Tổng điểm tối đa (MaxPoints) người dùng nhập: {MaxPoints}. Tổng điểm của tất cả câu hỏi trả về PHẢI đúng bằng {MaxPoints}.
+CẤU HÌNH YÊU CẦU:
+- Số lượng: Easy={EasyCount}, Medium={MediumCount}, Hard={HardCount}.
+- TỔNG ĐIỂM (MAX POINTS): {MaxPoints}
 
-TÍNH ĐIỂM TỪNG CÂU (QUAN TRỌNG – ĐỌC KỸ):
-Trọng số theo độ khó: Easy : Medium : Hard = 1 : 1.5 : 2 (mỗi câu).
-1) Tính: totalWeight = ({EasyCount} × 1) + ({MediumCount} × 1.5) + ({HardCount} × 2).
-2) Đơn vị: X = {MaxPoints} / totalWeight.
-3) Điểm mỗi câu: mỗi câu Easy = round(X, 1); mỗi câu Medium = round(1.5 × X, 1); mỗi câu Hard = round(2 × X, 1).
-4) Kiểm tra: (số câu Easy × điểm Easy) + (số câu Medium × điểm Medium) + (số câu Hard × điểm Hard) = {MaxPoints}. Nếu lệch do làm tròn, điều chỉnh 1 câu (cộng/bớt 0.5 hoặc 1) để tổng đúng bằng {MaxPoints}. Trường ""points"" trong JSON phải là số (có thể thập phân, ví dụ 3.5).
+QUY TRÌNH TÍNH ĐIỂM (BẮT BUỘC TUÂN THỦ):
+1. [Trọng số]: Easy=1, Medium=1.5, Hard=2.
+2. [Tổng trọng số]: W_Total = ({EasyCount} * 1) + ({MediumCount} * 1.5) + ({HardCount} * 2).
+3. [Giá trị đơn vị]: Unit = {MaxPoints} / W_Total.
+4. [Phân bổ sơ bộ]:
+   - Điểm mỗi câu Easy = Unit (giữ 2 số thập phân).
+   - Điểm mỗi câu Medium = Unit * 1.5 (giữ 2 số thập phân).
+   - Điểm mỗi câu Hard = Unit * 2 (giữ 2 số thập phân).
+5. [BƯỚC BÙ TRỪ - QUAN TRỌNG NHẤT]:
+   - Cộng tổng điểm sơ bộ của tất cả câu hỏi.
+   - Tính sai số: Delta = {MaxPoints} - (Tổng sơ bộ).
+   - Cộng giá trị Delta vào câu hỏi 'Hard' cuối cùng (hoặc câu cuối cùng của danh sách).
+   => Kết quả: Tổng điểm cuối cùng phải bằng đúng {MaxPoints}.
 
-TIÊU CHUẨN CÂU HỎI:
-- Easy (nhận biết/thông hiểu): định nghĩa, khái niệm có trong context.
-- Medium (vận dụng): tình huống/đoạn code ngắn, yêu cầu xác định kết quả hoặc lỗi.
-- Hard (phân tích/đánh giá): so sánh giải pháp, nguyên nhân sâu, tối ưu hóa.
-- Đáp án nhiễu: hợp lý, dễ gây nhầm. KHÔNG dùng ""Tất cả đáp án trên"" / ""Không đáp án nào đúng"".
+YÊU CẦU NỘI DUNG:
+- Format câu hỏi: Easy (Nhận biết), Medium (Vận dụng), Hard (Phân tích).
+- Đáp án nhiễu (Distractors): Hợp lý, không lộ liễu. KHÔNG dùng ""Tất cả đáp án trên"".
 
-OUTPUT:
-- Chỉ trả về Raw JSON, KHÔNG markdown (```json), KHÔNG giải thích ngoài JSON.
-
-Schema:
+OUTPUT FORMAT (JSON RAW):
 {{
-  ""easy"": [
-    {{ ""content"": ""..."", ""type"": 0, ""options"": [{{ ""id"": ""a"", ""text"": ""..."", ""isCorrect"": false }}, ...], ""explanation"": ""..."", ""tags"": [], ""difficulty"": 0, ""points"": <số điểm đã tính cho câu Easy> }}
+  ""easy"": [ 
+    {{ ""content"": ""..."", ""type"": 0, ""options"": [{{ ""id"": ""a"", ""text"": ""..."", ""isCorrect"": false }}], ""explanation"": ""..."", ""difficulty"": 0, ""points"": <số thập phân> }} 
   ],
   ""medium"": [ ... ],
-  ""hard"": [ ... ]
+  ""hard"": [ 
+    {{ ... ""difficulty"": 2, ""points"": <số thập phân đã cộng bù trừ> }} 
+  ]
 }}"
         },
+
         new AiPrompt
         {
-          Name = "Format Quiz Questions",
-          Description = "Đọc nội dung trích từ PDF (theo từng dòng), trích xuất câu hỏi trắc nghiệm thành mảng JSON. Dùng khi user upload file PDF câu hỏi.",
-          Category = PromptCategory.Assessment,
-          SystemPrompt = "Bạn là trợ lý trích xuất câu hỏi. Nhiệm vụ: đọc nội dung text (đã trích từ PDF), nhận diện từng câu hỏi với nội dung, các đáp án A/B/C/D và đáp án đúng, trả về mảng JSON. Chỉ trả về Raw JSON, KHÔNG markdown, KHÔNG giải thích ngoài JSON.",
-          Version = "1.0.0",
-          IsActive = true,
-          MaxTokens = 4096,
-          Temperature = 0.2m,
-          TopP = 0.9m,
-          Tags = "assessment,quiz,format,pdf,extract",
-          Template = @"Đọc nội dung sau (đã trích từ PDF, mỗi câu hỏi có thể có số thứ tự, nội dung câu hỏi, các đáp án A. B. C. D. hoặc A) B) C) D), và dòng Đáp án: X hoặc đánh dấu * trước đáp án đúng).
-
-Trích xuất thành mảng JSON các câu hỏi. Mỗi object:
-- content (string): nội dung câu hỏi
-- options (mảng): [{ id: ""a""|""b""|""c""|""d"", text: string, isCorrect: boolean }]
-- difficulty: 0=Easy, 1=Medium, 2=Hard (mặc định 1 nếu không xác định được)
-- points: number (mặc định 1.0)
-
-Chỉ trả về mảng JSON, không markdown (không ```json).
-
+            Name = "Format Quiz Questions",
+            Description = "Trích xuất câu hỏi từ text PDF, chuẩn hóa điền từ thành 4 gạch dưới.",
+            Category = PromptCategory.Assessment,
+            SystemPrompt = "Bạn là chuyên gia xử lý dữ liệu văn bản. Nhiệm vụ: Trích xuất câu hỏi trắc nghiệm sang JSON và chuẩn hóa định dạng.",
+            Version = "1.3.0",
+            IsActive = true,
+            MaxTokens = 4096,
+            Temperature = 0.1m,
+            TopP = 0.5m,
+            Tags = "format,pdf,extract,json",
+            Template = @"
+INPUT TEXT (Nguồn PDF):
 ---
-NỘI DUNG TỪ PDF:
+{Content}
 ---
-{Content}"
+
+NHIỆM VỤ CỤ THỂ:
+1. [Lọc nhiễu]: Loại bỏ số trang, header/footer (ví dụ: 'Page 1', 'Chapter 3') nếu chúng xen vào giữa câu hỏi.
+2. [Chuẩn hóa Content]: 
+   - Tìm tất cả các ký hiệu biểu thị chỗ trống như: '...', '___', '..', '_____' hoặc khoảng trắng trong ngoặc (...).
+   - Thay thế TẤT CẢ bằng duy nhất một định dạng: ____ (đúng 4 ký tự gạch dưới).
+   - Ví dụ: ""Java is ... language"" -> ""Java is ____ language"".
+3. [Xử lý Options]:
+   - Tách các đáp án A/B/C/D.
+   - Nhận diện đáp án đúng qua dấu hiệu (in đậm, dấu *, Answer Key). Nếu không tìm thấy dấu hiệu, để isCorrect = false.
+
+OUTPUT FORMAT (JSON ARRAY ONLY):
+[
+  {{
+    ""content"": ""Nội dung câu hỏi đã chuẩn hóa ____"",
+    ""options"": [
+      {{ ""id"": ""a"", ""text"": ""Option A"", ""isCorrect"": false }},
+      {{ ""id"": ""b"", ""text"": ""Option B"", ""isCorrect"": true }}
+    ],
+    ""difficulty"": 1,
+    ""points"": 1.0
+  }}
+]
+Tuyệt đối không trả về Markdown (```json), chỉ trả về Raw JSON."
         }
       ];
     }

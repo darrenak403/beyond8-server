@@ -172,6 +172,8 @@ namespace Beyond8.Integration.Application.Services.Implements
                 var userPrompt = prompt.Template.Replace("{Content}", contentForAi);
                 string fullPrompt = string.IsNullOrEmpty(prompt.SystemPrompt) ? userPrompt : $"{prompt.SystemPrompt}\n\n{userPrompt}";
 
+                logger.LogInformation("User prompt: {UserPrompt}", fullPrompt);
+
                 var aiResult = await generativeAiService.GenerateContentAsync(
                     fullPrompt,
                     AiOperation.FormatQuizQuestions,
