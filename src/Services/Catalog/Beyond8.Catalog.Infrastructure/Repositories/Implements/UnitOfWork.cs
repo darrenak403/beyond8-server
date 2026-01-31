@@ -10,12 +10,18 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
         private ICourseRepository? _courseRepository;
         private ISectionRepository? _sectionRepository;
         private ILessonRepository? _lessonRepository;
+        private ILessonVideoRepository? _lessonVideoRepository;
+        private ILessonTextRepository? _lessonTextRepository;
+        private ILessonQuizRepository? _lessonQuizRepository;
         private ICourseDocumentRepository? _courseDocumentRepository;
         private ILessonDocumentRepository? _lessonDocumentRepository;
         public ICategoryRepository CategoryRepository => _categoryRepository ??= new CategoryRepository(context);
         public ICourseRepository CourseRepository => _courseRepository ??= new CourseRepository(context);
         public ISectionRepository SectionRepository => _sectionRepository ??= new SectionRepository(context);
         public ILessonRepository LessonRepository => _lessonRepository ??= new LessonRepository(context);
+        public ILessonVideoRepository LessonVideoRepository => _lessonVideoRepository ??= new LessonVideoRepository(context);
+        public ILessonTextRepository LessonTextRepository => _lessonTextRepository ??= new LessonTextRepository(context);
+        public ILessonQuizRepository LessonQuizRepository => _lessonQuizRepository ??= new LessonQuizRepository(context);
         public ICourseDocumentRepository CourseDocumentRepository => _courseDocumentRepository ??= new CourseDocumentRepository(context);
         public ILessonDocumentRepository LessonDocumentRepository => _lessonDocumentRepository ??= new LessonDocumentRepository(context);
     }

@@ -1,11 +1,12 @@
 using Beyond8.Assessment.Application.Dtos.Quizzes;
+using Beyond8.Assessment.Application.Mappings.QuestionMappings;
 using Beyond8.Assessment.Domain.Entities;
 
 namespace Beyond8.Assessment.Application.Mappings.QuizMappings;
 
 public static class QuizMappings
 {
-    public static QuizResponse ToResponse(this Quiz quiz, int questionCount = 0)
+    public static QuizResponse ToResponse(this Quiz quiz, List<Question> questions)
     {
         return new QuizResponse
         {
@@ -22,9 +23,9 @@ public static class QuizMappings
             ShuffleQuestions = quiz.ShuffleQuestions,
             AllowReview = quiz.AllowReview,
             ShowExplanation = quiz.ShowExplanation,
-            QuestionCount = questionCount,
             CreatedAt = quiz.CreatedAt,
-            UpdatedAt = quiz.UpdatedAt ?? quiz.CreatedAt
+            UpdatedAt = quiz.UpdatedAt ?? quiz.CreatedAt,
+            Questions = [.. questions.Select(q => q.ToResponse())]
         };
     }
 
@@ -45,5 +46,34 @@ public static class QuizMappings
             AllowReview = request.AllowReview,
             ShowExplanation = request.ShowExplanation
         };
+    }
+
+    public static QuizSimpleResponse ToSimpleResponse(this Quiz quiz, int questionCount = 0)
+    {
+        return new QuizSimpleResponse
+        {
+            Id = quiz.Id,
+            InstructorId = quiz.InstructorId,
+            CourseId = quiz.CourseId,
+            LessonId = quiz.LessonId,
+            Title = quiz.Title,
+            Description = quiz.Description,
+            TimeLimitMinutes = quiz.TimeLimitMinutes,
+            PassScorePercent = quiz.PassScorePercent,
+            QuestionCount = questionCount,
+        };
+    }
+
+    public static void UpdateFromRequest(this Quiz quiz, UpdateQuizRequest request)
+    {
+        if (!string.IsNullOrEmpty(request.Title)) quiz.Title = request.Title;
+        quiz.Description = request.Description;
+        quiz.TimeLimitMinutes = request.TimeLimitMinutes;
+        quiz.PassScorePercent = request.PassScorePercent;
+        quiz.TotalPoints = request.TotalPoints;
+        quiz.MaxAttempts = request.MaxAttempts;
+        quiz.ShuffleQuestions = request.ShuffleQuestions;
+        quiz.AllowReview = request.AllowReview;
+        quiz.ShowExplanation = request.ShowExplanation;
     }
 }

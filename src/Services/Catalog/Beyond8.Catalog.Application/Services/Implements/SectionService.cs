@@ -158,7 +158,7 @@ public class SectionService(
                 return ApiResponse<bool>.FailureResponse("Bạn không có quyền xóa chương này.");
             }
 
-            // Check if section has lessons
+            // Cấm xóa chương còn bài học; phải xóa bài học trước.
             var lessonCount = await unitOfWork.LessonRepository.CountAsync(l => l.SectionId == sectionId);
             if (lessonCount > 0)
             {
@@ -166,7 +166,9 @@ public class SectionService(
                 return ApiResponse<bool>.FailureResponse("Không thể xóa chương có chứa bài học. Vui lòng xóa các bài học trước.");
             }
 
-            await unitOfWork.SectionRepository.DeleteAsync(sectionId);
+            section.DeletedAt = DateTime.UtcNow;
+            section.DeletedBy = currentUserId;
+            await unitOfWork.SectionRepository.UpdateAsync(sectionId, section);
             await unitOfWork.SaveChangesAsync();
 
             logger.LogInformation("Section deleted: {SectionId} by user {UserId}", sectionId, currentUserId);

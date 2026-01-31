@@ -540,7 +540,7 @@ namespace Beyond8.Identity.Application.Services.Implements
 
                 logger.LogInformation("Unhidden instructor profile {ProfileId} by user {UserId}", profileId, userId);
 
-                // Chỉ chuyển trạng thái sang Recovering, role sẽ được cấp lại khi admin approve
+                // Chỉ chuyển trạng thái sang Recovering, role sẽ được cấp lại khi admin approve.
                 profile.VerificationStatus = VerificationStatus.Recovering;
 
                 await unitOfWork.InstructorProfileRepository.UpdateAsync(profileId, profile);

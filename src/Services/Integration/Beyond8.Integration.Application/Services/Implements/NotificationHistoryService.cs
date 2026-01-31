@@ -180,10 +180,13 @@ namespace Beyond8.Integration.Application.Services.Implements
         {
             try
             {
+                // Soft delete (Status = Deleted) tất cả thông báo của user.
                 var notifications = await unitOfWork.NotificationRepository.GetAllAsync(n => n.UserId == userId);
                 foreach (var n in notifications)
                 {
                     n.Status = NotificationStatus.Deleted;
+                    n.DeletedAt = DateTime.UtcNow;
+                    n.DeletedBy = userId;
                     await unitOfWork.NotificationRepository.UpdateAsync(n.Id, n);
                 }
                 await unitOfWork.SaveChangesAsync();
@@ -200,12 +203,15 @@ namespace Beyond8.Integration.Application.Services.Implements
         {
             try
             {
+                // Soft delete (Status = Deleted). Chỉ user sở hữu mới xóa được.
                 var notification = await unitOfWork.NotificationRepository.FindOneAsync(n => n.Id == id && n.UserId == userId);
                 if (notification == null)
                 {
                     return ApiResponse<bool>.FailureResponse("Thông báo không tồn tại");
                 }
                 notification.Status = NotificationStatus.Deleted;
+                notification.DeletedAt = DateTime.UtcNow;
+                notification.DeletedBy = userId;
                 await unitOfWork.NotificationRepository.UpdateAsync(notification.Id, notification);
                 await unitOfWork.SaveChangesAsync();
                 return ApiResponse<bool>.SuccessResponse(true, "Xóa thông báo thành công.");

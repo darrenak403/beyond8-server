@@ -290,6 +290,9 @@ namespace Beyond8.Assessment.Infrastructure.Migrations
                     b.Property<Guid>("InstructorId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid?>("LessonId")
                         .HasColumnType("uuid");
 

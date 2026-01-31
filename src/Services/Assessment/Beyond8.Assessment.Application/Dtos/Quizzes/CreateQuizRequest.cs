@@ -7,9 +7,6 @@ public class CreateQuizRequest
     public Guid? CourseId { get; set; }
     public Guid? LessonId { get; set; }
 
-    /// <summary>
-    /// Danh sách QuestionId (thứ tự = OrderIndex 1-based).
-    /// </summary>
     public List<Guid> QuestionIds { get; set; } = [];
 
     public int? TimeLimitMinutes { get; set; }

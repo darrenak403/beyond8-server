@@ -8,6 +8,9 @@ namespace Beyond8.Catalog.Domain.Repositories.Interfaces
         ICourseRepository CourseRepository { get; }
         ISectionRepository SectionRepository { get; }
         ILessonRepository LessonRepository { get; }
+        ILessonVideoRepository LessonVideoRepository { get; }
+        ILessonTextRepository LessonTextRepository { get; }
+        ILessonQuizRepository LessonQuizRepository { get; }
         ICourseDocumentRepository CourseDocumentRepository { get; }
         ILessonDocumentRepository LessonDocumentRepository { get; }
     }

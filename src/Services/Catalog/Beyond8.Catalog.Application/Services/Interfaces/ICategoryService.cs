@@ -11,7 +11,7 @@ namespace Beyond8.Catalog.Application.Services.Interfaces
         Task<ApiResponse<CategoryResponse>> GetCategoryByIdAsync(Guid id);
         Task<ApiResponse<List<CategoryResponse>>> GetAllCategoriesAsync(PaginationRequest pagination);
         Task<ApiResponse<List<CategoryResponse>>> GetCategoriesByParentIdAsync(Guid parentId);
-        Task<ApiResponse<bool>> DeleteCategoryAsync(Guid id);
+        Task<ApiResponse<bool>> DeleteCategoryAsync(Guid id, Guid currentUserId);
         Task<ApiResponse<bool>> ToggleCategoryStatusAsync(Guid id);
         Task<ApiResponse<List<CategoryTreeDto>>> GetCategoryTreeAsync();
     }

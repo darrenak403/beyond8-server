@@ -193,15 +193,18 @@ namespace Beyond8.Integration.Application.Services.Implements
             }
         }
 
-        public async Task<ApiResponse<bool>> DeletePromptAsync(Guid id)
+        public async Task<ApiResponse<bool>> DeletePromptAsync(Guid id, Guid deletedByUserId)
         {
             try
             {
+                // Soft delete (IsActive=false). Prompt có thể vẫn được tham chiếu bởi AI usage log.
                 var prompt = await unitOfWork.AiPromptRepository.GetByIdAsync(id);
                 if (prompt == null)
                     return ApiResponse<bool>.FailureResponse("Không tìm thấy prompt AI.");
 
                 prompt.IsActive = false;
+                prompt.DeletedAt = DateTime.UtcNow;
+                prompt.DeletedBy = deletedByUserId;
                 await unitOfWork.AiPromptRepository.UpdateAsync(id, prompt);
 
                 await unitOfWork.SaveChangesAsync();

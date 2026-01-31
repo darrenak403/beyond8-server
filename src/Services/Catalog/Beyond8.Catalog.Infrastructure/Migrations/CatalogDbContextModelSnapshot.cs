@@ -296,38 +296,17 @@ namespace Beyond8.Catalog.Infrastructure.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
-                    b.Property<int?>("DurationSeconds")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("HlsVariants")
-                        .HasColumnType("jsonb");
-
-                    b.Property<bool>("IsDownloadable")
-                        .HasColumnType("boolean");
-
                     b.Property<bool>("IsPreview")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsPublished")
                         .HasColumnType("boolean");
 
-                    b.Property<int>("MinCompletionSeconds")
-                        .HasColumnType("integer");
-
                     b.Property<int>("OrderIndex")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid?>("QuizId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("RequiredScore")
                         .HasColumnType("integer");
 
                     b.Property<Guid>("SectionId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("TextContent")
-                        .HasColumnType("text");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -348,15 +327,6 @@ namespace Beyond8.Catalog.Infrastructure.Migrations
 
                     b.Property<Guid?>("UpdatedBy")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("VideoOriginalUrl")
-                        .HasColumnType("text");
-
-                    b.Property<string>("VideoQualities")
-                        .HasColumnType("jsonb");
-
-                    b.Property<string>("VideoThumbnailUrl")
-                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
@@ -419,6 +389,135 @@ namespace Beyond8.Catalog.Infrastructure.Migrations
                     b.HasIndex("LessonId");
 
                     b.ToTable("LessonDocuments");
+                });
+
+            modelBuilder.Entity("Beyond8.Catalog.Domain.Entities.LessonQuiz", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("LessonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("QuizId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LessonId")
+                        .IsUnique();
+
+                    b.ToTable("LessonQuizzes");
+                });
+
+            modelBuilder.Entity("Beyond8.Catalog.Domain.Entities.LessonText", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("LessonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TextContent")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LessonId")
+                        .IsUnique();
+
+                    b.ToTable("LessonTexts");
+                });
+
+            modelBuilder.Entity("Beyond8.Catalog.Domain.Entities.LessonVideo", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("DurationSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("HlsVariants")
+                        .HasColumnType("jsonb");
+
+                    b.Property<bool>("IsDownloadable")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("LessonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("VideoOriginalUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("VideoQualities")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("VideoThumbnailUrl")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LessonId")
+                        .IsUnique();
+
+                    b.ToTable("LessonVideos");
                 });
 
             modelBuilder.Entity("Beyond8.Catalog.Domain.Entities.Section", b =>
@@ -532,6 +631,39 @@ namespace Beyond8.Catalog.Infrastructure.Migrations
                     b.Navigation("Lesson");
                 });
 
+            modelBuilder.Entity("Beyond8.Catalog.Domain.Entities.LessonQuiz", b =>
+                {
+                    b.HasOne("Beyond8.Catalog.Domain.Entities.Lesson", "Lesson")
+                        .WithOne("Quiz")
+                        .HasForeignKey("Beyond8.Catalog.Domain.Entities.LessonQuiz", "LessonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Lesson");
+                });
+
+            modelBuilder.Entity("Beyond8.Catalog.Domain.Entities.LessonText", b =>
+                {
+                    b.HasOne("Beyond8.Catalog.Domain.Entities.Lesson", "Lesson")
+                        .WithOne("Text")
+                        .HasForeignKey("Beyond8.Catalog.Domain.Entities.LessonText", "LessonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Lesson");
+                });
+
+            modelBuilder.Entity("Beyond8.Catalog.Domain.Entities.LessonVideo", b =>
+                {
+                    b.HasOne("Beyond8.Catalog.Domain.Entities.Lesson", "Lesson")
+                        .WithOne("Video")
+                        .HasForeignKey("Beyond8.Catalog.Domain.Entities.LessonVideo", "LessonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Lesson");
+                });
+
             modelBuilder.Entity("Beyond8.Catalog.Domain.Entities.Section", b =>
                 {
                     b.HasOne("Beyond8.Catalog.Domain.Entities.Course", "Course")
@@ -560,6 +692,12 @@ namespace Beyond8.Catalog.Infrastructure.Migrations
             modelBuilder.Entity("Beyond8.Catalog.Domain.Entities.Lesson", b =>
                 {
                     b.Navigation("Documents");
+
+                    b.Navigation("Quiz");
+
+                    b.Navigation("Text");
+
+                    b.Navigation("Video");
                 });
 
             modelBuilder.Entity("Beyond8.Catalog.Domain.Entities.Section", b =>
