@@ -527,9 +527,7 @@ public class LessonService(
             if (oldIndex == request.NewOrderIndex)
                 return ApiResponse<bool>.SuccessResponse(true, "Sắp xếp bài học thành công.");
 
-            await unitOfWork.BeginTransactionAsync();
-
-            try
+            await unitOfWork.ExecuteInTransactionAsync(async () =>
             {
                 if (request.NewOrderIndex > oldIndex)
                 {
@@ -550,18 +548,11 @@ public class LessonService(
                 lesson.OrderIndex = request.NewOrderIndex;
                 await unitOfWork.LessonRepository.UpdateAsync(request.LessonId, lesson);
 
-                await unitOfWork.CommitTransactionAsync();
-
                 logger.LogInformation("Lesson reordered in section: {LessonId} from index {OldIndex} to index {NewIndex} by user {UserId}",
                     request.LessonId, oldIndex, request.NewOrderIndex, currentUserId);
+            });
 
-                return ApiResponse<bool>.SuccessResponse(true, "Sắp xếp bài học trong section thành công.");
-            }
-            catch
-            {
-                await unitOfWork.RollbackTransactionAsync();
-                throw;
-            }
+            return ApiResponse<bool>.SuccessResponse(true, "Sắp xếp bài học trong section thành công.");
         }
         catch (Exception ex)
         {
@@ -596,9 +587,7 @@ public class LessonService(
             if (oldSectionId == request.NewSectionId && oldIndex == request.NewOrderIndex)
                 return ApiResponse<bool>.SuccessResponse(true, "Di chuyển bài học thành công.");
 
-            await unitOfWork.BeginTransactionAsync();
-
-            try
+            await unitOfWork.ExecuteInTransactionAsync(async () =>
             {
                 // 1. Dịch chuyển các mục trong section cũ (đóng khoảng trống)
                 await unitOfWork.LessonRepository.AsQueryable()
@@ -615,18 +604,11 @@ public class LessonService(
                 lesson.OrderIndex = request.NewOrderIndex;
                 await unitOfWork.LessonRepository.UpdateAsync(request.LessonId, lesson);
 
-                await unitOfWork.CommitTransactionAsync();
-
                 logger.LogInformation("Lesson moved: {LessonId} from section {OldSectionId} index {OldIndex} to section {NewSectionId} index {NewIndex} by user {UserId}",
                     request.LessonId, oldSectionId, oldIndex, request.NewSectionId, request.NewOrderIndex, currentUserId);
+            });
 
-                return ApiResponse<bool>.SuccessResponse(true, "Di chuyển bài học sang section khác thành công.");
-            }
-            catch
-            {
-                await unitOfWork.RollbackTransactionAsync();
-                throw;
-            }
+            return ApiResponse<bool>.SuccessResponse(true, "Di chuyển bài học sang section khác thành công.");
         }
         catch (Exception ex)
         {
@@ -656,9 +638,7 @@ public class LessonService(
             if (oldIndex == request.NewOrderIndex)
                 return ApiResponse<bool>.SuccessResponse(true, "Sắp xếp chương thành công.");
 
-            await unitOfWork.BeginTransactionAsync();
-
-            try
+            await unitOfWork.ExecuteInTransactionAsync(async () =>
             {
                 if (request.NewOrderIndex > oldIndex)
                 {
@@ -679,18 +659,11 @@ public class LessonService(
                 section.OrderIndex = request.NewOrderIndex;
                 await unitOfWork.SectionRepository.UpdateAsync(request.SectionId, section);
 
-                await unitOfWork.CommitTransactionAsync();
-
                 logger.LogInformation("Section reordered: {SectionId} from index {OldIndex} to index {NewIndex} by user {UserId}",
                     request.SectionId, oldIndex, request.NewOrderIndex, currentUserId);
+            });
 
-                return ApiResponse<bool>.SuccessResponse(true, "Sắp xếp chương thành công.");
-            }
-            catch
-            {
-                await unitOfWork.RollbackTransactionAsync();
-                throw;
-            }
+            return ApiResponse<bool>.SuccessResponse(true, "Sắp xếp chương thành công.");
         }
         catch (Exception ex)
         {
