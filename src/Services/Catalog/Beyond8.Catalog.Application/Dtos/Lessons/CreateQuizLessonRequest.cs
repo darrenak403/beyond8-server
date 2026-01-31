@@ -14,8 +14,5 @@ public class CreateQuizLessonRequest
     public string? Description { get; set; }
 
     public bool IsPreview { get; set; } = false;
-
-    // Quiz-specific fields
-    [Required]
-    public Guid QuizId { get; set; }
+    public Guid? QuizId { get; set; }
 }

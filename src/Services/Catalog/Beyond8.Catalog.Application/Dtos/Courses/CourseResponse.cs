@@ -24,6 +24,9 @@ public class CourseResponse
     public int TotalDurationMinutes { get; set; }
     public decimal? AvgRating { get; set; }
     public int TotalReviews { get; set; }
+    public List<string> Outcomes { get; set; } = [];
+    public List<string>? Requirements { get; set; }
+    public List<string>? TargetAudience { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 }

@@ -110,6 +110,15 @@ public static class LessonApis
             .Produces<ApiResponse<LessonResponse>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
+        // Update section assignment
+        group.MapPatch("/{id}/quiz", ChangeQuizForLessonAsync)
+            .WithName("ChangeQuizForLesson")
+            .WithDescription("Thay đổi quiz khác cho bài học")
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
         return group;
     }
     private static async Task<IResult> CallbackHlsAsync(VideoCallbackDto request, ILessonService lessonService)
@@ -121,11 +130,10 @@ public static class LessonApis
     private static async Task<IResult> GetLessonsBySectionIdAsync(
         Guid sectionId,
         [FromServices] ILessonService lessonService,
-        [FromServices] ICurrentUserService currentUserService,
-        [AsParameters] PaginationRequest pagination)
+        [FromServices] ICurrentUserService currentUserService)
     {
         var currentUserId = currentUserService.UserId;
-        var result = await lessonService.GetLessonsBySectionIdAsync(sectionId, pagination, currentUserId);
+        var result = await lessonService.GetLessonsBySectionIdAsync(sectionId, currentUserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
@@ -235,4 +243,20 @@ public static class LessonApis
         var apiResult = await lessonService.UpdateQuizLessonAsync(id, request, currentUserId);
         return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
     }
+
+
+    private static async Task<IResult> ChangeQuizForLessonAsync(
+        Guid id,
+        [FromBody] ChangeQuizForLessonRequest request,
+        [FromServices] ILessonService lessonService,
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IValidator<ChangeQuizForLessonRequest> validator)
+    {
+        if (!request.ValidateRequest(validator, out var result))
+            return result!;
+
+        var apiResult = await lessonService.ChangeQuizForLessonAsync(id, request.QuizId, currentUserService.UserId);
+        return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
+    }
+
 }
