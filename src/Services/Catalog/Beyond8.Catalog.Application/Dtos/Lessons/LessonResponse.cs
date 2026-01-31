@@ -26,8 +26,6 @@ public class LessonResponse
 
     // Quiz fields
     public Guid? QuizId { get; set; }
-    public int MinCompletionSeconds { get; set; }
-    public int RequiredScore { get; set; }
 
     // Statistics
     public int TotalViews { get; set; }

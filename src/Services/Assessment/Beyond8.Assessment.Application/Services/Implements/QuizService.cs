@@ -4,14 +4,17 @@ using Beyond8.Assessment.Application.Mappings.QuizQuestionMappings;
 using Beyond8.Assessment.Application.Services.Interfaces;
 using Beyond8.Assessment.Domain.Entities;
 using Beyond8.Assessment.Domain.Repositories.Interfaces;
+using Beyond8.Common.Events.Assessment;
 using Beyond8.Common.Utilities;
+using MassTransit;
 using Microsoft.Extensions.Logging;
 
 namespace Beyond8.Assessment.Application.Services.Implements;
 
 public class QuizService(
     ILogger<QuizService> logger,
-    IUnitOfWork unitOfWork) : IQuizService
+    IUnitOfWork unitOfWork,
+    IPublishEndpoint publishEndpoint) : IQuizService
 {
     public async Task<ApiResponse<QuizResponse>> GetQuizByIdAsync(Guid id, Guid userId)
     {
@@ -120,9 +123,6 @@ public class QuizService(
     {
         try
         {
-            // TODO (cross-service): Không cấm xóa khi có Lesson (Catalog) đang dùng quiz này — Assessment không gọi Catalog.
-            // Ảnh hưởng: Lesson.QuizId có thể trỏ tới quiz đã xóa → dangling reference; GET /quizzes/{id} sẽ 404.
-            // Bổ sung sau: publish event QuizDeleted sang Catalog để consumer clear Lesson.QuizId cho các lesson có QuizId = id.
             var quiz = await unitOfWork.QuizRepository.FindOneAsync(q => q.Id == id && q.InstructorId == userId);
             if (quiz == null)
                 return ApiResponse<bool>.FailureResponse("Quiz không tồn tại.");
@@ -133,6 +133,9 @@ public class QuizService(
             await unitOfWork.QuizRepository.UpdateAsync(id, quiz);
 
             await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation("Publishing quiz deleted event: {QuizId}", id);
+            await publishEndpoint.Publish(new QuizDeletedEvent(id));
 
             logger.LogInformation("Quiz deleted: {QuizId}, InstructorId: {InstructorId}", id, userId);
             return ApiResponse<bool>.SuccessResponse(true, "Xóa quiz thành công.");

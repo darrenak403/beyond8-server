@@ -47,24 +47,6 @@ public static class LessonApis
             .Produces<ApiResponse<LessonResponse>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
-        // Create lesson
-        group.MapPost("/", CreateLessonAsync)
-            .WithName("CreateLesson")
-            .WithDescription("Tạo bài học mới")
-            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
-            .Produces<ApiResponse<LessonResponse>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<LessonResponse>>(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized);
-
-        // Update lesson
-        group.MapPatch("/{id}", UpdateLessonAsync)
-            .WithName("UpdateLesson")
-            .WithDescription("Cập nhật thông tin bài học")
-            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
-            .Produces<ApiResponse<LessonResponse>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<LessonResponse>>(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized);
-
         // Delete lesson
         group.MapDelete("/{id}", DeleteLessonAsync)
             .WithName("DeleteLesson")
@@ -72,6 +54,60 @@ public static class LessonApis
             .RequireAuthorization(x => x.RequireRole(Role.Instructor))
             .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
+        // Create video lesson
+        group.MapPost("/video", CreateVideoLessonAsync)
+            .WithName("CreateVideoLesson")
+            .WithDescription("Tạo bài học video")
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .Produces<ApiResponse<LessonResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<LessonResponse>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
+        // Create text lesson
+        group.MapPost("/text", CreateTextLessonAsync)
+            .WithName("CreateTextLesson")
+            .WithDescription("Tạo bài học văn bản")
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .Produces<ApiResponse<LessonResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<LessonResponse>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
+        // Create quiz lesson
+        group.MapPost("/quiz", CreateQuizLessonAsync)
+            .WithName("CreateQuizLesson")
+            .WithDescription("Tạo bài học quiz")
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .Produces<ApiResponse<LessonResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<LessonResponse>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
+        // Update video lesson
+        group.MapPatch("/{id}/video", UpdateVideoLessonAsync)
+            .WithName("UpdateVideoLesson")
+            .WithDescription("Cập nhật bài học video")
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .Produces<ApiResponse<LessonResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<LessonResponse>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
+        // Update text lesson
+        group.MapPatch("/{id}/text", UpdateTextLessonAsync)
+            .WithName("UpdateTextLesson")
+            .WithDescription("Cập nhật bài học văn bản")
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .Produces<ApiResponse<LessonResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<LessonResponse>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
+        // Update quiz lesson
+        group.MapPatch("/{id}/quiz", UpdateQuizLessonAsync)
+            .WithName("UpdateQuizLesson")
+            .WithDescription("Cập nhật bài học quiz")
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .Produces<ApiResponse<LessonResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<LessonResponse>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
         return group;
@@ -85,10 +121,11 @@ public static class LessonApis
     private static async Task<IResult> GetLessonsBySectionIdAsync(
         Guid sectionId,
         [FromServices] ILessonService lessonService,
-        [FromServices] ICurrentUserService currentUserService)
+        [FromServices] ICurrentUserService currentUserService,
+        [AsParameters] PaginationRequest pagination)
     {
         var currentUserId = currentUserService.UserId;
-        var result = await lessonService.GetLessonsBySectionIdAsync(sectionId, currentUserId);
+        var result = await lessonService.GetLessonsBySectionIdAsync(sectionId, pagination, currentUserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
@@ -102,35 +139,6 @@ public static class LessonApis
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
-    private static async Task<IResult> CreateLessonAsync(
-        [FromBody] CreateLessonRequest request,
-        [FromServices] ILessonService lessonService,
-        [FromServices] ICurrentUserService currentUserService,
-        [FromServices] IValidator<CreateLessonRequest> validator)
-    {
-        if (!request.ValidateRequest(validator, out var result))
-            return result!;
-
-        var currentUserId = currentUserService.UserId;
-        var apiResult = await lessonService.CreateLessonAsync(request, currentUserId);
-        return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
-    }
-
-    private static async Task<IResult> UpdateLessonAsync(
-        Guid id,
-        [FromBody] UpdateLessonRequest request,
-        [FromServices] ILessonService lessonService,
-        [FromServices] ICurrentUserService currentUserService,
-        [FromServices] IValidator<UpdateLessonRequest> validator)
-    {
-        if (!request.ValidateRequest(validator, out var result))
-            return result!;
-
-        var currentUserId = currentUserService.UserId;
-        var apiResult = await lessonService.UpdateLessonAsync(id, request, currentUserId);
-        return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
-    }
-
     private static async Task<IResult> DeleteLessonAsync(
         Guid id,
         [FromServices] ILessonService lessonService,
@@ -139,5 +147,92 @@ public static class LessonApis
         var currentUserId = currentUserService.UserId;
         var result = await lessonService.DeleteLessonAsync(id, currentUserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> CreateVideoLessonAsync(
+        [FromBody] CreateVideoLessonRequest request,
+        [FromServices] ILessonService lessonService,
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IValidator<CreateVideoLessonRequest> validator)
+    {
+        if (!request.ValidateRequest(validator, out var result))
+            return result!;
+
+        var currentUserId = currentUserService.UserId;
+        var apiResult = await lessonService.CreateVideoLessonAsync(request, currentUserId);
+        return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
+    }
+
+    private static async Task<IResult> CreateTextLessonAsync(
+        [FromBody] CreateTextLessonRequest request,
+        [FromServices] ILessonService lessonService,
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IValidator<CreateTextLessonRequest> validator)
+    {
+        if (!request.ValidateRequest(validator, out var result))
+            return result!;
+
+        var currentUserId = currentUserService.UserId;
+        var apiResult = await lessonService.CreateTextLessonAsync(request, currentUserId);
+        return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
+    }
+
+    private static async Task<IResult> CreateQuizLessonAsync(
+        [FromBody] CreateQuizLessonRequest request,
+        [FromServices] ILessonService lessonService,
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IValidator<CreateQuizLessonRequest> validator)
+    {
+        if (!request.ValidateRequest(validator, out var result))
+            return result!;
+
+        var currentUserId = currentUserService.UserId;
+        var apiResult = await lessonService.CreateQuizLessonAsync(request, currentUserId);
+        return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
+    }
+
+    private static async Task<IResult> UpdateVideoLessonAsync(
+        Guid id,
+        [FromBody] UpdateVideoLessonRequest request,
+        [FromServices] ILessonService lessonService,
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IValidator<UpdateVideoLessonRequest> validator)
+    {
+        if (!request.ValidateRequest(validator, out var result))
+            return result!;
+
+        var currentUserId = currentUserService.UserId;
+        var apiResult = await lessonService.UpdateVideoLessonAsync(id, request, currentUserId);
+        return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
+    }
+
+    private static async Task<IResult> UpdateTextLessonAsync(
+        Guid id,
+        [FromBody] UpdateTextLessonRequest request,
+        [FromServices] ILessonService lessonService,
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IValidator<UpdateTextLessonRequest> validator)
+    {
+        if (!request.ValidateRequest(validator, out var result))
+            return result!;
+
+        var currentUserId = currentUserService.UserId;
+        var apiResult = await lessonService.UpdateTextLessonAsync(id, request, currentUserId);
+        return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
+    }
+
+    private static async Task<IResult> UpdateQuizLessonAsync(
+        Guid id,
+        [FromBody] UpdateQuizLessonRequest request,
+        [FromServices] ILessonService lessonService,
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IValidator<UpdateQuizLessonRequest> validator)
+    {
+        if (!request.ValidateRequest(validator, out var result))
+            return result!;
+
+        var currentUserId = currentUserService.UserId;
+        var apiResult = await lessonService.UpdateQuizLessonAsync(id, request, currentUserId);
+        return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
     }
 }
