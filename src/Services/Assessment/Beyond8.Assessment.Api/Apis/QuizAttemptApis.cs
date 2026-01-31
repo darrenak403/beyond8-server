@@ -34,6 +34,13 @@ public static class QuizAttemptApis
             .Produces<ApiResponse<QuizResultResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<QuizResultResponse>>(StatusCodes.Status400BadRequest);
 
+        group.MapPost("/{attemptId:guid}/auto-save", AutoSaveQuizAttemptAsync)
+            .WithName("AutoSaveQuizAttempt")
+            .WithDescription("Tự động lưu bài làm quiz")
+            .RequireAuthorization()
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest);
+
         group.MapGet("/{attemptId:guid}/result", GetQuizAttemptResultAsync)
             .WithName("GetQuizAttemptResult")
             .WithDescription("Xem kết quả bài làm quiz đã nộp")
@@ -57,6 +64,17 @@ public static class QuizAttemptApis
 
         return group;
     }
+
+    private static async Task<IResult> AutoSaveQuizAttemptAsync(
+        [FromRoute] Guid attemptId,
+        [FromBody] AutoSaveQuizRequest request,
+        [FromServices] IQuizAttemptService quizAttemptService,
+        [FromServices] ICurrentUserService currentUserService)
+    {
+        var result = await quizAttemptService.AutoSaveQuizAttemptAsync(attemptId, request, currentUserService.UserId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
 
     private static async Task<IResult> StartQuizAttemptAsync(
         [FromRoute] Guid quizId,

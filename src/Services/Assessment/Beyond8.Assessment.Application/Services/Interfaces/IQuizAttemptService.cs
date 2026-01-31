@@ -9,6 +9,8 @@ public interface IQuizAttemptService
 
     Task<ApiResponse<QuizResultResponse>> SubmitQuizAttemptAsync(Guid attemptId, SubmitQuizRequest request, Guid studentId);
 
+    Task<ApiResponse<bool>> AutoSaveQuizAttemptAsync(Guid attemptId, AutoSaveQuizRequest request, Guid studentId);
+
     Task<ApiResponse<QuizResultResponse>> GetQuizAttemptResultAsync(Guid attemptId, Guid studentId);
 
     Task<ApiResponse<UserQuizAttemptsResponse>> GetUserQuizAttemptsAsync(Guid quizId, Guid studentId);

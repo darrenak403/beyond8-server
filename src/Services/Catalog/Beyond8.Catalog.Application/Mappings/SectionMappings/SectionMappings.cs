@@ -23,7 +23,7 @@ public static class SectionMappingExtensions
         };
     }
 
-    public static Section ToEntity(this CreateSectionRequest request)
+    public static Section ToEntity(this CreateSectionRequest request, int orderIndex)
     {
         return new Section
         {
@@ -31,7 +31,8 @@ public static class SectionMappingExtensions
             Title = request.Title,
             Description = request.Description,
             IsPublished = true, // Default value
-            AssignmentId = request.AssignmentId
+            AssignmentId = request.AssignmentId,
+            OrderIndex = orderIndex
         };
     }
 

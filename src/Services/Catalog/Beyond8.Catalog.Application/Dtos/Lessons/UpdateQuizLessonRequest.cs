@@ -14,7 +14,6 @@ public class UpdateQuizLessonRequest
     public string? Description { get; set; }
 
     public bool? IsPreview { get; set; }
-    public bool? IsPublished { get; set; }
 
     // Quiz-specific fields
     public Guid? QuizId { get; set; }

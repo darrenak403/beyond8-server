@@ -111,7 +111,7 @@ public static class LessonApis
             .Produces(StatusCodes.Status401Unauthorized);
 
         // Update section assignment
-        group.MapPatch("/{id}/quiz", ChangeQuizForLessonAsync)
+        group.MapPatch("/{id}/change-quiz", ChangeQuizForLessonAsync)
             .WithName("ChangeQuizForLesson")
             .WithDescription("Thay đổi quiz khác cho bài học")
             .RequireAuthorization(x => x.RequireRole(Role.Instructor))
@@ -119,12 +119,51 @@ public static class LessonApis
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
+        // Switch lesson activation
+        group.MapPatch("/{id}/activation", SwitchLessonActivationAsync)
+            .WithName("SwitchLessonActivation")
+            .WithDescription("Kích hoạt hoặc hủy kích hoạt bài học")
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
+        // Reorder lesson
+        group.MapPost("/reorder", ReorderLessonAsync)
+            .WithName("ReorderLesson")
+            .WithDescription("Sắp xếp lại bài học trong section hoặc chuyển sang section khác")
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
         return group;
     }
-    private static async Task<IResult> CallbackHlsAsync(VideoCallbackDto request, ILessonService lessonService)
+
+    private static async Task<IResult> SwitchLessonActivationAsync(
+        Guid id,
+        [FromBody] SwitchLessonActivationRequest request,
+        [FromServices] ILessonService lessonService,
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IValidator<SwitchLessonActivationRequest> validator)
     {
+        if (!request.ValidateRequest(validator, out var result))
+            return result!;
+
+        var apiResult = await lessonService.SwitchLessonActivationAsync(id, request.IsPublished, currentUserService.UserId);
+        return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
+    }
+
+    private static async Task<IResult> CallbackHlsAsync(
+        VideoCallbackDto request,
+        [FromServices] ILessonService lessonService,
+        [FromServices] IValidator<VideoCallbackDto> validator)
+    {
+        if (!request.ValidateRequest(validator, out var result))
+            return result!;
+
         var response = await lessonService.CallbackHlsAsync(request);
-        return Results.Ok(response);
+        return response.IsSuccess ? Results.Ok(response) : Results.BadRequest(response);
     }
 
     private static async Task<IResult> GetLessonsBySectionIdAsync(
@@ -259,4 +298,16 @@ public static class LessonApis
         return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
     }
 
+    private static async Task<IResult> ReorderLessonAsync(
+        [FromBody] ReorderLessonRequest request,
+        [FromServices] ILessonService lessonService,
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IValidator<ReorderLessonRequest> validator)
+    {
+        if (!request.ValidateRequest(validator, out var result))
+            return result!;
+
+        var apiResult = await lessonService.ReorderLessonAsync(request, currentUserService.UserId);
+        return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
+    }
 }

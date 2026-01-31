@@ -14,8 +14,6 @@ public class UpdateVideoLessonRequest
     public string? Description { get; set; }
 
     public bool? IsPreview { get; set; }
-    public bool? IsPublished { get; set; }
-
     // Video-specific fields
     public string? HlsVariants { get; set; }
     public string? VideoOriginalUrl { get; set; }
