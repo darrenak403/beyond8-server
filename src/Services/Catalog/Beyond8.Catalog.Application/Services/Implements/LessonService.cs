@@ -466,4 +466,28 @@ public class LessonService(
             return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi thay đổi quiz cho bài học.");
         }
     }
+
+    public async Task<ApiResponse<bool>> SwitchLessonActivationAsync(Guid lessonId, bool isPublished, Guid currentUserId)
+    {
+        try
+        {
+            // Validate lesson ownership
+            var (isValid, lesson, errorMessage) = await CheckLessonOwnershipAsync(lessonId, currentUserId);
+            if (!isValid)
+                return ApiResponse<bool>.FailureResponse(errorMessage!);
+
+            lesson!.IsPublished = isPublished;
+            await unitOfWork.LessonRepository.UpdateAsync(lessonId, lesson);
+            await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation("Lesson activation switched: {LessonId} to {IsPublished} by user {UserId}", lessonId, isPublished, currentUserId);
+
+            return ApiResponse<bool>.SuccessResponse(true, "Chuyển đổi trạng thái kích hoạt bài học thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error switching lesson activation: {LessonId}", lessonId);
+            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi chuyển đổi trạng thái kích hoạt bài học.");
+        }
+    }
 }

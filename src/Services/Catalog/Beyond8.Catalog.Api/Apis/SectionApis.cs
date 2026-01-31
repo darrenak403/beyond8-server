@@ -70,7 +70,8 @@ public static class SectionApis
         group.MapPatch("/{id}/assignment", ChangeAssignmentForSectionAsync)
             .WithName("ChangeAssignmentForSection")
             .WithDescription("Thay đổi assignment khác cho chương")
-            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor)
+            )
             .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);

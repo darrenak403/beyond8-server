@@ -119,8 +119,32 @@ public static class LessonApis
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
+        // Switch lesson activation
+        group.MapPatch("/{id}/activation", SwitchLessonActivationAsync)
+            .WithName("SwitchLessonActivation")
+            .WithDescription("Kích hoạt hoặc hủy kích hoạt bài học")
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
         return group;
     }
+
+    private static async Task<IResult> SwitchLessonActivationAsync(
+        Guid id,
+        [FromBody] SwitchLessonActivationRequest request,
+        [FromServices] ILessonService lessonService,
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IValidator<SwitchLessonActivationRequest> validator)
+    {
+        if (!request.ValidateRequest(validator, out var result))
+            return result!;
+
+        var apiResult = await lessonService.SwitchLessonActivationAsync(id, request.IsPublished, currentUserService.UserId);
+        return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
+    }
+
     private static async Task<IResult> CallbackHlsAsync(VideoCallbackDto request, ILessonService lessonService)
     {
         var response = await lessonService.CallbackHlsAsync(request);
