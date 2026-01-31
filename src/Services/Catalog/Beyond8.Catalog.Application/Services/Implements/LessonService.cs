@@ -244,23 +244,14 @@ public class LessonService(
             lesson!.UpdateFrom(request);
 
             // Update or create video entity
-            if (lesson.Video != null)
+            if (lesson!.Video != null)
             {
                 lesson.Video.UpdateVideoFrom(request);
                 await unitOfWork.LessonVideoRepository.UpdateAsync(lesson.Video.Id!, lesson.Video!);
             }
             else
             {
-                var videoEntity = new LessonVideo
-                {
-                    LessonId = lesson.Id,
-                    HlsVariants = request.HlsVariants,
-                    VideoOriginalUrl = request.VideoOriginalUrl,
-                    VideoThumbnailUrl = request.VideoThumbnailUrl,
-                    DurationSeconds = request.DurationSeconds,
-                    VideoQualities = request.VideoQualities,
-                    IsDownloadable = request.IsDownloadable ?? false
-                };
+                var videoEntity = request.ToVideoEntity(lesson.Id);
                 await unitOfWork.LessonVideoRepository.AddAsync(videoEntity);
             }
 
@@ -299,24 +290,20 @@ public class LessonService(
             lesson!.UpdateFrom(request);
 
             // Update or create text entity
-            if (lesson.Text != null)
+            if (lesson!.Text != null)
             {
                 lesson.Text.UpdateTextFrom(request);
                 await unitOfWork.LessonTextRepository.UpdateAsync(lesson.Text.Id!, lesson.Text!);
             }
             else
             {
-                var textEntity = new LessonText
-                {
-                    LessonId = lesson.Id,
-                    TextContent = request.Content
-                };
+                var textEntity = request.ToTextEntity(lesson.Id);
                 await unitOfWork.LessonTextRepository.AddAsync(textEntity);
             }
 
             // Remove other types if they exist
-            if (lesson.Video != null) await unitOfWork.LessonVideoRepository.DeleteAsync(lesson.Video.Id);
-            if (lesson.Quiz != null) await unitOfWork.LessonQuizRepository.DeleteAsync(lesson.Quiz.Id);
+            if (lesson!.Video != null) await unitOfWork.LessonVideoRepository.DeleteAsync(lesson.Video.Id);
+            if (lesson!.Quiz != null) await unitOfWork.LessonQuizRepository.DeleteAsync(lesson.Quiz.Id);
 
             lesson.Type = LessonType.Text;
             await unitOfWork.LessonRepository.UpdateAsync(lessonId, lesson);
@@ -349,18 +336,14 @@ public class LessonService(
             lesson!.UpdateFrom(request);
 
             // Update or create quiz entity
-            if (lesson.Quiz != null)
+            if (lesson!.Quiz != null)
             {
                 lesson.Quiz.UpdateQuizFrom(request);
                 await unitOfWork.LessonQuizRepository.UpdateAsync(lesson.Quiz.Id!, lesson.Quiz!);
             }
             else
             {
-                var quizEntity = new LessonQuiz
-                {
-                    LessonId = lesson.Id,
-                    QuizId = request.QuizId!.Value
-                };
+                var quizEntity = request.ToQuizEntity(lesson.Id);
                 await unitOfWork.LessonQuizRepository.AddAsync(quizEntity);
             }
 

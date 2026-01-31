@@ -165,4 +165,37 @@ public static class LessonMappings
     {
         quiz.QuizId = request.QuizId ?? quiz.QuizId;
     }
+
+    // Entity creation methods for update requests (when entity doesn't exist)
+    public static LessonVideo ToVideoEntity(this UpdateVideoLessonRequest request, Guid lessonId)
+    {
+        return new LessonVideo
+        {
+            LessonId = lessonId,
+            HlsVariants = request.HlsVariants,
+            VideoOriginalUrl = request.VideoOriginalUrl,
+            VideoThumbnailUrl = request.VideoThumbnailUrl,
+            DurationSeconds = request.DurationSeconds,
+            VideoQualities = request.VideoQualities,
+            IsDownloadable = request.IsDownloadable ?? false
+        };
+    }
+
+    public static LessonText ToTextEntity(this UpdateTextLessonRequest request, Guid lessonId)
+    {
+        return new LessonText
+        {
+            LessonId = lessonId,
+            TextContent = request.Content
+        };
+    }
+
+    public static LessonQuiz ToQuizEntity(this UpdateQuizLessonRequest request, Guid lessonId)
+    {
+        return new LessonQuiz
+        {
+            LessonId = lessonId,
+            QuizId = request.QuizId!.Value
+        };
+    }
 }
