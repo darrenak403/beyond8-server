@@ -111,7 +111,7 @@ public static class LessonApis
             .Produces(StatusCodes.Status401Unauthorized);
 
         // Update section assignment
-        group.MapPatch("/{id}/quiz", ChangeQuizForLessonAsync)
+        group.MapPatch("/{id}/change-quiz", ChangeQuizForLessonAsync)
             .WithName("ChangeQuizForLesson")
             .WithDescription("Thay đổi quiz khác cho bài học")
             .RequireAuthorization(x => x.RequireRole(Role.Instructor))
