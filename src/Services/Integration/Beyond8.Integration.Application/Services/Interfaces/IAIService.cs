@@ -12,5 +12,6 @@ namespace Beyond8.Integration.Application.Services.Interfaces
             GenQuizRequest request,
             Guid userId,
             CancellationToken cancellationToken = default);
+        Task<ApiResponse<List<GenQuizResponse>>> FormatQuizQuestionsFromPdfAsync(Stream stream, Guid userId);
     }
 }

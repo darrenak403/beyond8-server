@@ -10,6 +10,7 @@ namespace Beyond8.Integration.Domain.Enums
         Translation = 5,
         TextGeneration = 6,
         ChatCompletion = 7,
+        FormatQuizQuestions = 8,
         Custom = 99
     }
 }

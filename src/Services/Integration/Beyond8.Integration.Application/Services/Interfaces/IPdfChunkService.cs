@@ -10,5 +10,7 @@ namespace Beyond8.Integration.Application.Services.Interfaces
             Guid documentId,
             int chunkSize = 500,
             int chunkOverlap = 15);
+
+        string ExtractTextFromPdf(Stream pdfStream);
     }
 }

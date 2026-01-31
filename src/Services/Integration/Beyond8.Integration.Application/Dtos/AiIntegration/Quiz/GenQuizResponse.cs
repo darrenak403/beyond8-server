@@ -2,8 +2,6 @@ namespace Beyond8.Integration.Application.Dtos.AiIntegration.Quiz
 {
     public class GenQuizResponse
     {
-        public Guid CourseId { get; set; }
-        public string? Query { get; set; }
         public int TotalQuestions => Easy.Count + Medium.Count + Hard.Count;
 
         public List<QuizQuestionDto> Easy { get; set; } = [];

@@ -9,6 +9,27 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
 {
     public class PdfChunkService(ILogger<PdfChunkService> logger) : IPdfChunkService
     {
+        public string ExtractTextFromPdf(Stream pdfStream)
+        {
+            try
+            {
+                using var document = PdfDocument.Open(pdfStream);
+                var pageTexts = new List<string>();
+                foreach (var page in document.GetPages())
+                {
+                    var pageText = ExtractTextFromPage(page);
+                    if (!string.IsNullOrWhiteSpace(pageText))
+                        pageTexts.Add(pageText);
+                }
+                return string.Join("\n\n", pageTexts);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Không thể trích xuất text từ PDF.");
+                return string.Empty;
+            }
+        }
+
         public List<DocumentChunk> ChunkPdf(
             Stream pdfStream,
             Guid courseId,
