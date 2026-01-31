@@ -66,6 +66,15 @@ public static class SectionApis
             .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
+
+        group.MapPatch("/{id}/assignment", ChangeAssignmentForSectionAsync)
+            .WithName("ChangeAssignmentForSection")
+            .WithDescription("Thay đổi assignment khác cho chương")
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
         return group;
     }
 
@@ -126,5 +135,20 @@ public static class SectionApis
         var currentUserId = currentUserService.UserId;
         var result = await sectionService.DeleteSectionAsync(id, currentUserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> ChangeAssignmentForSectionAsync(
+        Guid id,
+        [FromBody] ChangeAssignmentForSectionRequest request,
+        [FromServices] ISectionService sectionService,
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IValidator<ChangeAssignmentForSectionRequest> validator)
+    {
+        if (!request.ValidateRequest(validator, out var result))
+            return result!;
+
+        var currentUserId = currentUserService.UserId;
+        var apiResult = await sectionService.ChangeAssignmentForSectionAsync(id, request.AssignmentId, currentUserId);
+        return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
     }
 }

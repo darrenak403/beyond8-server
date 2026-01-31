@@ -181,4 +181,40 @@ public class SectionService(
             return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi xóa chương.");
         }
     }
+
+    public async Task<ApiResponse<bool>> ChangeAssignmentForSectionAsync(Guid sectionId, Guid? assignmentId, Guid currentUserId)
+    {
+        try
+        {
+            // Validate section ownership through course
+            var section = await unitOfWork.SectionRepository.AsQueryable()
+                .Include(s => s.Course)
+                .FirstOrDefaultAsync(s => s.Id == sectionId);
+
+            if (section == null)
+            {
+                logger.LogWarning("Section not found: {SectionId}", sectionId);
+                return ApiResponse<bool>.FailureResponse("Chương không tồn tại.");
+            }
+
+            if (section.Course.InstructorId != currentUserId)
+            {
+                logger.LogWarning("Access denied for section {SectionId} by user {UserId}", sectionId, currentUserId);
+                return ApiResponse<bool>.FailureResponse("Bạn không có quyền truy cập chương này.");
+            }
+
+            section.AssignmentId = assignmentId;
+            await unitOfWork.SectionRepository.UpdateAsync(sectionId, section);
+            await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation("Section assignment updated: {SectionId} to {AssignmentId} by user {UserId}", sectionId, assignmentId, currentUserId);
+
+            return ApiResponse<bool>.SuccessResponse(true, "Cập nhật assignment cho chương thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error updating section assignment: {SectionId}", sectionId);
+            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi cập nhật assignment cho chương.");
+        }
+    }
 }

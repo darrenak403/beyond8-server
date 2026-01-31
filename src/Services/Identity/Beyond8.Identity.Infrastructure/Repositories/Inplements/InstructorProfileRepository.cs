@@ -9,15 +9,6 @@ namespace Beyond8.Identity.Infrastructure.Repositories.Inplements
 {
     public class InstructorProfileRepository(IdentityDbContext context) : PostgresRepository<InstructorProfile>(context), IInstructorProfileRepository
     {
-        public Task<List<InstructorProfile>> GetTopInstructorsByRatingAsync(int count)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<(List<InstructorProfile> Profiles, int TotalCount)> GetVerifiedInstructorsAsync(int pageNumber, int pageSize)
-        {
-            throw new NotImplementedException();
-        }
 
         public async Task<(List<InstructorProfile> Items, int TotalCount)> SearchInstructorsPagedAsync(
         int pageNumber,

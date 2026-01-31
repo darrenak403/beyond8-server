@@ -1,5 +1,6 @@
 using Beyond8.Catalog.Application.Dtos.Lessons;
 using Beyond8.Catalog.Domain.Entities;
+using Beyond8.Catalog.Domain.Enums;
 
 namespace Beyond8.Catalog.Application.Mappings.LessonMappings;
 
@@ -7,7 +8,7 @@ public static class LessonMappings
 {
     public static LessonResponse ToResponse(this Lesson lesson)
     {
-        return new LessonResponse
+        var response = new LessonResponse
         {
             Id = lesson.Id,
             SectionId = lesson.SectionId,
@@ -17,19 +18,34 @@ public static class LessonMappings
             OrderIndex = lesson.OrderIndex,
             IsPreview = lesson.IsPreview,
             IsPublished = lesson.IsPublished,
-            HlsVariants = lesson.Video?.HlsVariants,
-            VideoOriginalUrl = lesson.Video?.VideoOriginalUrl,
-            VideoThumbnailUrl = lesson.Video?.VideoThumbnailUrl,
-            DurationSeconds = lesson.Video?.DurationSeconds,
-            VideoQualities = lesson.Video?.VideoQualities,
-            IsDownloadable = lesson.Video?.IsDownloadable ?? false,
-            TextContent = lesson.Text?.TextContent,
-            QuizId = lesson.Quiz?.QuizId,
             TotalViews = lesson.TotalViews,
             TotalCompletions = lesson.TotalCompletions,
             CreatedAt = lesson.CreatedAt,
             UpdatedAt = lesson.UpdatedAt
         };
+
+        // Only populate fields for the specific lesson type
+        switch (lesson.Type)
+        {
+            case LessonType.Video:
+                response.HlsVariants = lesson.Video?.HlsVariants;
+                response.VideoOriginalUrl = lesson.Video?.VideoOriginalUrl;
+                response.VideoThumbnailUrl = lesson.Video?.VideoThumbnailUrl;
+                response.DurationSeconds = lesson.Video?.DurationSeconds;
+                response.VideoQualities = lesson.Video?.VideoQualities;
+                response.IsDownloadable = lesson.Video?.IsDownloadable ?? false;
+                break;
+
+            case LessonType.Text:
+                response.TextContent = lesson.Text?.TextContent;
+                break;
+
+            case LessonType.Quiz:
+                response.QuizId = lesson.Quiz?.QuizId;
+                break;
+        }
+
+        return response;
     }
 
     // New specific mappings for individual lesson types
@@ -40,9 +56,9 @@ public static class LessonMappings
             SectionId = request.SectionId,
             Title = request.Title,
             Description = request.Description,
-            Type = Beyond8.Catalog.Domain.Enums.LessonType.Video,
+            Type = LessonType.Video,
             IsPreview = request.IsPreview,
-            IsPublished = false // New lessons are not published by default
+            IsPublished = true // New lessons are published by default
         };
     }
 
@@ -53,9 +69,9 @@ public static class LessonMappings
             SectionId = request.SectionId,
             Title = request.Title,
             Description = request.Description,
-            Type = Beyond8.Catalog.Domain.Enums.LessonType.Text,
+            Type = LessonType.Text,
             IsPreview = request.IsPreview,
-            IsPublished = false // New lessons are not published by default
+            IsPublished = true // New lessons are published by default
         };
     }
 
@@ -66,9 +82,9 @@ public static class LessonMappings
             SectionId = request.SectionId,
             Title = request.Title,
             Description = request.Description,
-            Type = Beyond8.Catalog.Domain.Enums.LessonType.Quiz,
+            Type = LessonType.Quiz,
             IsPreview = request.IsPreview,
-            IsPublished = false // New lessons are not published by default
+            IsPublished = true // New lessons are published by default
         };
     }
 
@@ -78,7 +94,7 @@ public static class LessonMappings
         lesson.Description = request.Description ?? lesson.Description;
         lesson.IsPreview = request.IsPreview ?? lesson.IsPreview;
         lesson.IsPublished = request.IsPublished ?? lesson.IsPublished;
-        lesson.Type = Beyond8.Catalog.Domain.Enums.LessonType.Video;
+        lesson.Type = LessonType.Video;
     }
 
     public static void UpdateFrom(this Lesson lesson, UpdateTextLessonRequest request)
@@ -87,7 +103,7 @@ public static class LessonMappings
         lesson.Description = request.Description ?? lesson.Description;
         lesson.IsPreview = request.IsPreview ?? lesson.IsPreview;
         lesson.IsPublished = request.IsPublished ?? lesson.IsPublished;
-        lesson.Type = Beyond8.Catalog.Domain.Enums.LessonType.Text;
+        lesson.Type = LessonType.Text;
     }
 
     public static void UpdateFrom(this Lesson lesson, UpdateQuizLessonRequest request)
@@ -96,7 +112,7 @@ public static class LessonMappings
         lesson.Description = request.Description ?? lesson.Description;
         lesson.IsPreview = request.IsPreview ?? lesson.IsPreview;
         lesson.IsPublished = request.IsPublished ?? lesson.IsPublished;
-        lesson.Type = Beyond8.Catalog.Domain.Enums.LessonType.Quiz;
+        lesson.Type = LessonType.Quiz;
     }
 
     // New entity creation methods for specific types
@@ -149,5 +165,38 @@ public static class LessonMappings
     public static void UpdateQuizFrom(this LessonQuiz quiz, UpdateQuizLessonRequest request)
     {
         quiz.QuizId = request.QuizId ?? quiz.QuizId;
+    }
+
+    // Entity creation methods for update requests (when entity doesn't exist)
+    public static LessonVideo ToVideoEntity(this UpdateVideoLessonRequest request, Guid lessonId)
+    {
+        return new LessonVideo
+        {
+            LessonId = lessonId,
+            HlsVariants = request.HlsVariants,
+            VideoOriginalUrl = request.VideoOriginalUrl,
+            VideoThumbnailUrl = request.VideoThumbnailUrl,
+            DurationSeconds = request.DurationSeconds,
+            VideoQualities = request.VideoQualities,
+            IsDownloadable = request.IsDownloadable ?? false
+        };
+    }
+
+    public static LessonText ToTextEntity(this UpdateTextLessonRequest request, Guid lessonId)
+    {
+        return new LessonText
+        {
+            LessonId = lessonId,
+            TextContent = request.Content
+        };
+    }
+
+    public static LessonQuiz ToQuizEntity(this UpdateQuizLessonRequest request, Guid lessonId)
+    {
+        return new LessonQuiz
+        {
+            LessonId = lessonId,
+            QuizId = request.QuizId
+        };
     }
 }
