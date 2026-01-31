@@ -26,7 +26,7 @@ public class IdentityClient(HttpClient httpClient, IHttpContextAccessor httpCont
     {
         try
         {
-            var data = await PatchAsync<SubscriptionResponse>($"/api/v1/subscriptions/{userId}", request);
+            var data = await PutAsync<SubscriptionResponse>($"/api/v1/subscriptions/{userId}", request);
             return ApiResponse<SubscriptionResponse>.SuccessResponse(data, "OK");
         }
         catch (Exception ex)

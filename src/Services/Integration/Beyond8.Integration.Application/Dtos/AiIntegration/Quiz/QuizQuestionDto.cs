@@ -14,6 +14,6 @@ namespace Beyond8.Integration.Application.Dtos.AiIntegration.Quiz
 
         public DifficultyLevel Difficulty { get; set; } = DifficultyLevel.Medium;
 
-        public int Points { get; set; } = 1;
+        public decimal Points { get; set; } = 1.0m;
     }
 }

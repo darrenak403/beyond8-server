@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Beyond8.Common.Utilities;
 using Beyond8.Integration.Application.Clients;
-using Beyond8.Integration.Application.Dtos.Ai;
+using Beyond8.Integration.Application.Dtos.AiIntegration.Profile;
 using Beyond8.Integration.Application.Dtos.AiIntegration.GenerativeAi;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Quiz;
 using Beyond8.Integration.Application.Helpers.AiService;
@@ -136,6 +136,8 @@ namespace Beyond8.Integration.Application.Services.Implements
                     logger.LogWarning("ParseQuizResponse failed for CourseId {CourseId}. AI content preview: {Preview}", request.CourseId, preview);
                     return ApiResponse<GenQuizResponse>.FailureResponse("Không thể phân tích kết quả quiz từ AI. Kiểm tra lại thông tin.");
                 }
+
+                AiServiceQuizHelper.NormalizePointsToMaxPoints(parsed, request.MaxPoints);
 
                 return ApiResponse<GenQuizResponse>.SuccessResponse(parsed, "Tạo quiz từ AI thành công.");
             }
