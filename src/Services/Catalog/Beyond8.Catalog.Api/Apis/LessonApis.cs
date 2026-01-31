@@ -154,10 +154,16 @@ public static class LessonApis
         return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
     }
 
-    private static async Task<IResult> CallbackHlsAsync(VideoCallbackDto request, ILessonService lessonService)
+    private static async Task<IResult> CallbackHlsAsync(
+        VideoCallbackDto request,
+        [FromServices] ILessonService lessonService,
+        [FromServices] IValidator<VideoCallbackDto> validator)
     {
+        if (!request.ValidateRequest(validator, out var result))
+            return result!;
+
         var response = await lessonService.CallbackHlsAsync(request);
-        return Results.Ok(response);
+        return response.IsSuccess ? Results.Ok(response) : Results.BadRequest(response);
     }
 
     private static async Task<IResult> GetLessonsBySectionIdAsync(

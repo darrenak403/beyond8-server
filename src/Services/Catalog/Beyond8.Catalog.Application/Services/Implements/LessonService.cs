@@ -28,17 +28,17 @@ public class LessonService(
             if (lesson == null)
             {
                 logger.LogWarning("Lesson not found with original key: {OriginalKey}", request.OriginalKey);
-                return ApiResponse<bool>.FailureResponse("Lesson not found");
+                return ApiResponse<bool>.FailureResponse("Bài học không tồn tại.");
             }
             lesson.Video!.HlsVariants = JsonSerializer.Serialize(request.TranscodingData.Variants);
             await unitOfWork.LessonVideoRepository.UpdateAsync(lesson.Video.Id, lesson.Video);
             await unitOfWork.SaveChangesAsync();
-            return ApiResponse<bool>.SuccessResponse(true, "Callback HLS success");
+            return ApiResponse<bool>.SuccessResponse(true, "Cập nhật HLS thành công.");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error in CallbackHlsAsync");
-            return ApiResponse<bool>.FailureResponse("Error in CallbackHlsAsync");
+            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi cập nhật HLS.");
         }
     }
     public async Task<ApiResponse<List<LessonResponse>>> GetLessonsBySectionIdAsync(Guid sectionId, Guid currentUserId)
@@ -130,12 +130,8 @@ public class LessonService(
             if (!validationResult.IsValid)
                 return ApiResponse<LessonResponse>.FailureResponse(validationResult.ErrorMessage!);
 
-            var maxOrder = await unitOfWork.LessonRepository.AsQueryable()
-                .Where(l => l.SectionId == request.SectionId)
-                .MaxAsync(l => (int?)l.OrderIndex) ?? 0;
-
             var lesson = request.ToEntity();
-            lesson.OrderIndex = maxOrder + 1;
+            lesson.OrderIndex = await GetNextOrderIndexForSectionAsync(request.SectionId);
 
             await unitOfWork.LessonRepository.AddAsync(lesson);
 
@@ -166,12 +162,8 @@ public class LessonService(
             if (!validationResult.IsValid)
                 return ApiResponse<LessonResponse>.FailureResponse(validationResult.ErrorMessage!);
 
-            var maxOrder = await unitOfWork.LessonRepository.AsQueryable()
-                .Where(l => l.SectionId == request.SectionId)
-                .MaxAsync(l => (int?)l.OrderIndex) ?? 0;
-
             var lesson = request.ToEntity();
-            lesson.OrderIndex = maxOrder + 1;
+            lesson.OrderIndex = await GetNextOrderIndexForSectionAsync(request.SectionId);
 
             await unitOfWork.LessonRepository.AddAsync(lesson);
 
@@ -202,12 +194,8 @@ public class LessonService(
             if (!validationResult.IsValid)
                 return ApiResponse<LessonResponse>.FailureResponse(validationResult.ErrorMessage!);
 
-            var maxOrder = await unitOfWork.LessonRepository.AsQueryable()
-                .Where(l => l.SectionId == request.SectionId)
-                .MaxAsync(l => (int?)l.OrderIndex) ?? 0;
-
-            var lesson = request.ToEntity();
-            lesson.OrderIndex = maxOrder + 1;
+            var nextOrderIndex = await GetNextOrderIndexForSectionAsync(request.SectionId);
+            var lesson = request.ToEntity(nextOrderIndex);
 
             await unitOfWork.LessonRepository.AddAsync(lesson);
 
@@ -253,9 +241,7 @@ public class LessonService(
                 await unitOfWork.LessonVideoRepository.AddAsync(videoEntity);
             }
 
-            // Remove other types if they exist
-            if (lesson.Text != null) await unitOfWork.LessonTextRepository.DeleteAsync(lesson.Text.Id);
-            if (lesson.Quiz != null) await unitOfWork.LessonQuizRepository.DeleteAsync(lesson.Quiz.Id);
+            await RemoveOtherLessonTypeEntitiesAsync(lesson, LessonType.Video);
 
             lesson.Type = LessonType.Video;
             await unitOfWork.LessonRepository.UpdateAsync(lessonId, lesson);
@@ -266,7 +252,8 @@ public class LessonService(
 
             logger.LogInformation("Video lesson updated: {LessonId} by user {UserId}", lessonId, currentUserId);
 
-            return ApiResponse<LessonResponse>.SuccessResponse(lesson.ToResponse(), "Cập nhật bài học video thành công.");
+            var refreshed = await GetLessonWithIncludesAsync(lessonId);
+            return ApiResponse<LessonResponse>.SuccessResponse(refreshed!.ToResponse(), "Cập nhật bài học video thành công.");
         }
         catch (Exception ex)
         {
@@ -299,9 +286,7 @@ public class LessonService(
                 await unitOfWork.LessonTextRepository.AddAsync(textEntity);
             }
 
-            // Remove other types if they exist
-            if (lesson!.Video != null) await unitOfWork.LessonVideoRepository.DeleteAsync(lesson.Video.Id);
-            if (lesson!.Quiz != null) await unitOfWork.LessonQuizRepository.DeleteAsync(lesson.Quiz.Id);
+            await RemoveOtherLessonTypeEntitiesAsync(lesson, LessonType.Text);
 
             lesson.Type = LessonType.Text;
             await unitOfWork.LessonRepository.UpdateAsync(lessonId, lesson);
@@ -312,7 +297,8 @@ public class LessonService(
 
             logger.LogInformation("Text lesson updated: {LessonId} by user {UserId}", lessonId, currentUserId);
 
-            return ApiResponse<LessonResponse>.SuccessResponse(lesson.ToResponse(), "Cập nhật bài học văn bản thành công.");
+            var refreshed = await GetLessonWithIncludesAsync(lessonId);
+            return ApiResponse<LessonResponse>.SuccessResponse(refreshed!.ToResponse(), "Cập nhật bài học văn bản thành công.");
         }
         catch (Exception ex)
         {
@@ -345,9 +331,7 @@ public class LessonService(
                 await unitOfWork.LessonQuizRepository.AddAsync(quizEntity);
             }
 
-            // Remove other types if they exist
-            if (lesson.Video != null) await unitOfWork.LessonVideoRepository.DeleteAsync(lesson.Video.Id);
-            if (lesson.Text != null) await unitOfWork.LessonTextRepository.DeleteAsync(lesson.Text.Id);
+            await RemoveOtherLessonTypeEntitiesAsync(lesson, LessonType.Quiz);
 
             lesson.Type = LessonType.Quiz;
             await unitOfWork.LessonRepository.UpdateAsync(lessonId, lesson);
@@ -358,13 +342,41 @@ public class LessonService(
 
             logger.LogInformation("Quiz lesson updated: {LessonId} by user {UserId}", lessonId, currentUserId);
 
-            return ApiResponse<LessonResponse>.SuccessResponse(lesson.ToResponse(), "Cập nhật bài học quiz thành công.");
+            var refreshed = await GetLessonWithIncludesAsync(lessonId);
+            return ApiResponse<LessonResponse>.SuccessResponse(refreshed!.ToResponse(), "Cập nhật bài học quiz thành công.");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error updating quiz lesson: {LessonId}", lessonId);
             return ApiResponse<LessonResponse>.FailureResponse("Đã xảy ra lỗi khi cập nhật bài học quiz.");
         }
+    }
+
+    private async Task<int> GetNextOrderIndexForSectionAsync(Guid sectionId)
+    {
+        var maxOrder = await unitOfWork.LessonRepository.AsQueryable()
+            .Where(l => l.SectionId == sectionId)
+            .MaxAsync(l => (int?)l.OrderIndex) ?? 0;
+        return maxOrder + 1;
+    }
+
+    private async Task RemoveOtherLessonTypeEntitiesAsync(Lesson lesson, LessonType keepType)
+    {
+        if (keepType != LessonType.Video && lesson.Video != null)
+            await unitOfWork.LessonVideoRepository.DeleteAsync(lesson.Video.Id);
+        if (keepType != LessonType.Text && lesson.Text != null)
+            await unitOfWork.LessonTextRepository.DeleteAsync(lesson.Text.Id);
+        if (keepType != LessonType.Quiz && lesson.Quiz != null)
+            await unitOfWork.LessonQuizRepository.DeleteAsync(lesson.Quiz.Id);
+    }
+
+    private async Task<Lesson?> GetLessonWithIncludesAsync(Guid lessonId)
+    {
+        return await unitOfWork.LessonRepository.AsQueryable()
+            .Include(l => l.Video)
+            .Include(l => l.Text)
+            .Include(l => l.Quiz)
+            .FirstOrDefaultAsync(l => l.Id == lessonId);
     }
 
     private async Task<(bool IsValid, string? ErrorMessage)> CheckSectionOwnershipAsync(Guid sectionId, Guid currentUserId)
@@ -420,7 +432,10 @@ public class LessonService(
             var section = await unitOfWork.SectionRepository.FindOneAsync(s => s.Id == sectionId);
             if (section == null) return;
 
-            var lessons = await unitOfWork.LessonRepository.GetAllAsync(l => l.SectionId == sectionId);
+            var lessons = await unitOfWork.LessonRepository.AsQueryable()
+                .Where(l => l.SectionId == sectionId)
+                .Include(l => l.Video)
+                .ToListAsync();
 
             section.TotalLessons = lessons.Count;
             section.TotalDurationMinutes = lessons
