@@ -45,21 +45,9 @@ public class LessonService(
         try
         {
             // Validate section ownership through course
-            var section = await unitOfWork.SectionRepository.AsQueryable()
-                .Include(s => s.Course)
-                .FirstOrDefaultAsync(s => s.Id == sectionId);
-
-            if (section == null)
-            {
-                logger.LogWarning("Section not found: {SectionId}", sectionId);
-                return ApiResponse<List<LessonResponse>>.FailureResponse("Chương không tồn tại.");
-            }
-
-            if (section.Course.InstructorId != currentUserId)
-            {
-                logger.LogWarning("Access denied for section {SectionId} by user {UserId}", sectionId, currentUserId);
-                return ApiResponse<List<LessonResponse>>.FailureResponse("Bạn không có quyền truy cập chương này.");
-            }
+            var validationResult = await CheckSectionOwnershipAsync(sectionId, currentUserId);
+            if (!validationResult.IsValid)
+                return ApiResponse<List<LessonResponse>>.FailureResponse(validationResult.ErrorMessage!);
 
             var lessons = await unitOfWork.LessonRepository.GetPagedAsync(
                 pageNumber: pagination.PageNumber,
@@ -89,27 +77,12 @@ public class LessonService(
     {
         try
         {
-            var lesson = await unitOfWork.LessonRepository.AsQueryable()
-                .Include(l => l.Section)
-                .ThenInclude(s => s.Course)
-                .Include(l => l.Video)
-                .Include(l => l.Text)
-                .Include(l => l.Quiz)
-                .FirstOrDefaultAsync(l => l.Id == lessonId);
+            // Validate lesson ownership
+            var (isValid, lesson, errorMessage) = await CheckLessonOwnershipAsync(lessonId, currentUserId);
+            if (!isValid)
+                return ApiResponse<LessonResponse>.FailureResponse(errorMessage!);
 
-            if (lesson == null)
-            {
-                logger.LogWarning("Lesson not found: {LessonId}", lessonId);
-                return ApiResponse<LessonResponse>.FailureResponse("Bài học không tồn tại.");
-            }
-
-            if (lesson.Section.Course.InstructorId != currentUserId)
-            {
-                logger.LogWarning("Access denied for lesson {LessonId} by user {UserId}", lessonId, currentUserId);
-                return ApiResponse<LessonResponse>.FailureResponse("Bạn không có quyền truy cập bài học này.");
-            }
-
-            return ApiResponse<LessonResponse>.SuccessResponse(lesson.ToResponse(), "Lấy thông tin bài học thành công.");
+            return ApiResponse<LessonResponse>.SuccessResponse(lesson!.ToResponse(), "Lấy thông tin bài học thành công.");
         }
         catch (Exception ex)
         {
@@ -122,28 +95,13 @@ public class LessonService(
     {
         try
         {
-            var lesson = await unitOfWork.LessonRepository.AsQueryable()
-                .Include(l => l.Section)
-                .ThenInclude(s => s.Course)
-                .Include(l => l.Video)
-                .Include(l => l.Text)
-                .Include(l => l.Quiz)
-                .FirstOrDefaultAsync(l => l.Id == lessonId);
-
-            if (lesson == null)
-            {
-                logger.LogWarning("Lesson not found: {LessonId}", lessonId);
-                return ApiResponse<bool>.FailureResponse("Bài học không tồn tại.");
-            }
-
-            if (lesson.Section.Course.InstructorId != currentUserId)
-            {
-                logger.LogWarning("Access denied for lesson {LessonId} by user {UserId}", lessonId, currentUserId);
-                return ApiResponse<bool>.FailureResponse("Bạn không có quyền xóa bài học này.");
-            }
+            // Validate lesson ownership
+            var (isValid, lesson, errorMessage) = await CheckLessonOwnershipAsync(lessonId, currentUserId);
+            if (!isValid)
+                return ApiResponse<bool>.FailureResponse(errorMessage!);
 
             // Delete specific lesson type entities first
-            if (lesson.Video != null) await unitOfWork.LessonVideoRepository.DeleteAsync(lesson.Video.Id);
+            if (lesson!.Video != null) await unitOfWork.LessonVideoRepository.DeleteAsync(lesson.Video.Id);
             if (lesson.Text != null) await unitOfWork.LessonTextRepository.DeleteAsync(lesson.Text.Id);
             if (lesson.Quiz != null) await unitOfWork.LessonQuizRepository.DeleteAsync(lesson.Quiz.Id);
 
@@ -170,21 +128,9 @@ public class LessonService(
         try
         {
             // Validate section ownership through course
-            var section = await unitOfWork.SectionRepository.AsQueryable()
-                .Include(s => s.Course)
-                .FirstOrDefaultAsync(s => s.Id == request.SectionId);
-
-            if (section == null)
-            {
-                logger.LogWarning("Section not found: {SectionId}", request.SectionId);
-                return ApiResponse<LessonResponse>.FailureResponse("Chương không tồn tại.");
-            }
-
-            if (section.Course.InstructorId != currentUserId)
-            {
-                logger.LogWarning("Access denied for section {SectionId} by user {UserId}", request.SectionId, currentUserId);
-                return ApiResponse<LessonResponse>.FailureResponse("Bạn không có quyền tạo bài học trong chương này.");
-            }
+            var validationResult = await CheckSectionOwnershipAsync(request.SectionId, currentUserId);
+            if (!validationResult.IsValid)
+                return ApiResponse<LessonResponse>.FailureResponse(validationResult.ErrorMessage!);
 
             var maxOrder = await unitOfWork.LessonRepository.AsQueryable()
                 .Where(l => l.SectionId == request.SectionId)
@@ -218,21 +164,9 @@ public class LessonService(
         try
         {
             // Validate section ownership through course
-            var section = await unitOfWork.SectionRepository.AsQueryable()
-                .Include(s => s.Course)
-                .FirstOrDefaultAsync(s => s.Id == request.SectionId);
-
-            if (section == null)
-            {
-                logger.LogWarning("Section not found: {SectionId}", request.SectionId);
-                return ApiResponse<LessonResponse>.FailureResponse("Chương không tồn tại.");
-            }
-
-            if (section.Course.InstructorId != currentUserId)
-            {
-                logger.LogWarning("Access denied for section {SectionId} by user {UserId}", request.SectionId, currentUserId);
-                return ApiResponse<LessonResponse>.FailureResponse("Bạn không có quyền tạo bài học trong chương này.");
-            }
+            var validationResult = await CheckSectionOwnershipAsync(request.SectionId, currentUserId);
+            if (!validationResult.IsValid)
+                return ApiResponse<LessonResponse>.FailureResponse(validationResult.ErrorMessage!);
 
             var maxOrder = await unitOfWork.LessonRepository.AsQueryable()
                 .Where(l => l.SectionId == request.SectionId)
@@ -266,21 +200,9 @@ public class LessonService(
         try
         {
             // Validate section ownership through course
-            var section = await unitOfWork.SectionRepository.AsQueryable()
-                .Include(s => s.Course)
-                .FirstOrDefaultAsync(s => s.Id == request.SectionId);
-
-            if (section == null)
-            {
-                logger.LogWarning("Section not found: {SectionId}", request.SectionId);
-                return ApiResponse<LessonResponse>.FailureResponse("Chương không tồn tại.");
-            }
-
-            if (section.Course.InstructorId != currentUserId)
-            {
-                logger.LogWarning("Access denied for section {SectionId} by user {UserId}", request.SectionId, currentUserId);
-                return ApiResponse<LessonResponse>.FailureResponse("Bạn không có quyền tạo bài học trong chương này.");
-            }
+            var validationResult = await CheckSectionOwnershipAsync(request.SectionId, currentUserId);
+            if (!validationResult.IsValid)
+                return ApiResponse<LessonResponse>.FailureResponse(validationResult.ErrorMessage!);
 
             var maxOrder = await unitOfWork.LessonRepository.AsQueryable()
                 .Where(l => l.SectionId == request.SectionId)
@@ -313,32 +235,19 @@ public class LessonService(
     {
         try
         {
-            var lesson = await unitOfWork.LessonRepository.AsQueryable()
-                .Include(l => l.Section)
-                .ThenInclude(s => s.Course)
-                .Include(l => l.Video)
-                .FirstOrDefaultAsync(l => l.Id == lessonId);
-
-            if (lesson == null)
-            {
-                logger.LogWarning("Lesson not found: {LessonId}", lessonId);
-                return ApiResponse<LessonResponse>.FailureResponse("Bài học không tồn tại.");
-            }
-
-            if (lesson.Section.Course.InstructorId != currentUserId)
-            {
-                logger.LogWarning("Access denied for lesson {LessonId} by user {UserId}", lessonId, currentUserId);
-                return ApiResponse<LessonResponse>.FailureResponse("Bạn không có quyền chỉnh sửa bài học này.");
-            }
+            // Validate lesson ownership
+            var (isValid, lesson, errorMessage) = await CheckLessonOwnershipAsync(lessonId, currentUserId);
+            if (!isValid)
+                return ApiResponse<LessonResponse>.FailureResponse(errorMessage!);
 
             // Update base lesson properties
-            lesson.UpdateFrom(request);
+            lesson!.UpdateFrom(request);
 
             // Update or create video entity
             if (lesson.Video != null)
             {
                 lesson.Video.UpdateVideoFrom(request);
-                await unitOfWork.LessonVideoRepository.UpdateAsync(lesson.Video.Id, lesson.Video);
+                await unitOfWork.LessonVideoRepository.UpdateAsync(lesson.Video.Id!, lesson.Video!);
             }
             else
             {
@@ -381,32 +290,19 @@ public class LessonService(
     {
         try
         {
-            var lesson = await unitOfWork.LessonRepository.AsQueryable()
-                .Include(l => l.Section)
-                .ThenInclude(s => s.Course)
-                .Include(l => l.Text)
-                .FirstOrDefaultAsync(l => l.Id == lessonId);
-
-            if (lesson == null)
-            {
-                logger.LogWarning("Lesson not found: {LessonId}", lessonId);
-                return ApiResponse<LessonResponse>.FailureResponse("Bài học không tồn tại.");
-            }
-
-            if (lesson.Section.Course.InstructorId != currentUserId)
-            {
-                logger.LogWarning("Access denied for lesson {LessonId} by user {UserId}", lessonId, currentUserId);
-                return ApiResponse<LessonResponse>.FailureResponse("Bạn không có quyền chỉnh sửa bài học này.");
-            }
+            // Validate lesson ownership
+            var (isValid, lesson, errorMessage) = await CheckLessonOwnershipAsync(lessonId, currentUserId);
+            if (!isValid)
+                return ApiResponse<LessonResponse>.FailureResponse(errorMessage!);
 
             // Update base lesson properties
-            lesson.UpdateFrom(request);
+            lesson!.UpdateFrom(request);
 
             // Update or create text entity
             if (lesson.Text != null)
             {
                 lesson.Text.UpdateTextFrom(request);
-                await unitOfWork.LessonTextRepository.UpdateAsync(lesson.Text.Id, lesson.Text);
+                await unitOfWork.LessonTextRepository.UpdateAsync(lesson.Text.Id!, lesson.Text!);
             }
             else
             {
@@ -444,39 +340,26 @@ public class LessonService(
     {
         try
         {
-            var lesson = await unitOfWork.LessonRepository.AsQueryable()
-                .Include(l => l.Section)
-                .ThenInclude(s => s.Course)
-                .Include(l => l.Quiz)
-                .FirstOrDefaultAsync(l => l.Id == lessonId);
-
-            if (lesson == null)
-            {
-                logger.LogWarning("Lesson not found: {LessonId}", lessonId);
-                return ApiResponse<LessonResponse>.FailureResponse("Bài học không tồn tại.");
-            }
-
-            if (lesson.Section.Course.InstructorId != currentUserId)
-            {
-                logger.LogWarning("Access denied for lesson {LessonId} by user {UserId}", lessonId, currentUserId);
-                return ApiResponse<LessonResponse>.FailureResponse("Bạn không có quyền chỉnh sửa bài học này.");
-            }
+            // Validate lesson ownership
+            var (isValid, lesson, errorMessage) = await CheckLessonOwnershipAsync(lessonId, currentUserId);
+            if (!isValid)
+                return ApiResponse<LessonResponse>.FailureResponse(errorMessage!);
 
             // Update base lesson properties
-            lesson.UpdateFrom(request);
+            lesson!.UpdateFrom(request);
 
             // Update or create quiz entity
             if (lesson.Quiz != null)
             {
                 lesson.Quiz.UpdateQuizFrom(request);
-                await unitOfWork.LessonQuizRepository.UpdateAsync(lesson.Quiz.Id, lesson.Quiz);
+                await unitOfWork.LessonQuizRepository.UpdateAsync(lesson.Quiz.Id!, lesson.Quiz!);
             }
             else
             {
                 var quizEntity = new LessonQuiz
                 {
                     LessonId = lesson.Id,
-                    QuizId = request.QuizId.Value
+                    QuizId = request.QuizId!.Value
                 };
                 await unitOfWork.LessonQuizRepository.AddAsync(quizEntity);
             }
@@ -501,6 +384,52 @@ public class LessonService(
             logger.LogError(ex, "Error updating quiz lesson: {LessonId}", lessonId);
             return ApiResponse<LessonResponse>.FailureResponse("Đã xảy ra lỗi khi cập nhật bài học quiz.");
         }
+    }
+
+    private async Task<(bool IsValid, string? ErrorMessage)> CheckSectionOwnershipAsync(Guid sectionId, Guid currentUserId)
+    {
+        var section = await unitOfWork.SectionRepository.AsQueryable()
+            .Include(s => s.Course)
+            .FirstOrDefaultAsync(s => s.Id == sectionId);
+
+        if (section == null)
+        {
+            logger.LogWarning("Section not found: {SectionId}", sectionId);
+            return (false, "Chương không tồn tại.");
+        }
+
+        if (section.Course.InstructorId != currentUserId)
+        {
+            logger.LogWarning("Access denied for section {SectionId} by user {UserId}", sectionId, currentUserId);
+            return (false, "Bạn không có quyền truy cập chương này.");
+        }
+
+        return (true, null);
+    }
+
+    private async Task<(bool IsValid, Lesson? Lesson, string? ErrorMessage)> CheckLessonOwnershipAsync(Guid lessonId, Guid currentUserId)
+    {
+        var lesson = await unitOfWork.LessonRepository.AsQueryable()
+            .Include(l => l.Section)
+            .ThenInclude(s => s.Course)
+            .Include(l => l.Video)
+            .Include(l => l.Text)
+            .Include(l => l.Quiz)
+            .FirstOrDefaultAsync(l => l.Id == lessonId);
+
+        if (lesson == null)
+        {
+            logger.LogWarning("Lesson not found: {LessonId}", lessonId);
+            return (false, null, "Bài học không tồn tại.");
+        }
+
+        if (lesson.Section.Course.InstructorId != currentUserId)
+        {
+            logger.LogWarning("Access denied for lesson {LessonId} by user {UserId}", lessonId, currentUserId);
+            return (false, null, "Bạn không có quyền truy cập bài học này.");
+        }
+
+        return (true, lesson, null);
     }
 
     private async Task UpdateSectionStatisticsAsync(Guid sectionId)
