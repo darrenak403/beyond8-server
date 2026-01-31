@@ -490,4 +490,94 @@ public class LessonService(
             return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi chuyển đổi trạng thái kích hoạt bài học.");
         }
     }
+
+    public async Task<ApiResponse<bool>> ReorderLessonAsync(ReorderLessonRequest request, Guid currentUserId)
+    {
+        try
+        {
+            //Kiểm tra lesson có tồn tại ko
+            var lesson = await unitOfWork.LessonRepository.FindOneAsync(l => l.Id == request.LessonId);
+            if (lesson == null)
+                return ApiResponse<bool>.FailureResponse("Bài học không tồn tại.");
+
+            //Check quyền sở hữu bài học
+            var validationResult = await CheckSectionOwnershipAsync(lesson.SectionId, currentUserId);
+            if (!validationResult.IsValid)
+                return ApiResponse<bool>.FailureResponse(validationResult.ErrorMessage ?? "Không có quyền truy cập bài học.");
+
+            // Check quyền sở hữu section khác nếu khác section hiện tại
+            if (lesson.SectionId != request.NewSectionId)
+            {
+                var targetValidation = await CheckSectionOwnershipAsync(request.NewSectionId, currentUserId);
+                if (!targetValidation.IsValid)
+                    return ApiResponse<bool>.FailureResponse(targetValidation.ErrorMessage ?? "Không có quyền truy cập section đích.");
+            }
+
+            var oldSectionId = lesson.SectionId;
+            var oldIndex = lesson.OrderIndex;
+
+            // No change needed
+            if (oldSectionId == request.NewSectionId && oldIndex == request.NewOrderIndex)
+                return ApiResponse<bool>.SuccessResponse(true, "Sắp xếp bài học thành công.");
+
+            await unitOfWork.BeginTransactionAsync();
+
+            try
+            {
+                if (oldSectionId == request.NewSectionId)
+                {
+                    // Di chuyển trong cùng một section
+                    if (request.NewOrderIndex > oldIndex)
+                    {
+                        // Di chuyển xuống: giảm orderIndex cho các mục nằm giữa oldIndex và newIndex
+                        await unitOfWork.LessonRepository.AsQueryable()
+                            .Where(l => l.SectionId == oldSectionId && l.OrderIndex > oldIndex && l.OrderIndex <= request.NewOrderIndex)
+                            .ExecuteUpdateAsync(l => l.SetProperty(x => x.OrderIndex, x => x.OrderIndex - 1));
+                    }
+                    else
+                    {
+                        // Di chuyển lên: tăng orderIndex cho các mục nằm giữa newIndex và oldIndex
+                        await unitOfWork.LessonRepository.AsQueryable()
+                            .Where(l => l.SectionId == oldSectionId && l.OrderIndex >= request.NewOrderIndex && l.OrderIndex < oldIndex)
+                            .ExecuteUpdateAsync(l => l.SetProperty(x => x.OrderIndex, x => x.OrderIndex + 1));
+                    }
+                }
+                else
+                {
+                    // Di chuyển giữa các section
+                    // 1. Dịch chuyển các mục trong section cũ (đóng khoảng trống)
+                    await unitOfWork.LessonRepository.AsQueryable()
+                        .Where(l => l.SectionId == oldSectionId && l.OrderIndex > oldIndex)
+                        .ExecuteUpdateAsync(l => l.SetProperty(x => x.OrderIndex, x => x.OrderIndex - 1));
+
+                    // 2. Dịch chuyển các mục trong section mới (tạo khoảng trống)
+                    await unitOfWork.LessonRepository.AsQueryable()
+                        .Where(l => l.SectionId == request.NewSectionId && l.OrderIndex >= request.NewOrderIndex)
+                        .ExecuteUpdateAsync(l => l.SetProperty(x => x.OrderIndex, x => x.OrderIndex + 1));
+                }
+
+                // 3. Cập nhật bài học mục tiêu
+                lesson.SectionId = request.NewSectionId;
+                lesson.OrderIndex = request.NewOrderIndex;
+                await unitOfWork.LessonRepository.UpdateAsync(lesson.Id, lesson);
+
+                await unitOfWork.CommitTransactionAsync();
+
+                logger.LogInformation("Lesson reordered: {LessonId} from section {OldSectionId} index {OldIndex} to section {NewSectionId} index {NewIndex} by user {UserId}",
+                    request.LessonId, oldSectionId, oldIndex, request.NewSectionId, request.NewOrderIndex, currentUserId);
+
+                return ApiResponse<bool>.SuccessResponse(true, "Sắp xếp bài học thành công.");
+            }
+            catch
+            {
+                await unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error reordering lesson: {LessonId}", request.LessonId);
+            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi sắp xếp bài học.");
+        }
+    }
 }

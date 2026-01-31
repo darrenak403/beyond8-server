@@ -128,6 +128,15 @@ public static class LessonApis
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
+        // Reorder lesson
+        group.MapPost("/reorder", ReorderLessonAsync)
+            .WithName("ReorderLesson")
+            .WithDescription("Sắp xếp lại bài học trong section hoặc chuyển sang section khác")
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
         return group;
     }
 
@@ -283,4 +292,16 @@ public static class LessonApis
         return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
     }
 
+    private static async Task<IResult> ReorderLessonAsync(
+        [FromBody] ReorderLessonRequest request,
+        [FromServices] ILessonService lessonService,
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IValidator<ReorderLessonRequest> validator)
+    {
+        if (!request.ValidateRequest(validator, out var result))
+            return result!;
+
+        var apiResult = await lessonService.ReorderLessonAsync(request, currentUserService.UserId);
+        return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
+    }
 }
