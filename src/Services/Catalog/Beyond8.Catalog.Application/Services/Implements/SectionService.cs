@@ -17,18 +17,16 @@ public class SectionService(
     {
         try
         {
-            // Validate course ownership
-            var course = await unitOfWork.CourseRepository.FindOneAsync(c => c.Id == courseId && c.InstructorId == currentUserId);
-            if (course == null)
-            {
-                logger.LogWarning("Course not found or access denied: {CourseId} for user {UserId}", courseId, currentUserId);
-                return ApiResponse<List<SectionResponse>>.FailureResponse("Khóa học không tồn tại hoặc bạn không có quyền truy cập.");
-            }
+            var validation = await CheckCourseOwnershipAsync(courseId, currentUserId);
+            if (!validation.IsValid)
+                return ApiResponse<List<SectionResponse>>.FailureResponse(validation.ErrorMessage!);
 
-            var sections = await unitOfWork.SectionRepository.GetAllAsync(s => s.CourseId == courseId);
-            var orderedSections = sections.OrderBy(s => s.OrderIndex).ToList();
+            var sections = await unitOfWork.SectionRepository.AsQueryable()
+                .Where(s => s.CourseId == courseId)
+                .OrderBy(s => s.OrderIndex)
+                .ToListAsync();
 
-            var responses = orderedSections.Select(s => s.ToResponse()).ToList();
+            var responses = sections.Select(s => s.ToResponse()).ToList();
 
             return ApiResponse<List<SectionResponse>>.SuccessResponse(responses, "Lấy danh sách chương thành công.");
         }
@@ -43,23 +41,11 @@ public class SectionService(
     {
         try
         {
-            var section = await unitOfWork.SectionRepository.AsQueryable()
-                .Include(s => s.Course)
-                .FirstOrDefaultAsync(s => s.Id == sectionId);
+            var (isValid, section, errorMessage) = await CheckSectionOwnershipAsync(sectionId, currentUserId);
+            if (!isValid)
+                return ApiResponse<SectionResponse>.FailureResponse(errorMessage!);
 
-            if (section == null)
-            {
-                logger.LogWarning("Section not found: {SectionId}", sectionId);
-                return ApiResponse<SectionResponse>.FailureResponse("Chương không tồn tại.");
-            }
-
-            if (section.Course.InstructorId != currentUserId)
-            {
-                logger.LogWarning("Access denied for section {SectionId} by user {UserId}", sectionId, currentUserId);
-                return ApiResponse<SectionResponse>.FailureResponse("Bạn không có quyền truy cập chương này.");
-            }
-
-            return ApiResponse<SectionResponse>.SuccessResponse(section.ToResponse(), "Lấy thông tin chương thành công.");
+            return ApiResponse<SectionResponse>.SuccessResponse(section!.ToResponse(), "Lấy thông tin chương thành công.");
         }
         catch (Exception ex)
         {
@@ -72,21 +58,16 @@ public class SectionService(
     {
         try
         {
-            // Validate course ownership
-            var course = await unitOfWork.CourseRepository.FindOneAsync(c => c.Id == request.CourseId && c.InstructorId == currentUserId);
-            if (course == null)
-            {
-                logger.LogWarning("Course not found or access denied: {CourseId} for user {UserId}", request.CourseId, currentUserId);
-                return ApiResponse<SectionResponse>.FailureResponse("Khóa học không tồn tại hoặc bạn không có quyền truy cập.");
-            }
+            var validation = await CheckCourseOwnershipAsync(request.CourseId, currentUserId);
+            if (!validation.IsValid)
+                return ApiResponse<SectionResponse>.FailureResponse(validation.ErrorMessage!);
 
             // Get max order index for the course
             var maxOrder = await unitOfWork.SectionRepository.AsQueryable()
                 .Where(s => s.CourseId == request.CourseId)
                 .MaxAsync(s => (int?)s.OrderIndex) ?? 0;
 
-            var section = request.ToEntity();
-            section.OrderIndex = maxOrder + 1;
+            var section = request.ToEntity(maxOrder + 1);
 
             await unitOfWork.SectionRepository.AddAsync(section);
             await unitOfWork.SaveChangesAsync();
@@ -106,23 +87,11 @@ public class SectionService(
     {
         try
         {
-            var section = await unitOfWork.SectionRepository.AsQueryable()
-                .Include(s => s.Course)
-                .FirstOrDefaultAsync(s => s.Id == sectionId);
+            var (isValid, section, errorMessage) = await CheckSectionOwnershipAsync(sectionId, currentUserId);
+            if (!isValid)
+                return ApiResponse<SectionResponse>.FailureResponse(errorMessage!);
 
-            if (section == null)
-            {
-                logger.LogWarning("Section not found: {SectionId}", sectionId);
-                return ApiResponse<SectionResponse>.FailureResponse("Chương không tồn tại.");
-            }
-
-            if (section.Course.InstructorId != currentUserId)
-            {
-                logger.LogWarning("Access denied for section {SectionId} by user {UserId}", sectionId, currentUserId);
-                return ApiResponse<SectionResponse>.FailureResponse("Bạn không có quyền chỉnh sửa chương này.");
-            }
-
-            section.UpdateFrom(request);
+            section!.UpdateFrom(request);
 
             await unitOfWork.SectionRepository.UpdateAsync(sectionId, section);
             await unitOfWork.SaveChangesAsync();
@@ -142,21 +111,9 @@ public class SectionService(
     {
         try
         {
-            var section = await unitOfWork.SectionRepository.AsQueryable()
-                .Include(s => s.Course)
-                .FirstOrDefaultAsync(s => s.Id == sectionId);
-
-            if (section == null)
-            {
-                logger.LogWarning("Section not found: {SectionId}", sectionId);
-                return ApiResponse<bool>.FailureResponse("Chương không tồn tại.");
-            }
-
-            if (section.Course.InstructorId != currentUserId)
-            {
-                logger.LogWarning("Access denied for section {SectionId} by user {UserId}", sectionId, currentUserId);
-                return ApiResponse<bool>.FailureResponse("Bạn không có quyền xóa chương này.");
-            }
+            var (isValid, section, errorMessage) = await CheckSectionOwnershipAsync(sectionId, currentUserId);
+            if (!isValid)
+                return ApiResponse<bool>.FailureResponse(errorMessage!);
 
             // Cấm xóa chương còn bài học; phải xóa bài học trước.
             var lessonCount = await unitOfWork.LessonRepository.CountAsync(l => l.SectionId == sectionId);
@@ -166,7 +123,7 @@ public class SectionService(
                 return ApiResponse<bool>.FailureResponse("Không thể xóa chương có chứa bài học. Vui lòng xóa các bài học trước.");
             }
 
-            section.DeletedAt = DateTime.UtcNow;
+            section!.DeletedAt = DateTime.UtcNow;
             section.DeletedBy = currentUserId;
             await unitOfWork.SectionRepository.UpdateAsync(sectionId, section);
             await unitOfWork.SaveChangesAsync();
@@ -186,24 +143,11 @@ public class SectionService(
     {
         try
         {
-            // Validate section ownership through course
-            var section = await unitOfWork.SectionRepository.AsQueryable()
-                .Include(s => s.Course)
-                .FirstOrDefaultAsync(s => s.Id == sectionId);
+            var (isValid, section, errorMessage) = await CheckSectionOwnershipAsync(sectionId, currentUserId);
+            if (!isValid)
+                return ApiResponse<bool>.FailureResponse(errorMessage!);
 
-            if (section == null)
-            {
-                logger.LogWarning("Section not found: {SectionId}", sectionId);
-                return ApiResponse<bool>.FailureResponse("Chương không tồn tại.");
-            }
-
-            if (section.Course.InstructorId != currentUserId)
-            {
-                logger.LogWarning("Access denied for section {SectionId} by user {UserId}", sectionId, currentUserId);
-                return ApiResponse<bool>.FailureResponse("Bạn không có quyền truy cập chương này.");
-            }
-
-            section.AssignmentId = assignmentId;
+            section!.AssignmentId = assignmentId;
             await unitOfWork.SectionRepository.UpdateAsync(sectionId, section);
             await unitOfWork.SaveChangesAsync();
 
@@ -216,5 +160,37 @@ public class SectionService(
             logger.LogError(ex, "Error updating section assignment: {SectionId}", sectionId);
             return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi cập nhật assignment cho chương.");
         }
+    }
+
+    private async Task<(bool IsValid, string? ErrorMessage)> CheckCourseOwnershipAsync(Guid courseId, Guid currentUserId)
+    {
+        var course = await unitOfWork.CourseRepository.FindOneAsync(c => c.Id == courseId && c.InstructorId == currentUserId);
+        if (course == null)
+        {
+            logger.LogWarning("Course not found or access denied: {CourseId} for user {UserId}", courseId, currentUserId);
+            return (false, "Khóa học không tồn tại hoặc bạn không có quyền truy cập.");
+        }
+        return (true, null);
+    }
+
+    private async Task<(bool IsValid, Section? Section, string? ErrorMessage)> CheckSectionOwnershipAsync(Guid sectionId, Guid currentUserId)
+    {
+        var section = await unitOfWork.SectionRepository.AsQueryable()
+            .Include(s => s.Course)
+            .FirstOrDefaultAsync(s => s.Id == sectionId);
+
+        if (section == null)
+        {
+            logger.LogWarning("Section not found: {SectionId}", sectionId);
+            return (false, null, "Chương không tồn tại.");
+        }
+
+        if (section.Course.InstructorId != currentUserId)
+        {
+            logger.LogWarning("Access denied for section {SectionId} by user {UserId}", sectionId, currentUserId);
+            return (false, null, "Bạn không có quyền truy cập chương này.");
+        }
+
+        return (true, section, null);
     }
 }

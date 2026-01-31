@@ -75,7 +75,7 @@ public static class LessonMappings
         };
     }
 
-    public static Lesson ToEntity(this CreateQuizLessonRequest request)
+    public static Lesson ToEntity(this CreateQuizLessonRequest request, int orderIndex)
     {
         return new Lesson
         {
@@ -84,7 +84,8 @@ public static class LessonMappings
             Description = request.Description,
             Type = LessonType.Quiz,
             IsPreview = request.IsPreview,
-            IsPublished = true // New lessons are published by default
+            IsPublished = true, // New lessons are published by default
+            OrderIndex = orderIndex
         };
     }
 
