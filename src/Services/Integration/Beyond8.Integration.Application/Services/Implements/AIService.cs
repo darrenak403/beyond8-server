@@ -17,6 +17,7 @@ namespace Beyond8.Integration.Application.Services.Implements
         ILogger<AiService> logger,
         IGenerativeAiService generativeAiService,
         IAiPromptService aiPromptService,
+        IPdfChunkService pdfChunkService,
         IUrlContentDownloader urlContentDownloader,
         IStorageService storageService,
         IVectorEmbeddingService vectorEmbeddingService,
@@ -25,6 +26,7 @@ namespace Beyond8.Integration.Application.Services.Implements
         private const int DefaultTopK = 15;
         private const string InstructorProfileReviewPromptName = "Instructor Profile Review";
         private const string QuizGenerationPromptName = "Quiz Generation";
+        private const string FormatQuizQuestionsPromptName = "Format Quiz Questions";
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
             PropertyNameCaseInsensitive = true,
@@ -148,6 +150,101 @@ namespace Beyond8.Integration.Application.Services.Implements
                 return ApiResponse<GenQuizResponse>.FailureResponse(
                     "Đã xảy ra lỗi khi tạo quiz từ AI.");
             }
+        }
+
+        public async Task<ApiResponse<List<GenQuizResponse>>> FormatQuizQuestionsFromPdfAsync(Stream stream, Guid userId)
+        {
+            try
+            {
+                var pdfText = pdfChunkService.ExtractTextFromPdf(stream);
+                if (string.IsNullOrWhiteSpace(pdfText))
+                    return ApiResponse<List<GenQuizResponse>>.FailureResponse("Không trích xuất được nội dung từ PDF.");
+
+                var contentForAi = string.IsNullOrWhiteSpace(pdfText)
+                    ? string.Empty
+                    : pdfText.Trim().Replace("\r\n", "\n").Replace("\r", "\n");
+
+                var promptRes = await aiPromptService.GetPromptByNameAsync(FormatQuizQuestionsPromptName);
+                if (!promptRes.IsSuccess || promptRes.Data == null)
+                    return ApiResponse<List<GenQuizResponse>>.FailureResponse(promptRes.Message ?? "Không tìm thấy prompt định dạng câu hỏi quiz.");
+
+                var prompt = promptRes.Data;
+                var userPrompt = prompt.Template.Replace("{Content}", contentForAi);
+                string fullPrompt = string.IsNullOrEmpty(prompt.SystemPrompt) ? userPrompt : $"{prompt.SystemPrompt}\n\n{userPrompt}";
+
+                var aiResult = await generativeAiService.GenerateContentAsync(
+                    fullPrompt,
+                    AiOperation.FormatQuizQuestions,
+                    userId,
+                    promptId: prompt.Id,
+                    maxTokens: prompt.MaxTokens,
+                    temperature: prompt.Temperature,
+                    topP: prompt.TopP);
+
+                if (!aiResult.IsSuccess || aiResult.Data == null)
+                    return ApiResponse<List<GenQuizResponse>>.FailureResponse(
+                        aiResult.Message ?? "Đã xảy ra lỗi khi định dạng câu hỏi quiz.");
+
+                await SubscriptionHelper.UpdateUsageQuotaAsync(identityClient, userId);
+
+                var jsonArray = AiServiceJsonHelper.ExtractJsonArray(aiResult.Data.Content);
+                if (string.IsNullOrWhiteSpace(jsonArray))
+                {
+                    var preview = aiResult.Data.Content?.Length > 500 ? aiResult.Data.Content[..500] + "..." : aiResult.Data.Content ?? "";
+                    logger.LogWarning("FormatQuizQuestions: no JSON array in response. UserId {UserId}. Preview: {Preview}", userId, preview);
+                    return ApiResponse<List<GenQuizResponse>>.FailureResponse(
+                        "Không thể phân tích kết quả từ AI. Kiểm tra lại file PDF.");
+                }
+
+                var questions = AiServiceQuizHelper.ParseQuestionListFromJsonArray(jsonArray);
+                if (questions == null || questions.Count == 0)
+                {
+                    var preview = aiResult.Data.Content?.Length > 500 ? aiResult.Data.Content[..500] + "..." : aiResult.Data.Content ?? "";
+                    logger.LogWarning("FormatQuizQuestions: ParseQuestionListFromJsonArray failed for UserId {UserId}. AI content preview: {Preview}", userId, preview);
+                    return ApiResponse<List<GenQuizResponse>>.FailureResponse(
+                        "Không thể phân tích kết quả quiz từ AI. Kiểm tra lại file PDF.");
+                }
+
+                var grouped = GroupQuestionsByDifficulty(questions);
+                var parsed = new GenQuizResponse
+                {
+                    Easy = grouped.Easy,
+                    Medium = grouped.Medium,
+                    Hard = grouped.Hard
+                };
+                AiServiceQuizHelper.NormalizePointsToMaxPoints(parsed, questions.Count);
+
+                return ApiResponse<List<GenQuizResponse>>.SuccessResponse([parsed], "Định dạng câu hỏi quiz từ PDF thành công.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "FormatQuizQuestions failed for UserId {UserId}", userId);
+                return ApiResponse<List<GenQuizResponse>>.FailureResponse("Đã xảy ra lỗi khi định dạng câu hỏi quiz.");
+            }
+        }
+
+        private static (List<QuizQuestionDto> Easy, List<QuizQuestionDto> Medium, List<QuizQuestionDto> Hard) GroupQuestionsByDifficulty(
+            List<QuizQuestionDto> questions)
+        {
+            var easy = new List<QuizQuestionDto>();
+            var medium = new List<QuizQuestionDto>();
+            var hard = new List<QuizQuestionDto>();
+            foreach (var q in questions)
+            {
+                switch (q.Difficulty)
+                {
+                    case DifficultyLevel.Easy:
+                        easy.Add(q);
+                        break;
+                    case DifficultyLevel.Hard:
+                        hard.Add(q);
+                        break;
+                    default:
+                        medium.Add(q);
+                        break;
+                }
+            }
+            return (easy, medium, hard);
         }
 
         private async Task<(string ProfileReviewText, List<GenerativeAiImagePart> ImageParts)> BuildProfileReviewTextAndImagesAsync(ProfileReviewRequest r)

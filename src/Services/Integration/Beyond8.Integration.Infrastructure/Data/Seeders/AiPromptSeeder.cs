@@ -86,6 +86,33 @@ Schema:
   ""medium"": [ ... ],
   ""hard"": [ ... ]
 }}"
+        },
+        new AiPrompt
+        {
+          Name = "Format Quiz Questions",
+          Description = "Đọc nội dung trích từ PDF (theo từng dòng), trích xuất câu hỏi trắc nghiệm thành mảng JSON. Dùng khi user upload file PDF câu hỏi.",
+          Category = PromptCategory.Assessment,
+          SystemPrompt = "Bạn là trợ lý trích xuất câu hỏi. Nhiệm vụ: đọc nội dung text (đã trích từ PDF), nhận diện từng câu hỏi với nội dung, các đáp án A/B/C/D và đáp án đúng, trả về mảng JSON. Chỉ trả về Raw JSON, KHÔNG markdown, KHÔNG giải thích ngoài JSON.",
+          Version = "1.0.0",
+          IsActive = true,
+          MaxTokens = 4096,
+          Temperature = 0.2m,
+          TopP = 0.9m,
+          Tags = "assessment,quiz,format,pdf,extract",
+          Template = @"Đọc nội dung sau (đã trích từ PDF, mỗi câu hỏi có thể có số thứ tự, nội dung câu hỏi, các đáp án A. B. C. D. hoặc A) B) C) D), và dòng Đáp án: X hoặc đánh dấu * trước đáp án đúng).
+
+Trích xuất thành mảng JSON các câu hỏi. Mỗi object:
+- content (string): nội dung câu hỏi
+- options (mảng): [{ id: ""a""|""b""|""c""|""d"", text: string, isCorrect: boolean }]
+- difficulty: 0=Easy, 1=Medium, 2=Hard (mặc định 1 nếu không xác định được)
+- points: number (mặc định 1.0)
+
+Chỉ trả về mảng JSON, không markdown (không ```json).
+
+---
+NỘI DUNG TỪ PDF:
+---
+{Content}"
         }
       ];
     }

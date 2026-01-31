@@ -66,12 +66,32 @@ namespace Beyond8.Integration.Application.Helpers.AiService
                     AiServiceJsonHelper.GetPropertyIgnoreCase(root, "hard"), DifficultyLevel.Hard);
                 return new GenQuizResponse
                 {
-                    CourseId = request.CourseId,
-                    Query = request.Query,
                     Easy = easy,
                     Medium = medium,
                     Hard = hard
                 };
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
+        }
+
+        public static List<QuizQuestionDto>? ParseQuestionListFromJsonArray(string? jsonArray)
+        {
+            if (string.IsNullOrWhiteSpace(jsonArray)) return null;
+            try
+            {
+                using var doc = JsonDocument.Parse(jsonArray);
+                var root = doc.RootElement;
+                if (root.ValueKind != JsonValueKind.Array) return null;
+                var list = new List<QuizQuestionDto>();
+                foreach (var el in root.EnumerateArray())
+                {
+                    var q = ParseOneQuestion(el, DifficultyLevel.Medium);
+                    if (q != null) list.Add(q);
+                }
+                return list;
             }
             catch (JsonException)
             {
@@ -142,9 +162,6 @@ namespace Beyond8.Integration.Application.Helpers.AiService
             };
         }
 
-        /// <summary>
-        /// Chuẩn hóa điểm từng câu sao cho tổng điểm đúng bằng maxPoints (khắc phục AI trả về tổng lệch).
-        /// </summary>
         public static void NormalizePointsToMaxPoints(GenQuizResponse response, int maxPoints)
         {
             var all = new List<QuizQuestionDto>();

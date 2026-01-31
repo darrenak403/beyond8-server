@@ -77,8 +77,12 @@ namespace Beyond8.Assessment.Api.Apis
         private static async Task<IResult> GetQuestionsAsync(
             [FromServices] ICurrentUserService currentUserService,
             [FromServices] IQuestionService questionService,
+            [FromServices] IValidator<GetQuestionsRequest> validator,
             [AsParameters] GetQuestionsRequest request)
         {
+            if (!request.ValidateRequest(validator, out var validationResult))
+                return validationResult!;
+
             var result = await questionService.GetQuestionsAsync(request, currentUserService.UserId);
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
@@ -146,8 +150,12 @@ namespace Beyond8.Assessment.Api.Apis
         private static async Task<IResult> ImportQuestionsFromAiAsync(
             [FromServices] ICurrentUserService currentUserService,
             [FromBody] QuestionFromAiRequest request,
-            [FromServices] IQuestionService questionService)
+            [FromServices] IQuestionService questionService,
+            [FromServices] IValidator<QuestionFromAiRequest> validator)
         {
+            if (!request.ValidateRequest(validator, out var validationResult))
+                return validationResult!;
+
             var result = await questionService.ImportQuestionsFromAiAsync(request, currentUserService.UserId);
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
