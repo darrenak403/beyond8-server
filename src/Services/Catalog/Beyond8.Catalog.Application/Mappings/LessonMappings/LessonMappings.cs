@@ -7,7 +7,7 @@ public static class LessonMappings
 {
     public static LessonResponse ToResponse(this Lesson lesson)
     {
-        return new LessonResponse
+        var response = new LessonResponse
         {
             Id = lesson.Id,
             SectionId = lesson.SectionId,
@@ -17,19 +17,34 @@ public static class LessonMappings
             OrderIndex = lesson.OrderIndex,
             IsPreview = lesson.IsPreview,
             IsPublished = lesson.IsPublished,
-            HlsVariants = lesson.Video?.HlsVariants,
-            VideoOriginalUrl = lesson.Video?.VideoOriginalUrl,
-            VideoThumbnailUrl = lesson.Video?.VideoThumbnailUrl,
-            DurationSeconds = lesson.Video?.DurationSeconds,
-            VideoQualities = lesson.Video?.VideoQualities,
-            IsDownloadable = lesson.Video?.IsDownloadable ?? false,
-            TextContent = lesson.Text?.TextContent,
-            QuizId = lesson.Quiz?.QuizId,
             TotalViews = lesson.TotalViews,
             TotalCompletions = lesson.TotalCompletions,
             CreatedAt = lesson.CreatedAt,
             UpdatedAt = lesson.UpdatedAt
         };
+
+        // Only populate fields for the specific lesson type
+        switch (lesson.Type)
+        {
+            case Beyond8.Catalog.Domain.Enums.LessonType.Video:
+                response.HlsVariants = lesson.Video?.HlsVariants;
+                response.VideoOriginalUrl = lesson.Video?.VideoOriginalUrl;
+                response.VideoThumbnailUrl = lesson.Video?.VideoThumbnailUrl;
+                response.DurationSeconds = lesson.Video?.DurationSeconds;
+                response.VideoQualities = lesson.Video?.VideoQualities;
+                response.IsDownloadable = lesson.Video?.IsDownloadable ?? false;
+                break;
+
+            case Beyond8.Catalog.Domain.Enums.LessonType.Text:
+                response.TextContent = lesson.Text?.TextContent;
+                break;
+
+            case Beyond8.Catalog.Domain.Enums.LessonType.Quiz:
+                response.QuizId = lesson.Quiz?.QuizId;
+                break;
+        }
+
+        return response;
     }
 
     // New specific mappings for individual lesson types
