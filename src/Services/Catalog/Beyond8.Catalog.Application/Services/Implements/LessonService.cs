@@ -435,4 +435,35 @@ public class LessonService(
             logger.LogError(ex, "Error updating section statistics for section: {SectionId}", sectionId);
         }
     }
+
+    public async Task<ApiResponse<bool>> ChangeQuizForLessonAsync(Guid lessonId, Guid? quizId, Guid currentUserId)
+    {
+        try
+        {
+            // Validate lesson ownership
+            var (isValid, lesson, errorMessage) = await CheckLessonOwnershipAsync(lessonId, currentUserId);
+            if (!isValid)
+                return ApiResponse<bool>.FailureResponse(errorMessage!);
+
+            if (lesson!.Quiz != null)
+            {
+                lesson.Quiz.QuizId = quizId;
+                await unitOfWork.LessonQuizRepository.UpdateAsync(lesson.Quiz.Id!, lesson.Quiz!);
+                await unitOfWork.SaveChangesAsync();
+
+                logger.LogInformation("Quiz ID updated for lesson: {LessonId} by user {UserId}", lessonId, currentUserId);
+                return ApiResponse<bool>.SuccessResponse(true, "Cập nhật Quiz ID cho bài học thành công.");
+            }
+            else
+            {
+                logger.LogWarning("Lesson {LessonId} does not have a quiz entity to update", lessonId);
+                return ApiResponse<bool>.FailureResponse("Bài học này không có quiz để cập nhật.");
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error changing quiz for lesson: {LessonId}", lessonId);
+            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi thay đổi quiz cho bài học.");
+        }
+    }
 }

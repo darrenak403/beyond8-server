@@ -182,7 +182,7 @@ public class SectionService(
         }
     }
 
-    public async Task<ApiResponse<bool>> UpdateSectionAssignmentAsync(Guid sectionId, Guid? assignmentId, Guid currentUserId)
+    public async Task<ApiResponse<bool>> ChangeAssignmentForSectionAsync(Guid sectionId, Guid? assignmentId, Guid currentUserId)
     {
         try
         {

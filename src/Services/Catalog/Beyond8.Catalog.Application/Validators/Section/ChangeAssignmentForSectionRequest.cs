@@ -3,9 +3,9 @@ using FluentValidation;
 
 namespace Beyond8.Catalog.Application.Validators.Section;
 
-public class UpdateSectionAssignmentRequestValidator : AbstractValidator<UpdateSectionAssignmentRequest>
+public class ChangeAssignmentForSectionRequestValidator : AbstractValidator<ChangeAssignmentForSectionRequest>
 {
-    public UpdateSectionAssignmentRequestValidator()
+    public ChangeAssignmentForSectionRequestValidator()
     {
         RuleFor(x => x.AssignmentId)
             .NotEmpty().WithMessage("AssignmentId không được để trống");
