@@ -1,3 +1,5 @@
+using Beyond8.Assessment.Application.Dtos.Questions;
+
 namespace Beyond8.Assessment.Application.Dtos.Quizzes;
 
 public class QuizResponse
@@ -15,7 +17,7 @@ public class QuizResponse
     public bool ShuffleQuestions { get; set; }
     public bool AllowReview { get; set; }
     public bool ShowExplanation { get; set; }
-    public int QuestionCount { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    public List<QuestionResponse> Questions { get; set; } = [];
 }

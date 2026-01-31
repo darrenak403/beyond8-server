@@ -182,6 +182,7 @@ public class CourseService(
                 return ApiResponse<bool>.FailureResponse("Khóa học không tồn tại.");
             }
 
+            // Soft delete (IsActive=false). Cấm xóa khóa đã xuất bản. Section/Lesson vẫn tồn tại.
             if (course.Status == CourseStatus.Published)
             {
                 logger.LogWarning("Cannot delete published course: {CourseId}", id);
@@ -189,6 +190,8 @@ public class CourseService(
             }
 
             course.IsActive = false;
+            course.DeletedAt = DateTime.UtcNow;
+            course.DeletedBy = currentUserId;
             await unitOfWork.CourseRepository.UpdateAsync(id, course);
             await unitOfWork.SaveChangesAsync();
 

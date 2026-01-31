@@ -138,6 +138,7 @@ namespace Beyond8.Integration.Application.Services.Implements
         {
             try
             {
+                // Xóa file trên S3 + soft delete (Status = Deleted). Chỉ user sở hữu mới xóa được.
                 var mediaFile = await _unitOfWork.MediaFileRepository.FindOneAsync(
                     f => f.Id == fileId && f.UserId == userId);
 
@@ -149,6 +150,8 @@ namespace Beyond8.Integration.Application.Services.Implements
                 await _storageService.DeleteFileAsync(mediaFile.FilePath);
 
                 mediaFile.Status = FileStatus.Deleted;
+                mediaFile.DeletedAt = DateTime.UtcNow;
+                mediaFile.DeletedBy = userId;
                 await _unitOfWork.MediaFileRepository.UpdateAsync(mediaFile.Id, mediaFile);
                 await _unitOfWork.SaveChangesAsync();
 

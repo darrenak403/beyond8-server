@@ -45,6 +45,8 @@ public class Quiz : BaseEntity
 
     public int PassCount { get; set; } = 0;
 
+    public bool IsActive { get; set; } = true;
+
     public virtual ICollection<QuizQuestion> QuizQuestions { get; set; } = [];
     public virtual ICollection<QuizAttempt> Attempts { get; set; } = [];
 }

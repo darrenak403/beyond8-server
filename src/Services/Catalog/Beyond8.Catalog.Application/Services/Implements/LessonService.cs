@@ -209,7 +209,11 @@ public class LessonService(
                 return ApiResponse<bool>.FailureResponse("Bạn không có quyền xóa bài học này.");
             }
 
-            await unitOfWork.LessonRepository.DeleteAsync(lessonId);
+            // Lesson.QuizId trỏ Assessment; khi xóa lesson không clear Quiz.LessonId bên Assessment (cross-service).
+            // LessonDocument xóa theo cascade (DB). Bổ sung sau: event sang Assessment clear Quiz.LessonId nếu cần.
+            lesson.DeletedAt = DateTime.UtcNow;
+            lesson.DeletedBy = currentUserId;
+            await unitOfWork.LessonRepository.UpdateAsync(lessonId, lesson);
             await unitOfWork.SaveChangesAsync();
 
             // Update section statistics

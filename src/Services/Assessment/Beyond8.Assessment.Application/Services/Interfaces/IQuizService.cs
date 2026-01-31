@@ -5,5 +5,8 @@ namespace Beyond8.Assessment.Application.Services.Interfaces;
 
 public interface IQuizService
 {
-    Task<ApiResponse<QuizResponse>> CreateQuizAsync(CreateQuizRequest request, Guid instructorId);
+    Task<ApiResponse<QuizSimpleResponse>> CreateQuizAsync(CreateQuizRequest request, Guid instructorId);
+    Task<ApiResponse<QuizResponse>> GetQuizByIdAsync(Guid id, Guid userId);
+    Task<ApiResponse<QuizResponse>> UpdateQuizAsync(Guid id, UpdateQuizRequest request, Guid userId);
+    Task<ApiResponse<bool>> DeleteQuizAsync(Guid id, Guid userId);
 }

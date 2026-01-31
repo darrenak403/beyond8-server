@@ -122,9 +122,10 @@ namespace Beyond8.Integration.Api.Apis
 
         private static async Task<IResult> DeletePrompt(
             [FromRoute] Guid id,
+            [FromServices] ICurrentUserService currentUserService,
             [FromServices] IAiPromptService promptService)
         {
-            var result = await promptService.DeletePromptAsync(id);
+            var result = await promptService.DeletePromptAsync(id, currentUserService.UserId);
 
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }

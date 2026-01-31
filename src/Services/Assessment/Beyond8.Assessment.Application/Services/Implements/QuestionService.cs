@@ -21,6 +21,15 @@ namespace Beyond8.Assessment.Application.Services.Implements
                     return ApiResponse<bool>.FailureResponse("Câu hỏi không tồn tại.");
                 }
 
+                // Cấm xóa câu hỏi đang nằm trong quiz; phải xóa hoặc cập nhật quiz (bỏ câu hỏi) trước.
+                var usedInQuizzes = await unitOfWork.QuizQuestionRepository.GetAllAsync(qq => qq.QuestionId == id);
+                if (usedInQuizzes.Count > 0)
+                {
+                    logger.LogWarning("Cannot delete question {QuestionId}: used in {Count} quiz(zes)", id, usedInQuizzes.Count);
+                    return ApiResponse<bool>.FailureResponse(
+                        "Không thể xóa câu hỏi đang nằm trong quiz. Vui lòng xóa hoặc cập nhật quiz (bỏ câu hỏi này) trước.");
+                }
+
                 question.IsActive = false;
                 await unitOfWork.QuestionRepository.UpdateAsync(id, question);
                 await unitOfWork.SaveChangesAsync();

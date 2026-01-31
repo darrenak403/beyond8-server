@@ -3,16 +3,17 @@ using FluentValidation;
 
 namespace Beyond8.Assessment.Application.Validators.Quizzes
 {
-    public class CreateQuizRequestValidator : AbstractValidator<CreateQuizRequest>
+    public class UpdateQuizRequestValidator : AbstractValidator<UpdateQuizRequest>
     {
-        public CreateQuizRequestValidator()
+        public UpdateQuizRequestValidator()
         {
             RuleFor(x => x.Title)
                 .NotEmpty().WithMessage("Title không được để trống")
                 .MaximumLength(200).WithMessage("Title không được vượt quá 200 ký tự");
 
             RuleFor(x => x.Description)
-                .MaximumLength(1000).WithMessage("Description không được vượt quá 1000 ký tự");
+                .MaximumLength(1000).WithMessage("Description không được vượt quá 1000 ký tự")
+                .When(x => !string.IsNullOrEmpty(x.Description));
 
             RuleFor(x => x.TimeLimitMinutes)
                 .GreaterThanOrEqualTo(0).WithMessage("TimeLimitMinutes phải lớn hơn hoặc bằng 0")
