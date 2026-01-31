@@ -70,7 +70,7 @@ public static class CourseMappings
             TotalStudents = entity.TotalStudents,
             TotalSections = entity.Sections?.Count ?? 0,
             TotalLessons = entity.Sections?.Sum(s => s.Lessons.Count) ?? 0,
-            TotalDurationMinutes = entity.Sections?.Sum(s => s.Lessons.Sum(l => (l.DurationSeconds ?? 0) / 60)) ?? 0,
+            TotalDurationMinutes = entity.Sections?.Sum(s => s.Lessons.Sum(l => (l.Video?.DurationSeconds ?? 0) / 60)) ?? 0,
             AvgRating = entity.AvgRating,
             TotalReviews = entity.TotalReviews,
             CreatedAt = entity.CreatedAt,

@@ -3,6 +3,7 @@ using System;
 using Beyond8.Catalog.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Beyond8.Catalog.Infrastructure.Migrations
 {
     [DbContext(typeof(CatalogDbContext))]
-    partial class CatalogDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260131050851_SplitLessonEntities")]
+    partial class SplitLessonEntities
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -412,8 +415,14 @@ namespace Beyond8.Catalog.Infrastructure.Migrations
                     b.Property<Guid>("LessonId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("MinCompletionSeconds")
+                        .HasColumnType("integer");
+
                     b.Property<Guid?>("QuizId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("RequiredScore")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
