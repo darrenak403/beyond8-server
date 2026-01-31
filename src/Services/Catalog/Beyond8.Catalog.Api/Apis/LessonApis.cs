@@ -121,11 +121,10 @@ public static class LessonApis
     private static async Task<IResult> GetLessonsBySectionIdAsync(
         Guid sectionId,
         [FromServices] ILessonService lessonService,
-        [FromServices] ICurrentUserService currentUserService,
-        [AsParameters] PaginationRequest pagination)
+        [FromServices] ICurrentUserService currentUserService)
     {
         var currentUserId = currentUserService.UserId;
-        var result = await lessonService.GetLessonsBySectionIdAsync(sectionId, pagination, currentUserId);
+        var result = await lessonService.GetLessonsBySectionIdAsync(sectionId, currentUserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 

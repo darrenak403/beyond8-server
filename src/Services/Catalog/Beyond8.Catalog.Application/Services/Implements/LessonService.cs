@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Text.Json;
 using Beyond8.Catalog.Application.Dtos.Lessons;
 using Beyond8.Catalog.Application.Mappings.LessonMappings;
@@ -40,7 +41,7 @@ public class LessonService(
             return ApiResponse<bool>.FailureResponse("Error in CallbackHlsAsync");
         }
     }
-    public async Task<ApiResponse<List<LessonResponse>>> GetLessonsBySectionIdAsync(Guid sectionId, PaginationRequest pagination, Guid currentUserId)
+    public async Task<ApiResponse<List<LessonResponse>>> GetLessonsBySectionIdAsync(Guid sectionId, Guid currentUserId)
     {
         try
         {
@@ -49,21 +50,18 @@ public class LessonService(
             if (!validationResult.IsValid)
                 return ApiResponse<List<LessonResponse>>.FailureResponse(validationResult.ErrorMessage!);
 
-            var lessons = await unitOfWork.LessonRepository.GetPagedAsync(
-                pageNumber: pagination.PageNumber,
-                pageSize: pagination.PageSize,
-                filter: l => l.SectionId == sectionId,
-                orderBy: query => query.OrderBy(l => l.OrderIndex),
-                includes: query => query.Include(l => l.Video).Include(l => l.Text).Include(l => l.Quiz)
-            );
+            var lessons = await unitOfWork.LessonRepository.AsQueryable()
+                .Where(l => l.SectionId == sectionId)
+                .OrderBy(l => l.OrderIndex)
+                .Include(l => l.Video)
+                .Include(l => l.Text)
+                .Include(l => l.Quiz)
+                .ToListAsync();
 
-            var responses = lessons.Items.Select(l => l.ToResponse()).ToList();
+            var responses = lessons.Select(l => l.ToResponse()).ToList();
 
-            return ApiResponse<List<LessonResponse>>.SuccessPagedResponse(
+            return ApiResponse<List<LessonResponse>>.SuccessResponse(
                 responses,
-                lessons.TotalCount,
-                pagination.PageNumber,
-                pagination.PageSize,
                 "Lấy danh sách bài học thành công.");
         }
         catch (Exception ex)
