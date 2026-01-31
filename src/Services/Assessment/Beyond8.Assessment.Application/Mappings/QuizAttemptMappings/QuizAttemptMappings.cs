@@ -270,6 +270,44 @@ public static class QuizAttemptMappings
         return (totalScore, correctCount, wrongCount, questionResults);
     }
 
+    public static QuizAttemptSummaryResponse ToSummaryResponse(this QuizAttempt attempt, string quizTitle)
+    {
+        return new QuizAttemptSummaryResponse
+        {
+            AttemptId = attempt.Id,
+            QuizId = attempt.QuizId,
+            QuizTitle = quizTitle,
+            AttemptNumber = attempt.AttemptNumber,
+            StartedAt = attempt.StartedAt,
+            SubmittedAt = attempt.SubmittedAt,
+            Score = attempt.Score,
+            ScorePercent = attempt.ScorePercent,
+            IsPassed = attempt.IsPassed,
+            TimeSpentSeconds = attempt.TimeSpentSeconds,
+            Status = attempt.Status
+        };
+    }
+
+    public static UserQuizAttemptsResponse ToUserQuizAttemptsResponse(
+        this IReadOnlyCollection<QuizAttempt> attempts,
+        Quiz quiz)
+    {
+        var attemptsList = attempts.OrderByDescending(a => a.AttemptNumber).ToList();
+        var completedAttempts = attemptsList.Where(a => a.Status == QuizAttemptStatus.Graded).ToList();
+
+        return new UserQuizAttemptsResponse
+        {
+            QuizId = quiz.Id,
+            QuizTitle = quiz.Title,
+            MaxAttempts = quiz.MaxAttempts,
+            UsedAttempts = attempts.Count,
+            RemainingAttempts = quiz.MaxAttempts > 0 ? Math.Max(0, quiz.MaxAttempts - attempts.Count) : -1,
+            BestScore = completedAttempts.Count > 0 ? completedAttempts.Max(a => a.ScorePercent) : null,
+            LatestScore = completedAttempts.FirstOrDefault()?.ScorePercent,
+            Attempts = attemptsList.Select(a => a.ToSummaryResponse(quiz.Title)).ToList()
+        };
+    }
+
     public static Dictionary<string, List<string>> GenerateOptionOrders(
         List<Guid> questionIds,
         Dictionary<Guid, Question> questionDict,

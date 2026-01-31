@@ -134,6 +134,75 @@ public class QuizAttemptService(
         }
     }
 
+    public async Task<ApiResponse<UserQuizAttemptsResponse>> GetUserQuizAttemptsAsync(Guid quizId, Guid studentId)
+    {
+        try
+        {
+            var quiz = await unitOfWork.QuizRepository.FindOneAsync(q => q.Id == quizId);
+            if (quiz == null)
+                return ApiResponse<UserQuizAttemptsResponse>.FailureResponse("Quiz không tồn tại.");
+
+            var attempts = await unitOfWork.QuizAttemptRepository.GetAllAsync(
+                a => a.QuizId == quizId && a.StudentId == studentId);
+
+            var response = attempts.ToUserQuizAttemptsResponse(quiz);
+
+            return ApiResponse<UserQuizAttemptsResponse>.SuccessResponse(response, "Lấy danh sách lượt làm thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting user quiz attempts: QuizId={QuizId}, StudentId={StudentId}", quizId, studentId);
+            return ApiResponse<UserQuizAttemptsResponse>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách lượt làm.");
+        }
+    }
+
+    public async Task<ApiResponse<List<Guid>>> FlagQuestionAsync(Guid attemptId, FlagQuestionRequest request, Guid studentId)
+    {
+        try
+        {
+            var attempt = await unitOfWork.QuizAttemptRepository.FindOneAsync(a => a.Id == attemptId && a.StudentId == studentId);
+            if (attempt == null)
+                return ApiResponse<List<Guid>>.FailureResponse("Không tìm thấy bài làm quiz.");
+
+            if (attempt.Status != QuizAttemptStatus.InProgress)
+                return ApiResponse<List<Guid>>.FailureResponse("Chỉ có thể đánh dấu câu hỏi khi đang làm bài.");
+
+            var questionOrder = JsonSerializer.Deserialize<List<Guid>>(attempt.QuestionOrder) ?? [];
+            if (!questionOrder.Contains(request.QuestionId))
+                return ApiResponse<List<Guid>>.FailureResponse("Câu hỏi không thuộc bài quiz này.");
+
+            var flaggedQuestions = JsonSerializer.Deserialize<List<Guid>>(attempt.FlaggedQuestions) ?? [];
+
+            if (request.IsFlagged)
+            {
+                if (!flaggedQuestions.Contains(request.QuestionId))
+                    flaggedQuestions.Add(request.QuestionId);
+            }
+            else
+            {
+                flaggedQuestions.Remove(request.QuestionId);
+            }
+
+            attempt.FlaggedQuestions = JsonSerializer.Serialize(flaggedQuestions);
+            attempt.UpdatedBy = studentId;
+
+            await unitOfWork.QuizAttemptRepository.UpdateAsync(attemptId, attempt);
+            await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation(
+                "Question flagged: AttemptId={AttemptId}, QuestionId={QuestionId}, IsFlagged={IsFlagged}",
+                attemptId, request.QuestionId, request.IsFlagged);
+
+            return ApiResponse<List<Guid>>.SuccessResponse(flaggedQuestions,
+                request.IsFlagged ? "Đã đánh dấu câu hỏi." : "Đã bỏ đánh dấu câu hỏi.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error flagging question: AttemptId={AttemptId}, QuestionId={QuestionId}", attemptId, request.QuestionId);
+            return ApiResponse<List<Guid>>.FailureResponse("Đã xảy ra lỗi khi đánh dấu câu hỏi.");
+        }
+    }
+
 
     private static (bool CanStart, string? ErrorMessage) ValidateCanStartQuiz(Quiz quiz, IReadOnlyCollection<QuizAttempt> existingAttempts)
     {

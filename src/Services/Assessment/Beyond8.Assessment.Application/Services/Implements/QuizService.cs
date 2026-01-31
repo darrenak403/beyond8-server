@@ -6,6 +6,7 @@ using Beyond8.Assessment.Domain.Repositories.Interfaces;
 using Beyond8.Common.Events.Assessment;
 using Beyond8.Common.Utilities;
 using MassTransit;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Beyond8.Assessment.Application.Services.Implements;
@@ -19,11 +20,14 @@ public class QuizService(
     {
         try
         {
-            var quiz = await unitOfWork.QuizRepository.FindOneAsync(q => q.Id == id && q.InstructorId == userId);
+            var quiz = await unitOfWork.QuizRepository.AsQueryable()
+                .Include(q => q.QuizQuestions)
+                .ThenInclude(qq => qq.Question)
+                .FirstOrDefaultAsync(q => q.Id == id && q.InstructorId == userId && q.IsActive);
             if (quiz == null)
                 return ApiResponse<QuizResponse>.FailureResponse("Quiz không tồn tại.");
 
-            var questions = await unitOfWork.QuestionRepository.GetAllAsync(q => quiz.QuizQuestions.Select(qq => qq.QuestionId).Contains(q.Id));
+            var questions = quiz.QuizQuestions.Select(qq => qq.Question).ToList();
             return ApiResponse<QuizResponse>.SuccessResponse(quiz.ToResponse([.. questions]));
         }
         catch (Exception ex)
