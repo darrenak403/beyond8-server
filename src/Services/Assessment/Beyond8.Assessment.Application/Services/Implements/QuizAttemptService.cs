@@ -111,6 +111,57 @@ public class QuizAttemptService(
         }
     }
 
+    public async Task<ApiResponse<bool>> AutoSaveQuizAttemptAsync(Guid attemptId, AutoSaveQuizRequest request, Guid studentId)
+    {
+        try
+        {
+            var attempt = await unitOfWork.QuizAttemptRepository.FindOneAsync(
+                a => a.Id == attemptId && a.StudentId == studentId);
+
+            if (attempt == null)
+                return ApiResponse<bool>.FailureResponse("Không tìm thấy bài làm quiz.");
+
+            if (attempt.Status != QuizAttemptStatus.InProgress)
+                return ApiResponse<bool>.FailureResponse("Chỉ có thể lưu bài khi đang làm quiz.");
+
+            var quiz = await unitOfWork.QuizRepository.FindOneAsync(q => q.Id == attempt.QuizId);
+            if (quiz?.TimeLimitMinutes.HasValue == true)
+            {
+                var elapsedMinutes = (DateTime.UtcNow - attempt.StartedAt).TotalMinutes;
+                if (elapsedMinutes > quiz.TimeLimitMinutes.Value + 1)
+                {
+                    attempt.Status = QuizAttemptStatus.Expired;
+                    attempt.UpdatedBy = studentId;
+                    await unitOfWork.QuizAttemptRepository.UpdateAsync(attemptId, attempt);
+                    await unitOfWork.SaveChangesAsync();
+
+                    logger.LogWarning("Quiz attempt {AttemptId} auto-expired due to time limit", attemptId);
+                    return ApiResponse<bool>.FailureResponse("Đã hết thời gian làm bài.");
+                }
+            }
+
+            attempt.Answers = JsonSerializer.Serialize(request.Answers);
+
+            attempt.TimeSpentSeconds = request.TimeSpentSeconds;
+
+            attempt.FlaggedQuestions = JsonSerializer.Serialize(request.FlaggedQuestions);
+
+            await unitOfWork.QuizAttemptRepository.UpdateAsync(attemptId, attempt);
+            await unitOfWork.SaveChangesAsync();
+
+            logger.LogDebug(
+                "Quiz attempt auto-saved: AttemptId={AttemptId}, AnsweredCount={AnsweredCount}, TimeSpent={TimeSpent}s",
+                attemptId, request.Answers.Count, request.TimeSpentSeconds);
+
+            return ApiResponse<bool>.SuccessResponse(true, "Đã lưu bài làm.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error auto-saving quiz attempt: AttemptId={AttemptId}", attemptId);
+            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi lưu bài.");
+        }
+    }
+
     public async Task<ApiResponse<QuizResultResponse>> GetQuizAttemptResultAsync(Guid attemptId, Guid studentId)
     {
         try
