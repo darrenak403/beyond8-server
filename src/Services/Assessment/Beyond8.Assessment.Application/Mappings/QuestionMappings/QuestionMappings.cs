@@ -40,5 +40,16 @@ namespace Beyond8.Assessment.Application.Mappings.QuestionMappings
                 UpdatedAt = question.UpdatedAt ?? DateTime.UtcNow,
             };
         }
+
+        public static void UpdateFromRequest(this Question question, QuestionRequest request)
+        {
+            if (!string.IsNullOrEmpty(request.Content)) question.Content = request.Content;
+            question.Type = request.Type;
+            question.Options = JsonSerializer.Serialize(request.Options);
+            question.Explanation = request.Explanation;
+            question.Tags = JsonSerializer.Serialize(request.Tags);
+            question.Difficulty = request.Difficulty;
+            question.Points = request.Points;
+        }
     }
 }

@@ -1,7 +1,9 @@
 using Beyond8.Assessment.Application.Dtos.Quizzes;
 using Beyond8.Assessment.Application.Services.Interfaces;
+using Beyond8.Common.Extensions;
 using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Beyond8.Assessment.Api.Apis
@@ -34,8 +36,12 @@ namespace Beyond8.Assessment.Api.Apis
         private static async Task<IResult> CreateQuizAsync(
             [FromServices] ICurrentUserService currentUserService,
             [FromBody] CreateQuizRequest request,
-            [FromServices] IQuizService quizService)
+            [FromServices] IQuizService quizService,
+            [FromServices] IValidator<CreateQuizRequest> validator)
         {
+            if (!request.ValidateRequest(validator, out var validationResult))
+                return validationResult!;
+
             var result = await quizService.CreateQuizAsync(request, currentUserService.UserId);
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
