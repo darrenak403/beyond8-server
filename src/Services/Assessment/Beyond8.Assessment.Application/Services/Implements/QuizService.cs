@@ -2,7 +2,6 @@ using Beyond8.Assessment.Application.Dtos.Quizzes;
 using Beyond8.Assessment.Application.Mappings.QuizMappings;
 using Beyond8.Assessment.Application.Mappings.QuizQuestionMappings;
 using Beyond8.Assessment.Application.Services.Interfaces;
-using Beyond8.Assessment.Domain.Entities;
 using Beyond8.Assessment.Domain.Repositories.Interfaces;
 using Beyond8.Common.Events.Assessment;
 using Beyond8.Common.Utilities;

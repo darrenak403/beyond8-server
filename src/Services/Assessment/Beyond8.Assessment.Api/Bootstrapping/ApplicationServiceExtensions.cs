@@ -25,6 +25,7 @@ namespace Beyond8.Assessment.Api.Bootstrapping
 
             builder.Services.AddScoped<IQuestionService, QuestionService>();
             builder.Services.AddScoped<IQuizService, QuizService>();
+            builder.Services.AddScoped<IQuizAttemptService, QuizAttemptService>();
 
             return builder;
         }
@@ -39,6 +40,7 @@ namespace Beyond8.Assessment.Api.Bootstrapping
             app.UseHttpsRedirection();
             app.MapQuestionApi();
             app.MapQuizApi();
+            app.MapQuizAttemptApi();
 
             return app;
         }
