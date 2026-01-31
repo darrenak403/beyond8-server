@@ -93,7 +93,6 @@ public static class LessonMappings
         lesson.Title = request.Title ?? lesson.Title;
         lesson.Description = request.Description ?? lesson.Description;
         lesson.IsPreview = request.IsPreview ?? lesson.IsPreview;
-        lesson.IsPublished = request.IsPublished ?? lesson.IsPublished;
         lesson.Type = LessonType.Video;
     }
 
@@ -102,7 +101,6 @@ public static class LessonMappings
         lesson.Title = request.Title ?? lesson.Title;
         lesson.Description = request.Description ?? lesson.Description;
         lesson.IsPreview = request.IsPreview ?? lesson.IsPreview;
-        lesson.IsPublished = request.IsPublished ?? lesson.IsPublished;
         lesson.Type = LessonType.Text;
     }
 
@@ -111,7 +109,6 @@ public static class LessonMappings
         lesson.Title = request.Title ?? lesson.Title;
         lesson.Description = request.Description ?? lesson.Description;
         lesson.IsPreview = request.IsPreview ?? lesson.IsPreview;
-        lesson.IsPublished = request.IsPublished ?? lesson.IsPublished;
         lesson.Type = LessonType.Quiz;
     }
 

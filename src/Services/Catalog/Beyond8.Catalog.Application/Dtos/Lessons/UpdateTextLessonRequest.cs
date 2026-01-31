@@ -14,8 +14,6 @@ public class UpdateTextLessonRequest
     public string? Description { get; set; }
 
     public bool? IsPreview { get; set; }
-    public bool? IsPublished { get; set; }
-
     // Text-specific fields
     public string? Content { get; set; }
 }
