@@ -74,11 +74,11 @@ public static class CourseMappings
             AvgRating = entity.AvgRating,
             TotalReviews = entity.TotalReviews,
             Outcomes = JsonSerializer.Deserialize<List<string>>(entity.Outcomes) ?? [],
-            Requirements = !string.IsNullOrEmpty(entity.Requirements) 
-                ? JsonSerializer.Deserialize<List<string>>(entity.Requirements) 
+            Requirements = !string.IsNullOrEmpty(entity.Requirements)
+                ? JsonSerializer.Deserialize<List<string>>(entity.Requirements)
                 : null,
-            TargetAudience = !string.IsNullOrEmpty(entity.TargetAudience) 
-                ? JsonSerializer.Deserialize<List<string>>(entity.TargetAudience) 
+            TargetAudience = !string.IsNullOrEmpty(entity.TargetAudience)
+                ? JsonSerializer.Deserialize<List<string>>(entity.TargetAudience)
                 : null,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt
