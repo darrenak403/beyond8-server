@@ -128,10 +128,28 @@ public static class LessonApis
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
-        // Reorder lesson
-        group.MapPost("/reorder", ReorderLessonAsync)
-            .WithName("ReorderLesson")
-            .WithDescription("Sắp xếp lại bài học trong section hoặc chuyển sang section khác")
+        // Reorder lesson in section
+        group.MapPost("/reorder-lesson-in-section", ReorderLessonInSectionAsync)
+            .WithName("ReorderLessonInSection")
+            .WithDescription("Sắp xếp lại bài học trong chính section của nó")
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
+        // Move lesson to section
+        group.MapPost("/move-lesson-to-section", MoveLessonToSectionAsync)
+            .WithName("MoveLessonToSection")
+            .WithDescription("Chuyển bài học sang một section khác")
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
+        // Reorder section
+        group.MapPost("/reorder-section", ReorderSectionAsync)
+            .WithName("ReorderSection")
+            .WithDescription("Sắp xếp lại thứ tự các section trong course")
             .RequireAuthorization(x => x.RequireRole(Role.Instructor))
             .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
@@ -298,16 +316,42 @@ public static class LessonApis
         return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
     }
 
-    private static async Task<IResult> ReorderLessonAsync(
-        [FromBody] ReorderLessonRequest request,
+    private static async Task<IResult> ReorderLessonInSectionAsync(
+        [FromBody] ReorderLessonInSectionRequest request,
         [FromServices] ILessonService lessonService,
         [FromServices] ICurrentUserService currentUserService,
-        [FromServices] IValidator<ReorderLessonRequest> validator)
+        [FromServices] IValidator<ReorderLessonInSectionRequest> validator)
     {
         if (!request.ValidateRequest(validator, out var result))
             return result!;
 
-        var apiResult = await lessonService.ReorderLessonAsync(request, currentUserService.UserId);
+        var apiResult = await lessonService.ReorderLessonInSectionAsync(request, currentUserService.UserId);
+        return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
+    }
+
+    private static async Task<IResult> MoveLessonToSectionAsync(
+        [FromBody] MoveLessonToSectionRequest request,
+        [FromServices] ILessonService lessonService,
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IValidator<MoveLessonToSectionRequest> validator)
+    {
+        if (!request.ValidateRequest(validator, out var result))
+            return result!;
+
+        var apiResult = await lessonService.MoveLessonToSectionAsync(request, currentUserService.UserId);
+        return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
+    }
+
+    private static async Task<IResult> ReorderSectionAsync(
+        [FromBody] ReorderSectionRequest request,
+        [FromServices] ILessonService lessonService,
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IValidator<ReorderSectionRequest> validator)
+    {
+        if (!request.ValidateRequest(validator, out var result))
+            return result!;
+
+        var apiResult = await lessonService.ReorderSectionAsync(request, currentUserService.UserId);
         return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
     }
 }
