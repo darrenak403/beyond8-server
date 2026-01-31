@@ -44,6 +44,11 @@ namespace Beyond8.Catalog.Api.Bootstrapping
 
             builder.AddClientServices();
 
+            builder.Services.ConfigureHttpJsonOptions(options =>
+            {
+                options.SerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+            });
+
             return builder;
         }
 

@@ -1,5 +1,6 @@
 using Beyond8.Catalog.Application.Dtos.Lessons;
 using Beyond8.Catalog.Domain.Entities;
+using Beyond8.Catalog.Domain.Enums;
 
 namespace Beyond8.Catalog.Application.Mappings.LessonMappings;
 
@@ -26,7 +27,7 @@ public static class LessonMappings
         // Only populate fields for the specific lesson type
         switch (lesson.Type)
         {
-            case Beyond8.Catalog.Domain.Enums.LessonType.Video:
+            case LessonType.Video:
                 response.HlsVariants = lesson.Video?.HlsVariants;
                 response.VideoOriginalUrl = lesson.Video?.VideoOriginalUrl;
                 response.VideoThumbnailUrl = lesson.Video?.VideoThumbnailUrl;
@@ -35,11 +36,11 @@ public static class LessonMappings
                 response.IsDownloadable = lesson.Video?.IsDownloadable ?? false;
                 break;
 
-            case Beyond8.Catalog.Domain.Enums.LessonType.Text:
+            case LessonType.Text:
                 response.TextContent = lesson.Text?.TextContent;
                 break;
 
-            case Beyond8.Catalog.Domain.Enums.LessonType.Quiz:
+            case LessonType.Quiz:
                 response.QuizId = lesson.Quiz?.QuizId;
                 break;
         }
@@ -55,9 +56,9 @@ public static class LessonMappings
             SectionId = request.SectionId,
             Title = request.Title,
             Description = request.Description,
-            Type = Beyond8.Catalog.Domain.Enums.LessonType.Video,
+            Type = LessonType.Video,
             IsPreview = request.IsPreview,
-            IsPublished = false // New lessons are not published by default
+            IsPublished = true // New lessons are published by default
         };
     }
 
@@ -68,9 +69,9 @@ public static class LessonMappings
             SectionId = request.SectionId,
             Title = request.Title,
             Description = request.Description,
-            Type = Beyond8.Catalog.Domain.Enums.LessonType.Text,
+            Type = LessonType.Text,
             IsPreview = request.IsPreview,
-            IsPublished = false // New lessons are not published by default
+            IsPublished = true // New lessons are published by default
         };
     }
 
@@ -81,9 +82,9 @@ public static class LessonMappings
             SectionId = request.SectionId,
             Title = request.Title,
             Description = request.Description,
-            Type = Beyond8.Catalog.Domain.Enums.LessonType.Quiz,
+            Type = LessonType.Quiz,
             IsPreview = request.IsPreview,
-            IsPublished = false // New lessons are not published by default
+            IsPublished = true // New lessons are published by default
         };
     }
 
@@ -93,7 +94,7 @@ public static class LessonMappings
         lesson.Description = request.Description ?? lesson.Description;
         lesson.IsPreview = request.IsPreview ?? lesson.IsPreview;
         lesson.IsPublished = request.IsPublished ?? lesson.IsPublished;
-        lesson.Type = Beyond8.Catalog.Domain.Enums.LessonType.Video;
+        lesson.Type = LessonType.Video;
     }
 
     public static void UpdateFrom(this Lesson lesson, UpdateTextLessonRequest request)
@@ -102,7 +103,7 @@ public static class LessonMappings
         lesson.Description = request.Description ?? lesson.Description;
         lesson.IsPreview = request.IsPreview ?? lesson.IsPreview;
         lesson.IsPublished = request.IsPublished ?? lesson.IsPublished;
-        lesson.Type = Beyond8.Catalog.Domain.Enums.LessonType.Text;
+        lesson.Type = LessonType.Text;
     }
 
     public static void UpdateFrom(this Lesson lesson, UpdateQuizLessonRequest request)
@@ -111,7 +112,7 @@ public static class LessonMappings
         lesson.Description = request.Description ?? lesson.Description;
         lesson.IsPreview = request.IsPreview ?? lesson.IsPreview;
         lesson.IsPublished = request.IsPublished ?? lesson.IsPublished;
-        lesson.Type = Beyond8.Catalog.Domain.Enums.LessonType.Quiz;
+        lesson.Type = LessonType.Quiz;
     }
 
     // New entity creation methods for specific types
@@ -195,7 +196,7 @@ public static class LessonMappings
         return new LessonQuiz
         {
             LessonId = lessonId,
-            QuizId = request.QuizId!.Value
+            QuizId = request.QuizId
         };
     }
 }
