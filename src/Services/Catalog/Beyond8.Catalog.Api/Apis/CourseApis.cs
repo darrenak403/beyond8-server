@@ -139,7 +139,7 @@ public static class CourseApis
     }
 
     private static async Task<IResult> UpdateCourseThumbnailAsync(
-        [FromRoute] Guid courseId,
+        [FromRoute] Guid id,
         [FromBody] UpdateCourseThumbnailRequest request,
         [FromServices] ICourseService courseService,
         [FromServices] ICurrentUserService currentUserService,
@@ -151,7 +151,7 @@ public static class CourseApis
             return Results.BadRequest(ApiResponse<bool>.FailureResponse(message));
         }
 
-        var result = await courseService.UpdateCourseThumbnailAsync(courseId, currentUserService.UserId, request);
+        var result = await courseService.UpdateCourseThumbnailAsync(id, currentUserService.UserId, request);
         return result.IsSuccess
             ? Results.Ok(result)
             : Results.BadRequest(result);
