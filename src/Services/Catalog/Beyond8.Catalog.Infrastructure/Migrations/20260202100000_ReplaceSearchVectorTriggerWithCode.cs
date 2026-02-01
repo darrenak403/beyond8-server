@@ -63,6 +63,44 @@ namespace Beyond8.Catalog.Infrastructure.Migrations
                 END;
                 $$;
             ");
+
+            // Cập nhật SearchVector cho tất cả course hiện có (tránh SearchVector null sau khi bỏ trigger)
+            migrationBuilder.Sql(@"
+                UPDATE ""Courses"" c SET ""SearchVector"" =
+                    setweight(to_tsvector('simple', unaccent(coalesce(c.""Title"", ''))), 'A') ||
+                    setweight(to_tsvector('simple', unaccent(coalesce(c.""Slug"", ''))), 'B') ||
+                    setweight(to_tsvector('simple', unaccent(coalesce(c.""ShortDescription"", ''))), 'B') ||
+                    setweight(to_tsvector('simple', unaccent(coalesce(cat.""Name"", ''))), 'B') ||
+                    setweight(to_tsvector('simple', unaccent(coalesce(c.""Description"", ''))), 'C') ||
+                    setweight(to_tsvector('simple', unaccent(regexp_replace(coalesce(c.""Outcomes""::TEXT, '[]'), '[\[\]"",]', ' ', 'g'))), 'C') ||
+                    setweight(to_tsvector('simple', unaccent(regexp_replace(coalesce(c.""Requirements""::TEXT, '[]'), '[\[\]"",]', ' ', 'g'))), 'C') ||
+                    setweight(to_tsvector('simple', unaccent(regexp_replace(coalesce(c.""TargetAudience""::TEXT, '[]'), '[\[\]"",]', ' ', 'g'))), 'C') ||
+                    setweight(to_tsvector('simple', unaccent(
+                        CASE c.""Status""
+                            WHEN 0 THEN 'Draft Bản nháp'
+                            WHEN 1 THEN 'PendingApproval Chờ duyệt Pending'
+                            WHEN 2 THEN 'Approved Đã duyệt'
+                            WHEN 3 THEN 'Rejected Từ chối'
+                            WHEN 4 THEN 'Published Công khai Đã xuất bản'
+                            WHEN 5 THEN 'Archived Lưu trữ'
+                            WHEN 6 THEN 'Suspended Tạm ngưng'
+                            ELSE ''
+                        END
+                    )), 'C') ||
+                    setweight(to_tsvector('simple', unaccent(
+                        CASE c.""Level""
+                            WHEN 0 THEN 'All Tất cả'
+                            WHEN 1 THEN 'Beginner Cơ bản Người mới'
+                            WHEN 2 THEN 'Intermediate Trung cấp Trung bình'
+                            WHEN 3 THEN 'Advanced Nâng cao Chuyên sâu'
+                            ELSE ''
+                        END
+                    )), 'C') ||
+                    setweight(to_tsvector('simple', unaccent(coalesce(c.""Language"", ''))), 'C') ||
+                    setweight(to_tsvector('simple', unaccent(coalesce(c.""InstructorName"", ''))), 'D')
+                FROM ""Categories"" cat
+                WHERE c.""CategoryId"" = cat.""Id"";
+            ");
         }
 
         /// <inheritdoc />

@@ -35,12 +35,22 @@ public static class StringHelper
 
         var unsign = RemoveDiacritics(input);
 
-        // Strip tsquery operators so user input (e.g. "C# & C++", "a|b") does not break ToTsQuery('simple', ...)
         var sanitized = SanitizeForTsQuery(unsign);
 
-        // Split by whitespace, remove empty entries, join with & operator
         var terms = sanitized.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         return string.Join(" & ", terms);
+    }
+
+
+    public static string FormatSearchTermPlain(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return string.Empty;
+
+        var unsign = RemoveDiacritics(input);
+        var sanitized = SanitizeForTsQuery(unsign);
+        var terms = sanitized.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return string.Join(" ", terms);
     }
 
     public static string SanitizeForTsQuery(string input)

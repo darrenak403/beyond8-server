@@ -15,14 +15,13 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
             if (string.IsNullOrWhiteSpace(keyword))
                 return query;
 
-            var searchTerm = StringHelper.FormatSearchTerm(keyword);
-            if (string.IsNullOrEmpty(searchTerm))
+            var plainText = StringHelper.FormatSearchTermPlain(keyword);
+            if (string.IsNullOrEmpty(plainText))
                 return query;
 
-            // searchTerm đã được unaccent ở client-side (StringHelper.FormatSearchTerm)
-            // không cần gọi unaccent() trong DB nữa
+            // PlainToTsQuery bên trong lambda để EF dịch sang SQL (plainto_tsquery('simple', @p))
             return query.Where(c => c.SearchVector != null &&
-                c.SearchVector.Matches(EF.Functions.ToTsQuery("simple", searchTerm)));
+                c.SearchVector.Matches(EF.Functions.PlainToTsQuery("simple", plainText)));
         }
 
         private static IOrderedQueryable<Course> OrderBySearchRank(IQueryable<Course> query, string? keyword)
@@ -30,13 +29,12 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
             if (string.IsNullOrWhiteSpace(keyword))
                 return query.OrderByDescending(c => c.CreatedAt);
 
-            var searchTerm = StringHelper.FormatSearchTerm(keyword);
-            if (string.IsNullOrEmpty(searchTerm))
+            var plainText = StringHelper.FormatSearchTermPlain(keyword);
+            if (string.IsNullOrEmpty(plainText))
                 return query.OrderByDescending(c => c.CreatedAt);
 
-            // searchTerm đã được unaccent ở client-side
             return query.OrderByDescending(c =>
-                c.SearchVector!.Rank(EF.Functions.ToTsQuery("simple", searchTerm)));
+                c.SearchVector!.Rank(EF.Functions.PlainToTsQuery("simple", plainText)));
         }
 
         public async Task<(List<Course> Items, int TotalCount)> SearchCoursesAsync(

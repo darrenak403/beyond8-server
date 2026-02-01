@@ -138,6 +138,8 @@ public class CourseService(
                 _ => request.PageSize
             };
 
+            logger.LogInformation("Full text search courses with keyword: {Keyword}", request.Keyword);
+
             var (courses, totalCount) = await unitOfWork.CourseRepository.FullTextSearchCoursesAsync(
                 pageNumber,
                 pageSize,

@@ -10,6 +10,8 @@ using Beyond8.Common.Extensions;
 using Beyond8.Common.Utilities;
 using FluentValidation;
 using Beyond8.Assessment.Application.Clients.Catalog;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Polly;
 using Polly.Extensions.Http;
 
@@ -22,7 +24,9 @@ namespace Beyond8.Assessment.Api.Bootstrapping
             builder.Services.AddOpenApi();
             builder.Services.AddValidatorsFromAssemblyContaining<QuestionRequest>();
             builder.AddCommonExtensions();
-            builder.AddPostgresDatabase<AssessmentDbContext>(Const.AssessmentServiceDatabase);
+            // Bỏ qua PendingModelChangesWarning khi pooling bật (tránh lỗi khi model thay đổi chưa tạo migration)
+            builder.AddPostgresDatabase<AssessmentDbContext>(Const.AssessmentServiceDatabase, options =>
+                options.ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
             builder.AddServiceRedis(nameof(Assessment), connectionName: Const.Redis);
             builder.AddMassTransitWithRabbitMq(config =>
             {
