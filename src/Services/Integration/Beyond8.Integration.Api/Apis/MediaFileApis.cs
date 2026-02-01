@@ -16,11 +16,11 @@ namespace Beyond8.Integration.Api.Apis
         private const string InstructorProfileCertificatesFolder = "instructor/profile/certificates";
         private const string InstructorProfileIdentityCardsFolder = "instructor/profile/identity-cards";
         private const string InstructorProfileVideosFolder = "instructor/profile/intro-videos";
-        private const string CourseThumbnailFolder = "course/thumbnails";
-        private const string CourseDocumentFolder = "course/documents";
-        private const string CourseAssignmentSubmissionFolder = "course/sections/assignments/submissions";
-        private const string CourseAssignmentRubricFolder = "course/sections/assignments/rubrics";
-        private const string CourseVideoFolder = "course/sections/lessons/videos";
+        private const string CourseThumbnailFolder = "courses/thumbnails";
+        private const string CourseDocumentFolder = "courses/documents";
+        private const string CourseAssignmentSubmissionFolder = "courses/assignment-submissions";
+        private const string CourseAssignmentRubricFolder = "courses/rubrics";
+        private const string CourseVideoFolder = "courses/original";
 
 
         public static IEndpointRouteBuilder MapMediaFileApi(this IEndpointRouteBuilder builder)
