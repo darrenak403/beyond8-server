@@ -335,5 +335,177 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices.Email.Templates
 </body>
 </html>";
         }
+
+        public static string GetCourseRejectedEmailTemplate(string instructorName, string courseName, string reason)
+        {
+            return $@"
+<!DOCTYPE html>
+<html lang='vi'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Thông báo về khóa học của bạn</title>
+</head>
+<body style='margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;'>
+    <table width='100%' cellpadding='0' cellspacing='0' style='background-color: #f4f4f4; padding: 20px;'>
+        <tr>
+            <td align='center'>
+                <table width='600' cellpadding='0' cellspacing='0' style='background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
+                    <!-- Header -->
+                    <tr>
+                        <td style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;'>
+                            <h1 style='color: #ffffff; margin: 0; font-size: 28px; font-weight: 600;'>Beyond8</h1>
+                            <p style='color: #e0e0e0; margin: 10px 0 0 0; font-size: 14px;'>Nền tảng học tập trực tuyến</p>
+                        </td>
+                    </tr>
+
+                    <!-- Content -->
+                    <tr>
+                        <td style='padding: 40px 30px;'>
+                            <h2 style='color: #333333; margin: 0 0 20px 0; font-size: 24px;'>Xin chào {instructorName},</h2>
+
+                            <p style='color: #666666; font-size: 16px; line-height: 1.8; margin: 0 0 20px 0;'>
+                                Cảm ơn bạn đã gửi khóa học để xét duyệt tại Beyond8.
+                            </p>
+
+                            <p style='color: #666666; font-size: 16px; line-height: 1.8; margin: 0 0 20px 0;'>
+                                Sau khi xem xét kỹ lưỡng, chúng tôi rất tiếc phải thông báo rằng khóa học
+                                <strong style='color: #667eea;'>""{courseName}""</strong> của bạn
+                                <strong style='color: #dc2626;'>chưa được phê duyệt</strong> tại thời điểm này.
+                            </p>
+
+                            <div style='background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 20px; margin: 30px 0; border-radius: 4px;'>
+                                <h3 style='color: #991b1b; margin: 0 0 10px 0; font-size: 16px;'>Lý do từ chối:</h3>
+                                <p style='color: #7f1d1d; font-size: 15px; margin: 0; line-height: 1.6;'>
+                                    {reason}
+                                </p>
+                            </div>
+
+                            <h3 style='color: #333333; margin: 30px 0 15px 0; font-size: 18px;'>Bạn có thể làm gì tiếp theo?</h3>
+                            <ul style='color: #666666; font-size: 15px; line-height: 2; margin: 0 0 30px 0; padding-left: 20px;'>
+                                <li>Xem lại nội dung khóa học theo yêu cầu</li>
+                                <li>Cập nhật và hoàn thiện các bài giảng</li>
+                                <li>Kiểm tra chất lượng video và tài liệu</li>
+                                <li>Gửi lại để chúng tôi xem xét</li>
+                            </ul>
+
+                            <p style='color: #666666; font-size: 15px; line-height: 1.6; margin: 20px 0;'>
+                                Chúng tôi luôn sẵn sàng hỗ trợ bạn tạo ra những khóa học chất lượng.
+                                Đừng ngần ngại liên hệ nếu cần thêm thông tin!
+                            </p>
+
+                            <p style='color: #666666; font-size: 15px; margin: 20px 0 0 0;'>
+                                Trân trọng,<br>
+                                <strong>Đội ngũ Beyond8</strong>
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style='background-color: #f8f9fa; padding: 30px; text-align: center;'>
+                            <p style='color: #999999; font-size: 12px; margin: 0 0 10px 0;'>
+                                Cần hỗ trợ? Liên hệ với chúng tôi tại
+                                <a href='mailto:support@beyond8.dev' style='color: #667eea; text-decoration: none;'>support@beyond8.dev</a>
+                            </p>
+                            <p style='color: #999999; font-size: 12px; margin: 0; line-height: 1.6;'>
+                                © 2026 Beyond8. All rights reserved.<br>
+                                Nền tảng học tập trực tuyến hàng đầu Việt Nam
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>";
+        }
+
+        public static string GetCourseApprovedEmailTemplate(string instructorName, string courseName)
+        {
+            return $@"
+<!DOCTYPE html>
+<html lang='vi'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Khóa học của bạn đã được phê duyệt!</title>
+</head>
+<body style='margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;'>
+    <table width='100%' cellpadding='0' cellspacing='0' style='background-color: #f4f4f4; padding: 20px;'>
+        <tr>
+            <td align='center'>
+                <table width='600' cellpadding='0' cellspacing='0' style='background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
+                    <!-- Header -->
+                    <tr>
+                        <td style='background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); padding: 40px 30px; text-align: center;'>
+                            <h1 style='color: #ffffff; margin: 0; font-size: 28px; font-weight: 600;'>🎉 Chúc mừng!</h1>
+                            <p style='color: #e0fdf4; margin: 10px 0 0 0; font-size: 16px;'>Khóa học của bạn đã được phê duyệt</p>
+                        </td>
+                    </tr>
+
+                    <!-- Content -->
+                    <tr>
+                        <td style='padding: 40px 30px;'>
+                            <h2 style='color: #333333; margin: 0 0 20px 0; font-size: 24px;'>Xin chào {instructorName},</h2>
+
+                            <p style='color: #666666; font-size: 16px; line-height: 1.8; margin: 0 0 20px 0;'>
+                                Chúng tôi vui mừng thông báo rằng khóa học
+                                <strong style='color: #11998e;'>""{courseName}""</strong> của bạn
+                                đã được <strong>phê duyệt thành công</strong>! 🎓
+                            </p>
+
+                            <div style='background-color: #f0fdf4; border-left: 4px solid #11998e; padding: 20px; margin: 30px 0; border-radius: 4px;'>
+                                <p style='color: #166534; font-size: 15px; margin: 0; line-height: 1.6;'>
+                                    ✅ Khóa học của bạn đã qua vòng xét duyệt<br>
+                                    ✅ Bạn có thể xuất bản khóa học bất cứ lúc nào<br>
+                                    ✅ Sau khi xuất bản, học viên sẽ có thể tìm kiếm và đăng ký
+                                </p>
+                            </div>
+
+                            <h3 style='color: #333333; margin: 30px 0 15px 0; font-size: 18px;'>Bước tiếp theo:</h3>
+                            <ul style='color: #666666; font-size: 15px; line-height: 2; margin: 0 0 30px 0; padding-left: 20px;'>
+                                <li>Kiểm tra lại nội dung khóa học lần cuối</li>
+                                <li>Đặt giá cho khóa học (nếu chưa đặt)</li>
+                                <li>Nhấn nút Xuất bản để công khai khóa học</li>
+                                <li>Chia sẻ khóa học trên mạng xã hội</li>
+                            </ul>
+
+                            <p style='color: #999999; font-size: 14px; line-height: 1.6; margin: 30px 0 0 0; padding-top: 20px; border-top: 1px solid #eeeeee;'>
+                                💡 <strong>Mẹo:</strong> Hãy chuẩn bị sẵn nội dung quảng bá trước khi xuất bản để tối ưu hiệu quả!
+                            </p>
+
+                            <p style='color: #666666; font-size: 15px; line-height: 1.6; margin: 20px 0 0 0;'>
+                                Chúc bạn thành công với khóa học mới! 🚀
+                            </p>
+
+                            <p style='color: #666666; font-size: 15px; margin: 20px 0 0 0;'>
+                                Trân trọng,<br>
+                                <strong>Đội ngũ Beyond8</strong>
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style='background-color: #f8f9fa; padding: 30px; text-align: center;'>
+                            <p style='color: #999999; font-size: 12px; margin: 0 0 10px 0;'>
+                                Cần hỗ trợ? Liên hệ với chúng tôi tại
+                                <a href='mailto:support@beyond8.dev' style='color: #11998e; text-decoration: none;'>support@beyond8.dev</a>
+                            </p>
+                            <p style='color: #999999; font-size: 12px; margin: 0; line-height: 1.6;'>
+                                © 2026 Beyond8. All rights reserved.<br>
+                                Nền tảng học tập trực tuyến hàng đầu Việt Nam
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>";
+        }
     }
 }
