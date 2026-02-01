@@ -35,9 +35,27 @@ public static class StringHelper
 
         var unsign = RemoveDiacritics(input);
 
+        // Strip tsquery operators so user input (e.g. "C# & C++", "a|b") does not break ToTsQuery('simple', ...)
+        var sanitized = SanitizeForTsQuery(unsign);
+
         // Split by whitespace, remove empty entries, join with & operator
-        var terms = unsign.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var terms = sanitized.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         return string.Join(" & ", terms);
+    }
+
+    public static string SanitizeForTsQuery(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return string.Empty;
+        var sb = new StringBuilder(input.Length);
+        foreach (var c in input)
+        {
+            if (c is '&' or '|' or '!' or ':' or '*' or '(' or ')' or '\\')
+                sb.Append(' ');
+            else
+                sb.Append(c);
+        }
+        return sb.ToString();
     }
 
     public static string FormatSearchTermWithPrefix(string input)
@@ -46,9 +64,10 @@ public static class StringHelper
             return string.Empty;
 
         var unsign = RemoveDiacritics(input);
+        var sanitized = SanitizeForTsQuery(unsign);
 
         // Split by whitespace, add :* suffix for prefix matching, join with & operator
-        var terms = unsign.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var terms = sanitized.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         return string.Join(" & ", terms.Select(t => $"{t}:*"));
     }
 }

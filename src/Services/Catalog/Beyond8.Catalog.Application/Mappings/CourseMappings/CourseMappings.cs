@@ -170,6 +170,7 @@ public static class CourseMappings
         {
             Id = entity.Id,
             Title = entity.Title,
+            Slug = entity.Slug,
             ShortDescription = entity.ShortDescription ?? string.Empty,
             ThumbnailUrl = entity.ThumbnailUrl,
             CategoryName = entity.Category?.Name ?? string.Empty,

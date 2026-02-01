@@ -1,11 +1,41 @@
 using Beyond8.Catalog.Domain.Entities;
 using Beyond8.Common.Data.Base;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using NpgsqlTypes;
 
 namespace Beyond8.Catalog.Infrastructure.Data
 {
     public class CatalogDbContext(DbContextOptions<CatalogDbContext> options) : BaseDbContext(options)
     {
+        private const string SearchVectorUpdateFunction = "courses_search_vector_update_for_ids";
+
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            var courseIds = ChangeTracker
+                .Entries<Course>()
+                .Where(e => e.State == EntityState.Added || e.State == EntityState.Modified)
+                .Select(e => e.Entity.Id)
+                .Distinct()
+                .ToList();
+
+            var count = await base.SaveChangesAsync(cancellationToken);
+
+            if (courseIds.Count > 0)
+            {
+                await Database.ExecuteSqlRawAsync(
+                    $"SELECT {SearchVectorUpdateFunction}(@p0)",
+                    new NpgsqlParameter
+                    {
+                        ParameterName = "p0",
+                        NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Uuid,
+                        Value = courseIds.ToArray()
+                    },
+                    cancellationToken);
+            }
+
+            return count;
+        }
         public DbSet<Category> Categories { get; set; } = null!;
         public DbSet<Course> Courses { get; set; } = null!;
         public DbSet<Section> Sections { get; set; } = null!;
@@ -29,10 +59,9 @@ namespace Beyond8.Catalog.Infrastructure.Data
             {
                 entity.HasQueryFilter(e => e.DeletedAt == null);
 
-                // Configure SearchVector for full-text search
+                // SearchVector updated from code in SaveChangesAsync via courses_search_vector_update_for_ids()
                 entity.Property(c => c.SearchVector)
-                    .HasColumnType("tsvector")
-                    .ValueGeneratedOnAddOrUpdate();
+                    .HasColumnType("tsvector");
 
                 // Create GIN index for fast full-text search
                 entity.HasIndex(c => c.SearchVector)

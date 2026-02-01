@@ -6,7 +6,6 @@ namespace Beyond8.Identity.Infrastructure.Data.Seeders
 {
     public static class UserSubscriptionSeedData
     {
-        /// <summary>Instructor seed user ID (UserWithRoleSeedData userIds[3]).</summary>
         private static readonly Guid InstructorSeedUserId = new("00000000-0000-0000-0000-000000000006");
 
         public static async Task SeedUserSubscriptionsAsync(IdentityDbContext context)
