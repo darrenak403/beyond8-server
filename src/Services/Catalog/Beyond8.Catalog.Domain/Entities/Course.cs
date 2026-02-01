@@ -8,13 +8,7 @@ namespace Beyond8.Catalog.Domain.Entities
 {
     public class Course : BaseEntity
     {
-        /// <summary>
-        /// Normalized (diacritics removed) text used to build SearchVector. Set in application so Vietnamese search works (e.g. "lap trinh" matches "Lập trình").
-        /// </summary>
-        [MaxLength(10000)]
-        public string? SearchableText { get; set; }
-
-        // Full-text search vector (built from SearchableText when set, else from DB unaccent)
+        // Full-text search vector (built in DB via unaccent + to_tsvector)
         public NpgsqlTsVector? SearchVector { get; set; }
 
         public Guid InstructorId { get; set; }
