@@ -30,6 +30,14 @@ namespace Beyond8.Assessment.Api.Apis
                 .Produces<ApiResponse<QuizSimpleResponse>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
+            group.MapGet("/", GetAllQuizzesAsync)
+                .WithName("GetAllQuizzes")
+                .WithDescription("Lấy tất cả quizzes")
+                .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+                .Produces<ApiResponse<List<QuizSimpleResponse>>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<List<QuizSimpleResponse>>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
             group.MapGet("/{id}", GetQuizByIdAsync)
                 .WithName("GetQuizById")
                 .WithDescription("Lấy quiz theo ID")
@@ -57,6 +65,16 @@ namespace Beyond8.Assessment.Api.Apis
             return group;
         }
 
+        private static async Task<IResult> GetAllQuizzesAsync(
+            [FromServices] ICurrentUserService currentUserService,
+            [FromServices] IQuizService quizService,
+            [AsParameters] PaginationRequest paginationRequest)
+        {
+            var result = await quizService.GetAllQuizzesAsync(currentUserService.UserId, paginationRequest);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
+
+
         private static async Task<IResult> DeleteQuizAsync(
             [FromServices] ICurrentUserService currentUserService,
             [FromRoute] Guid id,
@@ -65,7 +83,6 @@ namespace Beyond8.Assessment.Api.Apis
             var result = await quizService.DeleteQuizAsync(id, currentUserService.UserId);
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
-
 
         private static async Task<IResult> UpdateQuizAsync(
             [FromServices] ICurrentUserService currentUserService,

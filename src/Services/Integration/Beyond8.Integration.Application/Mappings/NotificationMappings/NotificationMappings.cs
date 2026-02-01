@@ -56,7 +56,7 @@ namespace Beyond8.Integration.Application.Mappings.NotificationMappings
                 Channels = [NotificationChannel.Email],
                 ReadAt = null,
                 IsRead = false,
-                Context = NotificationContext.Instructor
+                Context = NotificationContext.Student
             };
         }
 
@@ -104,7 +104,7 @@ namespace Beyond8.Integration.Application.Mappings.NotificationMappings
                 Channels = [NotificationChannel.App],
                 ReadAt = null,
                 IsRead = false,
-                Context = NotificationContext.Instructor
+                Context = NotificationContext.Student
             };
         }
 

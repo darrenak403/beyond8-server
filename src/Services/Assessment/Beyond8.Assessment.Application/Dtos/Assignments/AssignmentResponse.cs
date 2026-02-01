@@ -1,4 +1,5 @@
 using Beyond8.Assessment.Domain.Enums;
+using Beyond8.Assessment.Domain.JSONFields;
 
 namespace Beyond8.Assessment.Application.Dtos.Assignments;
 
@@ -10,7 +11,7 @@ public class AssignmentResponse
     public Guid? SectionId { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    public List<string>? AttachmentUrls { get; set; }
+    public List<AssignmentAttachmentItem>? AttachmentUrls { get; set; }
     public AssignmentSubmissionType SubmissionType { get; set; }
     public List<string>? AllowedFileTypes { get; set; }
     public int MaxTextLength { get; set; }

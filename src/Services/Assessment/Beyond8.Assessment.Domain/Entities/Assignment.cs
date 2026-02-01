@@ -19,7 +19,7 @@ public class Assignment : BaseEntity
     public string Description { get; set; } = string.Empty;
 
     [Column(TypeName = "jsonb")]
-    public string? AttachmentUrls { get; set; }
+    public string? AttachmentUrls { get; set; } // ["Name" : "url", "Name" : "url"]
 
     public AssignmentSubmissionType SubmissionType { get; set; } = AssignmentSubmissionType.File;
 

@@ -5,5 +5,9 @@ namespace Beyond8.Assessment.Application.Services.Interfaces;
 
 public interface IAssignmentService
 {
-    Task<ApiResponse<AssignmentResponse>> CreateAssignmentAsync(CreateAssignmentRequest request, Guid instructorId);
+    Task<ApiResponse<AssignmentSimpleResponse>> CreateAssignmentAsync(CreateAssignmentRequest request, Guid instructorId);
+    Task<ApiResponse<bool>> DeleteAssignmentAsync(Guid id, Guid userId);
+    Task<ApiResponse<List<AssignmentSimpleResponse>>> GetAllAssignmentsAsync(Guid userId, GetAssignmentsRequest request);
+    Task<ApiResponse<AssignmentResponse>> GetAssignmentByIdAsync(Guid id, Guid userId);
+    Task<ApiResponse<AssignmentSimpleResponse>> UpdateAssignmentAsync(Guid id, UpdateAssignmentRequest request, Guid userId);
 }

@@ -15,6 +15,32 @@ public class QuizService(
     IUnitOfWork unitOfWork,
     ICatalogService catalogService) : IQuizService
 {
+
+    public async Task<ApiResponse<List<QuizSimpleResponse>>> GetAllQuizzesAsync(Guid userId, PaginationRequest paginationRequest)
+    {
+        try
+        {
+            var quizzes = await unitOfWork.QuizRepository.GetPagedAsync(
+                pageNumber: paginationRequest.PageNumber,
+                pageSize: paginationRequest.PageSize,
+                filter: q => q.InstructorId == userId && q.IsActive,
+                orderBy: query => query.OrderByDescending(q => q.CreatedAt));
+
+            return ApiResponse<List<QuizSimpleResponse>>.SuccessPagedResponse(
+                [.. quizzes.Items.Select(q => q.ToSimpleResponse(q.QuizQuestions.Count))],
+                quizzes.TotalCount,
+                paginationRequest.PageNumber,
+                paginationRequest.PageSize,
+                "Lấy tất cả quizzes thành công."
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting all quizzes for instructor: {InstructorId}", userId);
+            return ApiResponse<List<QuizSimpleResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy tất cả quizzes.");
+        }
+    }
+
     public async Task<ApiResponse<QuizResponse>> GetQuizByIdAsync(Guid id, Guid userId)
     {
         try

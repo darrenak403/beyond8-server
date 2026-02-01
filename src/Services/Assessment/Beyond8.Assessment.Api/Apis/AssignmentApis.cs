@@ -26,8 +26,40 @@ namespace Beyond8.Assessment.Api.Apis
                 .WithName("CreateAssignment")
                 .WithDescription("Tạo assignment")
                 .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+                .Produces<ApiResponse<AssignmentSimpleResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<AssignmentSimpleResponse>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
+            group.MapGet("/{id}", GetAssignmentByIdAsync)
+                .WithName("GetAssignmentById")
+                .WithDescription("Lấy assignment theo ID")
+                .RequireAuthorization(x => x.RequireRole(Role.Instructor))
                 .Produces<ApiResponse<AssignmentResponse>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<AssignmentResponse>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
+            group.MapGet("/", GetAllAssignmentsAsync)
+                .WithName("GetAllAssignments")
+                .WithDescription("Lấy tất cả assignments")
+                .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+                .Produces<ApiResponse<List<AssignmentSimpleResponse>>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<List<AssignmentSimpleResponse>>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
+            group.MapDelete("/{id}", DeleteAssignmentAsync)
+                .WithName("DeleteAssignment")
+                .WithDescription("Xóa assignment")
+                .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+                .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
+            group.MapPut("/{id}", UpdateAssignmentAsync)
+                .WithName("UpdateAssignment")
+                .WithDescription("Cập nhật assignment")
+                .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+                .Produces<ApiResponse<AssignmentSimpleResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<AssignmentSimpleResponse>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
             return group;
@@ -43,6 +75,51 @@ namespace Beyond8.Assessment.Api.Apis
                 return validationResult!;
 
             var result = await assignmentService.CreateAssignmentAsync(request, currentUserService.UserId);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
+
+        private static async Task<IResult> GetAssignmentByIdAsync(
+            [FromRoute] Guid id,
+            [FromServices] IAssignmentService assignmentService,
+            [FromServices] ICurrentUserService currentUserService)
+        {
+            var result = await assignmentService.GetAssignmentByIdAsync(id, currentUserService.UserId);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
+
+        private static async Task<IResult> GetAllAssignmentsAsync(
+            [AsParameters] GetAssignmentsRequest request,
+            [FromServices] IAssignmentService assignmentService,
+            [FromServices] ICurrentUserService currentUserService,
+            [FromServices] IValidator<GetAssignmentsRequest> validator)
+        {
+            if (!request.ValidateRequest(validator, out var validationResult))
+                return validationResult!;
+
+            var result = await assignmentService.GetAllAssignmentsAsync(currentUserService.UserId, request);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
+
+        private static async Task<IResult> DeleteAssignmentAsync(
+            [FromRoute] Guid id,
+            [FromServices] IAssignmentService assignmentService,
+            [FromServices] ICurrentUserService currentUserService)
+        {
+            var result = await assignmentService.DeleteAssignmentAsync(id, currentUserService.UserId);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
+
+        private static async Task<IResult> UpdateAssignmentAsync(
+            [FromRoute] Guid id,
+            [FromBody] UpdateAssignmentRequest request,
+            [FromServices] IAssignmentService assignmentService,
+            [FromServices] ICurrentUserService currentUserService,
+            [FromServices] IValidator<UpdateAssignmentRequest> validator)
+        {
+            if (!request.ValidateRequest(validator, out var validationResult))
+                return validationResult!;
+
+            var result = await assignmentService.UpdateAssignmentAsync(id, request, currentUserService.UserId);
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
     }
