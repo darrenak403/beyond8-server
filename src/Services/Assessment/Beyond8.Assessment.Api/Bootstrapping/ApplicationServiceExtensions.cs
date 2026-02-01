@@ -1,4 +1,5 @@
 using Beyond8.Assessment.Api.Apis;
+using Beyond8.Assessment.Application.Consumers.Catalog;
 using Beyond8.Assessment.Application.Dtos.Questions;
 using Beyond8.Assessment.Application.Services.Interfaces;
 using Beyond8.Assessment.Application.Services.Implements;
@@ -23,7 +24,10 @@ namespace Beyond8.Assessment.Api.Bootstrapping
             builder.AddCommonExtensions();
             builder.AddPostgresDatabase<AssessmentDbContext>(Const.AssessmentServiceDatabase);
             builder.AddServiceRedis(nameof(Assessment), connectionName: Const.Redis);
-            builder.AddMassTransitWithRabbitMq();
+            builder.AddMassTransitWithRabbitMq(config =>
+            {
+                config.AddConsumer<LessonQuizUnlinkedEventConsumer>();
+            });
             builder.AddClientServices();
 
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();

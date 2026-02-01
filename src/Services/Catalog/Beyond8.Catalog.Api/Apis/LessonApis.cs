@@ -110,10 +110,10 @@ public static class LessonApis
             .Produces<ApiResponse<LessonResponse>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
-        // Update section assignment
-        group.MapPatch("/{id}/change-quiz", ChangeQuizForLessonAsync)
-            .WithName("ChangeQuizForLesson")
-            .WithDescription("Thay đổi quiz khác cho bài học")
+        // Update quiz for lesson
+        group.MapPatch("/{id}/update-quiz", UpdateQuizForLessonAsync)
+            .WithName("UpdateQuizForLesson")
+            .WithDescription("Cập nhật quiz cho bài học")
             .RequireAuthorization(x => x.RequireRole(Role.Instructor))
             .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
@@ -302,7 +302,7 @@ public static class LessonApis
     }
 
 
-    private static async Task<IResult> ChangeQuizForLessonAsync(
+    private static async Task<IResult> UpdateQuizForLessonAsync(
         Guid id,
         [FromBody] ChangeQuizForLessonRequest request,
         [FromServices] ILessonService lessonService,
@@ -312,7 +312,7 @@ public static class LessonApis
         if (!request.ValidateRequest(validator, out var result))
             return result!;
 
-        var apiResult = await lessonService.ChangeQuizForLessonAsync(id, request.QuizId, currentUserService.UserId);
+        var apiResult = await lessonService.UpdateQuizForLessonAsync(id, request.QuizId, currentUserService.UserId);
         return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
     }
 

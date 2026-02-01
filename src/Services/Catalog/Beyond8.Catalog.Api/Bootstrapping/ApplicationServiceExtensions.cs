@@ -1,6 +1,5 @@
 using Beyond8.Catalog.Api.Apis;
 using Beyond8.Catalog.Application.Clients.Identity;
-using Beyond8.Catalog.Application.Consumers.Assessment;
 using Beyond8.Catalog.Application.Consumers.Identity;
 using Beyond8.Catalog.Application.Dtos.Categories;
 using Beyond8.Catalog.Application.Dtos.Courses;
@@ -32,7 +31,6 @@ namespace Beyond8.Catalog.Api.Bootstrapping
             {
                 config.AddConsumer<InstructorHiddenEventConsumer>();
                 config.AddConsumer<InstructorApprovalEventConsumer>();
-                config.AddConsumer<QuizDeletedEventConsumer>();
             });
 
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();

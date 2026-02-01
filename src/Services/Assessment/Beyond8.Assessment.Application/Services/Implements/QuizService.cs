@@ -1,11 +1,10 @@
+using Beyond8.Assessment.Application.Clients.Catalog;
 using Beyond8.Assessment.Application.Dtos.Quizzes;
 using Beyond8.Assessment.Application.Mappings.QuizMappings;
 using Beyond8.Assessment.Application.Mappings.QuizQuestionMappings;
 using Beyond8.Assessment.Application.Services.Interfaces;
 using Beyond8.Assessment.Domain.Repositories.Interfaces;
-using Beyond8.Common.Events.Assessment;
 using Beyond8.Common.Utilities;
-using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -14,7 +13,7 @@ namespace Beyond8.Assessment.Application.Services.Implements;
 public class QuizService(
     ILogger<QuizService> logger,
     IUnitOfWork unitOfWork,
-    IPublishEndpoint publishEndpoint) : IQuizService
+    ICatalogService catalogService) : IQuizService
 {
     public async Task<ApiResponse<QuizResponse>> GetQuizByIdAsync(Guid id, Guid userId)
     {
@@ -62,6 +61,15 @@ public class QuizService(
 
             logger.LogInformation("Quiz created: {QuizId}, InstructorId: {InstructorId}, QuestionCount: {Count}",
                 quiz.Id, instructorId, request.QuestionIds.Count);
+
+            if (request.LessonId != null)
+            {
+                var catalogResponse = await catalogService.UpdateQuizForLessonAsync(request.LessonId.Value, quiz.Id);
+                if (!catalogResponse.IsSuccess)
+                {
+                    return ApiResponse<QuizSimpleResponse>.FailureResponse(catalogResponse.Message!);
+                }
+            }
 
             return ApiResponse<QuizSimpleResponse>.SuccessResponse(
                 quiz.ToSimpleResponse(request.QuestionIds.Count),
@@ -130,15 +138,16 @@ public class QuizService(
             if (quiz == null)
                 return ApiResponse<bool>.FailureResponse("Quiz không tồn tại.");
 
+            if (quiz.LessonId != null)
+                return ApiResponse<bool>.FailureResponse(
+                    "Không thể xóa quiz đã gắn với lesson. Vui lòng gỡ quiz khỏi lesson trước.");
+
             quiz.IsActive = false;
             quiz.DeletedAt = DateTime.UtcNow;
             quiz.DeletedBy = userId;
             await unitOfWork.QuizRepository.UpdateAsync(id, quiz);
 
             await unitOfWork.SaveChangesAsync();
-
-            logger.LogInformation("Publishing quiz deleted event: {QuizId}", id);
-            await publishEndpoint.Publish(new QuizDeletedEvent(id));
 
             logger.LogInformation("Quiz deleted: {QuizId}, InstructorId: {InstructorId}", id, userId);
             return ApiResponse<bool>.SuccessResponse(true, "Xóa quiz thành công.");

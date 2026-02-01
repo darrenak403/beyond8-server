@@ -18,7 +18,7 @@ public interface ILessonService
     Task<ApiResponse<LessonResponse>> UpdateVideoLessonAsync(Guid lessonId, UpdateVideoLessonRequest request, Guid currentUserId);
     Task<ApiResponse<LessonResponse>> UpdateTextLessonAsync(Guid lessonId, UpdateTextLessonRequest request, Guid currentUserId);
     Task<ApiResponse<LessonResponse>> UpdateQuizLessonAsync(Guid lessonId, UpdateQuizLessonRequest request, Guid currentUserId);
-    Task<ApiResponse<bool>> ChangeQuizForLessonAsync(Guid lessonId, Guid? quizId, Guid currentUserId);
+    Task<ApiResponse<bool>> UpdateQuizForLessonAsync(Guid lessonId, Guid? quizId, Guid currentUserId);
     Task<ApiResponse<bool>> SwitchLessonActivationAsync(Guid lessonId, bool isPublished, Guid currentUserId);
     Task<ApiResponse<bool>> ReorderLessonInSectionAsync(ReorderLessonInSectionRequest request, Guid currentUserId);
     Task<ApiResponse<bool>> MoveLessonToSectionAsync(MoveLessonToSectionRequest request, Guid currentUserId);

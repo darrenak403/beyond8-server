@@ -462,34 +462,30 @@ public class LessonService(
         }
     }
 
-    public async Task<ApiResponse<bool>> ChangeQuizForLessonAsync(Guid lessonId, Guid? quizId, Guid currentUserId)
-    {
-        try
+    public async Task<ApiResponse<bool>> UpdateQuizForLessonAsync(Guid lessonId, Guid? quizId, Guid currentUserId)
         {
-            // Validate lesson ownership
-            var (isValid, lesson, errorMessage) = await CheckLessonOwnershipAsync(lessonId, currentUserId);
-            if (!isValid)
-                return ApiResponse<bool>.FailureResponse(errorMessage!);
-
-            if (lesson!.Quiz != null)
+            try
             {
-                lesson.Quiz.QuizId = quizId;
-                await unitOfWork.LessonQuizRepository.UpdateAsync(lesson.Quiz.Id!, lesson.Quiz!);
+                // Validate lesson ownership
+                var (isValid, lesson, errorMessage) = await CheckLessonOwnershipAsync(lessonId, currentUserId);
+                if (!isValid)
+                    return ApiResponse<bool>.FailureResponse(errorMessage!);
+
+                var previousQuizId = lesson!.Quiz?.QuizId;
+                lesson.Quiz!.QuizId = quizId;
+                await unitOfWork.LessonQuizRepository.UpdateAsync(lesson.Id, lesson.Quiz!);
                 await unitOfWork.SaveChangesAsync();
+
+                if (quizId == null && previousQuizId != null)
+                    await publishEndpoint.Publish(new LessonQuizUnlinkedEvent(lessonId, previousQuizId.Value));
 
                 logger.LogInformation("Quiz ID updated for lesson: {LessonId} by user {UserId}", lessonId, currentUserId);
                 return ApiResponse<bool>.SuccessResponse(true, "Cập nhật Quiz ID cho bài học thành công.");
             }
-            else
-            {
-                logger.LogWarning("Lesson {LessonId} does not have a quiz entity to update", lessonId);
-                return ApiResponse<bool>.FailureResponse("Bài học này không có quiz để cập nhật.");
-            }
-        }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error changing quiz for lesson: {LessonId}", lessonId);
-            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi thay đổi quiz cho bài học.");
+            logger.LogError(ex, "Error updating quiz for lesson: {LessonId}", lessonId);
+            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi cập nhật quiz cho bài học.");
         }
     }
 
