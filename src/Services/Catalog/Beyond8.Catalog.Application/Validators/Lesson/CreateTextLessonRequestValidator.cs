@@ -18,9 +18,7 @@ public class CreateTextLessonRequestValidator : AbstractValidator<CreateTextLess
             .MaximumLength(1000).WithMessage("Mô tả bài học không được vượt quá 1000 ký tự")
             .When(x => !string.IsNullOrEmpty(x.Description));
 
-        // Text-specific validation
         RuleFor(x => x.Content)
-            .NotEmpty().WithMessage("Nội dung bài học không được để trống cho bài học text")
             .MaximumLength(50000).WithMessage("Nội dung bài học không được vượt quá 50000 ký tự");
     }
 }

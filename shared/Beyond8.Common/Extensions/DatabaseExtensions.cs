@@ -7,11 +7,13 @@ namespace Beyond8.Common.Extensions
     {
         public static IHostApplicationBuilder AddPostgresDatabase<TContext>(
             this IHostApplicationBuilder builder,
-            string databaseName) where TContext : DbContext
+            string databaseName,
+            Action<DbContextOptionsBuilder>? configureOptions = null) where TContext : DbContext
         {
             builder.AddNpgsqlDbContext<TContext>(databaseName, configureDbContextOptions: options =>
             {
-                options.UseNpgsql(builder => builder.MigrationsAssembly(typeof(TContext).Assembly.FullName));
+                options.UseNpgsql(npgsql => npgsql.MigrationsAssembly(typeof(TContext).Assembly.FullName));
+                configureOptions?.Invoke(options);
             });
 
             return builder;

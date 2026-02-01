@@ -1,9 +1,7 @@
 using Beyond8.Catalog.Api.Apis;
 using Beyond8.Catalog.Application.Clients.Identity;
-using Beyond8.Catalog.Application.Consumers.Assessment;
 using Beyond8.Catalog.Application.Consumers.Identity;
 using Beyond8.Catalog.Application.Dtos.Categories;
-using Beyond8.Catalog.Application.Dtos.Courses;
 using Beyond8.Catalog.Application.Services.Implements;
 using Beyond8.Catalog.Application.Services.Interfaces;
 using Beyond8.Catalog.Domain.Repositories.Interfaces;
@@ -32,7 +30,6 @@ namespace Beyond8.Catalog.Api.Bootstrapping
             {
                 config.AddConsumer<InstructorHiddenEventConsumer>();
                 config.AddConsumer<InstructorApprovalEventConsumer>();
-                config.AddConsumer<QuizDeletedEventConsumer>();
             });
 
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -41,6 +38,8 @@ namespace Beyond8.Catalog.Api.Bootstrapping
             builder.Services.AddScoped<ICourseService, CourseService>();
             builder.Services.AddScoped<ISectionService, SectionService>();
             builder.Services.AddScoped<ILessonService, LessonService>();
+            builder.Services.AddScoped<ICourseDocumentService, CourseDocumentService>();
+            builder.Services.AddScoped<ILessonDocumentService, LessonDocumentService>();
 
             builder.Services.AddValidatorsFromAssemblyContaining<CreateCategoryRequest>();
 
@@ -109,6 +108,8 @@ namespace Beyond8.Catalog.Api.Bootstrapping
             app.MapCourseApi();
             app.MapSectionApi();
             app.MapLessonApi();
+            app.MapCourseDocumentApi();
+            app.MapLessonDocumentApi();
 
             return app;
         }

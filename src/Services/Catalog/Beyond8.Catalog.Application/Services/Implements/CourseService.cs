@@ -1,11 +1,14 @@
 using Beyond8.Catalog.Application.Clients.Identity;
 using Beyond8.Catalog.Application.Dtos.Courses;
+using Beyond8.Catalog.Application.Dtos.Users;
 using Beyond8.Catalog.Application.Mappings.CourseMappings;
 using Beyond8.Catalog.Application.Services.Interfaces;
 using Beyond8.Catalog.Domain.Entities;
 using Beyond8.Catalog.Domain.Enums;
 using Beyond8.Catalog.Domain.Repositories.Interfaces;
+using Beyond8.Common.Events.Catalog;
 using Beyond8.Common.Utilities;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -14,37 +17,102 @@ namespace Beyond8.Catalog.Application.Services.Implements;
 public class CourseService(
     ILogger<CourseService> logger,
     IUnitOfWork unitOfWork,
-    IIdentityClient identityClient) : ICourseService
+    IIdentityClient identityClient,
+    IPublishEndpoint publishEndpoint) : ICourseService
 {
 
-    public async Task<ApiResponse<List<CourseResponse>>> GetAllCoursesAsync(PaginationCourseSearchRequest request)
+    private static (int PageNumber, int PageSize) NormalizePagination(PaginationCourseSearchRequest request)
+    {
+        var pageNumber = request.PageNumber < 1 ? 1 : request.PageNumber;
+        var pageSize = request.PageSize switch
+        {
+            < 1 => 10,
+            > 100 => 100,
+            _ => request.PageSize
+        };
+        return (pageNumber, pageSize);
+    }
+
+    private async Task<(bool IsValid, string? ErrorMessage)> ValidateCategoryExistsAsync(Guid? categoryId)
+    {
+        if (!categoryId.HasValue)
+            return (true, null);
+
+        var category = await unitOfWork.CategoryRepository.FindOneAsync(c => c.Id == categoryId && c.IsActive && !c.IsRoot);
+        if (category == null)
+        {
+            logger.LogWarning("Category not found or inactive: {CategoryId}", categoryId);
+            return (false, "Danh mục không tồn tại hoặc không hoạt động.");
+        }
+        return (true, null);
+    }
+
+    private async Task<(bool IsValid, Course? Course, string? ErrorMessage)> CheckCourseOwnershipAsync(Guid courseId, Guid currentUserId)
+    {
+        var course = await unitOfWork.CourseRepository
+            .AsQueryable()
+            .Include(c => c.Category)
+            .FirstOrDefaultAsync(c => c.Id == courseId && c.IsActive && c.InstructorId == currentUserId);
+
+        if (course == null)
+        {
+            logger.LogWarning("Course not found: {CourseId}", courseId);
+            return (false, null, "Khóa học không tồn tại.");
+        }
+        return (true, course, null);
+    }
+
+    private async Task<(bool IsValid, Course? Course, string? ErrorMessage)> GetCourseWithSectionsForInstructorAsync(Guid courseId, Guid currentUserId)
+    {
+        var course = await unitOfWork.CourseRepository
+            .AsQueryable()
+            .Include(c => c.Sections)
+            .ThenInclude(s => s.Lessons)
+            .FirstOrDefaultAsync(c => c.Id == courseId && c.IsActive && c.InstructorId == currentUserId);
+
+        if (course == null)
+        {
+            logger.LogWarning("Course not found: {CourseId}", courseId);
+            return (false, null, "Khóa học không tồn tại.");
+        }
+        return (true, course, null);
+    }
+
+    private static decimal GetAverageRatingSafe(List<Course> courses)
+    {
+        var withRating = courses.Where(c => c.AvgRating.HasValue).ToList();
+        return withRating.Count > 0 ? withRating.Average(c => c.AvgRating!.Value) : 0;
+    }
+
+    public async Task<ApiResponse<List<CourseSimpleResponse>>> GetAllCoursesAsync(PaginationCourseSearchRequest request)
     {
         try
         {
             var (pageNumber, pageSize) = NormalizePagination(request);
 
+            // Public endpoint: always filter by Published status and active courses
             var (courses, totalCount) = await unitOfWork.CourseRepository.SearchCoursesAsync(
                 pageNumber,
                 pageSize,
                 keyword: request.Keyword,
                 categoryName: request.CategoryName,
                 instructorName: request.InstructorName,
-                status: request.Status,
+                status: CourseStatus.Published,
                 level: request.Level,
                 language: request.Language,
                 minPrice: request.MinPrice,
                 maxPrice: request.MaxPrice,
                 minRating: request.MinRating,
                 minStudents: request.MinStudents,
-                isActive: request.IsActive,
+                isActive: true,
                 isDescending: request.IsDescending,
                 isDescendingPrice: request.IsDescendingPrice,
                 isRandom: request.IsRandom
             );
 
-            var courseResponses = courses.Select(c => c.ToResponse()).ToList();
+            var courseResponses = courses.Select(c => c.ToSimpleResponse()).ToList();
 
-            return ApiResponse<List<CourseResponse>>.SuccessPagedResponse(
+            return ApiResponse<List<CourseSimpleResponse>>.SuccessPagedResponse(
                 courseResponses,
                 totalCount,
                 pageNumber,
@@ -55,7 +123,47 @@ public class CourseService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting all courses");
-            return ApiResponse<List<CourseResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách khóa học.");
+            return ApiResponse<List<CourseSimpleResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách khóa học.");
+        }
+    }
+    public async Task<ApiResponse<List<CourseResponse>>> FullTextSearchCoursesAsync(FullTextSearchRequest request)
+    {
+        try
+        {
+            var pageNumber = request.PageNumber < 1 ? 1 : request.PageNumber;
+            var pageSize = request.PageSize switch
+            {
+                < 1 => 10,
+                > 100 => 100,
+                _ => request.PageSize
+            };
+
+            logger.LogInformation("Full text search courses with keyword: {Keyword}", request.Keyword);
+
+            var (courses, totalCount) = await unitOfWork.CourseRepository.FullTextSearchCoursesAsync(
+                pageNumber,
+                pageSize,
+                request.Keyword ?? string.Empty
+            );
+
+            var courseResponses = courses.Select(c => c.ToResponse()).ToList();
+
+            var message = string.IsNullOrWhiteSpace(request.Keyword)
+                ? "Lấy danh sách khóa học thành công."
+                : "Tìm kiếm khóa học thành công.";
+
+            return ApiResponse<List<CourseResponse>>.SuccessPagedResponse(
+                courseResponses,
+                totalCount,
+                pageNumber,
+                pageSize,
+                message
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error searching courses with keyword: {Keyword}", request.Keyword);
+            return ApiResponse<List<CourseResponse>>.FailureResponse("Đã xảy ra lỗi khi tìm kiếm khóa học.");
         }
     }
 
@@ -68,14 +176,11 @@ public class CourseService(
                 return ApiResponse<CourseResponse>.FailureResponse(categoryValidation.ErrorMessage!);
 
             // Get instructor name
-            var instructorResponse = await identityClient.GetUserByIdAsync(currentUserId);
-            if (!instructorResponse.IsSuccess || instructorResponse.Data == null)
-            {
-                logger.LogWarning("Failed to get instructor info for user: {UserId}", currentUserId);
-                return ApiResponse<CourseResponse>.FailureResponse("Không thể lấy thông tin giảng viên.");
-            }
+            var instructorResponse = await GetInstructorInfoAsync(currentUserId);
+            if (!instructorResponse.IsValid)
+                return ApiResponse<CourseResponse>.FailureResponse(instructorResponse.ErrorMessage!);
 
-            var course = request.ToEntity(currentUserId, instructorResponse.Data.FullName);
+            var course = request.ToEntity(currentUserId, instructorResponse.User!.FullName);
             await unitOfWork.CourseRepository.AddAsync(course);
             await unitOfWork.SaveChangesAsync();
 
@@ -169,7 +274,7 @@ public class CourseService(
         }
     }
 
-    public async Task<ApiResponse<List<CourseResponse>>> GetCoursesByInstructorAsync(Guid instructorId, PaginationCourseSearchRequest request)
+    public async Task<ApiResponse<List<CourseResponse>>> GetCoursesByInstructorAsync(Guid instructorId, PaginationCourseInstructorSearchRequest request)
     {
         try
         {
@@ -177,6 +282,7 @@ public class CourseService(
 
             var (pageNumber, pageSize) = NormalizePagination(request);
 
+            // Instructor can see all their own courses (active only by default)
             var (courses, totalCount) = await unitOfWork.CourseRepository.SearchCoursesInstructorAsync(
                 pageNumber,
                 pageSize,
@@ -190,7 +296,7 @@ public class CourseService(
                 maxPrice: request.MaxPrice,
                 minRating: request.MinRating,
                 minStudents: request.MinStudents,
-                isActive: request.IsActive,
+                isActive: true,
                 isDescendingPrice: request.IsDescendingPrice,
                 isDescending: request.IsDescending,
                 isRandom: request.IsRandom,
@@ -214,7 +320,7 @@ public class CourseService(
         }
     }
 
-    public async Task<ApiResponse<CourseStatsDto>> GetCourseStatsByInstructorAsync(Guid instructorId)
+    public async Task<ApiResponse<CourseStatsResponse>> GetCourseStatsByInstructorAsync(Guid instructorId)
     {
         try
         {
@@ -223,7 +329,7 @@ public class CourseService(
                 .Where(c => c.InstructorId == instructorId && c.IsActive)
                 .ToListAsync();
 
-            var stats = new CourseStatsDto
+            var stats = new CourseStatsResponse
             {
                 TotalCourses = courses.Count,
                 DraftCourses = courses.Count(c => c.Status == CourseStatus.Draft),
@@ -237,12 +343,12 @@ public class CourseService(
                 TotalReviews = courses.Sum(c => c.TotalReviews)
             };
 
-            return ApiResponse<CourseStatsDto>.SuccessResponse(stats, "Lấy thống kê khóa học thành công.");
+            return ApiResponse<CourseStatsResponse>.SuccessResponse(stats, "Lấy thống kê khóa học thành công.");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting course stats for instructor: {InstructorId}", instructorId);
-            return ApiResponse<CourseStatsDto>.FailureResponse("Đã xảy ra lỗi khi lấy thống kê khóa học.");
+            return ApiResponse<CourseStatsResponse>.FailureResponse("Đã xảy ra lỗi khi lấy thống kê khóa học.");
         }
     }
 
@@ -272,7 +378,11 @@ public class CourseService(
                 return ApiResponse<bool>.FailureResponse("Khóa học phải có ít nhất 3 bài học.");
             }
 
-            // TODO: Kiểm tra tất cả video đã upload và transcoded (HLS) trước khi cho submit
+            var isAllVideosUploaded = await ValidateAllVideosUploadedAsync(course);
+            if (!isAllVideosUploaded)
+            {
+                return ApiResponse<bool>.FailureResponse("Tất cả video phải được upload và transcoded (HLS) trước khi cho submit.");
+            }
 
             course.Status = CourseStatus.PendingApproval;
             await unitOfWork.CourseRepository.UpdateAsync(courseId, course);
@@ -286,6 +396,17 @@ public class CourseService(
             logger.LogError(ex, "Error submitting course for approval: {CourseId}", courseId);
             return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi nộp duyệt khóa học.");
         }
+    }
+
+    private async Task<bool> ValidateAllVideosUploadedAsync(Course course)
+    {
+        var lesson = await unitOfWork.LessonRepository.AsQueryable()
+            .Include(l => l.Video)
+            .Include(l => l.Section)
+            .ThenInclude(s => s.Course)
+            .Where(l => l.Section.CourseId == course.Id && l.Video != null)
+            .ToListAsync();
+        return lesson.All(l => !string.IsNullOrEmpty(l.Video!.VideoOriginalUrl) && !string.IsNullOrEmpty(l.Video!.HlsVariants));
     }
 
     public async Task<ApiResponse<bool>> ApproveCourseAsync(Guid courseId, ApproveCourseRequest request)
@@ -308,6 +429,20 @@ public class CourseService(
             course.ApprovalNotes = request.Notes;
             await unitOfWork.CourseRepository.UpdateAsync(courseId, course);
             await unitOfWork.SaveChangesAsync();
+
+            var instructorInfo = await GetInstructorInfoAsync(course.InstructorId);
+            if (!instructorInfo.IsValid)
+                return ApiResponse<bool>.FailureResponse(instructorInfo.ErrorMessage!);
+
+            // Publish event to integration service (email notification)
+            await publishEndpoint.Publish(new CourseApprovedEvent(
+                courseId,
+                course.InstructorId,
+                instructorInfo.User!.Email,
+                instructorInfo.User!.FullName,
+                course.Title,
+                request.Notes,
+                DateTime.UtcNow));
 
             logger.LogInformation("Course approved: {CourseId}", courseId);
             return ApiResponse<bool>.SuccessResponse(true, "Phê duyệt khóa học thành công.");
@@ -340,6 +475,13 @@ public class CourseService(
             await unitOfWork.CourseRepository.UpdateAsync(courseId, course);
             await unitOfWork.SaveChangesAsync();
 
+            var instructorInfor = await GetInstructorInfoAsync(course.InstructorId);
+            if (!instructorInfor.IsValid)
+                return ApiResponse<bool>.FailureResponse(instructorInfor.ErrorMessage!);
+
+            // Publish event to notification service
+            await publishEndpoint.Publish(new CourseRejectedEvent(courseId, course.InstructorId, instructorInfor.User!.Email, instructorInfor.User!.FullName, course.Title, request.Reason, DateTime.UtcNow));
+
             logger.LogInformation("Course rejected: {CourseId}", courseId);
             return ApiResponse<bool>.SuccessResponse(true, "Từ chối khóa học thành công.");
         }
@@ -350,7 +492,7 @@ public class CourseService(
         }
     }
 
-    public async Task<ApiResponse<List<CourseResponse>>> GetAllCoursesForAdminAsync(PaginationCourseSearchRequest request)
+    public async Task<ApiResponse<List<CourseResponse>>> GetAllCoursesForAdminAsync(PaginationCourseAdminSearchRequest request)
     {
         try
         {
@@ -409,6 +551,17 @@ public class CourseService(
             await unitOfWork.CourseRepository.UpdateAsync(courseId, course);
             await unitOfWork.SaveChangesAsync();
 
+            var instructorInfor = await identityClient.GetUserByIdAsync(course.InstructorId);
+            if (!instructorInfor.IsSuccess || instructorInfor.Data == null)
+            {
+                logger.LogWarning("Failed to get instructor info for user: {UserId}", course.InstructorId);
+                return ApiResponse<bool>.FailureResponse("Không thể lấy thông tin giảng viên.");
+            }
+
+            // Publish event to integration service
+            var courseUrl = $"https://beyond8.dev/courses/{course.Slug}";
+            await publishEndpoint.Publish(new CoursePublishedEvent(courseId, course.InstructorId, instructorInfor.Data.Email, instructorInfor.Data.FullName, course.Title, courseUrl, DateTime.UtcNow));
+
             logger.LogInformation("Course published: {CourseId}", courseId);
             return ApiResponse<bool>.SuccessResponse(true, "Công bố khóa học thành công.");
         }
@@ -436,6 +589,9 @@ public class CourseService(
             await unitOfWork.CourseRepository.UpdateAsync(courseId, course);
             await unitOfWork.SaveChangesAsync();
 
+            // Publish event to identity service
+            await publishEndpoint.Publish(new CourseUnpublishedEvent(courseId, course.InstructorId, DateTime.UtcNow));
+
             logger.LogInformation("Course unpublished: {CourseId}", courseId);
             return ApiResponse<bool>.SuccessResponse(true, "Ẩn khóa học thành công.");
         }
@@ -446,66 +602,115 @@ public class CourseService(
         }
     }
 
-    private static (int PageNumber, int PageSize) NormalizePagination(PaginationCourseSearchRequest request)
+    public async Task<ApiResponse<bool>> UpdateCourseThumbnailAsync(Guid courseId, Guid currentUserId, UpdateCourseThumbnailRequest request)
     {
-        var pageNumber = request.PageNumber < 1 ? 1 : request.PageNumber;
-        var pageSize = request.PageSize switch
+        try
         {
-            < 1 => 10,
-            > 100 => 100,
-            _ => request.PageSize
-        };
-        return (pageNumber, pageSize);
-    }
+            var (isValid, course, errorMessage) = await CheckCourseOwnershipAsync(courseId, currentUserId);
+            if (!isValid)
+                return ApiResponse<bool>.FailureResponse(errorMessage!);
 
-    private async Task<(bool IsValid, string? ErrorMessage)> ValidateCategoryExistsAsync(Guid? categoryId)
-    {
-        if (!categoryId.HasValue)
-            return (true, null);
+            course!.ThumbnailUrl = request.ThumbnailUrl;
+            await unitOfWork.CourseRepository.UpdateAsync(courseId, course);
+            await unitOfWork.SaveChangesAsync();
 
-        var category = await unitOfWork.CategoryRepository.FindOneAsync(c => c.Id == categoryId && c.IsActive && !c.IsRoot);
-        if (category == null)
-        {
-            logger.LogWarning("Category not found or inactive: {CategoryId}", categoryId);
-            return (false, "Danh mục không tồn tại hoặc không hoạt động.");
+            logger.LogInformation("Course thumbnail updated successfully: {CourseId}", courseId);
+            return ApiResponse<bool>.SuccessResponse(true, "Cập nhật ảnh đại diện khóa học thành công.");
         }
-        return (true, null);
-    }
-
-    private async Task<(bool IsValid, Course? Course, string? ErrorMessage)> CheckCourseOwnershipAsync(Guid courseId, Guid currentUserId)
-    {
-        var course = await unitOfWork.CourseRepository
-            .AsQueryable()
-            .Include(c => c.Category)
-            .FirstOrDefaultAsync(c => c.Id == courseId && c.IsActive && c.InstructorId == currentUserId);
-
-        if (course == null)
+        catch (Exception ex)
         {
-            logger.LogWarning("Course not found: {CourseId}", courseId);
-            return (false, null, "Khóa học không tồn tại.");
+            logger.LogError(ex, "Error updating course thumbnail: {CourseId}", courseId);
+            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi cập nhật ảnh đại diện khóa học.");
         }
-        return (true, course, null);
     }
 
-    private async Task<(bool IsValid, Course? Course, string? ErrorMessage)> GetCourseWithSectionsForInstructorAsync(Guid courseId, Guid currentUserId)
+    private async Task<(bool IsValid, UserSimpleResponse? User, string? ErrorMessage)> GetInstructorInfoAsync(Guid instructorId)
     {
-        var course = await unitOfWork.CourseRepository
-            .AsQueryable()
-            .Include(c => c.Sections)
-            .ThenInclude(s => s.Lessons)
-            .FirstOrDefaultAsync(c => c.Id == courseId && c.IsActive && c.InstructorId == currentUserId);
-
-        if (course == null)
+        var instructorInfor = await identityClient.GetUserByIdAsync(instructorId);
+        if (!instructorInfor.IsSuccess || instructorInfor.Data == null)
         {
-            logger.LogWarning("Course not found: {CourseId}", courseId);
-            return (false, null, "Khóa học không tồn tại.");
+            logger.LogWarning("Failed to get instructor info for user: {UserId}", instructorId);
+            return (false, null, "Không thể lấy thông tin giảng viên.");
         }
-        return (true, course, null);
+        return (true, instructorInfor.Data, null);
     }
 
-    private static decimal GetAverageRatingSafe(List<Course> courses)
+    public async Task<ApiResponse<CourseSummaryResponse>> GetCourseSummaryAsync(Guid courseId)
     {
-        var withRating = courses.Where(c => c.AvgRating.HasValue).ToList();
-        return withRating.Count > 0 ? withRating.Average(c => c.AvgRating!.Value) : 0;
+        try
+        {
+            var course = await unitOfWork.CourseRepository
+                .AsQueryable()
+                .Include(c => c.Category)
+                .Include(c => c.Sections.Where(s => s.IsPublished))
+                    .ThenInclude(s => s.Lessons.Where(l => l.IsPublished))
+                        .ThenInclude(l => l.Video)
+                .Include(c => c.Sections.Where(s => s.IsPublished))
+                    .ThenInclude(s => s.Lessons.Where(l => l.IsPublished))
+                        .ThenInclude(l => l.Text)
+                .Include(c => c.Sections.Where(s => s.IsPublished))
+                    .ThenInclude(s => s.Lessons.Where(l => l.IsPublished))
+                        .ThenInclude(l => l.Quiz)
+                .FirstOrDefaultAsync(c => c.Id == courseId && c.IsActive && c.Status == CourseStatus.Published);
+
+            if (course == null)
+            {
+                logger.LogWarning("Course not found or not published: {CourseId}", courseId);
+                return ApiResponse<CourseSummaryResponse>.FailureResponse("Khóa học không tồn tại hoặc chưa được xuất bản.");
+            }
+
+            return ApiResponse<CourseSummaryResponse>.SuccessResponse(
+                course.ToSummaryResponse(),
+                "Lấy tóm tắt khóa học thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting course summary: {CourseId}", courseId);
+            return ApiResponse<CourseSummaryResponse>.FailureResponse("Đã xảy ra lỗi khi lấy tóm tắt khóa học.");
+        }
+    }
+
+    public async Task<ApiResponse<CourseDetailResponse>> GetCourseDetailsAsync(Guid courseId, Guid userId)
+    {
+        try
+        {
+            var course = await unitOfWork.CourseRepository
+                .AsQueryable()
+                .Include(c => c.Category)
+                .Include(c => c.Sections.Where(s => s.IsPublished))
+                    .ThenInclude(s => s.Lessons.Where(l => l.IsPublished))
+                        .ThenInclude(l => l.Video)
+                .Include(c => c.Sections.Where(s => s.IsPublished))
+                    .ThenInclude(s => s.Lessons.Where(l => l.IsPublished))
+                        .ThenInclude(l => l.Text)
+                .Include(c => c.Sections.Where(s => s.IsPublished))
+                    .ThenInclude(s => s.Lessons.Where(l => l.IsPublished))
+                        .ThenInclude(l => l.Quiz)
+                .FirstOrDefaultAsync(c => c.Id == courseId && c.IsActive && c.Status == CourseStatus.Published);
+
+            if (course == null)
+            {
+                logger.LogWarning("Course not found or not published: {CourseId}", courseId);
+                return ApiResponse<CourseDetailResponse>.FailureResponse("Khóa học không tồn tại hoặc chưa được xuất bản.");
+            }
+
+            // TODO: Check enrollment when Enrollment service is ready
+            // var isEnrolled = await enrollmentClient.CheckEnrollmentAsync(userId, courseId);
+            // if (!isEnrolled)
+            // {
+            //     return ApiResponse<CourseDetailResponse>.FailureResponse("Bạn chưa đăng ký khóa học này.");
+            // }
+
+            logger.LogInformation("User {UserId} accessed course details: {CourseId}", userId, courseId);
+
+            return ApiResponse<CourseDetailResponse>.SuccessResponse(
+                course.ToDetailResponse(),
+                "Lấy chi tiết khóa học thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting course details: {CourseId}", courseId);
+            return ApiResponse<CourseDetailResponse>.FailureResponse("Đã xảy ra lỗi khi lấy chi tiết khóa học.");
+        }
     }
 }

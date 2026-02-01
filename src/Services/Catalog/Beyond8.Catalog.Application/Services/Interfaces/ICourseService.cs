@@ -10,24 +10,29 @@ public interface ICourseService
     Task<ApiResponse<CourseResponse>> UpdateCourseMetadataAsync(Guid id, Guid currentUserId, UpdateCourseMetadataRequest request);
     Task<ApiResponse<CourseResponse>> GetCourseByIdAsync(Guid id, Guid currentUserId);
     Task<ApiResponse<bool>> DeleteCourseAsync(Guid id, Guid currentUserId);
+    Task<ApiResponse<bool>> UpdateCourseThumbnailAsync(Guid courseId, Guid currentUserId, UpdateCourseThumbnailRequest request);
 
     // Instructor-Specific Operations // luồng 2
-    Task<ApiResponse<List<CourseResponse>>> GetCoursesByInstructorAsync(Guid instructorId, PaginationCourseSearchRequest pagination);
-    Task<ApiResponse<CourseStatsDto>> GetCourseStatsByInstructorAsync(Guid instructorId);
+    Task<ApiResponse<List<CourseResponse>>> GetCoursesByInstructorAsync(Guid instructorId, PaginationCourseInstructorSearchRequest pagination);
+    Task<ApiResponse<CourseStatsResponse>> GetCourseStatsByInstructorAsync(Guid instructorId);
 
     // Phê Duyệt Khóa Học
     Task<ApiResponse<bool>> SubmitForApprovalAsync(Guid courseId, Guid currentUserId);
     Task<ApiResponse<bool>> ApproveCourseAsync(Guid courseId, ApproveCourseRequest request);
     Task<ApiResponse<bool>> RejectCourseAsync(Guid courseId, RejectCourseRequest request);
-    Task<ApiResponse<List<CourseResponse>>> GetAllCoursesForAdminAsync(PaginationCourseSearchRequest pagination);
+    Task<ApiResponse<List<CourseResponse>>> GetAllCoursesForAdminAsync(PaginationCourseAdminSearchRequest pagination);
 
     // Publishing & Public Access // luồng 2
     Task<ApiResponse<bool>> PublishCourseAsync(Guid courseId, Guid currentUserId);
     Task<ApiResponse<bool>> UnpublishCourseAsync(Guid courseId, Guid currentUserId);
-    Task<ApiResponse<List<CourseResponse>>> GetAllCoursesAsync(PaginationCourseSearchRequest request);
+    Task<ApiResponse<List<CourseSimpleResponse>>> GetAllCoursesAsync(PaginationCourseSearchRequest request);
+    Task<ApiResponse<List<CourseResponse>>> FullTextSearchCoursesAsync(FullTextSearchRequest request);
 
-    // Đăng Ký Học // luồng 3 
-    // Task<ApiResponse<CourseDetailResponse>> GetCourseDetailForEnrollmentAsync(Guid courseId);
+    // Public Course Views (for students/visitors)
+    Task<ApiResponse<CourseSummaryResponse>> GetCourseSummaryAsync(Guid courseId);
+    Task<ApiResponse<CourseDetailResponse>> GetCourseDetailsAsync(Guid courseId, Guid userId);
+
+    // Đăng Ký Học // luồng 3
     // Task<ApiResponse<bool>> CheckCourseAccessAsync(Guid courseId, Guid userId);
     // Task<ApiResponse<List<CourseResponse>>> GetEnrolledCoursesAsync(Guid userId, PaginationRequest pagination);
 

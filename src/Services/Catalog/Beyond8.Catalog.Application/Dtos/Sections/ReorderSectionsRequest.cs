@@ -1,5 +1,3 @@
-using Beyond8.Catalog.Application.Dtos.Sections;
-
 namespace Beyond8.Catalog.Application.Dtos.Sections;
 
 public class ReorderSectionsRequest

@@ -60,5 +60,10 @@ namespace Beyond8.Catalog.Domain.Repositories.Interfaces
                 bool? isDescending,
                 bool? isDescendingPrice,
                 bool? isRandom);
+
+        Task<(List<Course> Items, int TotalCount)> FullTextSearchCoursesAsync(
+            int pageNumber,
+            int pageSize,
+            string keyword);
     }
 }

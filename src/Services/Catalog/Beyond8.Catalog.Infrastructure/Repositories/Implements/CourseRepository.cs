@@ -3,12 +3,40 @@ using Beyond8.Catalog.Domain.Enums;
 using Beyond8.Catalog.Domain.Repositories.Interfaces;
 using Beyond8.Catalog.Infrastructure.Data;
 using Beyond8.Common.Data.Implements;
+using Beyond8.Catalog.Application.Helpers;
 using Microsoft.EntityFrameworkCore;
 
 namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
 {
     public class CourseRepository(CatalogDbContext context) : PostgresRepository<Course>(context), ICourseRepository
     {
+        private static IQueryable<Course> ApplyFullTextSearch(IQueryable<Course> query, string? keyword)
+        {
+            if (string.IsNullOrWhiteSpace(keyword))
+                return query;
+
+            var plainText = StringHelper.FormatSearchTermPlain(keyword);
+            if (string.IsNullOrEmpty(plainText))
+                return query;
+
+            // PlainToTsQuery bên trong lambda để EF dịch sang SQL (plainto_tsquery('simple', @p))
+            return query.Where(c => c.SearchVector != null &&
+                c.SearchVector.Matches(EF.Functions.PlainToTsQuery("simple", plainText)));
+        }
+
+        private static IOrderedQueryable<Course> OrderBySearchRank(IQueryable<Course> query, string? keyword)
+        {
+            if (string.IsNullOrWhiteSpace(keyword))
+                return query.OrderByDescending(c => c.CreatedAt);
+
+            var plainText = StringHelper.FormatSearchTermPlain(keyword);
+            if (string.IsNullOrEmpty(plainText))
+                return query.OrderByDescending(c => c.CreatedAt);
+
+            return query.OrderByDescending(c =>
+                c.SearchVector!.Rank(EF.Functions.PlainToTsQuery("simple", plainText)));
+        }
+
         public async Task<(List<Course> Items, int TotalCount)> SearchCoursesAsync(
             int pageNumber,
             int pageSize,
@@ -28,7 +56,11 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
             bool? isRandom)
         {
             var query = context.Courses
-                .Include(c => c.Category).ThenInclude(cat => cat.Parent)
+                .Include(c => c.Category)
+                .ThenInclude(cat => cat.Parent)
+                .Include(c => c.Sections)
+                .ThenInclude(s => s.Lessons)
+                .ThenInclude(l => l.Video)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(keyword))
@@ -370,6 +402,37 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
             {
                 items = items.OrderBy(c => c.Price).ToList();
             }
+
+            return (items, totalCount);
+        }
+
+        public async Task<(List<Course> Items, int TotalCount)> FullTextSearchCoursesAsync(
+            int pageNumber,
+            int pageSize,
+            string keyword)
+        {
+            var query = context.Courses
+                .Include(c => c.Category).ThenInclude(cat => cat.Parent)
+                .Where(c => c.IsActive && c.Status == CourseStatus.Published)
+                .AsQueryable();
+
+            // If keyword is provided, apply full-text search
+            if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                query = ApplyFullTextSearch(query, keyword);
+            }
+
+            var totalCount = await query.CountAsync();
+
+            // Order by search relevance rank if keyword exists, otherwise by creation date
+            IOrderedQueryable<Course> orderedQuery = string.IsNullOrWhiteSpace(keyword)
+                ? query.OrderByDescending(c => c.CreatedAt)
+                : OrderBySearchRank(query, keyword);
+
+            var items = await orderedQuery
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
 
             return (items, totalCount);
         }

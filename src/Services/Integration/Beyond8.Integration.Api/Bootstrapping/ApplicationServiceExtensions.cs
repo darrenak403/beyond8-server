@@ -5,6 +5,7 @@ using Beyond8.Common.Extensions;
 using Beyond8.Common.Utilities;
 using Beyond8.Integration.Api.Apis;
 using Beyond8.Integration.Application.Clients;
+using Beyond8.Integration.Application.Consumers.Catalog;
 using Beyond8.Integration.Application.Consumers.Identity;
 using Beyond8.Integration.Application.Dtos.MediaFiles;
 using Beyond8.Integration.Application.Services.Implements;
@@ -125,6 +126,10 @@ namespace Beyond8.Integration.Api.Bootstrapping
                 config.AddConsumer<InstructorProfileSubmittedConsumer>();
                 config.AddConsumer<InstructorApprovalConsumer>();
                 config.AddConsumer<InstructorUpdateRequestEmailConsumer>();
+
+                // Register consumers from Catalog events
+                config.AddConsumer<CourseRejectedEventConsumer>();
+                config.AddConsumer<CourseApprovedEventConsumer>();
             });
 
             // Configure Qdrant - Use Aspire Qdrant Client

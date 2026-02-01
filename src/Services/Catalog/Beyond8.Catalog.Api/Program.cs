@@ -14,9 +14,8 @@ await app.MigrateDbContextAsync<CatalogDbContext>(async (database, cancellationT
     using var scope = app.Services.CreateScope();
     var context = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
     await CatalogSeedData.SeedCategoriesAsync(context);
-    // await CatalogSeedData.SeedCoursesAsync(context); // Tạm thời comment out vì method chưa tồn tại
+    await CatalogSeedData.SeedCoursesAsync(context);
 });
 
 app.UseApplicationServices();
-
 app.Run();

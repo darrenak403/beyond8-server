@@ -1,0 +1,22 @@
+using Beyond8.Common.Clients;
+using Beyond8.Common.Utilities;
+using Microsoft.AspNetCore.Http;
+
+namespace Beyond8.Assessment.Application.Clients.Catalog
+{
+    public class CatalogService(HttpClient httpClient, IHttpContextAccessor httpContextAccessor) : BaseClient(httpClient, httpContextAccessor), ICatalogService
+    {
+        public async Task<ApiResponse<bool>> UpdateQuizForLessonAsync(Guid lessonId, Guid? quizId)
+        {
+            try
+            {
+                var response = await PatchAsync<bool>($"/api/v1/lessons/{lessonId}/update-quiz", new { QuizId = quizId });
+                return ApiResponse<bool>.SuccessResponse(response, "Quiz updated successfully");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<bool>.FailureResponse(ex.Message);
+            }
+        }
+    }
+}

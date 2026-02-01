@@ -1,4 +1,3 @@
-using System.Linq;
 using System.Text.Json;
 using Beyond8.Catalog.Application.Dtos.Lessons;
 using Beyond8.Catalog.Application.Mappings.LessonMappings;
@@ -9,14 +8,17 @@ using Beyond8.Catalog.Domain.Repositories.Interfaces;
 using Beyond8.Common.Utilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using MassTransit;
+using Beyond8.Common.Events.Catalog;
 
 namespace Beyond8.Catalog.Application.Services.Implements;
 
 public class LessonService(
     ILogger<LessonService> logger,
-    IUnitOfWork unitOfWork) : ILessonService
+    IUnitOfWork unitOfWork,
+    IPublishEndpoint publishEndpoint) : ILessonService
 {
-    public async Task<ApiResponse<bool>> CallbackHlsAsync(VideoCallbackDto request)
+    public async Task<ApiResponse<bool>> CallbackHlsAsync(VideoCallbackRequest request)
     {
         try
         {
@@ -24,15 +26,22 @@ public class LessonService(
             logger.LogInformation("Transcoding data: {TranscodingData}", JsonSerializer.Serialize(request.TranscodingData));
             var lesson = await unitOfWork.LessonRepository.AsQueryable()
                 .Include(l => l.Video)
+                .Include(l => l.Section)
+                .ThenInclude(s => s.Course)
                 .FirstOrDefaultAsync(x => x.Video != null && (string.IsNullOrEmpty(x.Video.VideoOriginalUrl) || x.Video.VideoOriginalUrl.Contains(request.OriginalKey)));
+
             if (lesson == null)
             {
                 logger.LogWarning("Lesson not found with original key: {OriginalKey}", request.OriginalKey);
                 return ApiResponse<bool>.FailureResponse("Bài học không tồn tại.");
             }
+
             lesson.Video!.HlsVariants = JsonSerializer.Serialize(request.TranscodingData.Variants);
             await unitOfWork.LessonVideoRepository.UpdateAsync(lesson.Video.Id, lesson.Video);
             await unitOfWork.SaveChangesAsync();
+
+            await publishEndpoint.Publish(new TranscodingVideoSuccessEvent(lesson.Section.Course.InstructorId, lesson.Id, lesson.Title));
+
             return ApiResponse<bool>.SuccessResponse(true, "Cập nhật HLS thành công.");
         }
         catch (Exception ex)
@@ -41,6 +50,7 @@ public class LessonService(
             return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi cập nhật HLS.");
         }
     }
+
     public async Task<ApiResponse<List<LessonResponse>>> GetLessonsBySectionIdAsync(Guid sectionId, Guid currentUserId)
     {
         try
@@ -451,34 +461,30 @@ public class LessonService(
         }
     }
 
-    public async Task<ApiResponse<bool>> ChangeQuizForLessonAsync(Guid lessonId, Guid? quizId, Guid currentUserId)
-    {
-        try
+    public async Task<ApiResponse<bool>> UpdateQuizForLessonAsync(Guid lessonId, Guid? quizId, Guid currentUserId)
         {
-            // Validate lesson ownership
-            var (isValid, lesson, errorMessage) = await CheckLessonOwnershipAsync(lessonId, currentUserId);
-            if (!isValid)
-                return ApiResponse<bool>.FailureResponse(errorMessage!);
-
-            if (lesson!.Quiz != null)
+            try
             {
-                lesson.Quiz.QuizId = quizId;
-                await unitOfWork.LessonQuizRepository.UpdateAsync(lesson.Quiz.Id!, lesson.Quiz!);
+                // Validate lesson ownership
+                var (isValid, lesson, errorMessage) = await CheckLessonOwnershipAsync(lessonId, currentUserId);
+                if (!isValid)
+                    return ApiResponse<bool>.FailureResponse(errorMessage!);
+
+                var previousQuizId = lesson!.Quiz?.QuizId;
+                lesson.Quiz!.QuizId = quizId;
+                await unitOfWork.LessonQuizRepository.UpdateAsync(lesson.Id, lesson.Quiz!);
                 await unitOfWork.SaveChangesAsync();
+
+                if (quizId == null && previousQuizId != null)
+                    await publishEndpoint.Publish(new LessonQuizUnlinkedEvent(lessonId, previousQuizId.Value));
 
                 logger.LogInformation("Quiz ID updated for lesson: {LessonId} by user {UserId}", lessonId, currentUserId);
                 return ApiResponse<bool>.SuccessResponse(true, "Cập nhật Quiz ID cho bài học thành công.");
             }
-            else
-            {
-                logger.LogWarning("Lesson {LessonId} does not have a quiz entity to update", lessonId);
-                return ApiResponse<bool>.FailureResponse("Bài học này không có quiz để cập nhật.");
-            }
-        }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error changing quiz for lesson: {LessonId}", lessonId);
-            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi thay đổi quiz cho bài học.");
+            logger.LogError(ex, "Error updating quiz for lesson: {LessonId}", lessonId);
+            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi cập nhật quiz cho bài học.");
         }
     }
 

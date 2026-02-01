@@ -205,10 +205,10 @@ namespace Beyond8.Identity.Api.Apis
         }
 
         private static async Task<IResult> CheckInstructorProfileVerifiedAsync(
-            [FromServices] ICurrentUserService currentUserService,
+            [FromRoute] Guid id,
             [FromServices] IInstructorService instructorService)
         {
-            var response = await instructorService.CheckInstructorProfileVerifiedAsync(currentUserService.UserId);
+            var response = await instructorService.CheckInstructorProfileVerifiedAsync(id);
             return response.IsSuccess
                             ? Results.Ok(response)
                             : Results.BadRequest(response);

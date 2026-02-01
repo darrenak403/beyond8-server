@@ -1,4 +1,3 @@
-using Beyond8.Identity.Application.Dtos;
 using Beyond8.Identity.Application.Dtos.Users;
 using Beyond8.Identity.Domain.Entities;
 using Beyond8.Identity.Domain.Enums;

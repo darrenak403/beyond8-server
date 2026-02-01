@@ -98,11 +98,15 @@ namespace Beyond8.AppHost.Extensions
                     config.AddRoute("/api/v1/courses/{**catch-all}", catalogCluster);
                     config.AddRoute("/api/v1/sections/{**catch-all}", catalogCluster);
                     config.AddRoute("/api/v1/lessons/{**catch-all}", catalogCluster);
+                    config.AddRoute("/api/v1/course-documents/{**catch-all}", catalogCluster);
+                    config.AddRoute("/api/v1/lesson-documents/{**catch-all}", catalogCluster);
 
                     var assessmentCluster = config.AddProjectCluster(assessmentService);
                     config.AddRoute("/api/v1/questions/{**catch-all}", assessmentCluster);
                     config.AddRoute("/api/v1/quizzes/{**catch-all}", assessmentCluster);
-
+                    config.AddRoute("/api/v1/quiz-attempts/{**catch-all}", assessmentCluster);
+                    config.AddRoute("/api/v1/assignments/{**catch-all}", assessmentCluster);
+                    config.AddRoute("/api/v1/assignment-submissions/{**catch-all}", assessmentCluster);
 
                     // SignalR hub route
                     config.AddRoute("/hubs/{**catch-all}", integrationCluster);

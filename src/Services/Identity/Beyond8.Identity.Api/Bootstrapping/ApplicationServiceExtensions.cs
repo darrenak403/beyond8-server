@@ -1,6 +1,7 @@
 using Beyond8.Common.Extensions;
 using Beyond8.Common.Utilities;
 using Beyond8.Identity.Api.Apis;
+using Beyond8.Identity.Application.Consumers.Catalog;
 using Beyond8.Identity.Application.Dtos.Auth;
 using Beyond8.Identity.Application.Services.Implements;
 using Beyond8.Identity.Application.Services.Interfaces;
@@ -28,8 +29,13 @@ namespace Beyond8.Identity.Api.Bootstrapping
 
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-            // Configure MassTransit with RabbitMQ 
-            builder.AddMassTransitWithRabbitMq();
+            // Configure MassTransit with RabbitMQ
+            builder.AddMassTransitWithRabbitMq(config =>
+            {
+                // Register consumers from Catalog events
+                config.AddConsumer<CoursePublishedEventConsumer>();
+                config.AddConsumer<CourseUnpublishedEventConsumer>();
+            });
 
             // Register services
             builder.Services.AddScoped<PasswordHasher<User>>();

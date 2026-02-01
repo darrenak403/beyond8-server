@@ -1,6 +1,6 @@
 using Beyond8.Catalog.Application.Dtos.Categories;
 using Beyond8.Catalog.Domain.Entities;
-using Beyond8.Common.Utilities;
+using Beyond8.Catalog.Application.Helpers;
 
 namespace Beyond8.Catalog.Application.Mappings.CategoyMappings
 {
