@@ -20,8 +20,8 @@ namespace Beyond8.Integration.Application.Validators.MediaFiles
                 .MaximumLength(200).WithMessage("Content type không được vượt quá 200 ký tự");
 
             RuleFor(x => x.Size)
-                .GreaterThan(0).WithMessage("Kích thước file phải lớn hơn 0")
-                .LessThanOrEqualTo(10485760).WithMessage("Kích thước file không được vượt quá 10MB");
+                .GreaterThan(0).WithMessage("Kích thước file phải lớn hơn 0");
+            // Note: Size limit is set in specific validator factories (ForAvatar, ForCourseVideo, etc.)
         }
 
         public static UploadFileRequestValidator ForAvatar()
