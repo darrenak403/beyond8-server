@@ -125,6 +125,44 @@ public class CourseService(
             return ApiResponse<List<CourseResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách khóa học.");
         }
     }
+    public async Task<ApiResponse<List<CourseResponse>>> FullTextSearchCoursesAsync(FullTextSearchRequest request)
+    {
+        try
+        {
+            var pageNumber = request.PageNumber < 1 ? 1 : request.PageNumber;
+            var pageSize = request.PageSize switch
+            {
+                < 1 => 10,
+                > 100 => 100,
+                _ => request.PageSize
+            };
+
+            var (courses, totalCount) = await unitOfWork.CourseRepository.FullTextSearchCoursesAsync(
+                pageNumber,
+                pageSize,
+                request.Keyword ?? string.Empty
+            );
+
+            var courseResponses = courses.Select(c => c.ToResponse()).ToList();
+
+            var message = string.IsNullOrWhiteSpace(request.Keyword)
+                ? "Lấy danh sách khóa học thành công."
+                : "Tìm kiếm khóa học thành công.";
+
+            return ApiResponse<List<CourseResponse>>.SuccessPagedResponse(
+                courseResponses,
+                totalCount,
+                pageNumber,
+                pageSize,
+                message
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error searching courses with keyword: {Keyword}", request.Keyword);
+            return ApiResponse<List<CourseResponse>>.FailureResponse("Đã xảy ra lỗi khi tìm kiếm khóa học.");
+        }
+    }
 
     public async Task<ApiResponse<CourseResponse>> CreateCourseAsync(CreateCourseRequest request, Guid currentUserId)
     {

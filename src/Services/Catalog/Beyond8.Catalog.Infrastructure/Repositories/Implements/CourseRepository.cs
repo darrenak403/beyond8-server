@@ -3,12 +3,50 @@ using Beyond8.Catalog.Domain.Enums;
 using Beyond8.Catalog.Domain.Repositories.Interfaces;
 using Beyond8.Catalog.Infrastructure.Data;
 using Beyond8.Common.Data.Implements;
+using Beyond8.Common.Utilities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
 {
     public class CourseRepository(CatalogDbContext context) : PostgresRepository<Course>(context), ICourseRepository
     {
+        /// <summary>
+        /// Applies full-text search filter using PostgreSQL tsvector.
+        /// Uses EF.Functions.ToTsQuery for server-side query parsing.
+        /// </summary>
+        private static IQueryable<Course> ApplyFullTextSearch(IQueryable<Course> query, string? keyword)
+        {
+            if (string.IsNullOrWhiteSpace(keyword))
+                return query;
+
+            var searchTerm = StringHelper.FormatSearchTerm(keyword);
+            if (string.IsNullOrEmpty(searchTerm))
+                return query;
+
+            // searchTerm đã được unaccent ở client-side (StringHelper.FormatSearchTerm)
+            // không cần gọi unaccent() trong DB nữa
+            return query.Where(c => c.SearchVector != null &&
+                c.SearchVector.Matches(EF.Functions.ToTsQuery("simple", searchTerm)));
+        }
+
+        /// <summary>
+        /// Orders query by full-text search relevance (rank).
+        /// Title matches are weighted higher than description matches.
+        /// </summary>
+        private static IOrderedQueryable<Course> OrderBySearchRank(IQueryable<Course> query, string? keyword)
+        {
+            if (string.IsNullOrWhiteSpace(keyword))
+                return query.OrderByDescending(c => c.CreatedAt);
+
+            var searchTerm = StringHelper.FormatSearchTerm(keyword);
+            if (string.IsNullOrEmpty(searchTerm))
+                return query.OrderByDescending(c => c.CreatedAt);
+
+            // searchTerm đã được unaccent ở client-side
+            return query.OrderByDescending(c =>
+                c.SearchVector!.Rank(EF.Functions.ToTsQuery("simple", searchTerm)));
+        }
+
         public async Task<(List<Course> Items, int TotalCount)> SearchCoursesAsync(
             int pageNumber,
             int pageSize,
@@ -370,6 +408,44 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
             {
                 items = items.OrderBy(c => c.Price).ToList();
             }
+
+            return (items, totalCount);
+        }
+
+        /// <summary>
+        /// Full-text search for courses using PostgreSQL tsvector.
+        /// If no keyword is provided, returns all published and active courses.
+        /// Supports Vietnamese diacritics (e.g., "lap trinh" matches "Lập trình").
+        /// Results are ranked by relevance: Title > ShortDescription > Description > InstructorName.
+        /// Only returns Published and Active courses.
+        /// </summary>
+        public async Task<(List<Course> Items, int TotalCount)> FullTextSearchCoursesAsync(
+            int pageNumber,
+            int pageSize,
+            string keyword)
+        {
+            var query = context.Courses
+                .Include(c => c.Category).ThenInclude(cat => cat.Parent)
+                .Where(c => c.IsActive && c.Status == CourseStatus.Published)
+                .AsQueryable();
+
+            // If keyword is provided, apply full-text search
+            if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                query = ApplyFullTextSearch(query, keyword);
+            }
+
+            var totalCount = await query.CountAsync();
+
+            // Order by search relevance rank if keyword exists, otherwise by creation date
+            IOrderedQueryable<Course> orderedQuery = string.IsNullOrWhiteSpace(keyword)
+                ? query.OrderByDescending(c => c.CreatedAt)
+                : OrderBySearchRank(query, keyword);
+
+            var items = await orderedQuery
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
 
             return (items, totalCount);
         }

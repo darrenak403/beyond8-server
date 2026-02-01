@@ -18,6 +18,9 @@ namespace Beyond8.Catalog.Infrastructure.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            // Enable unaccent extension for Vietnamese diacritics support
+            modelBuilder.HasPostgresExtension("unaccent");
+
             modelBuilder.Entity<Category>(entity =>
             {
                 entity.HasQueryFilter(e => e.DeletedAt == null);
@@ -25,6 +28,15 @@ namespace Beyond8.Catalog.Infrastructure.Data
             modelBuilder.Entity<Course>(entity =>
             {
                 entity.HasQueryFilter(e => e.DeletedAt == null);
+
+                // Configure SearchVector for full-text search
+                entity.Property(c => c.SearchVector)
+                    .HasColumnType("tsvector")
+                    .ValueGeneratedOnAddOrUpdate();
+
+                // Create GIN index for fast full-text search
+                entity.HasIndex(c => c.SearchVector)
+                    .HasMethod("GIN");
             });
             modelBuilder.Entity<Section>(entity =>
             {

@@ -60,5 +60,15 @@ namespace Beyond8.Catalog.Domain.Repositories.Interfaces
                 bool? isDescending,
                 bool? isDescendingPrice,
                 bool? isRandom);
+
+        /// <summary>
+        /// Full-text search for courses using PostgreSQL tsvector.
+        /// Supports Vietnamese diacritics (e.g., "lap trinh" matches "Lập trình").
+        /// Results are ranked by relevance: Title > ShortDescription > Description > InstructorName.
+        /// </summary>
+        Task<(List<Course> Items, int TotalCount)> FullTextSearchCoursesAsync(
+            int pageNumber,
+            int pageSize,
+            string keyword);
     }
 }

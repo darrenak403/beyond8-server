@@ -9,13 +9,14 @@ builder.AddApplicationServices();
 
 var app = builder.Build();
 
-await app.MigrateDbContextAsync<CatalogDbContext>(async (database, cancellationToken) =>
+await app.MigrateDbContextAsync<CatalogDbContext>();
+
+// Seed data after migration
+using (var scope = app.Services.CreateScope())
 {
-    using var scope = app.Services.CreateScope();
     var context = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
     await CatalogSeedData.SeedCategoriesAsync(context);
-    // await CatalogSeedData.SeedCoursesAsync(context); // Tạm thời comment out vì method chưa tồn tại
-});
+}
 
 app.UseApplicationServices();
 
