@@ -72,14 +72,11 @@ public class CourseService(
                 return ApiResponse<CourseResponse>.FailureResponse(categoryValidation.ErrorMessage!);
 
             // Get instructor name
-            var instructorResponse = await identityClient.GetUserByIdAsync(currentUserId);
-            if (!instructorResponse.IsSuccess || instructorResponse.Data == null)
-            {
-                logger.LogWarning("Failed to get instructor info for user: {UserId}", currentUserId);
-                return ApiResponse<CourseResponse>.FailureResponse("Không thể lấy thông tin giảng viên.");
-            }
+            var instructorResponse = await GetInstructorInfoAsync(currentUserId);
+            if (!instructorResponse.IsValid)
+                return ApiResponse<CourseResponse>.FailureResponse(instructorResponse.ErrorMessage!);
 
-            var course = request.ToEntity(currentUserId, instructorResponse.Data.FullName);
+            var course = request.ToEntity(currentUserId, instructorResponse.User!.FullName);
             await unitOfWork.CourseRepository.AddAsync(course);
             await unitOfWork.SaveChangesAsync();
 
@@ -328,19 +325,16 @@ public class CourseService(
             await unitOfWork.CourseRepository.UpdateAsync(courseId, course);
             await unitOfWork.SaveChangesAsync();
 
-            var instructorInfo = await identityClient.GetUserByIdAsync(course.InstructorId);
-            if (!instructorInfo.IsSuccess || instructorInfo.Data == null)
-            {
-                logger.LogWarning("Failed to get instructor info for user: {UserId}", course.InstructorId);
-                return ApiResponse<bool>.FailureResponse("Không thể lấy thông tin giảng viên.");
-            }
+            var instructorInfo = await GetInstructorInfoAsync(course.InstructorId);
+            if (!instructorInfo.IsValid)
+                return ApiResponse<bool>.FailureResponse(instructorInfo.ErrorMessage!);
 
             // Publish event to integration service (email notification)
             await publishEndpoint.Publish(new CourseApprovedEvent(
                 courseId,
                 course.InstructorId,
-                instructorInfo.Data.Email,
-                instructorInfo.Data.FullName,
+                instructorInfo.User!.Email,
+                instructorInfo.User!.FullName,
                 course.Title,
                 request.Notes,
                 DateTime.UtcNow));
@@ -376,15 +370,12 @@ public class CourseService(
             await unitOfWork.CourseRepository.UpdateAsync(courseId, course);
             await unitOfWork.SaveChangesAsync();
 
-            var instructorInfor = await identityClient.GetUserByIdAsync(course.InstructorId);
-            if (!instructorInfor.IsSuccess || instructorInfor.Data == null)
-            {
-                logger.LogWarning("Failed to get instructor info for user: {UserId}", course.InstructorId);
-                return ApiResponse<bool>.FailureResponse("Không thể lấy thông tin giảng viên.");
-            }
+            var instructorInfor = await GetInstructorInfoAsync(course.InstructorId);
+            if (!instructorInfor.IsValid)
+                return ApiResponse<bool>.FailureResponse(instructorInfor.ErrorMessage!);
 
             // Publish event to notification service
-            await publishEndpoint.Publish(new CourseRejectedEvent(courseId, course.InstructorId, instructorInfor.Data.Email, instructorInfor.Data.FullName, course.Title, request.Reason, DateTime.UtcNow));
+            await publishEndpoint.Publish(new CourseRejectedEvent(courseId, course.InstructorId, instructorInfor.User!.Email, instructorInfor.User!.FullName, course.Title, request.Reason, DateTime.UtcNow));
 
             logger.LogInformation("Course rejected: {CourseId}", courseId);
             return ApiResponse<bool>.SuccessResponse(true, "Từ chối khóa học thành công.");

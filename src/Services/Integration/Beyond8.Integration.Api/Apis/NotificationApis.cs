@@ -36,6 +36,15 @@ namespace Beyond8.Integration.Api.Apis
                 .Produces<ApiResponse<List<NotificationResponse>>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
+            // Staff endpoints
+            group.MapGet("/staff", GetStaffNotifications)
+                .WithName("GetStaffNotifications")
+                .WithDescription("Lấy danh sách thông báo cho Staff Dashboard")
+                .Produces<ApiResponse<List<NotificationResponse>>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<List<NotificationResponse>>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized)
+                .RequireAuthorization(x => x.RequireRole(Role.Staff, Role.Admin));
+
             group.MapGet("/student/status", GetStudentNotificationStatus)
                 .WithName("GetStudentNotificationStatus")
                 .WithDescription("Lấy trạng thái thông báo cho Student Dashboard")
@@ -49,6 +58,14 @@ namespace Beyond8.Integration.Api.Apis
                 .Produces<ApiResponse<NotificationStatusResponse>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<NotificationStatusResponse>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
+
+            group.MapGet("/staff/status", GetStaffNotificationStatus)
+                .WithName("GetStaffNotificationStatus")
+                .WithDescription("Lấy trạng thái thông báo cho Staff Dashboard")
+                .Produces<ApiResponse<NotificationStatusResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<NotificationStatusResponse>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized)
+                .RequireAuthorization(x => x.RequireRole(Role.Staff, Role.Admin));
 
             group.MapPut("/student/read-all", ReadAllStudentNotifications)
                 .WithName("ReadAllStudentNotifications")
@@ -64,30 +81,9 @@ namespace Beyond8.Integration.Api.Apis
                 .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
-            group.MapGet("/my-notifications", GetMyNotifications)
-                .WithName("GetMyNotifications")
-                .WithDescription("Lấy danh sách thông báo của người dùng hiện tại (Admin/Staff/User thông thường)")
-                .Produces<ApiResponse<List<NotificationResponse>>>(StatusCodes.Status200OK)
-                .Produces<ApiResponse<List<NotificationResponse>>>(StatusCodes.Status400BadRequest)
-                .Produces(StatusCodes.Status401Unauthorized);
-
-            group.MapGet("/instructor-notifications", GetInstructorNotifications)
-                .WithName("GetInstructorNotifications")
-                .WithDescription("[Deprecated] Sử dụng /instructor thay thế")
-                .Produces<ApiResponse<InstructorNotificationResponse>>(StatusCodes.Status200OK)
-                .Produces<ApiResponse<InstructorNotificationResponse>>(StatusCodes.Status400BadRequest)
-                .Produces(StatusCodes.Status401Unauthorized);
-
             group.MapPut("/{id:guid}/read", ReadNotification)
                 .WithName("ReadNotification")
                 .WithDescription("Đánh dấu thông báo đã đọc")
-                .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
-                .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
-                .Produces(StatusCodes.Status401Unauthorized);
-
-            group.MapPut("/read-all", ReadAllNotifications)
-                .WithName("ReadAllNotification")
-                .WithDescription("Đánh dấu tất cả thông báo đã đọc (tất cả context)")
                 .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
@@ -105,37 +101,6 @@ namespace Beyond8.Integration.Api.Apis
                 .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
-
-            group.MapDelete("/delete-all", DeleteAllNotifications)
-                .WithName("DeleteAllNotification")
-                .WithDescription("Xóa tất cả thông báo (tất cả context)")
-                .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
-                .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
-                .Produces(StatusCodes.Status401Unauthorized);
-
-            group.MapGet("/status", GetNotificationStatus)
-                .WithName("GetNotificationStatus")
-                .WithDescription("Lấy trạng thái thông báo (tất cả context)")
-                .Produces<ApiResponse<NotificationStatusResponse>>(StatusCodes.Status200OK)
-                .Produces<ApiResponse<NotificationStatusResponse>>(StatusCodes.Status400BadRequest)
-                .Produces(StatusCodes.Status401Unauthorized);
-
-            // Staff endpoints
-            group.MapGet("/staff", GetStaffNotifications)
-                .WithName("GetStaffNotifications")
-                .WithDescription("Lấy danh sách thông báo cho Staff Dashboard")
-                .Produces<ApiResponse<List<NotificationResponse>>>(StatusCodes.Status200OK)
-                .Produces<ApiResponse<List<NotificationResponse>>>(StatusCodes.Status400BadRequest)
-                .Produces(StatusCodes.Status401Unauthorized)
-                .RequireAuthorization(x => x.RequireRole(Role.Staff, Role.Admin));
-
-            group.MapGet("/staff/status", GetStaffNotificationStatus)
-                .WithName("GetStaffNotificationStatus")
-                .WithDescription("Lấy trạng thái thông báo cho Staff Dashboard")
-                .Produces<ApiResponse<NotificationStatusResponse>>(StatusCodes.Status200OK)
-                .Produces<ApiResponse<NotificationStatusResponse>>(StatusCodes.Status400BadRequest)
-                .Produces(StatusCodes.Status401Unauthorized)
-                .RequireAuthorization(x => x.RequireRole(Role.Staff, Role.Admin));
 
             // Admin endpoints
             group.MapGet("/admin/logs", GetAllNotificationLogs)
@@ -266,22 +231,6 @@ namespace Beyond8.Integration.Api.Apis
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
 
-        private static async Task<IResult> GetNotificationStatus(
-            [FromServices] INotificationHistoryService notificationHistoryService,
-            [FromServices] ICurrentUserService currentUserService)
-        {
-            var result = await notificationHistoryService.GetNotificationStatusAsync(currentUserService.UserId);
-            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
-        }
-
-        private static async Task<IResult> DeleteAllNotifications(
-            [FromServices] INotificationHistoryService notificationHistoryService,
-            [FromServices] ICurrentUserService currentUserService)
-        {
-            var result = await notificationHistoryService.DeleteAllNotificationAsync(currentUserService.UserId);
-            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
-        }
-
         private static async Task<IResult> DeleteNotification(
             [FromRoute] Guid id,
             [FromServices] INotificationHistoryService notificationHistoryService,
@@ -300,14 +249,6 @@ namespace Beyond8.Integration.Api.Apis
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
 
-        private static async Task<IResult> ReadAllNotifications(
-            [FromServices] INotificationHistoryService notificationHistoryService,
-            [FromServices] ICurrentUserService currentUserService)
-        {
-            var result = await notificationHistoryService.ReadAllNotificationAsync(currentUserService.UserId);
-            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
-        }
-
         private static async Task<IResult> ReadNotification(
             [FromRoute] Guid id,
             [FromServices] INotificationHistoryService notificationHistoryService,
@@ -317,54 +258,5 @@ namespace Beyond8.Integration.Api.Apis
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
 
-        private static async Task<IResult> GetMyNotifications(
-            [FromServices] INotificationHistoryService notificationHistoryService,
-            [FromServices] ICurrentUserService currentUserService,
-            [AsParameters] PaginationNotificationRequest pagination)
-        {
-            var userId = currentUserService.UserId;
-            var userRoles = GetUserRoles(currentUserService);
-
-            var result = await notificationHistoryService.GetMyNotificationsAsync(
-                userId,
-                userRoles,
-                pagination);
-
-            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
-        }
-
-        private static async Task<IResult> GetInstructorNotifications(
-            [FromServices] INotificationHistoryService notificationHistoryService,
-            [FromServices] ICurrentUserService currentUserService,
-            [AsParameters] PaginationNotificationRequest pagination)
-        {
-            var userId = currentUserService.UserId;
-
-            if (!currentUserService.IsInRole(Role.Instructor))
-            {
-                return Results.BadRequest(ApiResponse<InstructorNotificationResponse>.FailureResponse(
-                    "Chỉ Instructor mới có thể truy cập endpoint này."));
-            }
-
-            var result = await notificationHistoryService.GetInstructorNotificationsAsync(userId, pagination);
-
-            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
-        }
-
-        private static List<string> GetUserRoles(ICurrentUserService currentUserService)
-        {
-            var roles = new List<string>();
-
-            if (currentUserService.IsInRole(Role.Admin))
-                roles.Add(Role.Admin);
-            if (currentUserService.IsInRole(Role.Staff))
-                roles.Add(Role.Staff);
-            if (currentUserService.IsInRole(Role.Instructor))
-                roles.Add(Role.Instructor);
-            if (currentUserService.IsInRole(Role.Student))
-                roles.Add(Role.Student);
-
-            return roles;
-        }
     }
 }

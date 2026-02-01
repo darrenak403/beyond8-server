@@ -13,45 +13,6 @@ namespace Beyond8.Integration.Application.Services.Implements
         ILogger<NotificationHistoryService> logger
     ) : INotificationHistoryService
     {
-        public async Task<ApiResponse<List<NotificationResponse>>> GetMyNotificationsAsync(
-            Guid userId,
-            List<string> userRoles,
-            PaginationNotificationRequest pagination)
-        {
-            try
-            {
-                // Determine allowed targets based on user roles
-                var allowedTargets = GetAllowedTargets(userRoles);
-
-                var result = await unitOfWork.NotificationRepository.GetNotificationsByUserAndRolesAsync(
-                    userId,
-                    allowedTargets,
-                    pagination.PageNumber,
-                    pagination.PageSize,
-                    pagination.Status,
-                    pagination.Channel,
-                    pagination.IsRead);
-
-                var notifications = result.Items.Select(n => n.ToNotificationResponse(userId)).ToList();
-
-                logger.LogInformation("Retrieved {Count} notifications for user {UserId} with roles {Roles}",
-                    notifications.Count, userId, string.Join(", ", userRoles));
-
-                return ApiResponse<List<NotificationResponse>>.SuccessPagedResponse(
-                    notifications,
-                    result.TotalCount,
-                    pagination.PageNumber,
-                    pagination.PageSize,
-                    "Lấy danh sách thông báo thành công.");
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error retrieving notifications for user {UserId}", userId);
-                return ApiResponse<List<NotificationResponse>>.FailureResponse(
-                    "Đã xảy ra lỗi khi lấy danh sách thông báo.");
-            }
-        }
-
         public async Task<ApiResponse<List<NotificationResponse>>> GetNotificationsByContextAsync(
             Guid userId,
             NotificationContext context,
@@ -86,68 +47,6 @@ namespace Beyond8.Integration.Application.Services.Implements
                 return ApiResponse<List<NotificationResponse>>.FailureResponse(
                     "Đã xảy ra lỗi khi lấy danh sách thông báo.");
             }
-        }
-
-        public async Task<ApiResponse<InstructorNotificationResponse>> GetInstructorNotificationsAsync(
-            Guid userId,
-            PaginationNotificationRequest pagination)
-        {
-            try
-            {
-                var instructorTargets = new List<NotificationTarget> { NotificationTarget.AllInstructor };
-                var instructorResult = await unitOfWork.NotificationRepository.GetNotificationsByUserAndRolesAsync(
-                    userId,
-                    instructorTargets,
-                    pagination.PageNumber,
-                    pagination.PageSize,
-                    pagination.Status,
-                    pagination.Channel,
-                    pagination.IsRead);
-
-                var response = new InstructorNotificationResponse
-                {
-                    InstructorNotifications = new NotificationSection
-                    {
-                        Items = [.. instructorResult.Items.Select(n => n.ToNotificationResponse(userId)).ToList()],
-                        TotalCount = instructorResult.TotalCount,
-                        PageNumber = pagination.PageNumber,
-                        PageSize = pagination.PageSize
-                    }
-                };
-
-                logger.LogInformation("Retrieved {InstructorCount} instructor notifications for user {UserId}",
-                    response.InstructorNotifications.Items.Count, userId);
-
-                return ApiResponse<InstructorNotificationResponse>.SuccessResponse(
-                    response,
-                    "Lấy danh sách thông báo thành công.");
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error retrieving instructor notifications for user {UserId}", userId);
-                return ApiResponse<InstructorNotificationResponse>.FailureResponse(
-                    "Đã xảy ra lỗi khi lấy danh sách thông báo.");
-            }
-        }
-
-        private static List<NotificationTarget> GetAllowedTargets(List<string> userRoles)
-        {
-            var targets = new List<NotificationTarget> { NotificationTarget.AllUser };
-
-            if (userRoles.Contains(Role.Admin))
-            {
-                targets.Add(NotificationTarget.AllAdmin);
-            }
-            else if (userRoles.Contains(Role.Staff))
-            {
-                targets.Add(NotificationTarget.AllStaff);
-            }
-            else if (userRoles.Contains(Role.Instructor))
-            {
-                targets.Add(NotificationTarget.AllInstructor);
-            }
-
-            return targets;
         }
 
         public async Task<ApiResponse<bool>> UnreadNotificationAsync(Guid id, Guid userId)
@@ -194,15 +93,13 @@ namespace Beyond8.Integration.Application.Services.Implements
             }
         }
 
-        public async Task<ApiResponse<bool>> ReadAllNotificationAsync(Guid userId, NotificationContext? context = null)
+        public async Task<ApiResponse<bool>> ReadAllNotificationAsync(Guid userId, NotificationContext context)
         {
             try
             {
-                var notifications = context.HasValue
-                    ? await unitOfWork.NotificationRepository.GetAllAsync(n =>
-                        n.UserId == userId &&
-                        (n.Context == context.Value || n.Context == NotificationContext.General))
-                    : await unitOfWork.NotificationRepository.GetAllAsync(n => n.UserId == userId);
+                var notifications = await unitOfWork.NotificationRepository.GetAllAsync(n =>
+                    n.UserId == userId &&
+                    (n.Context == context || n.Context == NotificationContext.General));
 
                 foreach (var n in notifications)
                 {
@@ -217,33 +114,6 @@ namespace Beyond8.Integration.Application.Services.Implements
             {
                 logger.LogError(ex, "Error reading all notifications for user {UserId}", userId);
                 return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi đánh dấu tất cả thông báo đã đọc.");
-            }
-        }
-
-        public async Task<ApiResponse<bool>> DeleteAllNotificationAsync(Guid userId, NotificationContext? context = null)
-        {
-            try
-            {
-                var notifications = context.HasValue
-                    ? await unitOfWork.NotificationRepository.GetAllAsync(n =>
-                        n.UserId == userId &&
-                        (n.Context == context.Value || n.Context == NotificationContext.General))
-                    : await unitOfWork.NotificationRepository.GetAllAsync(n => n.UserId == userId);
-
-                foreach (var n in notifications)
-                {
-                    n.Status = NotificationStatus.Deleted;
-                    n.DeletedAt = DateTime.UtcNow;
-                    n.DeletedBy = userId;
-                    await unitOfWork.NotificationRepository.UpdateAsync(n.Id, n);
-                }
-                await unitOfWork.SaveChangesAsync();
-                return ApiResponse<bool>.SuccessResponse(true, "Xóa tất cả thông báo thành công.");
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error deleting all notifications for user {UserId}", userId);
-                return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi xóa tất cả thông báo.");
             }
         }
 
@@ -270,24 +140,11 @@ namespace Beyond8.Integration.Application.Services.Implements
             }
         }
 
-        public async Task<ApiResponse<NotificationStatusResponse>> GetNotificationStatusAsync(Guid userId, NotificationContext? context = null)
+        public async Task<ApiResponse<NotificationStatusResponse>> GetNotificationStatusAsync(Guid userId, NotificationContext context)
         {
             try
             {
-                int unreadCount;
-                if (context.HasValue)
-                {
-                    unreadCount = await unitOfWork.NotificationRepository.GetUnreadCountByContextAsync(userId, context.Value);
-                }
-                else
-                {
-                    var notifications = await unitOfWork.NotificationRepository.GetAllAsync(
-                        n => n.UserId == userId &&
-                        n.IsRead == false &&
-                        n.Channels.Contains(NotificationChannel.App) &&
-                        n.Status == NotificationStatus.Delivered);
-                    unreadCount = notifications.Count;
-                }
+                var unreadCount = await unitOfWork.NotificationRepository.GetUnreadCountByContextAsync(userId, context);
 
                 var response = new NotificationStatusResponse
                 {

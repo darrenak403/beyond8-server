@@ -141,6 +141,22 @@ namespace Beyond8.Integration.Application.Mappings.NotificationMappings
             };
         }
 
+        public static Notification TranscodingVideoSuccessEventToNotification(this TranscodingVideoSuccessEvent @event, NotificationStatus status)
+        {
+            return new Notification
+            {
+                Title = "Video đã được upload",
+                Message = $"Video của bài học {@event.LessonTitle} đã được upload thành công.",
+                UserId = @event.InstructorId,
+                Target = NotificationTarget.User,
+                Status = status,
+                Channels = [NotificationChannel.App],
+                ReadAt = null,
+                IsRead = false,
+                Context = NotificationContext.Instructor
+            };
+        }
+
         public static NotificationLogResponse ToNotificationLogResponse(this Notification notification)
         {
             return new NotificationLogResponse
