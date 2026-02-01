@@ -3,9 +3,9 @@ using FluentValidation;
 
 namespace Beyond8.Catalog.Application.Validators.Lessons;
 
-public class ReorderLessonRequestValidator : AbstractValidator<ReorderLessonRequest>
+public class MoveLessonToSectionRequestValidator : AbstractValidator<MoveLessonToSectionRequest>
 {
-    public ReorderLessonRequestValidator()
+    public MoveLessonToSectionRequestValidator()
     {
         RuleFor(x => x.LessonId)
             .NotEmpty().WithMessage("LessonId không được để trống");
@@ -14,6 +14,6 @@ public class ReorderLessonRequestValidator : AbstractValidator<ReorderLessonRequ
             .NotEmpty().WithMessage("NewSectionId không được để trống");
 
         RuleFor(x => x.NewOrderIndex)
-            .GreaterThanOrEqualTo(0).WithMessage("NewOrderIndex phải lớn hơn hoặc bằng 0");
+            .GreaterThan(0).WithMessage("NewOrderIndex phải lớn hơn 0");
     }
 }

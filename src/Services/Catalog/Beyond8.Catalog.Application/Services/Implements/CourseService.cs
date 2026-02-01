@@ -21,6 +21,69 @@ public class CourseService(
     IPublishEndpoint publishEndpoint) : ICourseService
 {
 
+    private static (int PageNumber, int PageSize) NormalizePagination(PaginationCourseSearchRequest request)
+    {
+        var pageNumber = request.PageNumber < 1 ? 1 : request.PageNumber;
+        var pageSize = request.PageSize switch
+        {
+            < 1 => 10,
+            > 100 => 100,
+            _ => request.PageSize
+        };
+        return (pageNumber, pageSize);
+    }
+
+    private async Task<(bool IsValid, string? ErrorMessage)> ValidateCategoryExistsAsync(Guid? categoryId)
+    {
+        if (!categoryId.HasValue)
+            return (true, null);
+
+        var category = await unitOfWork.CategoryRepository.FindOneAsync(c => c.Id == categoryId && c.IsActive && !c.IsRoot);
+        if (category == null)
+        {
+            logger.LogWarning("Category not found or inactive: {CategoryId}", categoryId);
+            return (false, "Danh mục không tồn tại hoặc không hoạt động.");
+        }
+        return (true, null);
+    }
+
+    private async Task<(bool IsValid, Course? Course, string? ErrorMessage)> CheckCourseOwnershipAsync(Guid courseId, Guid currentUserId)
+    {
+        var course = await unitOfWork.CourseRepository
+            .AsQueryable()
+            .Include(c => c.Category)
+            .FirstOrDefaultAsync(c => c.Id == courseId && c.IsActive && c.InstructorId == currentUserId);
+
+        if (course == null)
+        {
+            logger.LogWarning("Course not found: {CourseId}", courseId);
+            return (false, null, "Khóa học không tồn tại.");
+        }
+        return (true, course, null);
+    }
+
+    private async Task<(bool IsValid, Course? Course, string? ErrorMessage)> GetCourseWithSectionsForInstructorAsync(Guid courseId, Guid currentUserId)
+    {
+        var course = await unitOfWork.CourseRepository
+            .AsQueryable()
+            .Include(c => c.Sections)
+            .ThenInclude(s => s.Lessons)
+            .FirstOrDefaultAsync(c => c.Id == courseId && c.IsActive && c.InstructorId == currentUserId);
+
+        if (course == null)
+        {
+            logger.LogWarning("Course not found: {CourseId}", courseId);
+            return (false, null, "Khóa học không tồn tại.");
+        }
+        return (true, course, null);
+    }
+
+    private static decimal GetAverageRatingSafe(List<Course> courses)
+    {
+        var withRating = courses.Where(c => c.AvgRating.HasValue).ToList();
+        return withRating.Count > 0 ? withRating.Average(c => c.AvgRating!.Value) : 0;
+    }
+
     public async Task<ApiResponse<List<CourseResponse>>> GetAllCoursesAsync(PaginationCourseSearchRequest request)
     {
         try
@@ -497,6 +560,28 @@ public class CourseService(
         }
     }
 
+    public async Task<ApiResponse<bool>> UpdateCourseThumbnailAsync(Guid courseId, Guid currentUserId, UpdateCourseThumbnailRequest request)
+    {
+        try
+        {
+            var (isValid, course, errorMessage) = await CheckCourseOwnershipAsync(courseId, currentUserId);
+            if (!isValid)
+                return ApiResponse<bool>.FailureResponse(errorMessage!);
+
+            course!.ThumbnailUrl = request.ThumbnailUrl;
+            await unitOfWork.CourseRepository.UpdateAsync(courseId, course);
+            await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation("Course thumbnail updated successfully: {CourseId}", courseId);
+            return ApiResponse<bool>.SuccessResponse(true, "Cập nhật ảnh đại diện khóa học thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error updating course thumbnail: {CourseId}", courseId);
+            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi cập nhật ảnh đại diện khóa học.");
+        }
+    }
+
     private async Task<(bool IsValid, UserSimpleResponse? User, string? ErrorMessage)> GetInstructorInfoAsync(Guid instructorId)
     {
         var instructorInfor = await identityClient.GetUserByIdAsync(instructorId);
@@ -506,68 +591,5 @@ public class CourseService(
             return (false, null, "Không thể lấy thông tin giảng viên.");
         }
         return (true, instructorInfor.Data, null);
-    }
-
-    private static (int PageNumber, int PageSize) NormalizePagination(PaginationCourseSearchRequest request)
-    {
-        var pageNumber = request.PageNumber < 1 ? 1 : request.PageNumber;
-        var pageSize = request.PageSize switch
-        {
-            < 1 => 10,
-            > 100 => 100,
-            _ => request.PageSize
-        };
-        return (pageNumber, pageSize);
-    }
-
-    private async Task<(bool IsValid, string? ErrorMessage)> ValidateCategoryExistsAsync(Guid? categoryId)
-    {
-        if (!categoryId.HasValue)
-            return (true, null);
-
-        var category = await unitOfWork.CategoryRepository.FindOneAsync(c => c.Id == categoryId && c.IsActive && !c.IsRoot);
-        if (category == null)
-        {
-            logger.LogWarning("Category not found or inactive: {CategoryId}", categoryId);
-            return (false, "Danh mục không tồn tại hoặc không hoạt động.");
-        }
-        return (true, null);
-    }
-
-    private async Task<(bool IsValid, Course? Course, string? ErrorMessage)> CheckCourseOwnershipAsync(Guid courseId, Guid currentUserId)
-    {
-        var course = await unitOfWork.CourseRepository
-            .AsQueryable()
-            .Include(c => c.Category)
-            .FirstOrDefaultAsync(c => c.Id == courseId && c.IsActive && c.InstructorId == currentUserId);
-
-        if (course == null)
-        {
-            logger.LogWarning("Course not found: {CourseId}", courseId);
-            return (false, null, "Khóa học không tồn tại.");
-        }
-        return (true, course, null);
-    }
-
-    private async Task<(bool IsValid, Course? Course, string? ErrorMessage)> GetCourseWithSectionsForInstructorAsync(Guid courseId, Guid currentUserId)
-    {
-        var course = await unitOfWork.CourseRepository
-            .AsQueryable()
-            .Include(c => c.Sections)
-            .ThenInclude(s => s.Lessons)
-            .FirstOrDefaultAsync(c => c.Id == courseId && c.IsActive && c.InstructorId == currentUserId);
-
-        if (course == null)
-        {
-            logger.LogWarning("Course not found: {CourseId}", courseId);
-            return (false, null, "Khóa học không tồn tại.");
-        }
-        return (true, course, null);
-    }
-
-    private static decimal GetAverageRatingSafe(List<Course> courses)
-    {
-        var withRating = courses.Where(c => c.AvgRating.HasValue).ToList();
-        return withRating.Count > 0 ? withRating.Average(c => c.AvgRating!.Value) : 0;
     }
 }

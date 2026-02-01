@@ -127,9 +127,35 @@ public static class CourseApis
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
+        group.MapPut("/{id}/thumbnail", UpdateCourseThumbnailAsync)
+            .WithName("UpdateCourseThumbnail")
+            .WithDescription("Cập nhật ảnh đại diện khóa học")
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
         return group;
     }
 
+    private static async Task<IResult> UpdateCourseThumbnailAsync(
+        [FromRoute] Guid id,
+        [FromBody] UpdateCourseThumbnailRequest request,
+        [FromServices] ICourseService courseService,
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IIdentityClient identityClient)
+    {
+        var (isVerified, message) = await CheckInstructorVerificationAsync(currentUserService, identityClient);
+        if (!isVerified)
+        {
+            return Results.BadRequest(ApiResponse<bool>.FailureResponse(message));
+        }
+
+        var result = await courseService.UpdateCourseThumbnailAsync(id, currentUserService.UserId, request);
+        return result.IsSuccess
+            ? Results.Ok(result)
+            : Results.BadRequest(result);
+    }
 
     private static async Task<IResult> GetAllCoursesAsync(
         [FromServices] ICourseService courseService,
