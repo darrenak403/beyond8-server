@@ -10,6 +10,7 @@ public interface ICourseService
     Task<ApiResponse<CourseResponse>> UpdateCourseMetadataAsync(Guid id, Guid currentUserId, UpdateCourseMetadataRequest request);
     Task<ApiResponse<CourseResponse>> GetCourseByIdAsync(Guid id, Guid currentUserId);
     Task<ApiResponse<bool>> DeleteCourseAsync(Guid id, Guid currentUserId);
+    Task<ApiResponse<bool>> UpdateCourseThumbnailAsync(Guid courseId, Guid currentUserId, UpdateCourseThumbnailRequest request);
 
     // Instructor-Specific Operations // luồng 2
     Task<ApiResponse<List<CourseResponse>>> GetCoursesByInstructorAsync(Guid instructorId, PaginationCourseSearchRequest pagination);
