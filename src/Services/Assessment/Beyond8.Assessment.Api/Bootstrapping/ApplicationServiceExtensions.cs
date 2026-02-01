@@ -8,6 +8,9 @@ using Beyond8.Assessment.Infrastructure.Repositories.Implements;
 using Beyond8.Common.Extensions;
 using Beyond8.Common.Utilities;
 using FluentValidation;
+using Beyond8.Assessment.Application.Clients.Catalog;
+using Polly;
+using Polly.Extensions.Http;
 
 namespace Beyond8.Assessment.Api.Bootstrapping
 {
@@ -21,13 +24,56 @@ namespace Beyond8.Assessment.Api.Bootstrapping
             builder.AddPostgresDatabase<AssessmentDbContext>(Const.AssessmentServiceDatabase);
             builder.AddServiceRedis(nameof(Assessment), connectionName: Const.Redis);
             builder.AddMassTransitWithRabbitMq();
+            builder.AddClientServices();
+
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             builder.Services.AddScoped<IQuestionService, QuestionService>();
             builder.Services.AddScoped<IQuizService, QuizService>();
             builder.Services.AddScoped<IQuizAttemptService, QuizAttemptService>();
+            builder.Services.AddScoped<IAssignmentService, AssignmentService>();
 
             return builder;
+        }
+
+        private static IHostApplicationBuilder AddClientServices(this IHostApplicationBuilder builder)
+        {
+            var catalogBaseUrl = builder.Configuration["Clients:Catalog:BaseUrl"]
+                                 ?? throw new ArgumentNullException("Catalog URL missing");
+
+            builder.Services.AddHttpClient<ICatalogService, CatalogService>(client =>
+            {
+                client.BaseAddress = new Uri(catalogBaseUrl);
+                client.Timeout = TimeSpan.FromSeconds(30);
+            })
+            .AddPolicyHandler(GetResiliencePolicy());
+
+            builder.Services.AddHttpContextAccessor();
+            return builder;
+        }
+
+        private static IAsyncPolicy<HttpResponseMessage> GetResiliencePolicy()
+        {
+            var jitterer = new Random();
+
+            var retryPolicy = HttpPolicyExtensions
+                .HandleTransientHttpError()
+                .OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+                .WaitAndRetryAsync(
+                    retryCount: 3,
+                    sleepDurationProvider: retryAttempt =>
+                        TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))
+                        + TimeSpan.FromMilliseconds(jitterer.Next(0, 1000))
+                );
+
+            var circuitBreakerPolicy = HttpPolicyExtensions
+                .HandleTransientHttpError()
+                .CircuitBreakerAsync(
+                    handledEventsAllowedBeforeBreaking: 5,
+                    durationOfBreak: TimeSpan.FromSeconds(30)
+                );
+
+            return Policy.WrapAsync(retryPolicy, circuitBreakerPolicy);
         }
 
         public static WebApplication UseApplicationServices(this WebApplication app)
@@ -41,6 +87,7 @@ namespace Beyond8.Assessment.Api.Bootstrapping
             app.MapQuestionApi();
             app.MapQuizApi();
             app.MapQuizAttemptApi();
+            app.MapAssignmentApi();
 
             return app;
         }

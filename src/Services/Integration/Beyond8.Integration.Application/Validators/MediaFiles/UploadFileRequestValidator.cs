@@ -79,5 +79,56 @@ namespace Beyond8.Integration.Application.Validators.MediaFiles
 
             return validator;
         }
+
+        public static UploadFileRequestValidator ForCourseVideo()
+        {
+            var validator = new UploadFileRequestValidator();
+
+            validator.RuleFor(x => x.ContentType)
+                .Must(ct => AllowedVideoTypes.Contains(ct.ToLower()))
+                .WithMessage("Video chỉ chấp nhận định dạng: mp4, mov, avi, wmv, flv, mkv, webm");
+
+            validator.RuleFor(x => x.Size)
+                .LessThanOrEqualTo(2147483648).WithMessage("Kích thước video không được vượt quá 2GB");
+
+            return validator;
+        }
+
+        public static IValidator<UploadFileRequest> ForCourseDocument()
+        {
+            var validator = new UploadFileRequestValidator();
+
+            validator.RuleFor(x => x.ContentType)
+                .Must(ct => AllowedDocumentTypes.Contains(ct.ToLower()))
+                .WithMessage($"Tài liệu chỉ chấp nhận định dạng: {string.Join(", ", AllowedDocumentTypes)}");
+
+            validator.RuleFor(x => x.Size)
+                .LessThanOrEqualTo(1073741824).WithMessage($"Kích thước tài liệu không được vượt quá 1GB");
+
+            return validator;
+        }
+
+        public static IValidator<UploadFileRequest> ForAssignmentSubmission()
+        {
+            var validator = new UploadFileRequestValidator();
+
+            validator.RuleFor(x => x.Size)
+                .LessThanOrEqualTo(20971520).WithMessage($"Kích thước tài liệu không được vượt quá 20MB");
+            return validator;
+        }
+
+        public static IValidator<UploadFileRequest> ForAssignmentRubric()
+        {
+            var validator = new UploadFileRequestValidator();
+
+            validator.RuleFor(x => x.ContentType)
+                .Must(ct => AllowedDocumentTypes.Contains(ct.ToLower()))
+                .WithMessage($"Rubric chỉ chấp nhận định dạng: {string.Join(", ", AllowedDocumentTypes)}");
+
+            validator.RuleFor(x => x.Size)
+                .LessThanOrEqualTo(104857600).WithMessage($"Kích thước rubric không được vượt quá 100MB");
+
+            return validator;
+        }
     }
 }

@@ -75,7 +75,7 @@ Instructor (Course/Lesson)                    Integration          Assessment   
 
 | Bước | Service             | Hành động                                                                                                                                                                                                              |
 | ---- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0    | Catalog             | **Lesson đã tồn tại** (instructor tạo trước qua Catalog). Lesson có `LessonId`, `Type = Quiz` (hoặc chưa), **`QuizId = null`**.                                                                                         |
+| 0    | Catalog             | **Lesson đã tồn tại** (instructor tạo trước qua Catalog). Lesson có `LessonId`, `Type = Quiz` (hoặc chưa), **`QuizId = null`**.                                                                                        |
 | 1    | Frontend/Instructor | Gọi Integration `POST /api/v1/ai/quiz/generate` với `CourseId`, **`LessonId`** (của lesson bước 0), `TotalCount`, `Distribution`.                                                                                      |
 | 2    | Integration         | Vector search tài liệu khóa học, gọi Gemini với prompt "Quiz Generation", trả về `GenQuizResponse` (Easy/Medium/Hard list of `QuizQuestionDto`).                                                                       |
 | 3    | Frontend            | Nhận `GenQuizResponse`; có thể chỉnh sửa câu hỏi (optional).                                                                                                                                                           |
@@ -181,7 +181,6 @@ Instructor (Course/Lesson)                    Integration          Assessment   
 | PATCH  | `/{id}`         | Cập nhật assignment  | Instructor |
 | DELETE | `/{id}`         | Xóa assignment       | Instructor |
 | POST   | `/{id}/publish` | Publish assignment   | Instructor |
-| POST   | `/{id}/close`   | Đóng assignment      | Instructor |
 
 ### Assignment Student (`/api/v1/assignments` - Student)
 

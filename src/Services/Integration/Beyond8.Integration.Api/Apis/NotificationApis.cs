@@ -81,6 +81,14 @@ namespace Beyond8.Integration.Api.Apis
                 .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
+            group.MapPut("/staff/read-all", ReadAllStaffNotifications)
+                .WithName("ReadAllStaffNotifications")
+                .WithDescription("Đánh dấu tất cả thông báo Staff đã đọc")
+                .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized)
+                .RequireAuthorization(x => x.RequireRole(Role.Staff, Role.Admin));
+
             group.MapPut("/{id:guid}/read", ReadNotification)
                 .WithName("ReadNotification")
                 .WithDescription("Đánh dấu thông báo đã đọc")
@@ -228,6 +236,23 @@ namespace Beyond8.Integration.Api.Apis
             var result = await notificationHistoryService.ReadAllNotificationAsync(
                 currentUserService.UserId,
                 NotificationContext.Instructor);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
+
+        private static async Task<IResult> ReadAllStaffNotifications(
+            [FromServices] INotificationHistoryService notificationHistoryService,
+            [FromServices] ICurrentUserService currentUserService)
+        {
+            if (!currentUserService.IsInAnyRole(Role.Staff, Role.Admin))
+            {
+                return Results.BadRequest(ApiResponse<bool>.FailureResponse(
+                    "Chỉ Staff và Admin mới có thể đánh dấu tất cả thông báo đã đọc."));
+            }
+
+            var result = await notificationHistoryService.ReadAllNotificationAsync(
+                currentUserService.UserId,
+                NotificationContext.Staff);
+
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
 
