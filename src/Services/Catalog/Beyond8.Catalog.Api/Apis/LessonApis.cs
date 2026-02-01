@@ -173,9 +173,9 @@ public static class LessonApis
     }
 
     private static async Task<IResult> CallbackHlsAsync(
-        VideoCallbackDto request,
+        VideoCallbackRequest request,
         [FromServices] ILessonService lessonService,
-        [FromServices] IValidator<VideoCallbackDto> validator)
+        [FromServices] IValidator<VideoCallbackRequest> validator)
     {
         if (!request.ValidateRequest(validator, out var result))
             return result!;

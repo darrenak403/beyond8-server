@@ -1,8 +1,9 @@
 using System;
+using Beyond8.Catalog.Application.Dtos.Lessons;
 
-namespace Beyond8.Catalog.Application.Dtos.Courses;
+namespace Beyond8.Catalog.Application.Dtos.Sections;
 
-public class SectionSummaryDto
+public class SectionSummaryResponse
 {
     public Guid Id { get; set; }
     public string Title { get; set; } = string.Empty;
@@ -10,5 +11,5 @@ public class SectionSummaryDto
     public int Order { get; set; }
     public int TotalLessons { get; set; }
     public int TotalDurationMinutes { get; set; }
-    public List<LessonSummaryDto> Lessons { get; set; } = [];
+    public List<LessonSummaryResponse> Lessons { get; set; } = [];
 }

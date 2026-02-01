@@ -1,6 +1,6 @@
 namespace Beyond8.Catalog.Application.Dtos.Courses;
 
-public class CourseAnalyticsDto
+public class CourseAnalyticsResponse
 {
     public Guid CourseId { get; set; }
     public string CourseTitle { get; set; } = string.Empty;
@@ -29,18 +29,18 @@ public class CourseAnalyticsDto
     public decimal AverageCompletionTime { get; set; }
 
     // Time-based metrics
-    public List<MonthlyEnrollmentDto> MonthlyEnrollments { get; set; } = [];
-    public List<MonthlyRevenueDto> MonthlyRevenue { get; set; } = [];
+    public List<MonthlyEnrollmentResponse> MonthlyEnrollments { get; set; } = [];
+    public List<MonthlyRevenueResponse> MonthlyRevenue { get; set; } = [];
 }
 
-public class MonthlyEnrollmentDto
+public class MonthlyEnrollmentResponse
 {
     public int Year { get; set; }
     public int Month { get; set; }
     public int Enrollments { get; set; }
 }
 
-public class MonthlyRevenueDto
+public class MonthlyRevenueResponse
 {
     public int Year { get; set; }
     public int Month { get; set; }

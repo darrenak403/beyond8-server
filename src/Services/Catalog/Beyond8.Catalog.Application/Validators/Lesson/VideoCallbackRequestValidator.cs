@@ -3,9 +3,9 @@ using FluentValidation;
 
 namespace Beyond8.Catalog.Application.Validators.Lesson;
 
-public class VideoCallbackDtoValidator : AbstractValidator<VideoCallbackDto>
+public class VideoCallbackRequestValidator : AbstractValidator<VideoCallbackRequest>
 {
-    public VideoCallbackDtoValidator()
+    public VideoCallbackRequestValidator()
     {
         RuleFor(x => x.OriginalKey)
             .NotEmpty().WithMessage("OriginalKey không được để trống")

@@ -3,7 +3,7 @@ using Beyond8.Catalog.Domain.JSONFields;
 
 namespace Beyond8.Catalog.Application.Dtos.Lessons;
 
-public class VideoCallbackDto
+public class VideoCallbackRequest
 {
     public string OriginalKey { get; set; } = null!;
     public TranscodingsRequest TranscodingData { get; set; } = null!;

@@ -30,6 +30,19 @@ public static class CourseApis
             .Produces<ApiResponse<List<CourseResponse>>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<List<CourseResponse>>>(StatusCodes.Status400BadRequest);
 
+        group.MapGet("/{id}/summary", GetCourseSummaryAsync)
+            .WithName("GetCourseSummary")
+            .WithDescription("Lấy tóm tắt khóa học")
+            .Produces<ApiResponse<CourseSummaryResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<CourseSummaryResponse>>(StatusCodes.Status400BadRequest);
+
+        group.MapGet("/{id}/details", GetCourseDetailsAsync)
+            .WithName("GetCourseByIdDetails")
+            .WithDescription("Lấy thông tin khóa học chi tiết theo ID cho học viên")
+            .RequireAuthorization()
+            .Produces<ApiResponse<CourseDetailResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<CourseDetailResponse>>(StatusCodes.Status400BadRequest);
+
         // Instructor Operations
         group.MapPost("/", CreateCourseAsync)
             .WithName("CreateCourse")
@@ -67,8 +80,8 @@ public static class CourseApis
             .WithName("GetCourseStatsByInstructor")
             .WithDescription("Lấy thống kê khóa học của giảng viên")
             .RequireAuthorization(x => x.RequireRole(Role.Instructor))
-            .Produces<ApiResponse<CourseStatsDto>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<CourseStatsDto>>(StatusCodes.Status400BadRequest)
+            .Produces<ApiResponse<CourseStatsResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<CourseStatsResponse>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
         group.MapPost("/{id}/submit-approval", SubmitForApprovalAsync)
@@ -162,6 +175,23 @@ public static class CourseApis
         [AsParameters] PaginationCourseSearchRequest pagination)
     {
         var result = await courseService.GetAllCoursesAsync(pagination);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> GetCourseSummaryAsync(
+        [FromRoute] Guid id,
+        [FromServices] ICourseService courseService)
+    {
+        var result = await courseService.GetCourseSummaryAsync(id);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> GetCourseDetailsAsync(
+        [FromRoute] Guid id,
+        [FromServices] ICourseService courseService,
+        [FromServices] ICurrentUserService currentUserService)
+    {
+        var result = await courseService.GetCourseDetailsAsync(id, currentUserService.UserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 

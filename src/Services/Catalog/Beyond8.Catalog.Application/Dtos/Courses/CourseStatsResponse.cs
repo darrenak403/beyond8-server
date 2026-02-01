@@ -1,6 +1,6 @@
 namespace Beyond8.Catalog.Application.Dtos.Courses;
 
-public class CourseStatsDto
+public class CourseStatsResponse
 {
     public int TotalCourses { get; set; }
     public int DraftCourses { get; set; }

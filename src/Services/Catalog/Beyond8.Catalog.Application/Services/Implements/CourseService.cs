@@ -278,7 +278,7 @@ public class CourseService(
         }
     }
 
-    public async Task<ApiResponse<CourseStatsDto>> GetCourseStatsByInstructorAsync(Guid instructorId)
+    public async Task<ApiResponse<CourseStatsResponse>> GetCourseStatsByInstructorAsync(Guid instructorId)
     {
         try
         {
@@ -287,7 +287,7 @@ public class CourseService(
                 .Where(c => c.InstructorId == instructorId && c.IsActive)
                 .ToListAsync();
 
-            var stats = new CourseStatsDto
+            var stats = new CourseStatsResponse
             {
                 TotalCourses = courses.Count,
                 DraftCourses = courses.Count(c => c.Status == CourseStatus.Draft),
@@ -301,12 +301,12 @@ public class CourseService(
                 TotalReviews = courses.Sum(c => c.TotalReviews)
             };
 
-            return ApiResponse<CourseStatsDto>.SuccessResponse(stats, "Lấy thống kê khóa học thành công.");
+            return ApiResponse<CourseStatsResponse>.SuccessResponse(stats, "Lấy thống kê khóa học thành công.");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting course stats for instructor: {InstructorId}", instructorId);
-            return ApiResponse<CourseStatsDto>.FailureResponse("Đã xảy ra lỗi khi lấy thống kê khóa học.");
+            return ApiResponse<CourseStatsResponse>.FailureResponse("Đã xảy ra lỗi khi lấy thống kê khóa học.");
         }
     }
 
@@ -591,5 +591,84 @@ public class CourseService(
             return (false, null, "Không thể lấy thông tin giảng viên.");
         }
         return (true, instructorInfor.Data, null);
+    }
+
+    public async Task<ApiResponse<CourseSummaryResponse>> GetCourseSummaryAsync(Guid courseId)
+    {
+        try
+        {
+            var course = await unitOfWork.CourseRepository
+                .AsQueryable()
+                .Include(c => c.Category)
+                .Include(c => c.Sections.Where(s => s.IsPublished))
+                    .ThenInclude(s => s.Lessons.Where(l => l.IsPublished))
+                        .ThenInclude(l => l.Video)
+                .Include(c => c.Sections.Where(s => s.IsPublished))
+                    .ThenInclude(s => s.Lessons.Where(l => l.IsPublished))
+                        .ThenInclude(l => l.Text)
+                .Include(c => c.Sections.Where(s => s.IsPublished))
+                    .ThenInclude(s => s.Lessons.Where(l => l.IsPublished))
+                        .ThenInclude(l => l.Quiz)
+                .FirstOrDefaultAsync(c => c.Id == courseId && c.IsActive && c.Status == CourseStatus.Published);
+
+            if (course == null)
+            {
+                logger.LogWarning("Course not found or not published: {CourseId}", courseId);
+                return ApiResponse<CourseSummaryResponse>.FailureResponse("Khóa học không tồn tại hoặc chưa được xuất bản.");
+            }
+
+            return ApiResponse<CourseSummaryResponse>.SuccessResponse(
+                course.ToSummaryResponse(),
+                "Lấy tóm tắt khóa học thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting course summary: {CourseId}", courseId);
+            return ApiResponse<CourseSummaryResponse>.FailureResponse("Đã xảy ra lỗi khi lấy tóm tắt khóa học.");
+        }
+    }
+
+    public async Task<ApiResponse<CourseDetailResponse>> GetCourseDetailsAsync(Guid courseId, Guid userId)
+    {
+        try
+        {
+            var course = await unitOfWork.CourseRepository
+                .AsQueryable()
+                .Include(c => c.Category)
+                .Include(c => c.Sections.Where(s => s.IsPublished))
+                    .ThenInclude(s => s.Lessons.Where(l => l.IsPublished))
+                        .ThenInclude(l => l.Video)
+                .Include(c => c.Sections.Where(s => s.IsPublished))
+                    .ThenInclude(s => s.Lessons.Where(l => l.IsPublished))
+                        .ThenInclude(l => l.Text)
+                .Include(c => c.Sections.Where(s => s.IsPublished))
+                    .ThenInclude(s => s.Lessons.Where(l => l.IsPublished))
+                        .ThenInclude(l => l.Quiz)
+                .FirstOrDefaultAsync(c => c.Id == courseId && c.IsActive && c.Status == CourseStatus.Published);
+
+            if (course == null)
+            {
+                logger.LogWarning("Course not found or not published: {CourseId}", courseId);
+                return ApiResponse<CourseDetailResponse>.FailureResponse("Khóa học không tồn tại hoặc chưa được xuất bản.");
+            }
+
+            // TODO: Check enrollment when Enrollment service is ready
+            // var isEnrolled = await enrollmentClient.CheckEnrollmentAsync(userId, courseId);
+            // if (!isEnrolled)
+            // {
+            //     return ApiResponse<CourseDetailResponse>.FailureResponse("Bạn chưa đăng ký khóa học này.");
+            // }
+
+            logger.LogInformation("User {UserId} accessed course details: {CourseId}", userId, courseId);
+
+            return ApiResponse<CourseDetailResponse>.SuccessResponse(
+                course.ToDetailResponse(),
+                "Lấy chi tiết khóa học thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting course details: {CourseId}", courseId);
+            return ApiResponse<CourseDetailResponse>.FailureResponse("Đã xảy ra lỗi khi lấy chi tiết khóa học.");
+        }
     }
 }

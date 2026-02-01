@@ -1,6 +1,6 @@
 namespace Beyond8.Catalog.Application.Dtos.Lessons;
 
-public class VideoLessonDto
+public class VideoLessonRequest
 {
     public Guid Id { get; set; }
     public Guid LessonId { get; set; }

@@ -197,4 +197,76 @@ public static class LessonMappings
             QuizId = request.QuizId
         };
     }
+
+    /// <summary>
+    /// Maps Lesson to LessonSummaryResponse for public course preview.
+    /// Does not include actual content (video streaming URLs, text content).
+    /// </summary>
+    public static LessonSummaryResponse ToSummaryResponse(this Lesson lesson)
+    {
+        return new LessonSummaryResponse
+        {
+            Id = lesson.Id,
+            Title = lesson.Title,
+            Description = lesson.Description,
+            Type = lesson.Type,
+            Order = lesson.OrderIndex,
+            IsPreview = lesson.IsPreview,
+
+            // Video-specific (metadata only, no streaming URLs)
+            DurationSeconds = lesson.Video?.DurationSeconds,
+            VideoThumbnailUrl = lesson.Video?.VideoThumbnailUrl,
+
+            // Quiz-specific
+            QuizId = lesson.Quiz?.QuizId,
+
+            // Text-specific
+            HasTextContent = lesson.Text != null && !string.IsNullOrEmpty(lesson.Text.TextContent)
+        };
+    }
+
+    /// <summary>
+    /// Maps Lesson to LessonDetailResponse for enrolled students.
+    /// Includes full content access.
+    /// </summary>
+    public static LessonDetailResponse ToDetailResponse(this Lesson lesson)
+    {
+        var response = new LessonDetailResponse
+        {
+            Id = lesson.Id,
+            SectionId = lesson.SectionId,
+            Title = lesson.Title,
+            Description = lesson.Description,
+            Type = lesson.Type,
+            OrderIndex = lesson.OrderIndex,
+            IsPreview = lesson.IsPreview,
+            IsPublished = lesson.IsPublished,
+            TotalViews = lesson.TotalViews,
+            TotalCompletions = lesson.TotalCompletions,
+            CreatedAt = lesson.CreatedAt,
+            UpdatedAt = lesson.UpdatedAt
+        };
+
+        switch (lesson.Type)
+        {
+            case LessonType.Video:
+                response.HlsVariants = lesson.Video?.HlsVariants;
+                response.VideoOriginalUrl = lesson.Video?.VideoOriginalUrl;
+                response.VideoThumbnailUrl = lesson.Video?.VideoThumbnailUrl;
+                response.DurationSeconds = lesson.Video?.DurationSeconds;
+                response.VideoQualities = lesson.Video?.VideoQualities;
+                response.IsDownloadable = lesson.Video?.IsDownloadable ?? false;
+                break;
+
+            case LessonType.Text:
+                response.TextContent = lesson.Text?.TextContent;
+                break;
+
+            case LessonType.Quiz:
+                response.QuizId = lesson.Quiz?.QuizId;
+                break;
+        }
+
+        return response;
+    }
 }

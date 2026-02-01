@@ -1,8 +1,9 @@
-using Beyond8.Catalog.Domain.Enums;
+using Beyond8.Catalog.Application.Dtos.Sections;
 
-namespace Beyond8.Catalog.Application.Dtos.Courses;
-
-public class CourseDetailResponse : CourseResponse
+namespace Beyond8.Catalog.Application.Dtos.Courses
 {
-    public List<SectionSummaryDto> Sections { get; set; } = [];
+    public class CourseDetailResponse : CourseResponse
+    {
+        public List<SectionDetailResponse> Sections { get; set; } = [];
+    }
 }

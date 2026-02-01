@@ -14,7 +14,7 @@ public interface ICourseService
 
     // Instructor-Specific Operations // luồng 2
     Task<ApiResponse<List<CourseResponse>>> GetCoursesByInstructorAsync(Guid instructorId, PaginationCourseSearchRequest pagination);
-    Task<ApiResponse<CourseStatsDto>> GetCourseStatsByInstructorAsync(Guid instructorId);
+    Task<ApiResponse<CourseStatsResponse>> GetCourseStatsByInstructorAsync(Guid instructorId);
 
     // Phê Duyệt Khóa Học
     Task<ApiResponse<bool>> SubmitForApprovalAsync(Guid courseId, Guid currentUserId);
@@ -27,8 +27,11 @@ public interface ICourseService
     Task<ApiResponse<bool>> UnpublishCourseAsync(Guid courseId, Guid currentUserId);
     Task<ApiResponse<List<CourseResponse>>> GetAllCoursesAsync(PaginationCourseSearchRequest request);
 
-    // Đăng Ký Học // luồng 3 
-    // Task<ApiResponse<CourseDetailResponse>> GetCourseDetailForEnrollmentAsync(Guid courseId);
+    // Public Course Views (for students/visitors)
+    Task<ApiResponse<CourseSummaryResponse>> GetCourseSummaryAsync(Guid courseId);
+    Task<ApiResponse<CourseDetailResponse>> GetCourseDetailsAsync(Guid courseId, Guid userId);
+
+    // Đăng Ký Học // luồng 3
     // Task<ApiResponse<bool>> CheckCourseAccessAsync(Guid courseId, Guid userId);
     // Task<ApiResponse<List<CourseResponse>>> GetEnrolledCoursesAsync(Guid userId, PaginationRequest pagination);
 

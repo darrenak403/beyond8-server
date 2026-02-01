@@ -19,7 +19,7 @@ public class LessonService(
     IUnitOfWork unitOfWork,
     IPublishEndpoint publishEndpoint) : ILessonService
 {
-    public async Task<ApiResponse<bool>> CallbackHlsAsync(VideoCallbackDto request)
+    public async Task<ApiResponse<bool>> CallbackHlsAsync(VideoCallbackRequest request)
     {
         try
         {
