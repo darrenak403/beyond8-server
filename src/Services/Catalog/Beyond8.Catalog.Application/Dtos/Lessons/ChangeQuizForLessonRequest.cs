@@ -1,5 +1,3 @@
-using System;
-
 namespace Beyond8.Catalog.Application.Dtos.Lessons;
 
 public class ChangeQuizForLessonRequest

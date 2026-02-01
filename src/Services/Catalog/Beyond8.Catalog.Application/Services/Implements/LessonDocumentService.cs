@@ -1,7 +1,6 @@
 using Beyond8.Catalog.Application.Dtos.LessonDocuments;
 using Beyond8.Catalog.Application.Mappings.LessonDocumentMappings;
 using Beyond8.Catalog.Application.Services.Interfaces;
-using Beyond8.Catalog.Domain.Entities;
 using Beyond8.Catalog.Domain.Repositories.Interfaces;
 using Beyond8.Common.Utilities;
 using Microsoft.EntityFrameworkCore;

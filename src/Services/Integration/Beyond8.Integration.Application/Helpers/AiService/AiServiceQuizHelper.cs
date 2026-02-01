@@ -2,7 +2,6 @@ using System.Text;
 using System.Text.Json;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Embedding;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Quiz;
-using Beyond8.Integration.Domain.Enums;
 
 namespace Beyond8.Integration.Application.Helpers.AiService
 {

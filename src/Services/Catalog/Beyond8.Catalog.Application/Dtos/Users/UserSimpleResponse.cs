@@ -1,5 +1,3 @@
-using System;
-
 namespace Beyond8.Catalog.Application.Dtos.Users;
 
 public class UserSimpleResponse

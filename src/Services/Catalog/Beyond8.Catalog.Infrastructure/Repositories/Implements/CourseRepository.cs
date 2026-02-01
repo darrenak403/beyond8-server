@@ -3,17 +3,13 @@ using Beyond8.Catalog.Domain.Enums;
 using Beyond8.Catalog.Domain.Repositories.Interfaces;
 using Beyond8.Catalog.Infrastructure.Data;
 using Beyond8.Common.Data.Implements;
-using Beyond8.Common.Utilities;
+using Beyond8.Catalog.Application.Helpers;
 using Microsoft.EntityFrameworkCore;
 
 namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
 {
     public class CourseRepository(CatalogDbContext context) : PostgresRepository<Course>(context), ICourseRepository
     {
-        /// <summary>
-        /// Applies full-text search filter using PostgreSQL tsvector.
-        /// Uses EF.Functions.ToTsQuery for server-side query parsing.
-        /// </summary>
         private static IQueryable<Course> ApplyFullTextSearch(IQueryable<Course> query, string? keyword)
         {
             if (string.IsNullOrWhiteSpace(keyword))
@@ -29,10 +25,6 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
                 c.SearchVector.Matches(EF.Functions.ToTsQuery("simple", searchTerm)));
         }
 
-        /// <summary>
-        /// Orders query by full-text search relevance (rank).
-        /// Title matches are weighted higher than description matches.
-        /// </summary>
         private static IOrderedQueryable<Course> OrderBySearchRank(IQueryable<Course> query, string? keyword)
         {
             if (string.IsNullOrWhiteSpace(keyword))
@@ -416,13 +408,6 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
             return (items, totalCount);
         }
 
-        /// <summary>
-        /// Full-text search for courses using PostgreSQL tsvector.
-        /// If no keyword is provided, returns all published and active courses.
-        /// Supports Vietnamese diacritics (e.g., "lap trinh" matches "Lập trình").
-        /// Results are ranked by relevance: Title > ShortDescription > Description > InstructorName.
-        /// Only returns Published and Active courses.
-        /// </summary>
         public async Task<(List<Course> Items, int TotalCount)> FullTextSearchCoursesAsync(
             int pageNumber,
             int pageSize,

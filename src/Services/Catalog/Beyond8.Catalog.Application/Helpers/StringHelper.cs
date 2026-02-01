@@ -1,20 +1,10 @@
 using System.Globalization;
 using System.Text;
 
-namespace Beyond8.Common.Utilities;
+namespace Beyond8.Catalog.Application.Helpers;
 
-/// <summary>
-/// Helper class for string manipulation, including Vietnamese diacritics removal
-/// and PostgreSQL full-text search term formatting.
-/// </summary>
 public static class StringHelper
 {
-    /// <summary>
-    /// Removes diacritics (accent marks) from Vietnamese text.
-    /// Example: "Lập trình" -> "Lap trinh"
-    /// </summary>
-    /// <param name="text">Input text with diacritics</param>
-    /// <returns>Text without diacritics, lowercase and trimmed</returns>
     public static string RemoveDiacritics(string text)
     {
         if (string.IsNullOrWhiteSpace(text))
@@ -38,13 +28,6 @@ public static class StringHelper
         return stringBuilder.ToString().Normalize(NormalizationForm.FormC).ToLower().Trim();
     }
 
-    /// <summary>
-    /// Formats search term for PostgreSQL full-text search.
-    /// Removes diacritics and joins words with " & " for AND matching.
-    /// Example: "lập trình web" -> "lap & trinh & web"
-    /// </summary>
-    /// <param name="input">Raw search input from user</param>
-    /// <returns>Formatted search term for PostgreSQL tsquery</returns>
     public static string FormatSearchTerm(string input)
     {
         if (string.IsNullOrWhiteSpace(input))
@@ -57,13 +40,6 @@ public static class StringHelper
         return string.Join(" & ", terms);
     }
 
-    /// <summary>
-    /// Formats search term for PostgreSQL full-text search with prefix matching.
-    /// Example: "lap trinh" -> "lap:* & trinh:*"
-    /// This allows partial word matching.
-    /// </summary>
-    /// <param name="input">Raw search input from user</param>
-    /// <returns>Formatted search term with prefix matching</returns>
     public static string FormatSearchTermWithPrefix(string input)
     {
         if (string.IsNullOrWhiteSpace(input))

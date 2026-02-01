@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Beyond8.Common.Utilities
+namespace Beyond8.Catalog.Application.Helpers
 {
     public static class SlugExtensions
     {

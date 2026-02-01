@@ -1,11 +1,9 @@
 using Beyond8.Catalog.Application.Dtos.Courses;
-using Beyond8.Catalog.Application.Dtos.Lessons;
-using Beyond8.Catalog.Application.Dtos.Sections;
 using Beyond8.Catalog.Application.Mappings.SectionMappings;
 using Beyond8.Catalog.Domain.Entities;
 using Beyond8.Catalog.Domain.Enums;
-using Beyond8.Common.Utilities;
 using System.Text.Json;
+using Beyond8.Catalog.Application.Helpers;
 
 namespace Beyond8.Catalog.Application.Mappings.CourseMappings;
 

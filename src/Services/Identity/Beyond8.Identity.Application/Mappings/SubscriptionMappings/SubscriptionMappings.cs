@@ -1,4 +1,3 @@
-using System;
 using Beyond8.Identity.Application.Dtos.Users;
 using Beyond8.Identity.Domain.Entities;
 

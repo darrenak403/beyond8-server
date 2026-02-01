@@ -4,7 +4,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Embedding;
-using Beyond8.Integration.Application.Helpers.AiService;
 using Beyond8.Integration.Application.Mappings.AiIntegrationMappings;
 using Beyond8.Integration.Application.Services.Interfaces;
 using Beyond8.Integration.Infrastructure.Configuration;

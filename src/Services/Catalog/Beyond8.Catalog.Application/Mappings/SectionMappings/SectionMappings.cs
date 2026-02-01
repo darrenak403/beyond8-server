@@ -1,4 +1,3 @@
-using Beyond8.Catalog.Application.Dtos.Lessons;
 using Beyond8.Catalog.Application.Dtos.Sections;
 using Beyond8.Catalog.Application.Mappings.LessonMappings;
 using Beyond8.Catalog.Domain.Entities;
@@ -46,10 +45,6 @@ public static class SectionMappingExtensions
         section.AssignmentId = request.AssignmentId;
     }
 
-    /// <summary>
-    /// Maps Section to SectionSummaryResponse for public course preview.
-    /// Includes lesson summaries without full content.
-    /// </summary>
     public static SectionSummaryResponse ToSummaryResponse(this Section section)
     {
         return new SectionSummaryResponse
@@ -67,10 +62,6 @@ public static class SectionMappingExtensions
         };
     }
 
-    /// <summary>
-    /// Maps Section to SectionDetailResponse for enrolled students.
-    /// Includes full lesson details.
-    /// </summary>
     public static SectionDetailResponse ToDetailResponse(this Section section)
     {
         return new SectionDetailResponse

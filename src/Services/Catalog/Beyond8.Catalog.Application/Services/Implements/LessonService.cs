@@ -1,4 +1,3 @@
-using System.Linq;
 using System.Text.Json;
 using Beyond8.Catalog.Application.Dtos.Lessons;
 using Beyond8.Catalog.Application.Mappings.LessonMappings;

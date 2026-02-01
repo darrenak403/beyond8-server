@@ -1,4 +1,3 @@
-using System;
 using Beyond8.Catalog.Domain.Enums;
 
 namespace Beyond8.Catalog.Application.Dtos.Courses;

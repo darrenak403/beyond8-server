@@ -1,4 +1,3 @@
-using System;
 using Beyond8.Catalog.Application.Dtos.Users;
 using Beyond8.Common.Clients;
 using Beyond8.Common.Utilities;

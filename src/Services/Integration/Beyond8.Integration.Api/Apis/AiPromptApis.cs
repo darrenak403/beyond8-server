@@ -3,7 +3,6 @@ using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
 using Beyond8.Integration.Application.Dtos.Prompts;
 using Beyond8.Integration.Application.Services.Interfaces;
-using Beyond8.Integration.Domain.Enums;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 

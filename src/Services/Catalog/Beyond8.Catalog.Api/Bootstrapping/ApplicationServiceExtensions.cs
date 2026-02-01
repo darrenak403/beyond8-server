@@ -2,7 +2,6 @@ using Beyond8.Catalog.Api.Apis;
 using Beyond8.Catalog.Application.Clients.Identity;
 using Beyond8.Catalog.Application.Consumers.Identity;
 using Beyond8.Catalog.Application.Dtos.Categories;
-using Beyond8.Catalog.Application.Dtos.Courses;
 using Beyond8.Catalog.Application.Services.Implements;
 using Beyond8.Catalog.Application.Services.Interfaces;
 using Beyond8.Catalog.Domain.Repositories.Interfaces;

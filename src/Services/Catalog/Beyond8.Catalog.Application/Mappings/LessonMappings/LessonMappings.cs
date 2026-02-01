@@ -198,10 +198,6 @@ public static class LessonMappings
         };
     }
 
-    /// <summary>
-    /// Maps Lesson to LessonSummaryResponse for public course preview.
-    /// Does not include actual content (video streaming URLs, text content).
-    /// </summary>
     public static LessonSummaryResponse ToSummaryResponse(this Lesson lesson)
     {
         return new LessonSummaryResponse
@@ -225,10 +221,6 @@ public static class LessonMappings
         };
     }
 
-    /// <summary>
-    /// Maps Lesson to LessonDetailResponse for enrolled students.
-    /// Includes full content access.
-    /// </summary>
     public static LessonDetailResponse ToDetailResponse(this Lesson lesson)
     {
         var response = new LessonDetailResponse

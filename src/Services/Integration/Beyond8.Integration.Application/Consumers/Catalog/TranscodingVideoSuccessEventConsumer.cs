@@ -1,4 +1,3 @@
-using System;
 using Beyond8.Common.Events.Catalog;
 using Beyond8.Integration.Application.Dtos.Notifications;
 using Beyond8.Integration.Application.Mappings.NotificationMappings;

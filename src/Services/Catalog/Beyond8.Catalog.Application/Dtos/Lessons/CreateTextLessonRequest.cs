@@ -1,5 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace Beyond8.Catalog.Application.Dtos.Lessons;
 
 public class CreateTextLessonRequest
