@@ -191,7 +191,7 @@ Khóa học phù hợp cho cả người mới bắt đầu và những develope
             Status = CourseStatus.Published,
             Level = CourseLevel.Beginner,
             Language = "vi-VN",
-            ThumbnailUrl = "https://example.com/thumbnails/aspnet-core-course.jpg",
+            ThumbnailUrl = "https://d30z0qh7rhzgt8.cloudfront.net/course/thumbnails/00000000-0000-0000-0000-000000000006/7657afd45d724448a735735a95924605_615246363_1556413255931774_2968156490140092165_n.jpg",
             Outcomes = "[\"Xây dựng ứng dụng web hoàn chỉnh với ASP.NET Core\", \"Thiết kế RESTful API theo best practices\", \"Làm việc với Entity Framework Core và PostgreSQL\", \"Triển khai Authentication/Authorization với JWT\", \"Áp dụng Clean Architecture trong dự án thực tế\", \"Deploy ứng dụng lên Azure/AWS\"]",
             Requirements = "[\"Kiến thức cơ bản về C#\", \"Hiểu biết về HTML, CSS, JavaScript\", \"Máy tính cài đặt .NET SDK 8.0 trở lên\"]",
             TargetAudience = "[\"Sinh viên CNTT muốn học lập trình web\", \"Developer muốn chuyển sang .NET\", \"Backend developer muốn nâng cao kỹ năng\"]",
