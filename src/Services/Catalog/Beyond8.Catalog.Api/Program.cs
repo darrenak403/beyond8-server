@@ -18,5 +18,4 @@ await app.MigrateDbContextAsync<CatalogDbContext>(async (database, cancellationT
 });
 
 app.UseApplicationServices();
-
 app.Run();

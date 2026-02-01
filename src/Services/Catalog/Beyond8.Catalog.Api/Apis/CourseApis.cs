@@ -30,6 +30,13 @@ public static class CourseApis
             .Produces<ApiResponse<List<CourseSimpleResponse>>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<List<CourseResponse>>>(StatusCodes.Status400BadRequest);
 
+        // Full-Text Search endpoint
+        group.MapGet("/search", FullTextSearchCoursesAsync)
+            .WithName("FullTextSearchCourses")
+            .WithDescription("Tìm kiếm khóa học sử dụng Full-Text Search. Hỗ trợ tiếng Việt không dấu (VD: 'lap trinh' tìm được 'Lập trình'). Kết quả được xếp hạng theo độ liên quan.")
+            .Produces<ApiResponse<List<CourseResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<List<CourseResponse>>>(StatusCodes.Status400BadRequest);
+
         group.MapGet("/{id}/summary", GetCourseSummaryAsync)
             .WithName("GetCourseSummary")
             .WithDescription("Lấy tóm tắt khóa học")
@@ -175,6 +182,14 @@ public static class CourseApis
         [AsParameters] PaginationCourseSearchRequest pagination)
     {
         var result = await courseService.GetAllCoursesAsync(pagination);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> FullTextSearchCoursesAsync(
+        [FromServices] ICourseService courseService,
+        [AsParameters] FullTextSearchRequest request)
+    {
+        var result = await courseService.FullTextSearchCoursesAsync(request);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
