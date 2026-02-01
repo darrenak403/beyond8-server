@@ -1,11 +1,14 @@
 using Beyond8.Catalog.Application.Clients.Identity;
 using Beyond8.Catalog.Application.Dtos.Courses;
+using Beyond8.Catalog.Application.Dtos.Users;
 using Beyond8.Catalog.Application.Mappings.CourseMappings;
 using Beyond8.Catalog.Application.Services.Interfaces;
 using Beyond8.Catalog.Domain.Entities;
 using Beyond8.Catalog.Domain.Enums;
 using Beyond8.Catalog.Domain.Repositories.Interfaces;
+using Beyond8.Common.Events.Catalog;
 using Beyond8.Common.Utilities;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -14,7 +17,8 @@ namespace Beyond8.Catalog.Application.Services.Implements;
 public class CourseService(
     ILogger<CourseService> logger,
     IUnitOfWork unitOfWork,
-    IIdentityClient identityClient) : ICourseService
+    IIdentityClient identityClient,
+    IPublishEndpoint publishEndpoint) : ICourseService
 {
 
     private static (int PageNumber, int PageSize) NormalizePagination(PaginationCourseSearchRequest request)
@@ -335,7 +339,11 @@ public class CourseService(
                 return ApiResponse<bool>.FailureResponse("Khóa học phải có ít nhất 3 bài học.");
             }
 
-            // TODO: Kiểm tra tất cả video đã upload và transcoded (HLS) trước khi cho submit
+            var isAllVideosUploaded = await ValidateAllVideosUploadedAsync(course);
+            if (!isAllVideosUploaded)
+            {
+                return ApiResponse<bool>.FailureResponse("Tất cả video phải được upload và transcoded (HLS) trước khi cho submit.");
+            }
 
             course.Status = CourseStatus.PendingApproval;
             await unitOfWork.CourseRepository.UpdateAsync(courseId, course);
@@ -349,6 +357,17 @@ public class CourseService(
             logger.LogError(ex, "Error submitting course for approval: {CourseId}", courseId);
             return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi nộp duyệt khóa học.");
         }
+    }
+
+    private async Task<bool> ValidateAllVideosUploadedAsync(Course course)
+    {
+        var lesson = await unitOfWork.LessonRepository.AsQueryable()
+            .Include(l => l.Video)
+            .Include(l => l.Section)
+            .ThenInclude(s => s.Course)
+            .Where(l => l.Section.CourseId == course.Id && l.Video != null)
+            .ToListAsync();
+        return lesson.All(l => !string.IsNullOrEmpty(l.Video!.VideoOriginalUrl) && !string.IsNullOrEmpty(l.Video!.HlsVariants));
     }
 
     public async Task<ApiResponse<bool>> ApproveCourseAsync(Guid courseId, ApproveCourseRequest request)
@@ -371,6 +390,23 @@ public class CourseService(
             course.ApprovalNotes = request.Notes;
             await unitOfWork.CourseRepository.UpdateAsync(courseId, course);
             await unitOfWork.SaveChangesAsync();
+
+            var instructorInfo = await identityClient.GetUserByIdAsync(course.InstructorId);
+            if (!instructorInfo.IsSuccess || instructorInfo.Data == null)
+            {
+                logger.LogWarning("Failed to get instructor info for user: {UserId}", course.InstructorId);
+                return ApiResponse<bool>.FailureResponse("Không thể lấy thông tin giảng viên.");
+            }
+
+            // Publish event to integration service (email notification)
+            await publishEndpoint.Publish(new CourseApprovedEvent(
+                courseId,
+                course.InstructorId,
+                instructorInfo.Data.Email,
+                instructorInfo.Data.FullName,
+                course.Title,
+                request.Notes,
+                DateTime.UtcNow));
 
             logger.LogInformation("Course approved: {CourseId}", courseId);
             return ApiResponse<bool>.SuccessResponse(true, "Phê duyệt khóa học thành công.");
@@ -402,6 +438,16 @@ public class CourseService(
             course.RejectionReason = request.Reason;
             await unitOfWork.CourseRepository.UpdateAsync(courseId, course);
             await unitOfWork.SaveChangesAsync();
+
+            var instructorInfor = await identityClient.GetUserByIdAsync(course.InstructorId);
+            if (!instructorInfor.IsSuccess || instructorInfor.Data == null)
+            {
+                logger.LogWarning("Failed to get instructor info for user: {UserId}", course.InstructorId);
+                return ApiResponse<bool>.FailureResponse("Không thể lấy thông tin giảng viên.");
+            }
+
+            // Publish event to notification service
+            await publishEndpoint.Publish(new CourseRejectedEvent(courseId, course.InstructorId, instructorInfor.Data.Email, instructorInfor.Data.FullName, course.Title, request.Reason, DateTime.UtcNow));
 
             logger.LogInformation("Course rejected: {CourseId}", courseId);
             return ApiResponse<bool>.SuccessResponse(true, "Từ chối khóa học thành công.");
@@ -472,6 +518,17 @@ public class CourseService(
             await unitOfWork.CourseRepository.UpdateAsync(courseId, course);
             await unitOfWork.SaveChangesAsync();
 
+            var instructorInfor = await identityClient.GetUserByIdAsync(course.InstructorId);
+            if (!instructorInfor.IsSuccess || instructorInfor.Data == null)
+            {
+                logger.LogWarning("Failed to get instructor info for user: {UserId}", course.InstructorId);
+                return ApiResponse<bool>.FailureResponse("Không thể lấy thông tin giảng viên.");
+            }
+
+            // Publish event to integration service
+            var courseUrl = $"https://beyond8.dev/courses/{course.Slug}";
+            await publishEndpoint.Publish(new CoursePublishedEvent(courseId, course.InstructorId, instructorInfor.Data.Email, instructorInfor.Data.FullName, course.Title, courseUrl, DateTime.UtcNow));
+
             logger.LogInformation("Course published: {CourseId}", courseId);
             return ApiResponse<bool>.SuccessResponse(true, "Công bố khóa học thành công.");
         }
@@ -498,6 +555,9 @@ public class CourseService(
             course.Status = CourseStatus.Approved;
             await unitOfWork.CourseRepository.UpdateAsync(courseId, course);
             await unitOfWork.SaveChangesAsync();
+
+            // Publish event to identity service
+            await publishEndpoint.Publish(new CourseUnpublishedEvent(courseId, course.InstructorId, DateTime.UtcNow));
 
             logger.LogInformation("Course unpublished: {CourseId}", courseId);
             return ApiResponse<bool>.SuccessResponse(true, "Ẩn khóa học thành công.");
@@ -529,5 +589,16 @@ public class CourseService(
             logger.LogError(ex, "Error updating course thumbnail: {CourseId}", courseId);
             return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi cập nhật ảnh đại diện khóa học.");
         }
+    }
+
+    private async Task<(bool IsValid, UserSimpleResponse? User, string? ErrorMessage)> GetInstructorInfoAsync(Guid instructorId)
+    {
+        var instructorInfor = await identityClient.GetUserByIdAsync(instructorId);
+        if (!instructorInfor.IsSuccess || instructorInfor.Data == null)
+        {
+            logger.LogWarning("Failed to get instructor info for user: {UserId}", instructorId);
+            return (false, null, "Không thể lấy thông tin giảng viên.");
+        }
+        return (true, instructorInfor.Data, null);
     }
 }

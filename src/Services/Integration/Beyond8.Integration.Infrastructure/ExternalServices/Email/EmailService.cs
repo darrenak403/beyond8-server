@@ -27,7 +27,7 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices.Email
                 {
                     From = $"{_fromName} <{_fromEmail}>",
                     To = new[] { toEmail },
-                    Subject = $"[Beyond8] Mã xác thực OTP - {purpose}",
+                    Subject = $"[Beyond8] Mã xác thực OTP - {otpCode} - {purpose}",
                     HtmlBody = htmlContent
                 };
 
@@ -121,6 +121,60 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices.Email
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error sending instructor update request email to {Email}: {Message}", toEmail, ex.Message);
+                throw;
+            }
+        }
+
+        public async Task<bool> SendCourseRejectedEmailAsync(string toEmail, string instructorName, string courseName, string reason)
+        {
+            try
+            {
+                var htmlContent = EmailTemplates.GetCourseRejectedEmailTemplate(instructorName, courseName, reason);
+
+                var message = new EmailMessage
+                {
+                    From = $"{_fromName} <{_fromEmail}>",
+                    To = [toEmail],
+                    Subject = $"Thông báo về khóa học \"{courseName}\"",
+                    HtmlBody = htmlContent
+                };
+
+                var response = await resend.EmailSendAsync(message);
+
+                logger.LogInformation("Course rejected email sent successfully to {Email} for course {CourseName}",
+                    toEmail, courseName);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error sending course rejected email to {Email}: {Message}", toEmail, ex.Message);
+                throw;
+            }
+        }
+
+        public async Task<bool> SendCourseApprovedEmailAsync(string toEmail, string instructorName, string courseName)
+        {
+            try
+            {
+                var htmlContent = EmailTemplates.GetCourseApprovedEmailTemplate(instructorName, courseName);
+
+                var message = new EmailMessage
+                {
+                    From = $"{_fromName} <{_fromEmail}>",
+                    To = [toEmail],
+                    Subject = $"🎉 Khóa học \"{courseName}\" đã được phê duyệt!",
+                    HtmlBody = htmlContent
+                };
+
+                var response = await resend.EmailSendAsync(message);
+
+                logger.LogInformation("Course approved email sent successfully to {Email} for course {CourseName}",
+                    toEmail, courseName);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error sending course approved email to {Email}: {Message}", toEmail, ex.Message);
                 throw;
             }
         }

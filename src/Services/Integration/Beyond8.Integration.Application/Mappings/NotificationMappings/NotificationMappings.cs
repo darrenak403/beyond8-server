@@ -1,3 +1,4 @@
+using Beyond8.Common.Events.Catalog;
 using Beyond8.Common.Events.Identity;
 using Beyond8.Integration.Application.Dtos.Notifications;
 using Beyond8.Integration.Domain.Entities;
@@ -21,6 +22,7 @@ namespace Beyond8.Integration.Application.Mappings.NotificationMappings
                 Channels = notification.Channels,
                 ReadAt = notification.ReadAt,
                 IsRead = notification.IsRead,
+                Context = notification.Context,
                 CreatedAt = notification.CreatedAt,
                 UpdatedAt = notification.UpdatedAt
             };
@@ -37,7 +39,8 @@ namespace Beyond8.Integration.Application.Mappings.NotificationMappings
                 Status = status,
                 Channels = [NotificationChannel.Email],
                 ReadAt = null,
-                IsRead = false
+                IsRead = false,
+                Context = NotificationContext.General
             };
         }
 
@@ -52,7 +55,8 @@ namespace Beyond8.Integration.Application.Mappings.NotificationMappings
                 Status = status,
                 Channels = [NotificationChannel.Email],
                 ReadAt = null,
-                IsRead = false
+                IsRead = false,
+                Context = NotificationContext.Instructor
             };
         }
 
@@ -67,7 +71,8 @@ namespace Beyond8.Integration.Application.Mappings.NotificationMappings
                 Status = status,
                 Channels = [NotificationChannel.Email],
                 ReadAt = null,
-                IsRead = false
+                IsRead = false,
+                Context = NotificationContext.Instructor
             };
         }
 
@@ -82,7 +87,8 @@ namespace Beyond8.Integration.Application.Mappings.NotificationMappings
                 Status = status,
                 Channels = [NotificationChannel.App],
                 ReadAt = null,
-                IsRead = false
+                IsRead = false,
+                Context = NotificationContext.Staff
             };
         }
 
@@ -97,9 +103,59 @@ namespace Beyond8.Integration.Application.Mappings.NotificationMappings
                 Status = status,
                 Channels = [NotificationChannel.App],
                 ReadAt = null,
-                IsRead = false
+                IsRead = false,
+                Context = NotificationContext.Instructor
+            };
+        }
+
+        public static Notification CourseRejectedEventToNotification(this CourseRejectedEvent @event, NotificationStatus status)
+        {
+            var reason = @event.Reason ?? "Khóa học chưa đáp ứng đủ tiêu chuẩn chất lượng của Beyond8.";
+            return new Notification
+            {
+                Title = "Khóa học bị từ chối",
+                Message = $"Khóa học \"{@event.CourseName}\" của bạn đã bị từ chối. Lý do: {reason}",
+                UserId = @event.InstructorId,
+                Target = NotificationTarget.User,
+                Status = status,
+                Channels = [NotificationChannel.Email],
+                ReadAt = null,
+                IsRead = false,
+                Context = NotificationContext.Instructor
+            };
+        }
+
+        public static Notification CourseApprovedEventToNotification(this CourseApprovedEvent @event, NotificationStatus status)
+        {
+            return new Notification
+            {
+                Title = "Khóa học được duyệt",
+                Message = $"Chúc mừng! Khóa học \"{@event.CourseName}\" của bạn đã được duyệt và sẵn sàng để xuất bản.",
+                UserId = @event.InstructorId,
+                Target = NotificationTarget.User,
+                Status = status,
+                Channels = [NotificationChannel.Email],
+                ReadAt = null,
+                IsRead = false,
+                Context = NotificationContext.Instructor
+            };
+        }
+
+        public static NotificationLogResponse ToNotificationLogResponse(this Notification notification)
+        {
+            return new NotificationLogResponse
+            {
+                Id = notification.Id,
+                UserId = notification.UserId,
+                Target = notification.Target,
+                Status = notification.Status,
+                Channels = notification.Channels,
+                ReadAt = notification.ReadAt,
+                IsRead = notification.IsRead,
+                Context = notification.Context,
+                CreatedAt = notification.CreatedAt,
+                UpdatedAt = notification.UpdatedAt
             };
         }
     }
-
 }
