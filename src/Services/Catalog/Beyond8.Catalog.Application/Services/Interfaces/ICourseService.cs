@@ -13,19 +13,19 @@ public interface ICourseService
     Task<ApiResponse<bool>> UpdateCourseThumbnailAsync(Guid courseId, Guid currentUserId, UpdateCourseThumbnailRequest request);
 
     // Instructor-Specific Operations // luồng 2
-    Task<ApiResponse<List<CourseResponse>>> GetCoursesByInstructorAsync(Guid instructorId, PaginationCourseSearchRequest pagination);
+    Task<ApiResponse<List<CourseResponse>>> GetCoursesByInstructorAsync(Guid instructorId, PaginationCourseInstructorSearchRequest pagination);
     Task<ApiResponse<CourseStatsResponse>> GetCourseStatsByInstructorAsync(Guid instructorId);
 
     // Phê Duyệt Khóa Học
     Task<ApiResponse<bool>> SubmitForApprovalAsync(Guid courseId, Guid currentUserId);
     Task<ApiResponse<bool>> ApproveCourseAsync(Guid courseId, ApproveCourseRequest request);
     Task<ApiResponse<bool>> RejectCourseAsync(Guid courseId, RejectCourseRequest request);
-    Task<ApiResponse<List<CourseResponse>>> GetAllCoursesForAdminAsync(PaginationCourseSearchRequest pagination);
+    Task<ApiResponse<List<CourseResponse>>> GetAllCoursesForAdminAsync(PaginationCourseAdminSearchRequest pagination);
 
     // Publishing & Public Access // luồng 2
     Task<ApiResponse<bool>> PublishCourseAsync(Guid courseId, Guid currentUserId);
-    Task<ApiResponse<bool>> UnpublishCourseAsync(Guid courseId, Guid currentUserId);
-    Task<ApiResponse<List<CourseResponse>>> GetAllCoursesAsync(PaginationCourseSearchRequest request);
+    Task<ApiResponse<bool>> UnpublishCourseAsync(Guid courseId, Guid currentUserId);    
+    Task<ApiResponse<List<CourseSimpleResponse>>> GetAllCoursesAsync(PaginationCourseSearchRequest request);
 
     // Public Course Views (for students/visitors)
     Task<ApiResponse<CourseSummaryResponse>> GetCourseSummaryAsync(Guid courseId);

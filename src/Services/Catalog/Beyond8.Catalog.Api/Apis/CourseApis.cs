@@ -27,7 +27,7 @@ public static class CourseApis
         group.MapGet("/", GetAllCoursesAsync)
             .WithName("GetAllCourses")
             .WithDescription("Lấy danh sách tất cả khóa học")
-            .Produces<ApiResponse<List<CourseResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<List<CourseSimpleResponse>>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<List<CourseResponse>>>(StatusCodes.Status400BadRequest);
 
         group.MapGet("/{id}/summary", GetCourseSummaryAsync)
@@ -254,7 +254,7 @@ public static class CourseApis
     private static async Task<IResult> GetCoursesByInstructorAsync(
         [FromServices] ICourseService courseService,
         [FromServices] ICurrentUserService currentUserService,
-        [AsParameters] PaginationCourseSearchRequest pagination)
+        [AsParameters] PaginationCourseInstructorSearchRequest pagination)
     {
         var instructorId = currentUserService.UserId;
         var result = await courseService.GetCoursesByInstructorAsync(instructorId, pagination);
@@ -293,7 +293,7 @@ public static class CourseApis
 
     private static async Task<IResult> GetAllCoursesForAdminAsync(
         [FromServices] ICourseService courseService,
-        [AsParameters] PaginationCourseSearchRequest pagination)
+        [AsParameters] PaginationCourseAdminSearchRequest pagination)
     {
         var result = await courseService.GetAllCoursesForAdminAsync(pagination);
         return result.IsSuccess

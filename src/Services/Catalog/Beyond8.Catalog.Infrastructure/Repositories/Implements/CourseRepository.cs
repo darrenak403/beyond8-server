@@ -28,7 +28,11 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
             bool? isRandom)
         {
             var query = context.Courses
-                .Include(c => c.Category).ThenInclude(cat => cat.Parent)
+                .Include(c => c.Category)
+                .ThenInclude(cat => cat.Parent)
+                .Include(c => c.Sections)
+                .ThenInclude(s => s.Lessons)
+                .ThenInclude(l => l.Video)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(keyword))

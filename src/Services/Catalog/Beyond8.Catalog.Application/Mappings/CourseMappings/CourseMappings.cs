@@ -88,10 +88,6 @@ public static class CourseMappings
         };
     }
 
-    /// <summary>
-    /// Maps Course to CourseSummaryResponse with sections and lessons summary.
-    /// Used for public course preview (before enrollment).
-    /// </summary>
     public static CourseSummaryResponse ToSummaryResponse(this Course entity)
     {
         return new CourseSummaryResponse
@@ -131,10 +127,6 @@ public static class CourseMappings
         };
     }
 
-    /// <summary>
-    /// Maps Course to CourseDetailResponse with full section and lesson details.
-    /// Used for enrolled students to view full content.
-    /// </summary>
     public static CourseDetailResponse ToDetailResponse(this Course entity)
     {
         return new CourseDetailResponse
@@ -171,6 +163,26 @@ public static class CourseMappings
                 .OrderBy(s => s.OrderIndex)
                 .Select(s => s.ToDetailResponse())
                 .ToList() ?? []
+        };
+    }
+
+    public static CourseSimpleResponse ToSimpleResponse(this Course entity)
+    {
+        return new CourseSimpleResponse
+        {
+            Id = entity.Id,
+            Title = entity.Title,
+            ShortDescription = entity.ShortDescription ?? string.Empty,
+            ThumbnailUrl = entity.ThumbnailUrl,
+            CategoryName = entity.Category?.Name ?? string.Empty,
+            Level = entity.Level,
+            TotalStudents = entity.TotalStudents,
+            TotalDurationMinutes = entity.Sections?.Sum(s => s.Lessons.Sum(l => (l.Video?.DurationSeconds ?? 0) / 60)) ?? 0,
+            InstructorId = entity.InstructorId,
+            InstructorName = entity.InstructorName,
+            Price = entity.Price,
+            AvgRating = entity.AvgRating,
+            TotalReviews = entity.TotalReviews
         };
     }
 }

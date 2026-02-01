@@ -84,34 +84,35 @@ public class CourseService(
         return withRating.Count > 0 ? withRating.Average(c => c.AvgRating!.Value) : 0;
     }
 
-    public async Task<ApiResponse<List<CourseResponse>>> GetAllCoursesAsync(PaginationCourseSearchRequest request)
+    public async Task<ApiResponse<List<CourseSimpleResponse>>> GetAllCoursesAsync(PaginationCourseSearchRequest request)
     {
         try
         {
             var (pageNumber, pageSize) = NormalizePagination(request);
 
+            // Public endpoint: always filter by Published status and active courses
             var (courses, totalCount) = await unitOfWork.CourseRepository.SearchCoursesAsync(
                 pageNumber,
                 pageSize,
                 keyword: request.Keyword,
                 categoryName: request.CategoryName,
                 instructorName: request.InstructorName,
-                status: request.Status,
+                status: CourseStatus.Published,
                 level: request.Level,
                 language: request.Language,
                 minPrice: request.MinPrice,
                 maxPrice: request.MaxPrice,
                 minRating: request.MinRating,
                 minStudents: request.MinStudents,
-                isActive: request.IsActive,
+                isActive: true,
                 isDescending: request.IsDescending,
                 isDescendingPrice: request.IsDescendingPrice,
                 isRandom: request.IsRandom
             );
 
-            var courseResponses = courses.Select(c => c.ToResponse()).ToList();
+            var courseResponses = courses.Select(c => c.ToSimpleResponse()).ToList();
 
-            return ApiResponse<List<CourseResponse>>.SuccessPagedResponse(
+            return ApiResponse<List<CourseSimpleResponse>>.SuccessPagedResponse(
                 courseResponses,
                 totalCount,
                 pageNumber,
@@ -122,7 +123,7 @@ public class CourseService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting all courses");
-            return ApiResponse<List<CourseResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách khóa học.");
+            return ApiResponse<List<CourseSimpleResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách khóa học.");
         }
     }
 
@@ -233,7 +234,7 @@ public class CourseService(
         }
     }
 
-    public async Task<ApiResponse<List<CourseResponse>>> GetCoursesByInstructorAsync(Guid instructorId, PaginationCourseSearchRequest request)
+    public async Task<ApiResponse<List<CourseResponse>>> GetCoursesByInstructorAsync(Guid instructorId, PaginationCourseInstructorSearchRequest request)
     {
         try
         {
@@ -241,6 +242,7 @@ public class CourseService(
 
             var (pageNumber, pageSize) = NormalizePagination(request);
 
+            // Instructor can see all their own courses (active only by default)
             var (courses, totalCount) = await unitOfWork.CourseRepository.SearchCoursesInstructorAsync(
                 pageNumber,
                 pageSize,
@@ -254,7 +256,7 @@ public class CourseService(
                 maxPrice: request.MaxPrice,
                 minRating: request.MinRating,
                 minStudents: request.MinStudents,
-                isActive: request.IsActive,
+                isActive: true,
                 isDescendingPrice: request.IsDescendingPrice,
                 isDescending: request.IsDescending,
                 isRandom: request.IsRandom,
@@ -450,7 +452,7 @@ public class CourseService(
         }
     }
 
-    public async Task<ApiResponse<List<CourseResponse>>> GetAllCoursesForAdminAsync(PaginationCourseSearchRequest request)
+    public async Task<ApiResponse<List<CourseResponse>>> GetAllCoursesForAdminAsync(PaginationCourseAdminSearchRequest request)
     {
         try
         {
