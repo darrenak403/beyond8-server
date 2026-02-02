@@ -16,4 +16,5 @@ public class CreateQuizRequest
     public bool ShuffleQuestions { get; set; } = true;
     public bool AllowReview { get; set; } = true;
     public bool ShowExplanation { get; set; } = true;
+    public DifficultyDistributionDto? DifficultyDistribution { get; set; }
 }

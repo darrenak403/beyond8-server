@@ -12,6 +12,9 @@ namespace Beyond8.Integration.Application.Validators.AiIntegration
 
             RuleFor(x => x.DocumentId)
                 .NotEmpty().WithMessage("DocumentId không được để trống");
+
+            RuleFor(x => x.CloudFrontUrl)
+                .NotEmpty().WithMessage("CloudFront URL không được để trống");
         }
     }
 }
