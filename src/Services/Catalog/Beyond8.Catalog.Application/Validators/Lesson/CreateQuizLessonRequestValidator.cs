@@ -17,9 +17,5 @@ public class CreateQuizLessonRequestValidator : AbstractValidator<CreateQuizLess
         RuleFor(x => x.Description)
             .MaximumLength(1000).WithMessage("Mô tả bài học không được vượt quá 1000 ký tự")
             .When(x => !string.IsNullOrEmpty(x.Description));
-
-        // Quiz-specific validation
-        RuleFor(x => x.QuizId)
-            .NotEmpty().WithMessage("QuizId không được để trống cho bài học quiz");
     }
 }
