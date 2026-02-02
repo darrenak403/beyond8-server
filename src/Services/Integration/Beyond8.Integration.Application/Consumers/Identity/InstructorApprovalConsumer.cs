@@ -45,8 +45,8 @@ namespace Beyond8.Integration.Application.Consumers.Identity
 
                         var data = new DataInfor
                         {
-                            Title = "Yêu cầu đăng nhập lại",
-                            Message = "Tài khoản của bạn đã được duyệt thành công. Vui lòng đăng xuất và đăng nhập lại để cập nhật quyền truy cập.",
+                            Title = "Đơn giảng viên được duyệt",
+                            Message = $"Đơn giảng viên của bạn {message.InstructorName} đã được duyệt thành công. Xem hồ sơ: {message.ProfileUrl}",
                             Metadata = new
                             {
                                 RequireReLogin = true

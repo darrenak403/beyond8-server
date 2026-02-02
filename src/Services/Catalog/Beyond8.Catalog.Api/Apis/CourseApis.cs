@@ -28,7 +28,7 @@ public static class CourseApis
             .WithName("GetAllCourses")
             .WithDescription("Lấy danh sách tất cả khóa học")
             .Produces<ApiResponse<List<CourseSimpleResponse>>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<List<CourseResponse>>>(StatusCodes.Status400BadRequest);
+            .Produces<ApiResponse<List<CourseSimpleResponse>>>(StatusCodes.Status400BadRequest);
 
         // Full-Text Search endpoint
         group.MapGet("/search", FullTextSearchCoursesAsync)
