@@ -52,6 +52,7 @@ public class CourseService(
         var course = await unitOfWork.CourseRepository
             .AsQueryable()
             .Include(c => c.Category)
+            .Include(c => c.Documents)
             .FirstOrDefaultAsync(c => c.Id == courseId && c.IsActive && c.InstructorId == currentUserId);
 
         if (course == null)
@@ -642,6 +643,7 @@ public class CourseService(
             var course = await unitOfWork.CourseRepository
                 .AsQueryable()
                 .Include(c => c.Category)
+                .Include(c => c.Documents)
                 .Include(c => c.Sections.Where(s => s.IsPublished))
                     .ThenInclude(s => s.Lessons.Where(l => l.IsPublished))
                         .ThenInclude(l => l.Video)
@@ -677,6 +679,7 @@ public class CourseService(
             var course = await unitOfWork.CourseRepository
                 .AsQueryable()
                 .Include(c => c.Category)
+                .Include(c => c.Documents)
                 .Include(c => c.Sections.Where(s => s.IsPublished))
                     .ThenInclude(s => s.Lessons.Where(l => l.IsPublished))
                         .ThenInclude(l => l.Video)

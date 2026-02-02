@@ -178,6 +178,7 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
         {
             var query = context.Courses
             .Include(c => c.Category).ThenInclude(cat => cat.Parent)
+            .Include(c => c.Documents)
             .AsQueryable();
 
             if (instructorId.HasValue)
@@ -413,6 +414,7 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
         {
             var query = context.Courses
                 .Include(c => c.Category).ThenInclude(cat => cat.Parent)
+                .Include(c => c.Documents)
                 .Where(c => c.IsActive && c.Status == CourseStatus.Published)
                 .AsQueryable();
 

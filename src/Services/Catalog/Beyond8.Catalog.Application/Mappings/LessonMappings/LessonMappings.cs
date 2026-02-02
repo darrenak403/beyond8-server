@@ -1,4 +1,5 @@
 using Beyond8.Catalog.Application.Dtos.Lessons;
+using Beyond8.Catalog.Application.Mappings.LessonDocumentMappings;
 using Beyond8.Catalog.Domain.Entities;
 using Beyond8.Catalog.Domain.Enums;
 
@@ -21,7 +22,8 @@ public static class LessonMappings
             TotalViews = lesson.TotalViews,
             TotalCompletions = lesson.TotalCompletions,
             CreatedAt = lesson.CreatedAt,
-            UpdatedAt = lesson.UpdatedAt
+            UpdatedAt = lesson.UpdatedAt,
+            Documents = lesson.Documents?.Select(d => d.ToResponse()).ToList() ?? []
         };
 
         // Only populate fields for the specific lesson type
@@ -46,6 +48,21 @@ public static class LessonMappings
         }
 
         return response;
+    }
+
+    public static LessonSimpleResponse ToSimpleResponse(this Lesson lesson)
+    {
+        return new LessonSimpleResponse
+        {
+            Id = lesson.Id,
+            SectionId = lesson.SectionId,
+            Title = lesson.Title,
+            Description = lesson.Description,
+            Type = lesson.Type,
+            OrderIndex = lesson.OrderIndex,
+            IsPreview = lesson.IsPreview,
+            IsPublished = lesson.IsPublished
+        };
     }
 
     // New specific mappings for individual lesson types
