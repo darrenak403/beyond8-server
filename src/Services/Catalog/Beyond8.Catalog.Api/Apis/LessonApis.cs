@@ -34,8 +34,8 @@ public static class LessonApis
             .WithName("GetLessonsBySectionId")
             .WithDescription("Lấy danh sách bài học của chương")
             .RequireAuthorization(x => x.RequireRole(Role.Instructor))
-            .Produces<ApiResponse<List<LessonSimpleResponse>>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<List<LessonSimpleResponse>>>(StatusCodes.Status400BadRequest)
+            .Produces<ApiResponse<List<LessonResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<List<LessonResponse>>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
         // Get lesson by id

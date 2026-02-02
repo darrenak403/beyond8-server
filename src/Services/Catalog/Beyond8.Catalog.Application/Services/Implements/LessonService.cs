@@ -51,30 +51,30 @@ public class LessonService(
         }
     }
 
-    public async Task<ApiResponse<List<LessonSimpleResponse>>> GetLessonsBySectionIdAsync(Guid sectionId, Guid currentUserId)
+    public async Task<ApiResponse<List<LessonResponse>>> GetLessonsBySectionIdAsync(Guid sectionId, Guid currentUserId)
     {
         try
         {
             // Validate section ownership through course
             var validationResult = await CheckSectionOwnershipAsync(sectionId, currentUserId);
             if (!validationResult.IsValid)
-                return ApiResponse<List<LessonSimpleResponse>>.FailureResponse(validationResult.ErrorMessage!);
+                return ApiResponse<List<LessonResponse>>.FailureResponse(validationResult.ErrorMessage!);
 
             var lessons = await unitOfWork.LessonRepository.AsQueryable()
                 .Where(l => l.SectionId == sectionId)
                 .OrderBy(l => l.OrderIndex)
                 .ToListAsync();
 
-            var responses = lessons.Select(l => l.ToSimpleResponse()).ToList();
+            var responses = lessons.Select(l => l.ToResponse()).ToList();
 
-            return ApiResponse<List<LessonSimpleResponse>>.SuccessResponse(
+            return ApiResponse<List<LessonResponse>>.SuccessResponse(
                 responses,
                 "Lấy danh sách bài học thành công.");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting lessons for section: {SectionId}", sectionId);
-            return ApiResponse<List<LessonSimpleResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách bài học.");
+            return ApiResponse<List<LessonResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách bài học.");
         }
     }
 
