@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Beyond8.Assessment.Application.Dtos.Quizzes;
 using Beyond8.Assessment.Application.Mappings.QuestionMappings;
 using Beyond8.Assessment.Domain.Entities;
@@ -6,6 +7,7 @@ namespace Beyond8.Assessment.Application.Mappings.QuizMappings;
 
 public static class QuizMappings
 {
+    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     public static QuizResponse ToResponse(this Quiz quiz, List<Question> questions)
     {
         return new QuizResponse
@@ -23,6 +25,7 @@ public static class QuizMappings
             ShuffleQuestions = quiz.ShuffleQuestions,
             AllowReview = quiz.AllowReview,
             ShowExplanation = quiz.ShowExplanation,
+            DifficultyDistribution = DeserializeDifficultyDistribution(quiz.DifficultyDistribution),
             CreatedAt = quiz.CreatedAt,
             UpdatedAt = quiz.UpdatedAt ?? quiz.CreatedAt,
             Questions = [.. questions.Select(q => q.ToResponse())]
@@ -44,7 +47,10 @@ public static class QuizMappings
             MaxAttempts = request.MaxAttempts,
             ShuffleQuestions = request.ShuffleQuestions,
             AllowReview = request.AllowReview,
-            ShowExplanation = request.ShowExplanation
+            ShowExplanation = request.ShowExplanation,
+            DifficultyDistribution = request.DifficultyDistribution != null
+                ? JsonSerializer.Serialize(request.DifficultyDistribution, JsonOptions)
+                : null
         };
     }
 
@@ -75,5 +81,20 @@ public static class QuizMappings
         quiz.ShuffleQuestions = request.ShuffleQuestions;
         quiz.AllowReview = request.AllowReview;
         quiz.ShowExplanation = request.ShowExplanation;
+        if (request.DifficultyDistribution != null)
+            quiz.DifficultyDistribution = JsonSerializer.Serialize(request.DifficultyDistribution, JsonOptions);
+    }
+
+    private static DifficultyDistributionDto? DeserializeDifficultyDistribution(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            return JsonSerializer.Deserialize<DifficultyDistributionDto>(json, JsonOptions);
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

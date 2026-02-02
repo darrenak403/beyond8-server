@@ -40,6 +40,14 @@ namespace Beyond8.Assessment.Application.Validators.Quizzes
             RuleFor(x => x.QuestionIds)
                 .NotEmpty().WithMessage("QuestionIds không được để trống")
                 .Must(x => x.Count > 0).WithMessage("QuestionIds phải có ít nhất 1 câu hỏi");
+
+            RuleFor(x => x.DifficultyDistribution)
+                .Must(d => d == null || (d.EasyPercent >= 0 && d.EasyPercent <= 100
+                    && d.MediumPercent >= 0 && d.MediumPercent <= 100
+                    && d.HardPercent >= 0 && d.HardPercent <= 100
+                    && d.EasyPercent + d.MediumPercent + d.HardPercent == 100))
+                .WithMessage("DifficultyDistribution: EasyPercent, MediumPercent, HardPercent phải từ 0-100 và tổng bằng 100")
+                .When(x => x.DifficultyDistribution != null);
         }
     }
 }
