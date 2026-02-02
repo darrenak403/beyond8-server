@@ -61,6 +61,10 @@ public class LessonService(
                 return ApiResponse<List<LessonResponse>>.FailureResponse(validationResult.ErrorMessage!);
 
             var lessons = await unitOfWork.LessonRepository.AsQueryable()
+                .Include(l => l.Video)
+                .Include(l => l.Text)
+                .Include(l => l.Quiz)
+                .Include(l => l.Documents)
                 .Where(l => l.SectionId == sectionId)
                 .OrderBy(l => l.OrderIndex)
                 .ToListAsync();
