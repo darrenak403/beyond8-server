@@ -69,8 +69,7 @@ namespace Beyond8.Integration.Api.Apis
 
             group.MapPost("/embed", EmbedCourseDocuments)
                 .WithName("EmbedCourseDocuments")
-                .WithDescription("Upload PDF, chunk và embed vào Qdrant (Instructor only)")
-                .DisableAntiforgery()
+                .WithDescription("Gửi CloudFront URL của PDF, backend giải mã key, tải từ S3 và embed vào Qdrant (Instructor only)")
                 .RequireAuthorization(r => r.RequireRole(Role.Instructor))
                 .Produces<ApiResponse<EmbedCourseDocumentsResult>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<EmbedCourseDocumentsResult>>(StatusCodes.Status400BadRequest)
@@ -144,9 +143,9 @@ namespace Beyond8.Integration.Api.Apis
         }
 
         private static async Task<IResult> EmbedCourseDocuments(
-            [FromForm] EmbedCourseDocumentsRequest request,
-            [FromForm] IFormFile file,
+            [FromBody] EmbedCourseDocumentsRequest request,
             [FromServices] IEmbeddingService embeddingService,
+            [FromServices] IStorageService storageService,
             [FromServices] IValidator<EmbedCourseDocumentsRequest> validator,
             [FromServices] ICurrentUserService currentUserService,
             [FromServices] IIdentityClient identityClient)
@@ -158,13 +157,19 @@ namespace Beyond8.Integration.Api.Apis
             if (!request.ValidateRequest(validator, out var validationResult))
                 return validationResult!;
 
-            if (file == null || file.Length == 0)
-                return Results.BadRequest(ApiResponse<EmbedCourseDocumentsResult>.FailureResponse("File không được để trống."));
+            var s3Key = storageService.ExtractKeyFromUrl(request.CloudFrontUrl);
+            if (string.IsNullOrWhiteSpace(s3Key))
+                return Results.BadRequest(ApiResponse<EmbedCourseDocumentsResult>.FailureResponse("URL CloudFront không hợp lệ."));
 
-            if (file.ContentType != "application/pdf")
+            var (data, contentType) = await storageService.GetObjectAsync(s3Key);
+            if (data == null || data.Length == 0)
+                return Results.BadRequest(ApiResponse<EmbedCourseDocumentsResult>.FailureResponse("File không tồn tại trên S3."));
+
+            var isPdf = contentType != null && contentType.Trim().StartsWith("application/pdf", StringComparison.OrdinalIgnoreCase);
+            if (!isPdf)
                 return Results.BadRequest(ApiResponse<EmbedCourseDocumentsResult>.FailureResponse("Chỉ chấp nhận file PDF."));
 
-            await using var stream = file.OpenReadStream();
+            await using var stream = new MemoryStream(data);
             var result = await embeddingService.EmbedCourseDocumentsAsync(stream, request);
 
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);

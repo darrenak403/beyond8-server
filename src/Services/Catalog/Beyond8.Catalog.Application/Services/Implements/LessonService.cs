@@ -61,11 +61,12 @@ public class LessonService(
                 return ApiResponse<List<LessonResponse>>.FailureResponse(validationResult.ErrorMessage!);
 
             var lessons = await unitOfWork.LessonRepository.AsQueryable()
-                .Where(l => l.SectionId == sectionId)
-                .OrderBy(l => l.OrderIndex)
                 .Include(l => l.Video)
                 .Include(l => l.Text)
                 .Include(l => l.Quiz)
+                .Include(l => l.Documents)
+                .Where(l => l.SectionId == sectionId)
+                .OrderBy(l => l.OrderIndex)
                 .ToListAsync();
 
             var responses = lessons.Select(l => l.ToResponse()).ToList();
@@ -108,24 +109,56 @@ public class LessonService(
             if (!isValid)
                 return ApiResponse<bool>.FailureResponse(errorMessage!);
 
-            // Delete specific lesson type entities first
-            if (lesson!.Video != null) await unitOfWork.LessonVideoRepository.DeleteAsync(lesson.Video.Id);
+            // Kiểm tra dependencies - lesson có thể có documents hoặc quiz links
+            // Documents sẽ bị xóa cascade, quiz links cần kiểm tra
+            if (lesson!.Quiz?.QuizId != null)
+            {
+                logger.LogWarning("Cannot hard delete lesson {LessonId} with linked quiz", lessonId);
+                return ApiResponse<bool>.FailureResponse("Không thể xóa bài học có liên kết với quiz. Vui lòng gỡ liên kết quiz trước.");
+            }
+
+            // Hard delete lesson type entities first
+            if (lesson.Video != null) await unitOfWork.LessonVideoRepository.DeleteAsync(lesson.Video.Id);
             if (lesson.Text != null) await unitOfWork.LessonTextRepository.DeleteAsync(lesson.Text.Id);
             if (lesson.Quiz != null) await unitOfWork.LessonQuizRepository.DeleteAsync(lesson.Quiz.Id);
+            if (lesson.Documents != null && lesson.Documents.Any())
+            {
+                foreach (var doc in lesson.Documents)
+                {
+                    await unitOfWork.LessonDocumentRepository.DeleteAsync(doc.Id);
+                }
+            }
 
+            // Hard delete lesson
             await unitOfWork.LessonRepository.DeleteAsync(lessonId);
+
+            // Cập nhật OrderIndex của các lesson còn lại trong section
+            var remainingLessons = await unitOfWork.LessonRepository.AsQueryable()
+                .Where(l => l.SectionId == lesson.SectionId && l.DeletedAt == null)
+                .OrderBy(l => l.OrderIndex)
+                .ToListAsync();
+
+            for (int i = 0; i < remainingLessons.Count; i++)
+            {
+                if (remainingLessons[i].OrderIndex != i + 1)
+                {
+                    remainingLessons[i].OrderIndex = i + 1;
+                    await unitOfWork.LessonRepository.UpdateAsync(remainingLessons[i].Id, remainingLessons[i]);
+                }
+            }
+
             await unitOfWork.SaveChangesAsync();
 
             // Update section statistics
             await UpdateSectionStatisticsAsync(lesson.SectionId);
 
-            logger.LogInformation("Lesson deleted: {LessonId} by user {UserId}", lessonId, currentUserId);
+            logger.LogInformation("Lesson hard deleted: {LessonId} by user {UserId}", lessonId, currentUserId);
 
             return ApiResponse<bool>.SuccessResponse(true, "Xóa bài học thành công.");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error deleting lesson: {LessonId}", lessonId);
+            logger.LogError(ex, "Error hard deleting lesson: {LessonId}", lessonId);
             return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi xóa bài học.");
         }
     }
@@ -386,6 +419,7 @@ public class LessonService(
             .Include(l => l.Video)
             .Include(l => l.Text)
             .Include(l => l.Quiz)
+            .Include(l => l.Documents)
             .FirstOrDefaultAsync(l => l.Id == lessonId);
     }
 
@@ -418,6 +452,7 @@ public class LessonService(
             .Include(l => l.Video)
             .Include(l => l.Text)
             .Include(l => l.Quiz)
+            .Include(l => l.Documents)
             .FirstOrDefaultAsync(l => l.Id == lessonId);
 
         if (lesson == null)
@@ -462,25 +497,25 @@ public class LessonService(
     }
 
     public async Task<ApiResponse<bool>> UpdateQuizForLessonAsync(Guid lessonId, Guid? quizId, Guid currentUserId)
+    {
+        try
         {
-            try
-            {
-                // Validate lesson ownership
-                var (isValid, lesson, errorMessage) = await CheckLessonOwnershipAsync(lessonId, currentUserId);
-                if (!isValid)
-                    return ApiResponse<bool>.FailureResponse(errorMessage!);
+            // Validate lesson ownership
+            var (isValid, lesson, errorMessage) = await CheckLessonOwnershipAsync(lessonId, currentUserId);
+            if (!isValid)
+                return ApiResponse<bool>.FailureResponse(errorMessage!);
 
-                var previousQuizId = lesson!.Quiz?.QuizId;
-                lesson.Quiz!.QuizId = quizId;
-                await unitOfWork.LessonQuizRepository.UpdateAsync(lesson.Id, lesson.Quiz!);
-                await unitOfWork.SaveChangesAsync();
+            var previousQuizId = lesson!.Quiz?.QuizId;
+            lesson.Quiz!.QuizId = quizId;
+            await unitOfWork.LessonQuizRepository.UpdateAsync(lesson.Id, lesson.Quiz!);
+            await unitOfWork.SaveChangesAsync();
 
-                if (quizId == null && previousQuizId != null)
-                    await publishEndpoint.Publish(new LessonQuizUnlinkedEvent(lessonId, previousQuizId.Value));
+            if (quizId == null && previousQuizId != null)
+                await publishEndpoint.Publish(new LessonQuizUnlinkedEvent(lessonId, previousQuizId.Value));
 
-                logger.LogInformation("Quiz ID updated for lesson: {LessonId} by user {UserId}", lessonId, currentUserId);
-                return ApiResponse<bool>.SuccessResponse(true, "Cập nhật Quiz ID cho bài học thành công.");
-            }
+            logger.LogInformation("Quiz ID updated for lesson: {LessonId} by user {UserId}", lessonId, currentUserId);
+            return ApiResponse<bool>.SuccessResponse(true, "Cập nhật Quiz ID cho bài học thành công.");
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error updating quiz for lesson: {LessonId}", lessonId);
@@ -501,9 +536,10 @@ public class LessonService(
             await unitOfWork.LessonRepository.UpdateAsync(lessonId, lesson);
             await unitOfWork.SaveChangesAsync();
 
+            var action = isPublished ? "hiện" : "ẩn";
             logger.LogInformation("Lesson activation switched: {LessonId} to {IsPublished} by user {UserId}", lessonId, isPublished, currentUserId);
 
-            return ApiResponse<bool>.SuccessResponse(true, "Chuyển đổi trạng thái kích hoạt bài học thành công.");
+            return ApiResponse<bool>.SuccessResponse(true, $"{action} bài học thành công.");
         }
         catch (Exception ex)
         {

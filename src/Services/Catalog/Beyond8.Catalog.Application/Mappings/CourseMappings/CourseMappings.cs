@@ -1,4 +1,5 @@
 using Beyond8.Catalog.Application.Dtos.Courses;
+using Beyond8.Catalog.Application.Mappings.CourseDocumentMappings;
 using Beyond8.Catalog.Application.Mappings.SectionMappings;
 using Beyond8.Catalog.Domain.Entities;
 using Beyond8.Catalog.Domain.Enums;
@@ -81,6 +82,7 @@ public static class CourseMappings
             TargetAudience = !string.IsNullOrEmpty(entity.TargetAudience)
                 ? JsonSerializer.Deserialize<List<string>>(entity.TargetAudience)
                 : null,
+            Documents = entity.Documents?.Select(d => d.ToResponse()).ToList() ?? [],
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt
         };
@@ -118,6 +120,7 @@ public static class CourseMappings
                 : null,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt,
+            Documents = entity.Documents?.Select(d => d.ToResponse()).ToList() ?? [],
             Sections = entity.Sections?
                 .OrderBy(s => s.OrderIndex)
                 .Select(s => s.ToSummaryResponse())
@@ -157,6 +160,7 @@ public static class CourseMappings
                 : null,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt,
+            Documents = entity.Documents?.Select(d => d.ToResponse()).ToList() ?? [],
             Sections = entity.Sections?
                 .OrderBy(s => s.OrderIndex)
                 .Select(s => s.ToDetailResponse())

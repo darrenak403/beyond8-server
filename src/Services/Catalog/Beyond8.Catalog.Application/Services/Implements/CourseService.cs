@@ -52,6 +52,7 @@ public class CourseService(
         var course = await unitOfWork.CourseRepository
             .AsQueryable()
             .Include(c => c.Category)
+            .Include(c => c.Documents)
             .FirstOrDefaultAsync(c => c.Id == courseId && c.IsActive && c.InstructorId == currentUserId);
 
         if (course == null)
@@ -256,6 +257,12 @@ public class CourseService(
             {
                 logger.LogWarning("Cannot delete published course: {CourseId}", id);
                 return ApiResponse<bool>.FailureResponse("Không thể xóa khóa học đã xuất bản.");
+            }
+
+            if (course!.TotalStudents > 0)
+            {
+                logger.LogWarning("Cannot delete course with enrolled students: {CourseId}", id);
+                return ApiResponse<bool>.FailureResponse("Không thể xóa khóa học có học viên đăng ký.");
             }
 
             course!.IsActive = false;
@@ -585,6 +592,12 @@ public class CourseService(
                 return ApiResponse<bool>.FailureResponse("Khóa học không ở trạng thái công khai.");
             }
 
+            if (course!.TotalStudents > 0)
+            {
+                logger.LogWarning("Cannot unpublish course with enrolled students: {CourseId}", courseId);
+                return ApiResponse<bool>.FailureResponse("Không thể ẩn khóa học có học viên đăng ký.");
+            }
+
             course.Status = CourseStatus.Approved;
             await unitOfWork.CourseRepository.UpdateAsync(courseId, course);
             await unitOfWork.SaveChangesAsync();
@@ -642,6 +655,7 @@ public class CourseService(
             var course = await unitOfWork.CourseRepository
                 .AsQueryable()
                 .Include(c => c.Category)
+                .Include(c => c.Documents)
                 .Include(c => c.Sections.Where(s => s.IsPublished))
                     .ThenInclude(s => s.Lessons.Where(l => l.IsPublished))
                         .ThenInclude(l => l.Video)
@@ -677,6 +691,7 @@ public class CourseService(
             var course = await unitOfWork.CourseRepository
                 .AsQueryable()
                 .Include(c => c.Category)
+                .Include(c => c.Documents)
                 .Include(c => c.Sections.Where(s => s.IsPublished))
                     .ThenInclude(s => s.Lessons.Where(l => l.IsPublished))
                         .ThenInclude(l => l.Video)

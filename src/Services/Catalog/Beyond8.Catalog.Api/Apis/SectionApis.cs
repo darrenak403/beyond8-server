@@ -70,8 +70,16 @@ public static class SectionApis
         group.MapPatch("/{id}/change-assignment", ChangeAssignmentForSectionAsync)
             .WithName("ChangeAssignmentForSection")
             .WithDescription("Thay đổi assignment khác cho chương")
-            .RequireAuthorization(x => x.RequireRole(Role.Instructor)
-            )
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
+        // Switch section activation
+        group.MapPatch("/{id}/activation", SwitchSectionActivationAsync)
+            .WithName("SwitchSectionActivation")
+            .WithDescription("Ẩn/hiện chương và tất cả bài học bên trong")
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
             .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
@@ -150,6 +158,21 @@ public static class SectionApis
 
         var currentUserId = currentUserService.UserId;
         var apiResult = await sectionService.ChangeAssignmentForSectionAsync(id, request.AssignmentId, currentUserId);
+        return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
+    }
+
+    private static async Task<IResult> SwitchSectionActivationAsync(
+        Guid id,
+        [FromBody] SwitchActivationRequest request,
+        [FromServices] ISectionService sectionService,
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IValidator<SwitchActivationRequest> validator)
+    {
+        if (!request.ValidateRequest(validator, out var result))
+            return result!;
+
+        var currentUserId = currentUserService.UserId;
+        var apiResult = await sectionService.SwitchSectionActivationAsync(id, request.IsPublished, currentUserId);
         return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
     }
 }

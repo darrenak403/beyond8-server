@@ -130,6 +130,9 @@ namespace Beyond8.Integration.Api.Bootstrapping
                 // Register consumers from Catalog events
                 config.AddConsumer<CourseRejectedEventConsumer>();
                 config.AddConsumer<CourseApprovedEventConsumer>();
+
+                // Register consumers from Transcoding events
+                config.AddConsumer<TranscodingVideoSuccessEventConsumer>();
             });
 
             // Configure Qdrant - Use Aspire Qdrant Client
