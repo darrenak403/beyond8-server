@@ -532,9 +532,10 @@ public class LessonService(
             await unitOfWork.LessonRepository.UpdateAsync(lessonId, lesson);
             await unitOfWork.SaveChangesAsync();
 
+            var action = isPublished ? "hiện" : "ẩn";
             logger.LogInformation("Lesson activation switched: {LessonId} to {IsPublished} by user {UserId}", lessonId, isPublished, currentUserId);
 
-            return ApiResponse<bool>.SuccessResponse(true, "Chuyển đổi trạng thái kích hoạt bài học thành công.");
+            return ApiResponse<bool>.SuccessResponse(true, $"{action} bài học thành công.");
         }
         catch (Exception ex)
         {

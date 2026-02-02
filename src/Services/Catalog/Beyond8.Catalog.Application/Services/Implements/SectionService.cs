@@ -185,33 +185,7 @@ public class SectionService(
             if (!isValid)
                 return ApiResponse<bool>.FailureResponse(errorMessage!);
 
-            var currentOrderIndex = section!.OrderIndex;
-
-            if (!isPublished)
-            {
-                // Ẩn section: cập nhật orderIndex của các section còn lại
-                var sectionsToUpdate = await unitOfWork.SectionRepository.AsQueryable()
-                    .Where(s => s.CourseId == section.CourseId && s.Id != sectionId && s.DeletedAt == null && s.OrderIndex > currentOrderIndex)
-                    .ToListAsync();
-
-                foreach (var s in sectionsToUpdate)
-                {
-                    s.OrderIndex -= 1;
-                    await unitOfWork.SectionRepository.UpdateAsync(s.Id, s);
-                }
-            }
-            else
-            {
-                // Hiện section: chèn vào cuối danh sách
-                var maxOrder = await unitOfWork.SectionRepository.AsQueryable()
-                    .Where(s => s.CourseId == section.CourseId && s.Id != sectionId && s.DeletedAt == null)
-                    .MaxAsync(s => (int?)s.OrderIndex) ?? 0;
-
-                section.OrderIndex = maxOrder + 1;
-            }
-
-            // Cập nhật trạng thái section
-            section.IsPublished = isPublished;
+            section!.IsPublished = isPublished;
             await unitOfWork.SectionRepository.UpdateAsync(sectionId, section);
 
             // Cập nhật trạng thái tất cả lesson trong section
