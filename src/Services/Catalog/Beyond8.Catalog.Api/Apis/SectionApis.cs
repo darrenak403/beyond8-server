@@ -67,11 +67,11 @@ public static class SectionApis
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
-        // Reorder sections
-        group.MapPost("/reorder", ReorderSectionsAsync)
-            .WithName("ReorderSections")
-            .WithDescription("Sắp xếp lại thứ tự các chương")
-            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+        group.MapPatch("/{id}/change-assignment", ChangeAssignmentForSectionAsync)
+            .WithName("ChangeAssignmentForSection")
+            .WithDescription("Thay đổi assignment khác cho chương")
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor)
+            )
             .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
@@ -138,17 +138,18 @@ public static class SectionApis
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
-    private static async Task<IResult> ReorderSectionsAsync(
-        [FromBody] ReorderSectionsRequest request,
+    private static async Task<IResult> ChangeAssignmentForSectionAsync(
+        Guid id,
+        [FromBody] ChangeAssignmentForSectionRequest request,
         [FromServices] ISectionService sectionService,
         [FromServices] ICurrentUserService currentUserService,
-        [FromServices] IValidator<ReorderSectionsRequest> validator)
+        [FromServices] IValidator<ChangeAssignmentForSectionRequest> validator)
     {
         if (!request.ValidateRequest(validator, out var result))
             return result!;
 
         var currentUserId = currentUserService.UserId;
-        var apiResult = await sectionService.ReorderSectionsAsync(request.CourseId, request.Sections, currentUserId);
+        var apiResult = await sectionService.ChangeAssignmentForSectionAsync(id, request.AssignmentId, currentUserId);
         return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
     }
 }

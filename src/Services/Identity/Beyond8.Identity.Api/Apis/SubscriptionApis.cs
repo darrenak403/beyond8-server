@@ -39,7 +39,7 @@ public static class SubscriptionApis
         group.MapPut("/{id:guid}", UpdateSubscriptionAsync)
             .WithName("UpdateSubscription")
             .WithDescription("Cập nhật gói đăng ký của người dùng")
-            .RequireAuthorization(x => x.RequireRole(Role.Admin))
+            .RequireAuthorization()
             .Produces<ApiResponse<SubscriptionResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<SubscriptionResponse>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)

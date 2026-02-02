@@ -13,5 +13,5 @@ public class CreateSectionRequest
     [MaxLength(1000)]
     public string? Description { get; set; }
 
-    public int OrderIndex { get; set; }
+    public Guid? AssignmentId { get; set; }
 }

@@ -5,5 +5,6 @@ namespace Beyond8.Integration.Domain.Enums
         Pending = 0,
         Delivered = 1,
         Failed = 2,
+        Deleted = 3,
     }
 }

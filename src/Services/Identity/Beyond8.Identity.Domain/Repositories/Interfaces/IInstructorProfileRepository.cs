@@ -19,11 +19,5 @@ namespace Beyond8.Identity.Domain.Repositories.Interfaces
             string? companyName,
             VerificationStatus? verificationStatus,
             bool? isDescending);
-
-        Task<(List<InstructorProfile> Profiles, int TotalCount)> GetVerifiedInstructorsAsync(
-            int pageNumber,
-            int pageSize);
-
-        Task<List<InstructorProfile>> GetTopInstructorsByRatingAsync(int count);
     }
 }

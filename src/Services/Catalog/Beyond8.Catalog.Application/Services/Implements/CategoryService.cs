@@ -177,7 +177,7 @@ namespace Beyond8.Catalog.Application.Services.Implements
             }
         }
 
-        public async Task<ApiResponse<bool>> DeleteCategoryAsync(Guid id)
+        public async Task<ApiResponse<bool>> DeleteCategoryAsync(Guid id, Guid currentUserId)
         {
             try
             {
@@ -188,7 +188,7 @@ namespace Beyond8.Catalog.Application.Services.Implements
                     return ApiResponse<bool>.FailureResponse("Danh mục không tồn tại.");
                 }
 
-                // Check if category has subcategories
+                // Cấm xóa danh mục có danh mục con hoặc có khóa học.
                 var hasSubcategories = await unitOfWork.CategoryRepository
                     .AsQueryable()
                     .AnyAsync(c => c.ParentId == id);
@@ -205,7 +205,9 @@ namespace Beyond8.Catalog.Application.Services.Implements
                     return ApiResponse<bool>.FailureResponse("Không thể xóa danh mục có chứa khóa học.");
                 }
 
-                await unitOfWork.CategoryRepository.DeleteAsync(id);
+                category.DeletedAt = DateTime.UtcNow;
+                category.DeletedBy = currentUserId;
+                await unitOfWork.CategoryRepository.UpdateAsync(id, category);
                 await unitOfWork.SaveChangesAsync();
 
                 logger.LogInformation("Category deleted successfully: {CategoryId}", id);

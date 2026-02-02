@@ -6,24 +6,25 @@ namespace Beyond8.Common.Data.Implements
 {
     public abstract class BaseUnitOfWork<TContext>(TContext context) : IBaseUnitOfWork where TContext : DbContext
     {
-        protected readonly TContext Context = context;
+        protected readonly TContext _context = context;
+        public DbContext Context => _context;
         private IDbContextTransaction? _transaction;
 
         public virtual async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
-            return await Context.SaveChangesAsync(cancellationToken);
+            return await _context.SaveChangesAsync(cancellationToken);
         }
 
         public virtual async Task BeginTransactionAsync()
         {
-            _transaction = await Context.Database.BeginTransactionAsync();
+            _transaction = await _context.Database.BeginTransactionAsync();
         }
 
         public virtual async Task CommitTransactionAsync()
         {
             try
             {
-                await Context.SaveChangesAsync();
+                await _context.SaveChangesAsync();
                 if (_transaction != null)
                 {
                     await _transaction.CommitAsync();
@@ -54,10 +55,45 @@ namespace Beyond8.Common.Data.Implements
             }
         }
 
-        public virtual void Dispose()
+        public virtual async Task ExecuteInTransactionAsync(Func<Task> operation)
         {
-            _transaction?.Dispose();
-            Context.Dispose();
+            var strategy = _context.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
+            {
+                await using var transaction = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    await operation();
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                }
+                catch
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            });
+        }
+
+        public virtual async Task<TResult> ExecuteInTransactionAsync<TResult>(Func<Task<TResult>> operation)
+        {
+            var strategy = _context.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
+            {
+                await using var transaction = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    var result = await operation();
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                    return result;
+                }
+                catch
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            });
         }
     }
 }

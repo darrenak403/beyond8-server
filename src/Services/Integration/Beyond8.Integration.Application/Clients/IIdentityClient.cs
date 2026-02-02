@@ -1,4 +1,3 @@
-using System;
 using Beyond8.Common.Clients;
 using Beyond8.Common.Utilities;
 using Beyond8.Integration.Application.Dtos.Clients.Identity;

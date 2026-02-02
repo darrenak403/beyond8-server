@@ -1,6 +1,6 @@
 using System.Text;
 using System.Text.Json;
-using Beyond8.Integration.Application.Dtos.Ai;
+using Beyond8.Integration.Application.Dtos.AiIntegration.Profile;
 
 namespace Beyond8.Integration.Application.Helpers.AiService
 {

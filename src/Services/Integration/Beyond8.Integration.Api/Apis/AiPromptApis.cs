@@ -3,7 +3,6 @@ using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
 using Beyond8.Integration.Application.Dtos.Prompts;
 using Beyond8.Integration.Application.Services.Interfaces;
-using Beyond8.Integration.Domain.Enums;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 
@@ -122,9 +121,10 @@ namespace Beyond8.Integration.Api.Apis
 
         private static async Task<IResult> DeletePrompt(
             [FromRoute] Guid id,
+            [FromServices] ICurrentUserService currentUserService,
             [FromServices] IAiPromptService promptService)
         {
-            var result = await promptService.DeletePromptAsync(id);
+            var result = await promptService.DeletePromptAsync(id, currentUserService.UserId);
 
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }

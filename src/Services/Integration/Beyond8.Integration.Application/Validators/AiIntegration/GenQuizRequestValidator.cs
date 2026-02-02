@@ -14,7 +14,7 @@ namespace Beyond8.Integration.Application.Validators.AiIntegration
                 .InclusiveBetween(5, 50).WithMessage("Tổng số câu hỏi phải từ 5 đến 50");
 
             RuleFor(x => x.MaxPoints)
-                .InclusiveBetween(10, 100).WithMessage("Điểm tối đa phải từ 10 đến 100");
+                .InclusiveBetween(100, 1000).WithMessage("Điểm tối đa phải từ 100 đến 1000");
 
             RuleFor(x => x.Distribution)
                 .Must(d => d == null || (d.EasyPercent + d.MediumPercent + d.HardPercent == 100))

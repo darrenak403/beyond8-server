@@ -2,12 +2,18 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Beyond8.Catalog.Domain.Enums;
 using Beyond8.Common.Data.Base;
+using NpgsqlTypes;
 
 namespace Beyond8.Catalog.Domain.Entities
 {
     public class Course : BaseEntity
     {
+        // Full-text search vector (built in DB via unaccent + to_tsvector)
+        public NpgsqlTsVector? SearchVector { get; set; }
+
         public Guid InstructorId { get; set; }
+        [MaxLength(100)]
+        public string InstructorName { get; set; } = string.Empty;
         public virtual InstructorVerificationStatus InstructorVerificationStatus { get; set; } = InstructorVerificationStatus.Verified;
 
         public Guid CategoryId { get; set; }

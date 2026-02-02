@@ -12,6 +12,11 @@ public class UpdateSectionRequestValidator : AbstractValidator<UpdateSectionRequ
             .MaximumLength(200).WithMessage("Tiêu đề chương không được vượt quá 200 ký tự");
 
         RuleFor(x => x.Description)
-            .MaximumLength(1000).WithMessage("Mô tả chương không được vượt quá 1000 ký tự");
+            .MaximumLength(1000).WithMessage("Mô tả chương không được vượt quá 1000 ký tự")
+            .When(x => !string.IsNullOrEmpty(x.Description));
+
+        RuleFor(x => x.AssignmentId)
+            .NotEmpty().When(x => x.AssignmentId.HasValue)
+            .WithMessage("AssignmentId phải là GUID hợp lệ nếu được cung cấp");
     }
 }

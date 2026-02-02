@@ -200,10 +200,13 @@ namespace Beyond8.Identity.Application.Services.Implements
         {
             try
             {
+                // Soft delete (Status = Inactive). Course.InstructorId, Assessment (Quiz/Question).InstructorId vẫn tham chiếu.
                 var (isValid, error, user) = await ValidateUserByIdAsync(id, requireActive: true);
                 if (!isValid) return ApiResponse<bool>.FailureResponse(error!);
 
                 user!.Status = UserStatus.Inactive;
+                user.DeletedAt = DateTime.UtcNow;
+                user.DeletedBy = id;
 
                 await unitOfWork.UserRepository.UpdateAsync(user.Id, user);
                 await unitOfWork.SaveChangesAsync();

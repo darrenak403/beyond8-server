@@ -16,8 +16,12 @@ namespace Beyond8.Integration.Api.Apis
         private const string InstructorProfileCertificatesFolder = "instructor/profile/certificates";
         private const string InstructorProfileIdentityCardsFolder = "instructor/profile/identity-cards";
         private const string InstructorProfileVideosFolder = "instructor/profile/intro-videos";
-        private const string CourseThumbnailFolder = "course/thumbnails";
-        
+        private const string CourseThumbnailFolder = "courses/thumbnails";
+        private const string CourseDocumentFolder = "courses/documents";
+        private const string CourseAssignmentSubmissionFolder = "courses/assignment-submissions";
+        private const string CourseAssignmentRubricFolder = "courses/rubrics";
+        private const string CourseVideoFolder = "courses/original";
+
 
         public static IEndpointRouteBuilder MapMediaFileApi(this IEndpointRouteBuilder builder)
         {
@@ -87,6 +91,38 @@ namespace Beyond8.Integration.Api.Apis
                 .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
+            group.MapPost("/course-video/presigned-url", GetCourseVideoPresignUrlAsync)
+                .WithName("GetCourseVideoPresignedUrl")
+                .WithDescription("Lấy presigned URL để upload video khóa học")
+                .RequireAuthorization(r => r.RequireRole(Role.Student, Role.Instructor))
+                .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
+            group.MapPost("/course-document/presigned-url", GetCourseDocumentPresignUrlAsync)
+                .WithName("GetCourseDocumentPresignedUrl")
+                .WithDescription("Lấy presigned URL để upload document khóa học")
+                .RequireAuthorization(r => r.RequireRole(Role.Student, Role.Instructor))
+                .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
+            group.MapPost("/assignment-submission/presigned-url", GetAssignmentSubmissionPresignUrlAsync)
+                .WithName("GetAssignmentSubmissionPresignedUrl")
+                .WithDescription("Lấy presigned URL để upload submission assignment")
+                .RequireAuthorization(r => r.RequireRole(Role.Student, Role.Instructor))
+                .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
+            group.MapPost("/assignment-rubric/presigned-url", GetAssignmentRubricPresignUrlAsync)
+                .WithName("GetAssignmentRubricPresignedUrl")
+                .WithDescription("Lấy presigned URL để upload rubric assignment")
+                .RequireAuthorization(r => r.RequireRole(Role.Student, Role.Instructor))
+                .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<UploadFileResponse>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
             group.MapPost("/confirm", ConfirmUploadAsync)
                 .WithName("ConfirmUpload")
                 .WithDescription("Xác nhận file đã upload lên S3")
@@ -128,6 +164,69 @@ namespace Beyond8.Integration.Api.Apis
                 .Produces(StatusCodes.Status401Unauthorized);
 
             return group;
+        }
+
+        private static async Task<IResult> GetAssignmentRubricPresignUrlAsync(
+            [FromBody] UploadFileRequest request,
+            [FromServices] IMediaFileService mediaFileService,
+            [FromServices] ICurrentUserService currentUserService)
+        {
+            var validator = UploadFileRequestValidator.ForAssignmentRubric();
+
+            if (!request.ValidateRequest(validator, out var validationResult))
+                return validationResult!;
+            var result = await mediaFileService.InitiateUploadAsync(
+                currentUserService.UserId,
+                request,
+                CourseAssignmentRubricFolder);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
+
+        private static async Task<IResult> GetAssignmentSubmissionPresignUrlAsync(
+            [FromBody] UploadFileRequest request,
+            [FromServices] IMediaFileService mediaFileService,
+            [FromServices] ICurrentUserService currentUserService)
+        {
+            var validator = UploadFileRequestValidator.ForAssignmentSubmission();
+            if (!request.ValidateRequest(validator, out var validationResult))
+                return validationResult!;
+
+            var result = await mediaFileService.InitiateUploadAsync(
+                currentUserService.UserId,
+                request,
+                CourseAssignmentSubmissionFolder);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
+
+        private static async Task<IResult> GetCourseDocumentPresignUrlAsync(
+            [FromBody] UploadFileRequest request,
+            [FromServices] IMediaFileService mediaFileService,
+            [FromServices] ICurrentUserService currentUserService)
+        {
+            var validator = UploadFileRequestValidator.ForCourseDocument();
+            if (!request.ValidateRequest(validator, out var validationResult))
+                return validationResult!;
+            var result = await mediaFileService.InitiateUploadAsync(
+                currentUserService.UserId,
+                request,
+                CourseDocumentFolder);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
+
+        private static async Task<IResult> GetCourseVideoPresignUrlAsync(
+            [FromBody] UploadFileRequest request,
+            [FromServices] IMediaFileService mediaFileService,
+            [FromServices] ICurrentUserService currentUserService)
+        {
+            var validator = UploadFileRequestValidator.ForCourseVideo();
+            if (!request.ValidateRequest(validator, out var validationResult))
+                return validationResult!;
+
+            var result = await mediaFileService.InitiateUploadAsync(
+                currentUserService.UserId,
+                request,
+                CourseVideoFolder);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
 
         private static async Task<IResult> GetIntroVideoPresignUrlAsync(
