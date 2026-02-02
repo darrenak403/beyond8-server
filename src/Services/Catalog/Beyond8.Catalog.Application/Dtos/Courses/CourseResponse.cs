@@ -1,3 +1,4 @@
+using Beyond8.Catalog.Application.Dtos.CourseDocuments;
 using Beyond8.Catalog.Domain.Enums;
 
 namespace Beyond8.Catalog.Application.Dtos.Courses;
@@ -26,6 +27,7 @@ public class CourseResponse
     public List<string> Outcomes { get; set; } = [];
     public List<string>? Requirements { get; set; }
     public List<string>? TargetAudience { get; set; }
+    public List<CourseDocumentResponse> Documents { get; set; } = [];
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 }

@@ -1,3 +1,4 @@
+using Beyond8.Catalog.Application.Dtos.LessonDocuments;
 using Beyond8.Catalog.Domain.Enums;
 
 namespace Beyond8.Catalog.Application.Dtos.Lessons;
@@ -26,6 +27,9 @@ public class LessonResponse
 
     // Quiz fields
     public Guid? QuizId { get; set; }
+
+    // Documents
+    public List<LessonDocumentResponse> Documents { get; set; } = [];
 
     // Statistics
     public int TotalViews { get; set; }
