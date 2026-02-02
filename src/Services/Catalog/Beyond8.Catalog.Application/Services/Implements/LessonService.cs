@@ -105,8 +105,16 @@ public class LessonService(
             if (!isValid)
                 return ApiResponse<bool>.FailureResponse(errorMessage!);
 
-            // Delete specific lesson type entities first
-            if (lesson!.Video != null) await unitOfWork.LessonVideoRepository.DeleteAsync(lesson.Video.Id);
+            // Kiểm tra dependencies - lesson có thể có documents hoặc quiz links
+            // Documents sẽ bị xóa cascade, quiz links cần kiểm tra
+            if (lesson!.Quiz?.QuizId != null)
+            {
+                logger.LogWarning("Cannot hard delete lesson {LessonId} with linked quiz", lessonId);
+                return ApiResponse<bool>.FailureResponse("Không thể xóa bài học có liên kết với quiz. Vui lòng gỡ liên kết quiz trước.");
+            }
+
+            // Hard delete lesson type entities first
+            if (lesson.Video != null) await unitOfWork.LessonVideoRepository.DeleteAsync(lesson.Video.Id);
             if (lesson.Text != null) await unitOfWork.LessonTextRepository.DeleteAsync(lesson.Text.Id);
             if (lesson.Quiz != null) await unitOfWork.LessonQuizRepository.DeleteAsync(lesson.Quiz.Id);
             if (lesson.Documents != null && lesson.Documents.Any())
@@ -116,19 +124,37 @@ public class LessonService(
                     await unitOfWork.LessonDocumentRepository.DeleteAsync(doc.Id);
                 }
             }
+
+            // Hard delete lesson
             await unitOfWork.LessonRepository.DeleteAsync(lessonId);
+
+            // Cập nhật OrderIndex của các lesson còn lại trong section
+            var remainingLessons = await unitOfWork.LessonRepository.AsQueryable()
+                .Where(l => l.SectionId == lesson.SectionId && l.DeletedAt == null)
+                .OrderBy(l => l.OrderIndex)
+                .ToListAsync();
+
+            for (int i = 0; i < remainingLessons.Count; i++)
+            {
+                if (remainingLessons[i].OrderIndex != i + 1)
+                {
+                    remainingLessons[i].OrderIndex = i + 1;
+                    await unitOfWork.LessonRepository.UpdateAsync(remainingLessons[i].Id, remainingLessons[i]);
+                }
+            }
+
             await unitOfWork.SaveChangesAsync();
 
             // Update section statistics
             await UpdateSectionStatisticsAsync(lesson.SectionId);
 
-            logger.LogInformation("Lesson deleted: {LessonId} by user {UserId}", lessonId, currentUserId);
+            logger.LogInformation("Lesson hard deleted: {LessonId} by user {UserId}", lessonId, currentUserId);
 
             return ApiResponse<bool>.SuccessResponse(true, "Xóa bài học thành công.");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error deleting lesson: {LessonId}", lessonId);
+            logger.LogError(ex, "Error hard deleting lesson: {LessonId}", lessonId);
             return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi xóa bài học.");
         }
     }

@@ -115,12 +115,27 @@ public class SectionService(
             if (!isValid)
                 return ApiResponse<bool>.FailureResponse(errorMessage!);
 
-            // Cấm xóa chương còn bài học; phải xóa bài học trước.
-            var lessonCount = await unitOfWork.LessonRepository.CountAsync(l => l.SectionId == sectionId);
+            // Kiểm tra xem section có lesson không
+            var lessonCount = await unitOfWork.LessonRepository.CountAsync(l => l.SectionId == sectionId && l.DeletedAt == null);
             if (lessonCount > 0)
             {
                 logger.LogWarning("Cannot delete section {SectionId} with existing lessons", sectionId);
                 return ApiResponse<bool>.FailureResponse("Không thể xóa chương có chứa bài học. Vui lòng xóa các bài học trước.");
+            }
+
+            // Cập nhật OrderIndex của các section còn lại
+            var remainingSections = await unitOfWork.SectionRepository.AsQueryable()
+                .Where(s => s.CourseId == section!.CourseId && s.Id != sectionId && s.DeletedAt == null)
+                .OrderBy(s => s.OrderIndex)
+                .ToListAsync();
+
+            for (int i = 0; i < remainingSections.Count; i++)
+            {
+                if (remainingSections[i].OrderIndex != i + 1)
+                {
+                    remainingSections[i].OrderIndex = i + 1;
+                    await unitOfWork.SectionRepository.UpdateAsync(remainingSections[i].Id, remainingSections[i]);
+                }
             }
 
             section!.DeletedAt = DateTime.UtcNow;
@@ -159,6 +174,68 @@ public class SectionService(
         {
             logger.LogError(ex, "Error updating section assignment: {SectionId}", sectionId);
             return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi cập nhật assignment cho chương.");
+        }
+    }
+
+    public async Task<ApiResponse<bool>> SwitchSectionActivationAsync(Guid sectionId, bool isPublished, Guid currentUserId)
+    {
+        try
+        {
+            var (isValid, section, errorMessage) = await CheckSectionOwnershipAsync(sectionId, currentUserId);
+            if (!isValid)
+                return ApiResponse<bool>.FailureResponse(errorMessage!);
+
+            var currentOrderIndex = section!.OrderIndex;
+
+            if (!isPublished)
+            {
+                // Ẩn section: cập nhật orderIndex của các section còn lại
+                var sectionsToUpdate = await unitOfWork.SectionRepository.AsQueryable()
+                    .Where(s => s.CourseId == section.CourseId && s.Id != sectionId && s.DeletedAt == null && s.OrderIndex > currentOrderIndex)
+                    .ToListAsync();
+
+                foreach (var s in sectionsToUpdate)
+                {
+                    s.OrderIndex -= 1;
+                    await unitOfWork.SectionRepository.UpdateAsync(s.Id, s);
+                }
+            }
+            else
+            {
+                // Hiện section: chèn vào cuối danh sách
+                var maxOrder = await unitOfWork.SectionRepository.AsQueryable()
+                    .Where(s => s.CourseId == section.CourseId && s.Id != sectionId && s.DeletedAt == null)
+                    .MaxAsync(s => (int?)s.OrderIndex) ?? 0;
+
+                section.OrderIndex = maxOrder + 1;
+            }
+
+            // Cập nhật trạng thái section
+            section.IsPublished = isPublished;
+            await unitOfWork.SectionRepository.UpdateAsync(sectionId, section);
+
+            // Cập nhật trạng thái tất cả lesson trong section
+            var lessons = await unitOfWork.LessonRepository.AsQueryable()
+                .Where(l => l.SectionId == sectionId && l.DeletedAt == null)
+                .ToListAsync();
+
+            foreach (var lesson in lessons)
+            {
+                lesson.IsPublished = isPublished;
+                await unitOfWork.LessonRepository.UpdateAsync(lesson.Id, lesson);
+            }
+
+            await unitOfWork.SaveChangesAsync();
+
+            var action = isPublished ? "hiện" : "ẩn";
+            logger.LogInformation("Section activation switched: {SectionId} to {IsPublished} by user {UserId}", sectionId, isPublished, currentUserId);
+
+            return ApiResponse<bool>.SuccessResponse(true, $"{action} chương thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error switching section activation: {SectionId}", sectionId);
+            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi chuyển đổi trạng thái kích hoạt chương.");
         }
     }
 

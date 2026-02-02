@@ -11,4 +11,5 @@ public interface ISectionService
     Task<ApiResponse<SectionResponse>> UpdateSectionAsync(Guid sectionId, UpdateSectionRequest request, Guid currentUserId);
     Task<ApiResponse<bool>> DeleteSectionAsync(Guid sectionId, Guid currentUserId);
     Task<ApiResponse<bool>> ChangeAssignmentForSectionAsync(Guid sectionId, Guid? assignmentId, Guid currentUserId);
+    Task<ApiResponse<bool>> SwitchSectionActivationAsync(Guid sectionId, bool isPublished, Guid currentUserId);
 }

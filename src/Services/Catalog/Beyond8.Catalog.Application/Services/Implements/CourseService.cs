@@ -259,6 +259,12 @@ public class CourseService(
                 return ApiResponse<bool>.FailureResponse("Không thể xóa khóa học đã xuất bản.");
             }
 
+            if (course!.TotalStudents > 0)
+            {
+                logger.LogWarning("Cannot delete course with enrolled students: {CourseId}", id);
+                return ApiResponse<bool>.FailureResponse("Không thể xóa khóa học có học viên đăng ký.");
+            }
+
             course!.IsActive = false;
             course.DeletedAt = DateTime.UtcNow;
             course.DeletedBy = currentUserId;
@@ -584,6 +590,12 @@ public class CourseService(
             if (course!.Status != CourseStatus.Published)
             {
                 return ApiResponse<bool>.FailureResponse("Khóa học không ở trạng thái công khai.");
+            }
+
+            if (course!.TotalStudents > 0)
+            {
+                logger.LogWarning("Cannot unpublish course with enrolled students: {CourseId}", courseId);
+                return ApiResponse<bool>.FailureResponse("Không thể ẩn khóa học có học viên đăng ký.");
             }
 
             course.Status = CourseStatus.Approved;
