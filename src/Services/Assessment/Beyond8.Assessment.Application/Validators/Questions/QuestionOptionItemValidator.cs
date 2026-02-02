@@ -15,7 +15,7 @@ namespace Beyond8.Assessment.Application.Validators.Questions
                 .MaximumLength(100).WithMessage("Text không được vượt quá 100 ký tự");
 
             RuleFor(x => x.IsCorrect)
-                .IsInEnum().WithMessage("IsCorrect không hợp lệ");
+                .Must(x => x == true || x == false).WithMessage("IsCorrect không hợp lệ");
         }
     }
 }
