@@ -1,14 +1,14 @@
+using Beyond8.Learning.Api.Bootstrapping;
+using Beyond8.Learning.Infrastructure.Data;
+using Beyond8.DatabaseMigrationHelpers;
+
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddOpenApi();
+builder.AddApplicationServices();
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
+await app.MigrateDbContextAsync<LearningDbContext>();
 
-app.UseHttpsRedirection();
-
+app.UseApplicationServices();
 app.Run();

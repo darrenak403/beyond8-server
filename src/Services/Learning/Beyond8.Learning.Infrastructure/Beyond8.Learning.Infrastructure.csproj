@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -14,6 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\..\shared\Beyond8.Common\Beyond8.Common.csproj" />
     <ProjectReference Include="..\Beyond8.Learning.Application\Beyond8.Learning.Application.csproj" />
     <ProjectReference Include="..\Beyond8.Learning.Domain\Beyond8.Learning.Domain.csproj" />
   </ItemGroup>
