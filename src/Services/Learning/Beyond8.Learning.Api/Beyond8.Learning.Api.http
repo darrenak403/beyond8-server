@@ -1,0 +1,6 @@
+@Beyond8.Learning.Api_HostAddress = http://localhost:5028
+
+GET {{Beyond8.Learning.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

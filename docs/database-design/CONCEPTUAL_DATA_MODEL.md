@@ -1029,7 +1029,9 @@ public record AssignmentGradedEvent
 ## 4️⃣ Learning Service
 
 **Database:** `Learning`
-**Responsibility:** Student progress tracking, enrollments
+**Responsibility:** Student progress tracking, enrollments, reviews, certificates
+
+> **Note:** Quiz/Assignment submissions are managed by **Assessment Service**, not Learning Service. Learning Service only tracks progress summaries synced via events.
 
 ### **Enrollment**
 
@@ -1077,6 +1079,13 @@ public class Enrollment : BaseEntity
     // Last activity
     public DateTime? LastAccessedAt { get; set; }
     public Guid? LastAccessedLessonId { get; set; }
+
+    // Relationships
+    public virtual ICollection<LessonProgress> LessonProgresses { get; set; } = new List<LessonProgress>();
+    public virtual ICollection<LessonNote> Notes { get; set; } = new List<LessonNote>();
+    public virtual ICollection<Bookmark> Bookmarks { get; set; } = new List<Bookmark>();
+    public virtual CourseReview? Review { get; set; }
+    public virtual Certificate? Certificate { get; set; }
 }
 
 public enum EnrollmentStatus
@@ -1109,27 +1118,38 @@ public class LessonProgress : BaseEntity
     public Guid UserId { get; set; }  // Logical reference
     public Guid LessonId { get; set; }  // Logical reference
     public Guid CourseId { get; set; }  // For filtering
+    public Guid EnrollmentId { get; set; }  // For relationship
+
+    [ForeignKey(nameof(EnrollmentId))]
+    public virtual Enrollment Enrollment { get; set; } = null!;
 
     public LessonProgressStatus Status { get; set; } = LessonProgressStatus.NotStarted;
 
     // Video progress
-    public int LastPosition { get; set; } = 0;  // Seconds
-    public int TotalDuration { get; set; } = 0;
+    public int LastPositionSeconds { get; set; } = 0;
+    public int TotalDurationSeconds { get; set; } = 0;
 
     [Column(TypeName = "decimal(5, 2)")]
     public decimal WatchPercent { get; set; } = 0;
 
-    // Quiz/Assignment results
+    // Quiz/Assignment summary (synced from Assessment Service via events)
     public int? QuizAttempts { get; set; }
+
+    [Column(TypeName = "decimal(5, 2)")]
     public decimal? QuizBestScore { get; set; }
 
     public bool? AssignmentSubmitted { get; set; }
+
+    [Column(TypeName = "decimal(5, 2)")]
     public decimal? AssignmentGrade { get; set; }
 
     // Timestamps
     public DateTime? StartedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
     public DateTime? LastAccessedAt { get; set; }
+
+    // Completion criteria
+    public bool IsManuallyCompleted { get; set; } = false;  // Instructor can mark complete
 }
 
 public enum LessonProgressStatus
@@ -1140,107 +1160,83 @@ public enum LessonProgressStatus
 }
 ```
 
-**Composite PK:**
-```sql
-ALTER TABLE lesson_progress ADD PRIMARY KEY (user_id, lesson_id);
-CREATE INDEX idx_lesson_progress_course ON lesson_progress(course_id, user_id);
-CREATE INDEX idx_lesson_progress_status ON lesson_progress(status);
-CREATE INDEX idx_lesson_progress_updated ON lesson_progress(last_accessed_at DESC);
-```
-
----
-
-### **QuizSubmission**
-
-```csharp
-public class QuizSubmission : BaseEntity
-{
-    public Guid QuizId { get; set; }  // Logical reference
-    public Guid UserId { get; set; }  // Logical reference
-    public Guid EnrollmentId { get; set; }  // For relationship
-
-    [ForeignKey(nameof(EnrollmentId))]
-    public virtual Enrollment Enrollment { get; set; } = null!;
-
-    public int AttemptNumber { get; set; } = 1;
-
-    [Column(TypeName = "decimal(5, 2)")]
-    public decimal Score { get; set; } = 0;
-
-    public bool IsPassed { get; set; } = false;
-
-    // Answers (JSONB)
-    [Column(TypeName = "jsonb")]
-    public string Answers { get; set; } = "[]";  // [{questionId, answer, isCorrect}]
-
-    public int TimeSpentSeconds { get; set; } = 0;
-
-    public DateTime StartedAt { get; set; } = DateTime.UtcNow;
-    public DateTime? CompletedAt { get; set; }
-}
-```
-
 **Indexes:**
 ```sql
-CREATE INDEX idx_quiz_submission_quiz ON quiz_submissions(quiz_id, user_id);
-CREATE INDEX idx_quiz_submission_user ON quiz_submissions(user_id) WHERE deleted_at IS NULL;
-CREATE INDEX idx_quiz_submission_enrollment ON quiz_submissions(enrollment_id) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX idx_lesson_progress_user_lesson ON lesson_progress(user_id, lesson_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_lesson_progress_enrollment ON lesson_progress(enrollment_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_lesson_progress_course ON lesson_progress(course_id, user_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_lesson_progress_status ON lesson_progress(status) WHERE deleted_at IS NULL;
+CREATE INDEX idx_lesson_progress_updated ON lesson_progress(last_accessed_at DESC) WHERE deleted_at IS NULL;
 ```
 
 ---
 
-### **AssignmentSubmission**
+### **LessonNote** (User notes while learning)
 
 ```csharp
-public class AssignmentSubmission : BaseEntity
+public class LessonNote : BaseEntity
 {
-    public Guid AssignmentId { get; set; }  // Logical reference
     public Guid UserId { get; set; }  // Logical reference
+    public Guid LessonId { get; set; }  // Logical reference
+    public Guid CourseId { get; set; }  // For filtering
     public Guid EnrollmentId { get; set; }
 
     [ForeignKey(nameof(EnrollmentId))]
     public virtual Enrollment Enrollment { get; set; } = null!;
 
-    public int AttemptNumber { get; set; } = 1;
+    [Required]
+    public string Content { get; set; } = string.Empty;  // Markdown/HTML
 
-    // Submission files
-    [Column(TypeName = "jsonb")]
-    public string FileUrls { get; set; } = "[]";  // ["url1", "url2"]
+    // Video timestamp (if note taken at specific time)
+    public int? VideoTimestampSeconds { get; set; }
 
-    [MaxLength(2000)]
-    public string? TextSubmission { get; set; }
+    // For ordering/display
+    public int DisplayOrder { get; set; } = 0;
 
-    // Grading
-    [Column(TypeName = "decimal(5, 2)")]
-    public decimal? Grade { get; set; }
-
-    [MaxLength(2000)]
-    public string? Feedback { get; set; }
-
-    public Guid? GradedBy { get; set; }
-    public DateTime? GradedAt { get; set; }
-
-    public AssignmentSubmissionStatus Status { get; set; } = AssignmentSubmissionStatus.Submitted;
-
-    public DateTime SubmittedAt { get; set; } = DateTime.UtcNow;
-    public bool IsLate { get; set; } = false;
-}
-
-public enum AssignmentSubmissionStatus
-{
-    Submitted = 0,
-    Graded = 1,
-    Returned = 2,
-    Resubmitted = 3
+    public bool IsPrivate { get; set; } = true;  // Only visible to user
 }
 ```
 
 **Indexes:**
 ```sql
-CREATE INDEX idx_assignment_submission_assignment ON assignment_submissions(assignment_id, user_id);
-CREATE INDEX idx_assignment_submission_user ON assignment_submissions(user_id) WHERE deleted_at IS NULL;
-CREATE INDEX idx_assignment_submission_enrollment ON assignment_submissions(enrollment_id) WHERE deleted_at IS NULL;
-CREATE INDEX idx_assignment_submission_grading ON assignment_submissions(status) WHERE status = 0;
+CREATE INDEX idx_lesson_note_user ON lesson_notes(user_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_lesson_note_lesson ON lesson_notes(lesson_id, user_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_lesson_note_enrollment ON lesson_notes(enrollment_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_lesson_note_course ON lesson_notes(course_id, user_id) WHERE deleted_at IS NULL;
+```
+
+---
+
+### **Bookmark** (Save important positions)
+
+```csharp
+public class Bookmark : BaseEntity
+{
+    public Guid UserId { get; set; }  // Logical reference
+    public Guid LessonId { get; set; }  // Logical reference
+    public Guid CourseId { get; set; }  // For filtering
+    public Guid EnrollmentId { get; set; }
+
+    [ForeignKey(nameof(EnrollmentId))]
+    public virtual Enrollment Enrollment { get; set; } = null!;
+
+    [MaxLength(200)]
+    public string? Title { get; set; }  // User-defined title
+
+    [MaxLength(500)]
+    public string? Description { get; set; }
+
+    // Video timestamp (optional)
+    public int? VideoTimestampSeconds { get; set; }
+}
+```
+
+**Indexes:**
+```sql
+CREATE INDEX idx_bookmark_user ON bookmarks(user_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_bookmark_lesson ON bookmarks(lesson_id, user_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_bookmark_enrollment ON bookmarks(enrollment_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_bookmark_course ON bookmarks(course_id, user_id) WHERE deleted_at IS NULL;
 ```
 
 ---
@@ -1410,14 +1406,19 @@ public record LessonCompletedEvent
 ```csharp
 // From Sales Service
 - OrderCompletedEvent → Create Enrollment
+- OrderRefundedEvent → Update Enrollment status to Refunded
 
 // From Course Catalog Service
 - CourseArchivedEvent → Suspend Enrollments
-- CourseLessonsUpdatedEvent → Update TotalLessons
+- CourseLessonsUpdatedEvent → Update TotalLessons in Enrollment
+- CourseUpdatedEvent → Update denormalized course data (title, thumbnail)
 
 // From Assessment Service
-- QuizCompletedEvent → Update LessonProgress
-- AssignmentGradedEvent → Update LessonProgress
+- QuizAttemptCompletedEvent → Update LessonProgress (QuizAttempts, QuizBestScore)
+- AssignmentGradedEvent → Update LessonProgress (AssignmentSubmitted, AssignmentGrade)
+
+// From Identity Service
+- UserProfileUpdatedEvent → Update denormalized user data in certificates
 ```
 
 ---
@@ -1471,17 +1472,6 @@ public class Order : BaseEntity
     public DateTime? SettledAt { get; set; }
     public DateTime? SettlementEligibleAt { get; set; }  // CreatedAt + 14 days
 
-    // Payment
-    public Guid? PaymentId { get; set; }
-
-    [MaxLength(50)]
-    public string? PaymentMethod { get; set; }  // "momo", "vnpay", "stripe"
-
-    [MaxLength(100)]
-    public string? PaymentTransactionId { get; set; }
-
-    public DateTime? PaidAt { get; set; }
-
     // Refund
     public DateTime? RefundRequestedAt { get; set; }
     public DateTime? RefundedAt { get; set; }
@@ -1494,6 +1484,7 @@ public class Order : BaseEntity
 
     // Relationships
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+    public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
 }
 
 public enum OrderStatus
@@ -1512,9 +1503,99 @@ public enum OrderStatus
 CREATE UNIQUE INDEX idx_order_number ON orders(order_number);
 CREATE INDEX idx_order_user ON orders(user_id) WHERE deleted_at IS NULL;
 CREATE INDEX idx_order_status ON orders(status) WHERE deleted_at IS NULL;
-CREATE INDEX idx_order_paid ON orders(paid_at DESC) WHERE status = 1 AND deleted_at IS NULL;
+CREATE INDEX idx_order_paid ON orders(status, created_at DESC) WHERE status = 1 AND deleted_at IS NULL;
 CREATE INDEX idx_order_settlement ON orders(settlement_eligible_at) WHERE is_settled = false AND status = 1;
-CREATE INDEX idx_order_payment_tx ON orders(payment_transaction_id) WHERE payment_transaction_id IS NOT NULL;
+CREATE INDEX idx_order_coupon ON orders(coupon_id) WHERE coupon_id IS NOT NULL AND deleted_at IS NULL;
+```
+
+---
+
+### **Payment** ⭐ Separate Payment Entity
+
+```csharp
+public class Payment : BaseEntity
+{
+    public Guid OrderId { get; set; }
+    [ForeignKey(nameof(OrderId))]
+    public virtual Order Order { get; set; } = null!;
+
+    [Required, MaxLength(50)]
+    public string PaymentNumber { get; set; } = string.Empty;  // PAY-2026-XXXXX
+
+    [Required, MaxLength(50)]
+    public string Provider { get; set; } = string.Empty;  // "vnpay", "momo", "stripe", "payos"
+
+    [MaxLength(50)]
+    public string? Method { get; set; }  // "qr", "card", "wallet", "bank_transfer"
+
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal Amount { get; set; } = 0;
+
+    [MaxLength(10)]
+    public string Currency { get; set; } = "VND";
+
+    public PaymentStatus Status { get; set; } = PaymentStatus.Pending;
+
+    // Provider response
+    [MaxLength(100)]
+    public string? ExternalTransactionId { get; set; }
+
+    [Column(TypeName = "jsonb")]
+    public string? ProviderRequest { get; set; }  // Request sent to provider
+
+    [Column(TypeName = "jsonb")]
+    public string? ProviderResponse { get; set; }  // Raw response from provider
+
+    [MaxLength(100)]
+    public string? ProviderErrorCode { get; set; }
+
+    [MaxLength(500)]
+    public string? ProviderErrorMessage { get; set; }
+
+    // Timestamps
+    public DateTime? PaidAt { get; set; }
+    public DateTime? FailedAt { get; set; }
+    public DateTime? ExpiredAt { get; set; }  // Payment link expiry
+
+    // Refund tracking
+    public bool IsRefunded { get; set; } = false;
+    public DateTime? RefundedAt { get; set; }
+
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal? RefundedAmount { get; set; }
+
+    [MaxLength(100)]
+    public string? RefundTransactionId { get; set; }
+
+    // Metadata
+    [MaxLength(500)]
+    public string? Description { get; set; }
+
+    [Column(TypeName = "jsonb")]
+    public string? Metadata { get; set; }  // Additional provider-specific data
+}
+
+public enum PaymentStatus
+{
+    Pending = 0,
+    Processing = 1,
+    Completed = 2,
+    Failed = 3,
+    Expired = 4,
+    Cancelled = 5,
+    Refunded = 6,
+    PartiallyRefunded = 7
+}
+```
+
+**Indexes:**
+```sql
+CREATE UNIQUE INDEX idx_payment_number ON payments(payment_number);
+CREATE INDEX idx_payment_order ON payments(order_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_payment_status ON payments(status) WHERE deleted_at IS NULL;
+CREATE INDEX idx_payment_provider ON payments(provider, status) WHERE deleted_at IS NULL;
+CREATE INDEX idx_payment_external_tx ON payments(external_transaction_id) WHERE external_transaction_id IS NOT NULL;
+CREATE INDEX idx_payment_completed ON payments(paid_at DESC) WHERE status = 2 AND deleted_at IS NULL;
 ```
 
 ---
@@ -1644,6 +1725,9 @@ public class TransactionLedger : BaseEntity
 
     [Column(TypeName = "decimal(18, 2)")]
     public decimal Amount { get; set; } = 0;
+
+    [MaxLength(10)]
+    public string Currency { get; set; } = "VND";
 
     [Column(TypeName = "decimal(18, 2)")]
     public decimal BalanceBefore { get; set; } = 0;
@@ -1804,6 +1888,9 @@ public class Coupon : BaseEntity
     // Creator
     public Guid? CreatedByInstructorId { get; set; }  // For instructor-created coupons
     public bool IsPlatformCoupon { get; set; } = false;
+
+    // Relationships
+    public virtual ICollection<CouponUsage> Usages { get; set; } = new List<CouponUsage>();
 }
 
 public enum CouponType
@@ -1819,6 +1906,51 @@ CREATE UNIQUE INDEX idx_coupon_code ON coupons(code) WHERE deleted_at IS NULL;
 CREATE INDEX idx_coupon_active ON coupons(is_active, valid_from, valid_until) WHERE deleted_at IS NULL;
 CREATE INDEX idx_coupon_instructor ON coupons(applicable_instructor_id) WHERE applicable_instructor_id IS NOT NULL;
 CREATE INDEX idx_coupon_course ON coupons(applicable_course_id) WHERE applicable_course_id IS NOT NULL;
+```
+
+---
+
+### **CouponUsage** (Track coupon usage per user)
+
+```csharp
+public class CouponUsage : BaseEntity
+{
+    public Guid CouponId { get; set; }
+    [ForeignKey(nameof(CouponId))]
+    public virtual Coupon Coupon { get; set; } = null!;
+
+    public Guid UserId { get; set; }  // Logical reference
+
+    public Guid OrderId { get; set; }
+    [ForeignKey(nameof(OrderId))]
+    public virtual Order Order { get; set; } = null!;
+
+    // Snapshot coupon info at usage time
+    [Required, MaxLength(50)]
+    public string CouponCode { get; set; } = string.Empty;
+
+    public CouponType CouponType { get; set; }
+
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal DiscountValue { get; set; } = 0;  // Original value (% or amount)
+
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal DiscountApplied { get; set; } = 0;  // Actual discount amount
+
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal OrderSubtotal { get; set; } = 0;  // Order subtotal before discount
+
+    public DateTime UsedAt { get; set; } = DateTime.UtcNow;
+}
+```
+
+**Indexes:**
+```sql
+CREATE INDEX idx_coupon_usage_coupon ON coupon_usages(coupon_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_coupon_usage_user ON coupon_usages(user_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_coupon_usage_order ON coupon_usages(order_id) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX idx_coupon_usage_user_coupon ON coupon_usages(user_id, coupon_id, order_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_coupon_usage_date ON coupon_usages(used_at DESC) WHERE deleted_at IS NULL;
 ```
 
 ---
@@ -2435,11 +2567,16 @@ public enum AiOperation
 | Assessment | Assignment | 25,000 |
 | Learning | Enrollment | 200,000 |
 | Learning | LessonProgress | 5,000,000 |
-| Learning | QuizSubmission | 500,000 |
+| Learning | LessonNote | 500,000 |
+| Learning | Bookmark | 200,000 |
 | Learning | CourseReview | 50,000 |
+| Learning | Certificate | 30,000 |
 | Sales | Order | 150,000 |
+| Sales | Payment | 200,000 |
 | Sales | TransactionLedger | 500,000 |
 | Sales | PayoutRequest | 10,000 |
+| Sales | Coupon | 5,000 |
+| Sales | CouponUsage | 100,000 |
 | Analytics | AggCourseStats | 5,000 |
 
 ---

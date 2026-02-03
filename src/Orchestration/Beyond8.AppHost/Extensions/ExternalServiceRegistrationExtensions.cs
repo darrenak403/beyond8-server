@@ -38,6 +38,7 @@ namespace Beyond8.AppHost.Extensions
             var integrationDb = postgres.AddDatabase("integration-db", "Integrations");
             var catalogDb = postgres.AddDatabase("catalog-db", "Catalogs");
             var assessmentDb = postgres.AddDatabase("assessment-db", "Assessments");
+            var learningDb = postgres.AddDatabase("learning-db", "Learnings");
 
             var identityService = builder.AddProject<Projects.Beyond8_Identity_Api>("Identity-Service")
                 .WithReference(identityDb)
@@ -67,6 +68,14 @@ namespace Beyond8.AppHost.Extensions
 
             var assessmentService = builder.AddProject<Projects.Beyond8_Assessment_Api>("Assessment-Service")
                 .WithReference(assessmentDb)
+                .WithReference(redis)
+                .WithReference(rabbitMq)
+                .WaitFor(postgres)
+                .WaitFor(redis)
+                .WaitFor(rabbitMq);
+
+            var learningService = builder.AddProject<Projects.Beyond8_Learning_Api>("Learning-Service")
+                .WithReference(learningDb)
                 .WithReference(redis)
                 .WithReference(rabbitMq)
                 .WaitFor(postgres)
@@ -121,7 +130,8 @@ namespace Beyond8.AppHost.Extensions
                .WithApiReference(identityService, options => options.AddPreferredSecuritySchemes("Bearer"))
                .WithApiReference(integrationService, options => options.AddPreferredSecuritySchemes("Bearer"))
                .WithApiReference(catalogService, options => options.AddPreferredSecuritySchemes("Bearer"))
-               .WithApiReference(assessmentService, options => options.AddPreferredSecuritySchemes("Bearer"));
+               .WithApiReference(assessmentService, options => options.AddPreferredSecuritySchemes("Bearer"))
+               .WithApiReference(learningService, options => options.AddPreferredSecuritySchemes("Bearer"));
 
             return builder;
         }
