@@ -1,7 +1,7 @@
 using Beyond8.Integration.Application.Clients;
 using Beyond8.Integration.Application.Dtos.Clients.Identity;
 
-namespace Beyond8.Integration.Application.Helpers.AiService
+namespace Beyond8.Integration.Application.Helpers
 {
     public static class SubscriptionHelper
     {

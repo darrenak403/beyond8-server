@@ -7,6 +7,7 @@ using Beyond8.Integration.Application.Dtos.AiIntegration.Profile;
 using Beyond8.Integration.Application.Dtos.AiIntegration.GenerativeAi;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Quiz;
 using Beyond8.Integration.Application.Helpers.AiService;
+using Beyond8.Integration.Application.Helpers;
 using Beyond8.Integration.Application.Mappings.AiIntegrationMappings;
 using Beyond8.Integration.Application.Services.Interfaces;
 using Beyond8.Integration.Domain.Enums;

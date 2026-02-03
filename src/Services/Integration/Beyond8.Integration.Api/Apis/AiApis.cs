@@ -5,7 +5,7 @@ using Beyond8.Integration.Application.Clients;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Profile;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Embedding;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Quiz;
-using Beyond8.Integration.Application.Helpers.AiService;
+using Beyond8.Integration.Application.Helpers;
 using Beyond8.Integration.Application.Services.Interfaces;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
@@ -34,7 +34,7 @@ namespace Beyond8.Integration.Api.Apis
                 .Produces<ApiResponse<AiProfileReviewResponse>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<AiProfileReviewResponse>>(StatusCodes.Status400BadRequest);
 
-            group.MapPost("/lesson/quiz/generate", GenerateQuiz)
+            group.MapPost("/quiz/generate", GenerateQuiz)
                 .WithName("GenerateQuiz")
                 .WithDescription("Sinh quiz từ ngữ cảnh khóa học. Chia 3 cấp độ Easy/Medium/Hard, số lượng theo request.")
                 .RequireAuthorization()

@@ -31,7 +31,83 @@ namespace Beyond8.Assessment.Api.Apis
                 .Produces<ApiResponse<SubmissionResponse>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
+            group.MapPatch("/{submissionId:guid}/instructor-grade", InstructorGradingSubmissionAsync)
+                .WithName("InstructorGradingSubmission")
+                .WithDescription("Chấm điểm submission bởi giảng viên")
+                .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+                .Produces<ApiResponse<SubmissionResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<SubmissionResponse>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
+            group.MapGet("{submissionId:guid}/student", GetSubmissionByIdAsync)
+                .WithName("GetSubmissionByIdForStudent")
+                .WithDescription("Lấy submission theo ID")
+                .RequireAuthorization(x => x.RequireRole(Role.Student))
+                .Produces<ApiResponse<SubmissionResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<SubmissionResponse>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
+            group.MapGet("/assignment/{assignmentId:guid}/student", GetSubmissionsByAssignmentIdAsync)
+                .WithName("GetSubmissionsByAssignmentId")
+                .WithDescription("Lấy danh sách submission theo assignment ID")
+                .RequireAuthorization(x => x.RequireRole(Role.Student))
+                .Produces<ApiResponse<List<SubmissionResponse>>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<List<SubmissionResponse>>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
+            group.MapGet("/instructor", GetAllSubmissionsByInstructorAsync)
+                .WithName("GetAllSubmissions")
+                .WithDescription("Lấy danh sách tất cả submission")
+                .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+                .Produces<ApiResponse<List<SubmissionResponse>>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<List<SubmissionResponse>>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
+            group.MapGet("{submissionId:guid}/instructor", GetSubmissionByIdForInstructorAsync)
+                .WithName("GetSubmissionByIdForInstructor")
+                .WithDescription("Lấy submission theo ID")
+                .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+                .Produces<ApiResponse<SubmissionResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<SubmissionResponse>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
             return group;
+        }
+
+        private static async Task<IResult> GetSubmissionByIdForInstructorAsync(
+            [FromRoute] Guid submissionId,
+            [FromServices] IAssignmentSubmissionService assignmentSubmissionService,
+            [FromServices] ICurrentUserService currentUserService)
+        {
+            var result = await assignmentSubmissionService.GetSubmissionByIdForInstructorAsync(submissionId, currentUserService.UserId);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
+
+
+        private static async Task<IResult> GetAllSubmissionsByInstructorAsync(
+            [FromServices] IAssignmentSubmissionService assignmentSubmissionService,
+            [FromServices] ICurrentUserService currentUserService)
+        {
+            var result = await assignmentSubmissionService.GetAllSubmissionsByInstructorAsync(currentUserService.UserId);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
+
+        private static async Task<IResult> GetSubmissionsByAssignmentIdAsync(
+            [FromRoute] Guid assignmentId,
+            [FromServices] IAssignmentSubmissionService assignmentSubmissionService,
+            [FromServices] ICurrentUserService currentUserService)
+        {
+            var result = await assignmentSubmissionService.GetSubmissionsByAssignmentIdAsync(assignmentId, currentUserService.UserId);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
+
+        private static async Task<IResult> GetSubmissionByIdAsync(
+            [FromRoute] Guid submissionId,
+            [FromServices] IAssignmentSubmissionService assignmentSubmissionService,
+            [FromServices] ICurrentUserService currentUserService)
+        {
+            var result = await assignmentSubmissionService.GetSubmissionByIdAsync(submissionId, currentUserService.UserId);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
 
         private static async Task<IResult> CreateSubmissionAsync(
@@ -45,6 +121,20 @@ namespace Beyond8.Assessment.Api.Apis
                 return validationResult!;
 
             var result = await assignmentSubmissionService.CreateSubmissionAsync(assignmentId, request, currentUserService.UserId);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
+
+        private static async Task<IResult> InstructorGradingSubmissionAsync(
+            [FromRoute] Guid submissionId,
+            [FromBody] GradeSubmissionRequest request,
+            [FromServices] IAssignmentSubmissionService assignmentSubmissionService,
+            [FromServices] ICurrentUserService currentUserService,
+            [FromServices] IValidator<GradeSubmissionRequest> validator)
+        {
+            if (!request.ValidateRequest(validator, out var validationResult))
+                return validationResult!;
+
+            var result = await assignmentSubmissionService.InstructorGradingSubmissionAsync(submissionId, request, currentUserService.UserId);
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
     }

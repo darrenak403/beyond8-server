@@ -43,4 +43,31 @@ public static class AssignmentSubmissionMappings
             UpdatedAt = entity.UpdatedAt ?? entity.CreatedAt,
         };
     }
+
+    public static void UpdateFromRequest(this AssignmentSubmission entity, GradeSubmissionRequest request, Guid gradedBy)
+    {
+        if (request.FinalScore > 0)
+            entity.FinalScore = request.FinalScore;
+        if (!string.IsNullOrEmpty(request.InstructorFeedback))
+            entity.InstructorFeedback = request.InstructorFeedback;
+        entity.Status = SubmissionStatus.Graded;
+        entity.GradedAt = DateTime.UtcNow;
+        entity.GradedBy = gradedBy;
+    }
+
+    public static SubmissionSimpleResponse ToSimpleResponse(this AssignmentSubmission entity)
+    {
+        return new SubmissionSimpleResponse
+        {
+            Id = entity.Id,
+            StudentId = entity.StudentId,
+            AssignmentId = entity.AssignmentId,
+            SubmissionNumber = entity.SubmissionNumber,
+            SubmittedAt = entity.SubmittedAt,
+            AiScore = entity.AiScore,
+            FinalScore = entity.FinalScore,
+            Status = entity.Status,
+            CreatedAt = entity.CreatedAt,
+        };
+    }
 }

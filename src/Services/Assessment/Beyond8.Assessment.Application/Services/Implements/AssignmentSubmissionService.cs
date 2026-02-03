@@ -21,13 +21,19 @@ public class AssignmentSubmissionService(
         {
             var assignment = await unitOfWork.AssignmentRepository.FindOneAsync(a => a.Id == assignmentId);
             if (assignment == null)
+            {
+                logger.LogError("Assignment not found for id: {AssignmentId}", assignmentId);
                 return ApiResponse<SubmissionResponse>.FailureResponse("Assignment không tồn tại.");
+            }
 
             var existingSubmissions = await unitOfWork.AssignmentSubmissionRepository
                 .GetAllAsync(s => s.AssignmentId == assignmentId && s.StudentId == userId);
 
             if (existingSubmissions.Count >= assignment.TotalSubmissions && assignment.TotalSubmissions > 0)
+            {
+                logger.LogError("Student {StudentId} has reached the maximum number of submissions for assignment {AssignmentId}", userId, assignmentId);
                 return ApiResponse<SubmissionResponse>.FailureResponse("Bạn đã đạt số lượng nộp bài tối đa cho assignment này.");
+            }
 
             var submission = request.ToEntity(assignmentId, userId, existingSubmissions.Count + 1);
             await unitOfWork.AssignmentSubmissionRepository.AddAsync(submission);
@@ -60,6 +66,7 @@ public class AssignmentSubmissionService(
                     submission.Id, assignmentId, userId);
             }
 
+            logger.LogInformation("Submission created successfully: {SubmissionId}", submission.Id);
             return ApiResponse<SubmissionResponse>.SuccessResponse(
                 submission.ToResponse(),
                 "Nộp bài thành công. Bài làm đang được chấm điểm.");
@@ -68,6 +75,134 @@ public class AssignmentSubmissionService(
         {
             logger.LogError(ex, "Error creating submission for assignment {AssignmentId}", assignmentId);
             return ApiResponse<SubmissionResponse>.FailureResponse("Đã xảy ra lỗi khi tạo submission.");
+        }
+    }
+
+    public async Task<ApiResponse<SubmissionResponse>> InstructorGradingSubmissionAsync(Guid submissionId, GradeSubmissionRequest request, Guid userId)
+    {
+        try
+        {
+            var submission = await unitOfWork.AssignmentSubmissionRepository.FindOneAsync(s => s.Id == submissionId && s.StudentId == userId);
+            if (submission == null)
+            {
+                logger.LogError("Submission not found for id: {SubmissionId}", submissionId);
+                return ApiResponse<SubmissionResponse>.FailureResponse("Submission không tồn tại.");
+            }
+
+            var assignment = await unitOfWork.AssignmentRepository.FindOneAsync(a => a.Id == submission.AssignmentId && a.InstructorId == userId);
+            if (assignment == null)
+            {
+                logger.LogError("Assignment not found for id: {AssignmentId}", submission.AssignmentId);
+                return ApiResponse<SubmissionResponse>.FailureResponse("Assignment không tồn tại.");
+            }
+
+            submission.UpdateFromRequest(request, userId);
+            await unitOfWork.AssignmentSubmissionRepository.UpdateAsync(submission.Id, submission);
+            await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation("Submission graded successfully: {SubmissionId}", submission.Id);
+            return ApiResponse<SubmissionResponse>.SuccessResponse(
+                submission.ToResponse(),
+                "Chấm điểm submission thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error grading submission {SubmissionId}", submissionId);
+            return ApiResponse<SubmissionResponse>.FailureResponse("Đã xảy ra lỗi khi chấm điểm submission.");
+        }
+    }
+
+    public async Task<ApiResponse<SubmissionResponse>> GetSubmissionByIdAsync(Guid submissionId, Guid userId)
+    {
+        try
+        {
+            var submission = await unitOfWork.AssignmentSubmissionRepository.FindOneAsync(s => s.Id == submissionId && s.StudentId == userId);
+            if (submission == null)
+            {
+                logger.LogError("Submission not found for id: {SubmissionId}", submissionId);
+                return ApiResponse<SubmissionResponse>.FailureResponse("Submission không tồn tại.");
+            }
+
+            return ApiResponse<SubmissionResponse>.SuccessResponse(submission.ToResponse(), "Lấy submission thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting submission by id: {SubmissionId}", submissionId);
+            return ApiResponse<SubmissionResponse>.FailureResponse("Đã xảy ra lỗi khi lấy submission.");
+        }
+    }
+
+    public async Task<ApiResponse<List<SubmissionResponse>>> GetSubmissionsByAssignmentIdAsync(Guid assignmentId, Guid userId)
+    {
+        try
+        {
+            var submissions = await unitOfWork.AssignmentSubmissionRepository.GetAllAsync(s => s.AssignmentId == assignmentId && s.StudentId == userId);
+            if (submissions.Count == 0)
+            {
+                logger.LogError("No submissions found for assignment id: {AssignmentId}", assignmentId);
+                return ApiResponse<List<SubmissionResponse>>.FailureResponse("Không có submission nào cho assignment này.");
+            }
+
+            return ApiResponse<List<SubmissionResponse>>.SuccessResponse(submissions.Select(s => s.ToResponse()).ToList(), "Lấy danh sách submission thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting submissions by assignment id: {AssignmentId}", assignmentId);
+            return ApiResponse<List<SubmissionResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách submission.");
+        }
+    }
+
+    public async Task<ApiResponse<List<SubmissionSimpleResponse>>> GetAllSubmissionsByInstructorAsync(Guid userId)
+    {
+        try
+        {
+            var assignment = await unitOfWork.AssignmentRepository.FindOneAsync(a => a.InstructorId == userId);
+            if (assignment == null)
+            {
+                logger.LogError("Assignment not found for instructor: {InstructorId}", userId);
+                return ApiResponse<List<SubmissionSimpleResponse>>.FailureResponse("Assignment không tồn tại.");
+            }
+
+            var submissions = await unitOfWork.AssignmentSubmissionRepository.GetAllAsync(s => s.AssignmentId == assignment.Id);
+            if (submissions.Count == 0)
+            {
+                logger.LogError("No submissions found for assignment: {AssignmentId}", assignment.Id);
+                return ApiResponse<List<SubmissionSimpleResponse>>.FailureResponse("Không có submission nào cho assignment này.");
+            }
+
+            return ApiResponse<List<SubmissionSimpleResponse>>.SuccessResponse(submissions.Select(s => s.ToSimpleResponse()).ToList(), "Lấy danh sách submission thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting all submissions by instructor: {InstructorId}", userId);
+            return ApiResponse<List<SubmissionSimpleResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách submission.");
+        }
+    }
+
+    public async Task<ApiResponse<SubmissionResponse>> GetSubmissionByIdForInstructorAsync(Guid submissionId, Guid userId)
+    {
+        try
+        {
+            var assignment = await unitOfWork.AssignmentRepository.FindOneAsync(a => a.InstructorId == userId);
+            if (assignment == null)
+            {
+                logger.LogError("Assignment not found for instructor: {InstructorId}", userId);
+                return ApiResponse<SubmissionResponse>.FailureResponse("Assignment không tồn tại.");
+            }
+
+            var submission = await unitOfWork.AssignmentSubmissionRepository.FindOneAsync(s => s.Id == submissionId && s.AssignmentId == assignment.Id);
+            if (submission == null)
+            {
+                logger.LogError("Submission not found for id: {SubmissionId}", submissionId);
+                return ApiResponse<SubmissionResponse>.FailureResponse("Submission không tồn tại.");
+            }
+
+            return ApiResponse<SubmissionResponse>.SuccessResponse(submission.ToResponse(), "Lấy submission thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting submission by id for instructor: {SubmissionId}", submissionId);
+            return ApiResponse<SubmissionResponse>.FailureResponse("Đã xảy ra lỗi khi lấy submission.");
         }
     }
 }
