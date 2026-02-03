@@ -6,7 +6,7 @@ namespace Beyond8.Catalog.Application.Services.Interfaces;
 public interface ILessonService
 {
     Task<ApiResponse<bool>> CallbackHlsAsync(VideoCallbackRequest request);
-    Task<ApiResponse<List<LessonSimpleResponse>>> GetLessonsBySectionIdAsync(Guid sectionId, Guid currentUserId);
+    Task<ApiResponse<List<LessonResponse>>> GetLessonsBySectionIdAsync(Guid sectionId, Guid currentUserId);
     Task<ApiResponse<LessonResponse>> GetLessonByIdAsync(Guid lessonId, Guid currentUserId);
     Task<ApiResponse<bool>> DeleteLessonAsync(Guid lessonId, Guid currentUserId);
 
