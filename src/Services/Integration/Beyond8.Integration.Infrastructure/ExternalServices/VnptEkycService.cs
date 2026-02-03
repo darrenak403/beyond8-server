@@ -17,6 +17,7 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
         private const string ClassifyEndpoint = "ai/v1/classify/id";
         private const string OcrFrontEndpoint = "ai/v1/ocr/id/front";
         private const string OcrBackEndpoint = "ai/v1/ocr/id/back";
+        private const string CompareFaceEndpoint = "ai/v1/face/compare";
         private const string HttpClientName = "VnptEkycClient";
 
         private readonly VnptEkycSettings _settings = options.Value;
@@ -393,6 +394,128 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
         private HttpClient CreateHttpClient()
         {
             return _httpClientFactory.CreateClient(HttpClientName);
+        }
+
+        public async Task<CompareFaceResponse> CompareFaceAsync(CompareFaceRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("Starting VNPT eKYC face comparison: ImgFront={ImgFront}, ImgFace={ImgFace}, ClientSession={ClientSession}",
+           request.ImgFront, request.ImgFace, request.ClientSession);
+
+                // Validation
+                if (string.IsNullOrWhiteSpace(request.ImgFront))
+                {
+                    _logger.LogWarning("Face comparison failed: ImgFront is empty");
+                    throw new ArgumentException("ImgFront cannot be empty", nameof(request.ImgFront));
+                }
+                if (string.IsNullOrWhiteSpace(request.ImgFace))
+                {
+                    _logger.LogWarning("Face comparison failed: ImgFace is empty");
+                    throw new ArgumentException("ImgFace cannot be empty", nameof(request.ImgFace));
+                }
+                if (string.IsNullOrWhiteSpace(request.ClientSession))
+                {
+                    _logger.LogWarning("Face comparison failed: ClientSession is empty");
+                    throw new ArgumentException("ClientSession cannot be empty", nameof(request.ClientSession));
+                }
+                if (string.IsNullOrWhiteSpace(request.Token))
+                {
+                    _logger.LogWarning("Face comparison failed: Token is empty");
+                    throw new ArgumentException("Token cannot be empty", nameof(request.Token));
+                }
+
+                var httpClient = CreateHttpClient();
+
+                httpClient.DefaultRequestHeaders.Remove("mac-address");
+                httpClient.DefaultRequestHeaders.Add("mac-address", "TEST1");
+
+                var payload = new
+                {
+                    img_front = request.ImgFront,
+                    img_face = request.ImgFace,
+                    client_session = request.ClientSession,
+                    token = request.Token
+                };
+
+                _logger.LogDebug("Sending face comparison request to VNPT eKYC API");
+
+                var response = await httpClient.PostAsJsonAsync(CompareFaceEndpoint, payload);
+                var jsonContent = await response.Content.ReadAsStringAsync();
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogError("VNPT eKYC face comparison failed with status {StatusCode}: {ErrorContent}",
+                        response.StatusCode, errorContent);
+                    throw new HttpRequestException($"VNPT eKYC face comparison failed: {response.StatusCode}");
+                }
+
+                var result = JsonSerializer.Deserialize<VnptEkycResponse<CompareFaceResponse>>(jsonContent);
+
+                if (result?.Object == null)
+                {
+                    _logger.LogError("VNPT eKYC face comparison response is null or invalid");
+                    throw new InvalidOperationException("Invalid response from VNPT eKYC API");
+                }
+
+                _logger.LogInformation("VNPT eKYC face comparison completed: Result={Result}, Msg={Msg}, Prob={Prob}",
+                    result.Object.Result, result.Object.Msg, result.Object.Prob);
+
+                return result.Object;
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception during VNPT face comparison");
+                throw new InvalidOperationException("Failed to compare faces with VNPT eKYC", ex);
+            }
+        }
+
+        public async Task<ApiResponse<CompareFaceResponse>> UploadFaceAndCompareAsync(IFormFile faceFile, string imgFrontHash)
+        {
+            try
+            {
+                _logger.LogInformation("Starting upload face and compare: FrontHash={ImgFrontHash}, FaceFile={FaceFileName}",
+                imgFrontHash, faceFile.FileName);
+
+                var uploadImgFaceResult = await UploadAsync(faceFile);
+
+                var compareFaceRequest = new CompareFaceRequest
+                {
+                    ImgFront = imgFrontHash,
+                    ImgFace = uploadImgFaceResult.Hash,
+                    ClientSession = GenerateClientSession(),
+                    Token = Guid.NewGuid().ToString("N")
+                };
+
+                var compareFaceResult = await CompareFaceAsync(compareFaceRequest);
+
+                if (compareFaceResult.Msg != "MATCH")
+                {
+                    _logger.LogWarning("Face comparison not matched: {Result}, Msg={Msg}, Prob={Prob}",
+                    compareFaceResult.Result, compareFaceResult.Msg, compareFaceResult.Prob);
+                    return ApiResponse<CompareFaceResponse>.FailureResponse(compareFaceResult.Result ?? "Khuôn mặt không khớp");
+                }
+
+                _logger.LogInformation("Upload face and compare completed successfully");
+                return ApiResponse<CompareFaceResponse>.SuccessResponse(compareFaceResult, "So sánh khuôn mặt thành công");
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(ex, "Validation failed during face upload and comparison");
+                return ApiResponse<CompareFaceResponse>.FailureResponse(ex.Message);
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "HTTP request failed during face upload and comparison");
+                return ApiResponse<CompareFaceResponse>.FailureResponse("Không thể kết nối đến dịch vụ VNPT eKYC");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception during VNPT face upload and comparison");
+                return ApiResponse<CompareFaceResponse>.FailureResponse("Lỗi hệ thống khi tải lên và so sánh khuôn mặt");
+            }
         }
     }
 }
