@@ -6,5 +6,6 @@ namespace Beyond8.Assessment.Application.Clients.Catalog
     public interface ICatalogService : IBaseClient
     {
         Task<ApiResponse<bool>> UpdateQuizForLessonAsync(Guid lessonId, Guid? quizId);
+        Task<ApiResponse<bool>> UpdateAssignmentForSectionAsync(Guid sectionId, Guid? assignmentId);
     }
 }

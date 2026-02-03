@@ -18,5 +18,18 @@ namespace Beyond8.Assessment.Application.Clients.Catalog
                 return ApiResponse<bool>.FailureResponse(ex.Message);
             }
         }
+
+        public async Task<ApiResponse<bool>> UpdateAssignmentForSectionAsync(Guid sectionId, Guid? assignmentId)
+        {
+            try
+            {
+                var response = await PatchAsync<bool>($"/api/v1/sections/{sectionId}/update-assignment", new { AssignmentId = assignmentId });
+                return ApiResponse<bool>.SuccessResponse(response, "Assignment updated successfully");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<bool>.FailureResponse(ex.Message);
+            }
+        }
     }
 }

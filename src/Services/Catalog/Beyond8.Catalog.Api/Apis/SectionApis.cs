@@ -23,7 +23,7 @@ public static class SectionApis
     public static RouteGroupBuilder MapSectionRoutes(this RouteGroupBuilder group)
     {
         // Get sections by course
-        group.MapGet("/course/{courseId}", GetSectionsByCourseIdAsync)
+        group.MapGet("/course/{courseId:guid}", GetSectionsByCourseIdAsync)
             .WithName("GetSectionsByCourseId")
             .WithDescription("Lấy danh sách chương của khóa học")
             .RequireAuthorization(x => x.RequireRole(Role.Instructor))
@@ -32,7 +32,7 @@ public static class SectionApis
             .Produces(StatusCodes.Status401Unauthorized);
 
         // Get section by id
-        group.MapGet("/{id}", GetSectionByIdAsync)
+        group.MapGet("/{id:guid}", GetSectionByIdAsync)
             .WithName("GetSectionById")
             .WithDescription("Lấy thông tin chương theo ID")
             .RequireAuthorization(x => x.RequireRole(Role.Instructor))
@@ -50,7 +50,7 @@ public static class SectionApis
             .Produces(StatusCodes.Status401Unauthorized);
 
         // Update section
-        group.MapPatch("/{id}", UpdateSectionAsync)
+        group.MapPatch("/{id:guid}", UpdateSectionAsync)
             .WithName("UpdateSection")
             .WithDescription("Cập nhật thông tin chương")
             .RequireAuthorization(x => x.RequireRole(Role.Instructor))
@@ -59,7 +59,7 @@ public static class SectionApis
             .Produces(StatusCodes.Status401Unauthorized);
 
         // Delete section
-        group.MapDelete("/{id}", DeleteSectionAsync)
+        group.MapDelete("/{id:guid}", DeleteSectionAsync)
             .WithName("DeleteSection")
             .WithDescription("Xóa chương")
             .RequireAuthorization(x => x.RequireRole(Role.Instructor))
@@ -67,7 +67,7 @@ public static class SectionApis
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
-        group.MapPatch("/{id}/change-assignment", ChangeAssignmentForSectionAsync)
+        group.MapPatch("/{id:guid}/update-assignment", UpdateAssignmentForSectionAsync)
             .WithName("ChangeAssignmentForSection")
             .WithDescription("Thay đổi assignment khác cho chương")
             .RequireAuthorization(x => x.RequireRole(Role.Instructor))
@@ -76,7 +76,7 @@ public static class SectionApis
             .Produces(StatusCodes.Status401Unauthorized);
 
         // Switch section activation
-        group.MapPatch("/{id}/activation", SwitchSectionActivationAsync)
+        group.MapPatch("/{id:guid}/activation", SwitchSectionActivationAsync)
             .WithName("SwitchSectionActivation")
             .WithDescription("Ẩn/hiện chương và tất cả bài học bên trong")
             .RequireAuthorization(x => x.RequireRole(Role.Instructor))
@@ -146,7 +146,7 @@ public static class SectionApis
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
-    private static async Task<IResult> ChangeAssignmentForSectionAsync(
+    private static async Task<IResult> UpdateAssignmentForSectionAsync(
         Guid id,
         [FromBody] ChangeAssignmentForSectionRequest request,
         [FromServices] ISectionService sectionService,
@@ -157,7 +157,7 @@ public static class SectionApis
             return result!;
 
         var currentUserId = currentUserService.UserId;
-        var apiResult = await sectionService.ChangeAssignmentForSectionAsync(id, request.AssignmentId, currentUserId);
+        var apiResult = await sectionService.UpdateAssignmentForSectionAsync(id, request.AssignmentId, currentUserId);
         return apiResult.IsSuccess ? Results.Ok(apiResult) : Results.BadRequest(apiResult);
     }
 

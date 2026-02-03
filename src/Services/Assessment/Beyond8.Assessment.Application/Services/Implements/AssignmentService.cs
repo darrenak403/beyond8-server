@@ -1,3 +1,4 @@
+using Beyond8.Assessment.Application.Clients.Catalog;
 using Beyond8.Assessment.Application.Dtos.Assignments;
 using Beyond8.Assessment.Application.Mappings.AssignmentMappings;
 using Beyond8.Assessment.Application.Services.Interfaces;
@@ -9,7 +10,8 @@ namespace Beyond8.Assessment.Application.Services.Implements;
 
 public class AssignmentService(
     ILogger<AssignmentService> logger,
-    IUnitOfWork unitOfWork) : IAssignmentService
+    IUnitOfWork unitOfWork,
+    ICatalogService catalogService) : IAssignmentService
 {
     public async Task<ApiResponse<AssignmentSimpleResponse>> CreateAssignmentAsync(CreateAssignmentRequest request, Guid instructorId)
     {
@@ -21,6 +23,16 @@ public class AssignmentService(
 
             logger.LogInformation("Assignment created: {AssignmentId}, InstructorId: {InstructorId}",
                 assignment.Id, instructorId);
+
+            if (assignment.SectionId != null)
+            {
+                var catalogResponse = await catalogService.UpdateAssignmentForSectionAsync(assignment.SectionId.Value, assignment.Id);
+                if (!catalogResponse.IsSuccess)
+                {
+                    logger.LogError("Error updating assignment for section: {SectionId}", assignment.SectionId.Value);
+                    return ApiResponse<AssignmentSimpleResponse>.FailureResponse(catalogResponse.Message!);
+                }
+            }
 
             return ApiResponse<AssignmentSimpleResponse>.SuccessResponse(
                 assignment.ToSimpleResponse(),
