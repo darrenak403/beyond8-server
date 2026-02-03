@@ -401,7 +401,7 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
             try
             {
                 _logger.LogInformation("Starting VNPT eKYC face comparison: ImgFront={ImgFront}, ImgFace={ImgFace}, ClientSession={ClientSession}",
-           request.ImgFront, request.ImgFace, request.ClientSession);
+                    request.ImgFront, request.ImgFace, request.ClientSession);
 
                 // Validation
                 if (string.IsNullOrWhiteSpace(request.ImgFront))
@@ -443,27 +443,30 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                 var response = await httpClient.PostAsJsonAsync(CompareFaceEndpoint, payload);
                 var jsonContent = await response.Content.ReadAsStringAsync();
 
+                _logger.LogDebug("VNPT face comparison raw response: {JsonContent}", jsonContent);
+
                 if (!response.IsSuccessStatusCode)
                 {
-                    var errorContent = await response.Content.ReadAsStringAsync();
                     _logger.LogError("VNPT eKYC face comparison failed with status {StatusCode}: {ErrorContent}",
-                        response.StatusCode, errorContent);
+                        response.StatusCode, jsonContent);
                     throw new HttpRequestException($"VNPT eKYC face comparison failed: {response.StatusCode}");
                 }
 
-                var result = JsonSerializer.Deserialize<VnptEkycResponse<CompareFaceResponse>>(jsonContent);
+                var result = JsonSerializer.Deserialize<VnptEkycResponse<CompareFaceResponse>>(jsonContent, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
 
                 if (result?.Object == null)
                 {
-                    _logger.LogError("VNPT eKYC face comparison response is null or invalid");
+                    _logger.LogError("VNPT eKYC face comparison response is null or invalid: {Content}", jsonContent);
                     throw new InvalidOperationException("Invalid response from VNPT eKYC API");
                 }
 
                 _logger.LogInformation("VNPT eKYC face comparison completed: Result={Result}, Msg={Msg}, Prob={Prob}",
-                    result.Object.Result, result.Object.Msg, result.Object.Prob);
+                    result.Object.Result ?? "null", result.Object.Msg ?? "null", result.Object.Prob);
 
                 return result.Object;
-
             }
             catch (Exception ex)
             {

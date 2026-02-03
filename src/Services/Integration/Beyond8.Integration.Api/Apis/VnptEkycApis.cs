@@ -49,8 +49,8 @@ namespace Beyond8.Integration.Api.Apis
         }
 
         private static async Task<IResult> CompareFaceAsync(
-            IFormFile faceFile,
-            [FromQuery] string imgFrontHash,
+            [FromForm] IFormFile faceFile,
+            [FromForm] string imgFrontHash,
             [FromServices] IVnptEkycService vnptEkycService
         )
         {
