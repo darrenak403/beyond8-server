@@ -1,5 +1,6 @@
 using Beyond8.Assessment.Api.Apis;
 using Beyond8.Assessment.Application.Consumers.Catalog;
+using Beyond8.Assessment.Application.Consumers.Integration;
 using Beyond8.Assessment.Application.Dtos.Questions;
 using Beyond8.Assessment.Application.Services.Interfaces;
 using Beyond8.Assessment.Application.Services.Implements;
@@ -30,7 +31,11 @@ namespace Beyond8.Assessment.Api.Bootstrapping
             builder.AddServiceRedis(nameof(Assessment), connectionName: Const.Redis);
             builder.AddMassTransitWithRabbitMq(config =>
             {
+                // Catalog events
                 config.AddConsumer<LessonQuizUnlinkedEventConsumer>();
+
+                // Integration events (AI Grading)
+                config.AddConsumer<AiGradingCompletedConsumer>();
             });
             builder.AddClientServices();
 
@@ -40,6 +45,7 @@ namespace Beyond8.Assessment.Api.Bootstrapping
             builder.Services.AddScoped<IQuizService, QuizService>();
             builder.Services.AddScoped<IQuizAttemptService, QuizAttemptService>();
             builder.Services.AddScoped<IAssignmentService, AssignmentService>();
+            builder.Services.AddScoped<IAssignmentSubmissionService, AssignmentSubmissionService>();
 
             return builder;
         }
