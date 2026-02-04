@@ -15,6 +15,25 @@ public class QuizService(
     IUnitOfWork unitOfWork,
     ICatalogService catalogService) : IQuizService
 {
+    public async Task<ApiResponse<QuizSimpleResponse>> GetQuizByIdForStudentAsync(Guid id)
+    {
+        try
+        {
+            var quiz = await unitOfWork.QuizRepository.FindOneAsync(q => q.Id == id && q.IsActive);
+            if (quiz == null)
+            {
+                logger.LogError("Quiz not found for id: {Id} for student", id);
+                return ApiResponse<QuizSimpleResponse>.FailureResponse("Quiz không tồn tại cho học sinh.");
+            }
+
+            return ApiResponse<QuizSimpleResponse>.SuccessResponse(quiz.ToSimpleResponse(quiz.QuizQuestions.Count), "Lấy quiz thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting quiz by id for student: {Id}", id);
+            return ApiResponse<QuizSimpleResponse>.FailureResponse("Đã xảy ra lỗi khi lấy quiz cho học sinh.");
+        }
+    }
 
     public async Task<ApiResponse<List<QuizSimpleResponse>>> GetAllQuizzesAsync(Guid userId, PaginationRequest paginationRequest)
     {

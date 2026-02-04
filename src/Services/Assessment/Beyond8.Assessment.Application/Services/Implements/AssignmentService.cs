@@ -13,6 +13,27 @@ public class AssignmentService(
     IUnitOfWork unitOfWork,
     ICatalogService catalogService) : IAssignmentService
 {
+
+    public async Task<ApiResponse<AssignmentSimpleResponse>> GetAssignmentByIdForStudentAsync(Guid id, Guid userId)
+    {
+        try
+        {
+            var assignment = await unitOfWork.AssignmentRepository.FindOneAsync(a => a.Id == id);
+            if (assignment == null)
+            {
+                logger.LogError("Assignment not found for id: {Id} for student", id);
+                return ApiResponse<AssignmentSimpleResponse>.FailureResponse("Assignment không tồn tại cho học sinh.");
+            }
+
+            return ApiResponse<AssignmentSimpleResponse>.SuccessResponse(assignment.ToSimpleResponse(), "Lấy assignment thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting assignment by id for student: {Id}", id);
+            return ApiResponse<AssignmentSimpleResponse>.FailureResponse("Đã xảy ra lỗi khi lấy assignment cho học sinh.");
+        }
+    }
+
     public async Task<ApiResponse<AssignmentSimpleResponse>> CreateAssignmentAsync(CreateAssignmentRequest request, Guid instructorId)
     {
         try
