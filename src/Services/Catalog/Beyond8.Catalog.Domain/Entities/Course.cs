@@ -37,6 +37,17 @@ namespace Beyond8.Catalog.Domain.Entities
         [Column(TypeName = "decimal(18, 2)")]
         public decimal Price { get; set; } = 0;
 
+        /// Phần trăm giảm giá (0-100), null = không giảm.
+        [Column(TypeName = "decimal(5, 2)")]
+        public decimal? DiscountPercent { get; set; }
+
+        /// Số tiền giảm cố định, null = không giảm. Ưu tiên DiscountPercent nếu cả hai có.
+        [Column(TypeName = "decimal(18, 2)")]
+        public decimal? DiscountAmount { get; set; }
+
+        /// Thời hạn hết discount (UTC). Null = không giới hạn.        
+        public DateTime? DiscountEndsAt { get; set; }
+
         // Status & Visibility
         public CourseStatus Status { get; set; } = CourseStatus.Draft;
         public CourseLevel Level { get; set; } = CourseLevel.Beginner;

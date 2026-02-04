@@ -20,7 +20,27 @@ Danh sách việc cần làm / ghi chú cho từng module.
 
 ---
 
-## 2. Khác (ghi chú nhanh)
+## 2. Get khóa học kèm coupon (giá + discount) – đã bổ sung cấu trúc
+
+### Đã triển khai
+
+- **CourseResponse** và **CourseSimpleResponse** (Catalog) đã có thêm:
+  - **OriginalPrice**: giá ban đầu (giá gốc khóa học).
+  - **DiscountPercent** (nullable): phần trăm giảm giá từ coupon.
+  - **DiscountAmount** (nullable): số tiền giảm từ coupon.
+  - **FinalPrice**: giá sau khi áp dụng discount (hiển thị cho người dùng).
+  - **CouponCode**, **CouponDescription** (nullable): mã và mô tả coupon nếu có.
+- Hiện tại mapping: `OriginalPrice = Price`, `FinalPrice = Price`, discount = null (chưa có Sales/Coupon).
+
+### TODO (khi có Sales / Coupon service)
+
+- Endpoint get course (summary/details/list) nhận tham số **couponCode** (optional).
+- Gọi Sales/Coupon service validate coupon cho courseId → lấy DiscountPercent hoặc DiscountAmount.
+- Tính **FinalPrice** và điền **DiscountPercent**, **DiscountAmount**, **CouponCode**, **CouponDescription** vào response.
+
+---
+
+## 3. Khác (ghi chú nhanh)
 
 - **Coupon (REQ-07.01)**: Lấy discount từ bảng coupon (Sales Service) để cho phép enroll free khi có coupon 100% dù course có giá.
 - **Learning – Check enrollment**: API `GET /api/v1/enrollments/check?courseId=...` đã có, dùng cho Assessment.
