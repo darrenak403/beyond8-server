@@ -205,6 +205,78 @@ graph TD
 4. Implement API endpoints theo thứ tự
 5. Integration testing giữa các services
 
+## 📋 ClickUp Tasks
+
+### 🔥 **PHASE 1: CORE FOUNDATION (Ưu tiên Cao)**
+
+#### **1. IOrderService Implementation**
+
+```
+[BE] Implement CreateOrderAsync - Tạo đơn hàng từ cart với validation và coupon áp dụng
+[BE] Implement GetOrderByIdAsync - Lấy thông tin chi tiết đơn hàng theo ID
+[BE] Implement UpdateOrderStatusAsync - Cập nhật trạng thái đơn hàng (Pending->Paid->Completed)
+[BE] Implement CancelOrderAsync - Hủy đơn hàng với business rules validation
+[BE] Implement GetOrdersByUserAsync - Lấy danh sách đơn hàng của user với pagination
+[BE] Implement GetOrdersByInstructorAsync - Lấy đơn hàng chứa courses của instructor
+```
+
+#### **2. IPaymentService Implementation**
+
+```
+[BE] Implement ProcessPaymentAsync - Tích hợp VNPay gateway, tạo payment URL
+[BE] Implement ConfirmPaymentAsync - Xử lý webhook confirm từ VNPay
+[BE] Implement RefundPaymentAsync - Xử lý hoàn tiền với VNPay API
+[BE] Implement GetPaymentsByOrderAsync - Lấy lịch sử thanh toán của đơn hàng
+[BE] Implement GetPaymentsByUserAsync - Lấy lịch sử thanh toán của user
+```
+
+### 🔄 **PHASE 2: PARALLEL DEVELOPMENT (Ưu tiên Trung bình)**
+
+#### **3. ICouponService Implementation**
+
+```
+[BE] Implement CreateCouponAsync - Tạo coupon với validation (code unique, type, value)
+[BE] Implement GetCouponByCodeAsync - Lấy coupon theo code để validate
+[BE] Implement UpdateCouponAsync - Cập nhật thông tin coupon
+[BE] Implement DeleteCouponAsync - Xóa coupon (soft delete)
+[BE] Implement GetCouponsAsync - Lấy danh sách coupon cho admin management
+[BE] Implement ApplyCouponAsync - Validate và tính toán giảm giá cho order
+```
+
+### 💰 **PHASE 3: REVENUE MANAGEMENT (Ưu tiên Trung bình)**
+
+#### **4. IInstructorWalletService Implementation**
+
+```
+[BE] Implement GetWalletByInstructorAsync - Lấy thông tin ví và số dư
+[BE] Implement AddFundsAsync - Thêm tiền vào ví từ sales revenue
+[BE] Implement DeductFundsAsync - Trừ tiền từ ví cho payouts
+[BE] Implement GetWalletTransactionsAsync - Lịch sử giao dịch ví
+```
+
+### 🏦 **PHASE 4: FINALIZATION (Ưu tiên Thấp)**
+
+#### **5. IPayoutService Implementation**
+
+```
+[BE] Implement CreatePayoutRequestAsync - Tạo yêu cầu rút tiền với validation
+[BE] Implement GetPayoutRequestByIdAsync - Lấy chi tiết payout request
+[BE] Implement ApprovePayoutRequestAsync - Admin approve payout và transfer tiền
+[BE] Implement RejectPayoutRequestAsync - Admin reject với lý do
+[BE] Implement GetPayoutRequestsAsync - Admin xem tất cả payout requests
+[BE] Implement GetPayoutRequestsByInstructorAsync - Instructor xem lịch sử payouts
+```
+
+#### **6. ITransactionService Implementation**
+
+```
+[BE] Implement CreateTransactionAsync - Ghi log tất cả giao dịch
+[BE] Implement GetTransactionByIdAsync - Lấy chi tiết transaction
+[BE] Implement GetTransactionsByUserAsync - Lịch sử giao dịch của user
+[BE] Implement GetAllTransactionsAsync - Admin xem tất cả transactions
+[BE] Implement GetTotalRevenueAsync - Báo cáo doanh thu theo khoảng thời gian
+```
+
 ---
 
 _Document created: February 5, 2026_
