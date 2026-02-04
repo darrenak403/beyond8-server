@@ -112,10 +112,7 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
                 query = query.Where(c => c.AvgRating >= minRating.Value);
             }
 
-            if (minStudents.HasValue)
-            {
-                query = query.Where(c => c.TotalStudents >= minStudents.Value);
-            }
+            // minStudents: không lưu trên Course nữa; có thể lấy từ Learning service sau nếu cần filter.
 
             if (isActive.HasValue)
             {
@@ -241,10 +238,7 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
                 query = query.Where(c => c.AvgRating >= minRating.Value);
             }
 
-            if (minStudents.HasValue)
-            {
-                query = query.Where(c => c.TotalStudents >= minStudents.Value);
-            }
+            // minStudents: không lưu trên Course nữa; có thể lấy từ Learning service sau nếu cần filter.
 
             if (isActive.HasValue)
             {
@@ -361,10 +355,7 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
                 query = query.Where(c => c.AvgRating >= minRating.Value);
             }
 
-            if (minStudents.HasValue)
-            {
-                query = query.Where(c => c.TotalStudents >= minStudents.Value);
-            }
+            // minStudents: không lưu trên Course nữa; có thể lấy từ Learning service sau nếu cần filter.
 
             if (isActive.HasValue)
             {

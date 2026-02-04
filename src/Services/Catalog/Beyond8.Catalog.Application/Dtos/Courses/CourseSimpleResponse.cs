@@ -16,6 +16,10 @@ namespace Beyond8.Catalog.Application.Dtos.Courses
         public Guid InstructorId { get; set; }
         public string InstructorName { get; set; } = string.Empty;
         public decimal Price { get; set; } = 0;
+        public decimal? DiscountPercent { get; set; }
+        public decimal? DiscountAmount { get; set; }
+        public DateTime? DiscountEndsAt { get; set; }
+        public decimal FinalPrice { get; set; }
         public decimal? AvgRating { get; set; }
         public int TotalReviews { get; set; }
     }

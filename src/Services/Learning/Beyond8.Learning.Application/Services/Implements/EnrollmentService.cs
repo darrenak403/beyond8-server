@@ -1,3 +1,4 @@
+using Beyond8.Common.Events.Learning;
 using Beyond8.Common.Utilities;
 using Beyond8.Learning.Application.Clients.Catalog;
 using Beyond8.Learning.Application.Dtos.Enrollments;
@@ -5,6 +6,7 @@ using Beyond8.Learning.Application.Mappings;
 using Beyond8.Learning.Application.Services.Interfaces;
 using Beyond8.Learning.Domain.Entities;
 using Beyond8.Learning.Domain.Repositories.Interfaces;
+using MassTransit;
 using Microsoft.Extensions.Logging;
 
 namespace Beyond8.Learning.Application.Services.Implements;
@@ -12,7 +14,8 @@ namespace Beyond8.Learning.Application.Services.Implements;
 public class EnrollmentService(
     ILogger<EnrollmentService> logger,
     IUnitOfWork unitOfWork,
-    ICatalogClient catalogClient) : IEnrollmentService
+    ICatalogClient catalogClient,
+    IPublishEndpoint publishEndpoint) : IEnrollmentService
 {
     private const int CourseStatusPublished = 4; // Catalog.CourseStatus.Published
 
@@ -30,9 +33,7 @@ public class EnrollmentService(
 
         var structure = structureResult.Data;
 
-        // TODO: Lấy thêm discount của courseId từ bảng coupon (Sales Service) để check có giảm giá hay không
-        // (vd: coupon 100% → cho phép enroll free dù Price != 0). Hiện tại chỉ cho enroll khi Price == 0.
-        if (structure.Price != 0)
+        if (structure.FinalPrice != 0)
         {
             logger.LogWarning("User {UserId} attempted to enroll free in paid course {CourseId}", userId, courseId);
             return ApiResponse<EnrollmentResponse>.FailureResponse("Khóa học không miễn phí. Vui lòng thanh toán để đăng ký.");
@@ -75,6 +76,9 @@ public class EnrollmentService(
         }
 
         await unitOfWork.SaveChangesAsync();
+
+        var totalStudents = await unitOfWork.EnrollmentRepository.CountActiveByCourseIdAsync(courseId);
+        await publishEndpoint.Publish(new CourseEnrollmentCountChangedEvent(courseId, totalStudents, DateTime.UtcNow));
 
         logger.LogInformation("User {UserId} enrolled in free course {CourseId}, EnrollmentId {EnrollmentId}",
             userId, courseId, enrollment.Id);

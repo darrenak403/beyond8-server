@@ -25,6 +25,8 @@ public static class ApplicationServiceExtensions
             options.ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
         builder.AddServiceRedis(nameof(Learning), connectionName: Const.Redis);
 
+        builder.AddMassTransitWithRabbitMq(_ => { });
+
         builder.Services.AddValidatorsFromAssemblyContaining<EnrollFreeRequest>();
 
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();

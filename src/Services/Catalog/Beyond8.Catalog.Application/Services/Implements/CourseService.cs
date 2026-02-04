@@ -259,11 +259,7 @@ public class CourseService(
                 return ApiResponse<bool>.FailureResponse("Không thể xóa khóa học đã xuất bản.");
             }
 
-            if (course!.TotalStudents > 0)
-            {
-                logger.LogWarning("Cannot delete course with enrolled students: {CourseId}", id);
-                return ApiResponse<bool>.FailureResponse("Không thể xóa khóa học có học viên đăng ký.");
-            }
+            // TODO: Kiểm tra số học viên qua Learning service trước khi cho phép xóa (nếu TotalStudents > 0 thì từ chối).
 
             course!.IsActive = false;
             course.DeletedAt = DateTime.UtcNow;
@@ -592,11 +588,7 @@ public class CourseService(
                 return ApiResponse<bool>.FailureResponse("Khóa học không ở trạng thái công khai.");
             }
 
-            if (course!.TotalStudents > 0)
-            {
-                logger.LogWarning("Cannot unpublish course with enrolled students: {CourseId}", courseId);
-                return ApiResponse<bool>.FailureResponse("Không thể ẩn khóa học có học viên đăng ký.");
-            }
+            // TODO: Kiểm tra số học viên qua Learning service (nếu > 0 thì từ chối unpublish).
 
             course.Status = CourseStatus.Approved;
             await unitOfWork.CourseRepository.UpdateAsync(courseId, course);
@@ -634,6 +626,30 @@ public class CourseService(
         {
             logger.LogError(ex, "Error updating course thumbnail: {CourseId}", courseId);
             return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi cập nhật ảnh đại diện khóa học.");
+        }
+    }
+
+    public async Task<ApiResponse<CourseResponse>> SetCourseDiscountAsync(Guid courseId, Guid currentUserId, SetCourseDiscountRequest request)
+    {
+        try
+        {
+            var (isValid, course, errorMessage) = await CheckCourseOwnershipAsync(courseId, currentUserId);
+            if (!isValid)
+                return ApiResponse<CourseResponse>.FailureResponse(errorMessage!);
+
+            course!.DiscountPercent = request.DiscountPercent;
+            course.DiscountAmount = request.DiscountAmount;
+            course.DiscountEndsAt = request.DiscountEndsAt;
+            await unitOfWork.CourseRepository.UpdateAsync(courseId, course);
+            await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation("Course discount updated successfully: {CourseId}", courseId);
+            return ApiResponse<CourseResponse>.SuccessResponse(course.ToResponse(), "Cập nhật giảm giá khóa học thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error setting course discount: {CourseId}", courseId);
+            return ApiResponse<CourseResponse>.FailureResponse("Đã xảy ra lỗi khi cập nhật giảm giá khóa học.");
         }
     }
 

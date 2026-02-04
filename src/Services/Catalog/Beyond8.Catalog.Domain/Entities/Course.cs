@@ -8,7 +8,6 @@ namespace Beyond8.Catalog.Domain.Entities
 {
     public class Course : BaseEntity
     {
-        // Full-text search vector (built in DB via unaccent + to_tsvector)
         public NpgsqlTsVector? SearchVector { get; set; }
 
         public Guid InstructorId { get; set; }
@@ -33,19 +32,15 @@ namespace Beyond8.Catalog.Domain.Entities
         [MaxLength(1000)]
         public string? ShortDescription { get; set; }
 
-        // Pricing
         [Column(TypeName = "decimal(18, 2)")]
         public decimal Price { get; set; } = 0;
 
-        /// Phần trăm giảm giá (0-100), null = không giảm.
         [Column(TypeName = "decimal(5, 2)")]
         public decimal? DiscountPercent { get; set; }
 
-        /// Số tiền giảm cố định, null = không giảm. Ưu tiên DiscountPercent nếu cả hai có.
         [Column(TypeName = "decimal(18, 2)")]
         public decimal? DiscountAmount { get; set; }
 
-        /// Thời hạn hết discount (UTC). Null = không giới hạn.        
         public DateTime? DiscountEndsAt { get; set; }
 
         // Status & Visibility
@@ -69,11 +64,7 @@ namespace Beyond8.Catalog.Domain.Entities
         [Column(TypeName = "jsonb")]
         public string? TargetAudience { get; set; }  // ["student type 1"]
 
-        // Statistics
         public int TotalStudents { get; set; } = 0;
-        public int TotalSections { get; set; } = 0;
-        public int TotalLessons { get; set; } = 0;
-        public int TotalDurationMinutes { get; set; } = 0;
 
         [Column(TypeName = "decimal(3, 2)")]
         public decimal? AvgRating { get; set; }
@@ -92,7 +83,6 @@ namespace Beyond8.Catalog.Domain.Entities
 
         public bool IsActive { get; set; } = true;
 
-        // Relationships
         public virtual ICollection<Section> Sections { get; set; } = [];
         public virtual ICollection<CourseDocument> Documents { get; set; } = [];
     }

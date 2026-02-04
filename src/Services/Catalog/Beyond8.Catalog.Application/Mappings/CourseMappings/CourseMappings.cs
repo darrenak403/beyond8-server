@@ -10,6 +10,24 @@ namespace Beyond8.Catalog.Application.Mappings.CourseMappings;
 
 public static class CourseMappings
 {
+    public static decimal ComputeFinalPrice(this Course entity)
+    {
+        var now = DateTime.UtcNow;
+        if (entity.DiscountEndsAt.HasValue && entity.DiscountEndsAt.Value < now)
+            return entity.Price;
+
+        if (entity.DiscountPercent.HasValue && entity.DiscountPercent.Value >= 0 && entity.DiscountPercent.Value <= 100)
+        {
+            var final = entity.Price * (1 - entity.DiscountPercent.Value / 100);
+            return Math.Max(0, final);
+        }
+        if (entity.DiscountAmount.HasValue && entity.DiscountAmount.Value >= 0)
+        {
+            var final = entity.Price - entity.DiscountAmount.Value;
+            return Math.Max(0, final);
+        }
+        return entity.Price;
+    }
     public static Course ToEntity(this CreateCourseRequest request, Guid instructorId, string instructorName)
     {
         var slug = request.Title.ToSlug();
@@ -68,6 +86,10 @@ public static class CourseMappings
             Level = entity.Level,
             Language = entity.Language,
             Price = entity.Price,
+            DiscountPercent = entity.DiscountPercent,
+            DiscountAmount = entity.DiscountAmount,
+            DiscountEndsAt = entity.DiscountEndsAt,
+            FinalPrice = entity.ComputeFinalPrice(),
             ThumbnailUrl = entity.ThumbnailUrl,
             TotalStudents = entity.TotalStudents,
             TotalSections = entity.Sections?.Count ?? 0,
@@ -104,6 +126,10 @@ public static class CourseMappings
             Level = entity.Level,
             Language = entity.Language,
             Price = entity.Price,
+            DiscountPercent = entity.DiscountPercent,
+            DiscountAmount = entity.DiscountAmount,
+            DiscountEndsAt = entity.DiscountEndsAt,
+            FinalPrice = entity.ComputeFinalPrice(),
             ThumbnailUrl = entity.ThumbnailUrl,
             TotalStudents = entity.TotalStudents,
             TotalSections = entity.Sections?.Count ?? 0,
@@ -144,6 +170,10 @@ public static class CourseMappings
             Level = entity.Level,
             Language = entity.Language,
             Price = entity.Price,
+            DiscountPercent = entity.DiscountPercent,
+            DiscountAmount = entity.DiscountAmount,
+            DiscountEndsAt = entity.DiscountEndsAt,
+            FinalPrice = entity.ComputeFinalPrice(),
             ThumbnailUrl = entity.ThumbnailUrl,
             TotalStudents = entity.TotalStudents,
             TotalSections = entity.Sections?.Count ?? 0,
@@ -184,6 +214,10 @@ public static class CourseMappings
             InstructorId = entity.InstructorId,
             InstructorName = entity.InstructorName,
             Price = entity.Price,
+            DiscountPercent = entity.DiscountPercent,
+            DiscountAmount = entity.DiscountAmount,
+            DiscountEndsAt = entity.DiscountEndsAt,
+            FinalPrice = entity.ComputeFinalPrice(),
             AvgRating = entity.AvgRating,
             TotalReviews = entity.TotalReviews
         };
