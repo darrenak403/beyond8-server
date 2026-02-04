@@ -64,7 +64,7 @@ public static class QuizAttemptApis
 
         group.MapGet("/quiz/{quizId:guid}/current", GetCurrentQuizAttemptAsync)
             .WithName("GetCurrentQuizAttempt")
-            .WithDescription("Lấy bài quiz đang làm dở để tiếp tục (resume) - trả về câu hỏi, đáp án đã chọn, thời gian, câu đánh dấu")
+            .WithDescription("Lấy bài quiz đang làm dở để tiếp tục")
             .RequireAuthorization()
             .Produces<ApiResponse<CurrentQuizAttemptResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<CurrentQuizAttemptResponse>>(StatusCodes.Status400BadRequest);
