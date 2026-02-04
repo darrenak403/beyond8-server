@@ -642,9 +642,7 @@ public class CourseService(
                 return ApiResponse<CourseResponse>.FailureResponse("Chỉ có thể cập nhật giảm giá khóa học đã được công bố hoặc đã được phê duyệt.");
             }
 
-            course!.DiscountPercent = request.DiscountPercent;
-            course.DiscountAmount = request.DiscountAmount;
-            course.DiscountEndsAt = request.DiscountEndsAt;
+            course.UpdateCourseDiscount(request);
             await unitOfWork.CourseRepository.UpdateAsync(courseId, course);
             await unitOfWork.SaveChangesAsync();
 

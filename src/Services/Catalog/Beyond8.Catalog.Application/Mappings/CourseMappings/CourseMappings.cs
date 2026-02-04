@@ -222,4 +222,11 @@ public static class CourseMappings
             TotalReviews = entity.TotalReviews
         };
     }
+
+    public static void UpdateCourseDiscount(this Course entity, SetCourseDiscountRequest request)
+    {
+        entity.DiscountPercent = request.DiscountPercent;
+        entity.DiscountAmount = request.DiscountAmount;
+        entity.DiscountEndsAt = request.DiscountEndsAt;
+    }
 }
