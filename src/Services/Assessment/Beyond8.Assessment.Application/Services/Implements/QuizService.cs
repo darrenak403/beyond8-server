@@ -21,7 +21,12 @@ public class QuizService(
     {
         try
         {
-            var quiz = await unitOfWork.QuizRepository.FindOneAsync(q => q.Id == id && q.IsActive);
+            var quiz = await unitOfWork.QuizRepository.AsQueryable()
+                .Where(q => q.Id == id && q.IsActive)
+                .Include(q => q.QuizQuestions)
+                .ThenInclude(qq => qq.Question)
+                .FirstOrDefaultAsync();
+
             if (quiz == null)
             {
                 logger.LogError("Quiz not found for id: {Id} for student", id);

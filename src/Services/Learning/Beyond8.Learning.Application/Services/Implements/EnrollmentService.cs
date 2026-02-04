@@ -77,7 +77,12 @@ public class EnrollmentService(
         await unitOfWork.SaveChangesAsync();
 
         var totalStudents = await unitOfWork.EnrollmentRepository.CountActiveByCourseIdAsync(courseId);
-        await publishEndpoint.Publish(new CourseEnrollmentCountChangedEvent(courseId, totalStudents, DateTime.UtcNow));
+        await publishEndpoint.Publish(new CourseEnrollmentCountChangedEvent(
+            courseId,
+            totalStudents,
+            DateTime.UtcNow,
+            InstructorId: structure.InstructorId,
+            Delta: 1));
 
         logger.LogInformation("User {UserId} enrolled in free course {CourseId}, EnrollmentId {EnrollmentId}",
             userId, courseId, enrollment.Id);

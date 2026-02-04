@@ -2,6 +2,7 @@ using Beyond8.Common.Extensions;
 using Beyond8.Common.Utilities;
 using Beyond8.Identity.Api.Apis;
 using Beyond8.Identity.Application.Consumers.Catalog;
+using Beyond8.Identity.Application.Consumers.Learning;
 using Beyond8.Identity.Application.Dtos.Auth;
 using Beyond8.Identity.Application.Services.Implements;
 using Beyond8.Identity.Application.Services.Interfaces;
@@ -35,6 +36,7 @@ namespace Beyond8.Identity.Api.Bootstrapping
                 // Register consumers from Catalog events
                 config.AddConsumer<CoursePublishedEventConsumer>();
                 config.AddConsumer<CourseUnpublishedEventConsumer>();
+                config.AddConsumer<CourseEnrollmentCountChangedEventConsumer>();
             });
 
             // Register services
