@@ -20,7 +20,6 @@ public class CreateVideoLessonRequestValidator : AbstractValidator<CreateVideoLe
 
         // Video-specific validation
         RuleFor(x => x.VideoOriginalUrl)
-            .NotEmpty().WithMessage("URL video gốc không được để trống cho bài học video")
             .MaximumLength(500).WithMessage("URL video gốc không được vượt quá 500 ký tự");
 
         RuleFor(x => x.VideoThumbnailUrl)
