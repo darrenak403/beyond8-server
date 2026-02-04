@@ -9,6 +9,8 @@ namespace Beyond8.Assessment.Application.Mappings.QuizAttemptMappings;
 
 public static class QuizAttemptMappings
 {
+    private static readonly JsonSerializerOptions OptionJsonOptions = new() { PropertyNameCaseInsensitive = true };
+
     public static QuizAttempt ToEntity(
         Guid studentId,
         Guid quizId,
@@ -45,7 +47,7 @@ public static class QuizAttemptMappings
         {
             if (!questionDict.TryGetValue(questionId, out var question)) continue;
 
-            var options = JsonSerializer.Deserialize<List<QuestionOptionItem>>(question.Options) ?? [];
+            var options = JsonSerializer.Deserialize<List<QuestionOptionItem>>(question.Options, OptionJsonOptions) ?? [];
             var shuffledOptionIds = optionOrders[questionId.ToString()];
             var optionLookup = options
                 .Where(o => !string.IsNullOrEmpty(o.Id))
@@ -133,7 +135,7 @@ public static class QuizAttemptMappings
         {
             if (!questionDict.TryGetValue(questionId, out var question)) continue;
 
-            var options = JsonSerializer.Deserialize<List<QuestionOptionItem>>(question.Options) ?? [];
+            var options = JsonSerializer.Deserialize<List<QuestionOptionItem>>(question.Options, OptionJsonOptions) ?? [];
             var correctOptionIds = options.Where(o => o.IsCorrect).Select(o => o.Id).ToHashSet();
 
             var selectedAnswers = studentAnswers.TryGetValue(questionId.ToString(), out var answers)
@@ -260,7 +262,7 @@ public static class QuizAttemptMappings
         {
             if (!questionDict.TryGetValue(questionId, out var question)) continue;
 
-            var options = JsonSerializer.Deserialize<List<QuestionOptionItem>>(question.Options) ?? [];
+            var options = JsonSerializer.Deserialize<List<QuestionOptionItem>>(question.Options, OptionJsonOptions) ?? [];
             var correctOptionIds = options.Where(o => o.IsCorrect).Select(o => o.Id).ToHashSet();
 
             var selectedAnswers = studentAnswers.TryGetValue(questionId.ToString(), out var answers)
@@ -351,7 +353,7 @@ public static class QuizAttemptMappings
         {
             if (!questionDict.TryGetValue(questionId, out var question)) continue;
 
-            var options = JsonSerializer.Deserialize<List<QuestionOptionItem>>(question.Options) ?? [];
+            var options = JsonSerializer.Deserialize<List<QuestionOptionItem>>(question.Options, OptionJsonOptions) ?? [];
             var optionIds = options
                 .Where(o => !string.IsNullOrEmpty(o.Id))
                 .Select(o => o.Id)

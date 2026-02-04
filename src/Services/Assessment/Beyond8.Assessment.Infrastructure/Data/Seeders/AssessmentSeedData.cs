@@ -8,13 +8,12 @@ namespace Beyond8.Assessment.Infrastructure.Data.Seeders;
 
 public static class AssessmentSeedData
 {
-    // Khớp với Catalog seed
     private static readonly Guid SeedCourseId = Guid.Parse("33333333-3333-3333-3333-333333333333");
-    private static readonly Guid SeedInstructorId = Guid.Parse("22222222-2222-2222-2222-222222222222");
-    private static readonly Guid Lesson2_4Id = Guid.Parse("55555555-5555-5555-5555-555555550204"); // Quiz Section 2
-    private static readonly Guid Lesson3_3Id = Guid.Parse("55555555-5555-5555-5555-555555550303"); // Quiz Section 3
+    private static readonly Guid SeedInstructorId = Guid.Parse("00000000-0000-0000-0000-000000000006"); // Trần Thị Giảng Viên (Identity)
+    private static readonly Guid Lesson2_4Id = Guid.Parse("55555555-5555-5555-5555-555555550204"); // Section 2 - Quiz lesson
+    private static readonly Guid Lesson3_3Id = Guid.Parse("55555555-5555-5555-5555-555555550303"); // Section 3 - Quiz lesson
 
-    // Quiz IDs (Catalog đã tham chiếu)
+    // Quiz IDs (Catalog LessonQuiz tham chiếu tới)
     private static readonly Guid Quiz1Id = Guid.Parse("66666666-6666-6666-6666-666666666601");
     private static readonly Guid Quiz2Id = Guid.Parse("66666666-6666-6666-6666-666666666602");
 
