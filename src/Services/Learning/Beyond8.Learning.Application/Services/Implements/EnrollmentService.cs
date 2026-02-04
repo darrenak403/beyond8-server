@@ -83,4 +83,11 @@ public class EnrollmentService(
             enrollment.ToResponse(),
             "Đăng ký khóa học miễn phí thành công.");
     }
+
+    public async Task<ApiResponse<bool>> IsUserEnrolledInCourseAsync(Guid userId, Guid courseId)
+    {
+        var enrollment = await unitOfWork.EnrollmentRepository.FindOneAsync(e =>
+            e.UserId == userId && e.CourseId == courseId && e.DeletedAt == null);
+        return ApiResponse<bool>.SuccessResponse(enrollment != null, enrollment != null ? "Đã đăng ký khóa học." : "Chưa đăng ký khóa học.");
+    }
 }

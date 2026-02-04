@@ -11,6 +11,7 @@ using Beyond8.Common.Extensions;
 using Beyond8.Common.Utilities;
 using FluentValidation;
 using Beyond8.Assessment.Application.Clients.Catalog;
+using Beyond8.Assessment.Application.Clients.Learning;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Polly;
@@ -25,7 +26,6 @@ namespace Beyond8.Assessment.Api.Bootstrapping
             builder.Services.AddOpenApi();
             builder.Services.AddValidatorsFromAssemblyContaining<QuestionRequest>();
             builder.AddCommonExtensions();
-            // Bỏ qua PendingModelChangesWarning khi pooling bật (tránh lỗi khi model thay đổi chưa tạo migration)
             builder.AddPostgresDatabase<AssessmentDbContext>(Const.AssessmentServiceDatabase, options =>
                 options.ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
             builder.AddServiceRedis(nameof(Assessment), connectionName: Const.Redis);
@@ -54,10 +54,19 @@ namespace Beyond8.Assessment.Api.Bootstrapping
         {
             var catalogBaseUrl = builder.Configuration["Clients:Catalog:BaseUrl"]
                                  ?? throw new ArgumentNullException("Catalog URL missing");
+            var learningBaseUrl = builder.Configuration["Clients:Learning:BaseUrl"]
+                                 ?? throw new ArgumentNullException("Learning URL missing");
 
             builder.Services.AddHttpClient<ICatalogService, CatalogService>(client =>
             {
                 client.BaseAddress = new Uri(catalogBaseUrl);
+                client.Timeout = TimeSpan.FromSeconds(30);
+            })
+            .AddPolicyHandler(GetResiliencePolicy());
+
+            builder.Services.AddHttpClient<ILearningClient, LearningClient>(client =>
+            {
+                client.BaseAddress = new Uri(learningBaseUrl);
                 client.Timeout = TimeSpan.FromSeconds(30);
             })
             .AddPolicyHandler(GetResiliencePolicy());

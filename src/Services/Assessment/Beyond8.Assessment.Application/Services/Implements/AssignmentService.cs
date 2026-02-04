@@ -1,4 +1,5 @@
 using Beyond8.Assessment.Application.Clients.Catalog;
+using Beyond8.Assessment.Application.Clients.Learning;
 using Beyond8.Assessment.Application.Dtos.Assignments;
 using Beyond8.Assessment.Application.Mappings.AssignmentMappings;
 using Beyond8.Assessment.Application.Services.Interfaces;
@@ -11,9 +12,12 @@ namespace Beyond8.Assessment.Application.Services.Implements;
 public class AssignmentService(
     ILogger<AssignmentService> logger,
     IUnitOfWork unitOfWork,
-    ICatalogService catalogService) : IAssignmentService
+    ICatalogService catalogService,
+    ILearningClient learningClient) : IAssignmentService
 {
-
+    /// <summary>
+    /// Lấy assignment theo ID cho học sinh. Chỉ cho phép khi đã enroll vào khóa học (assignment.CourseId).
+    /// </summary>
     public async Task<ApiResponse<AssignmentSimpleResponse>> GetAssignmentByIdForStudentAsync(Guid id, Guid userId)
     {
         try
@@ -23,6 +27,25 @@ public class AssignmentService(
             {
                 logger.LogError("Assignment not found for id: {Id} for student", id);
                 return ApiResponse<AssignmentSimpleResponse>.FailureResponse("Assignment không tồn tại cho học sinh.");
+            }
+
+            if (!assignment.CourseId.HasValue)
+            {
+                logger.LogWarning("Assignment {AssignmentId} has no CourseId, denying student access", id);
+                return ApiResponse<AssignmentSimpleResponse>.FailureResponse("Assignment không gắn khóa học. Không thể truy cập.");
+            }
+
+            var enrollmentResult = await learningClient.IsUserEnrolledInCourseAsync(assignment.CourseId.Value);
+            if (!enrollmentResult.IsSuccess)
+            {
+                logger.LogWarning("Learning client failed for assignment {AssignmentId}, course {CourseId}: {Message}", id, assignment.CourseId, enrollmentResult.Message);
+                return ApiResponse<AssignmentSimpleResponse>.FailureResponse(enrollmentResult.Message ?? "Không thể kiểm tra đăng ký khóa học.");
+            }
+
+            if (!enrollmentResult.Data)
+            {
+                logger.LogWarning("Student not enrolled in course {CourseId} for assignment {AssignmentId}", assignment.CourseId, id);
+                return ApiResponse<AssignmentSimpleResponse>.FailureResponse("Bạn chưa đăng ký khóa học. Vui lòng đăng ký khóa học trước khi xem bài tập.");
             }
 
             return ApiResponse<AssignmentSimpleResponse>.SuccessResponse(assignment.ToSimpleResponse(), "Lấy assignment thành công.");

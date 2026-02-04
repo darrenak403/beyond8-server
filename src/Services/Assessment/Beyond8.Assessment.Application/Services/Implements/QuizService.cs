@@ -1,4 +1,5 @@
 using Beyond8.Assessment.Application.Clients.Catalog;
+using Beyond8.Assessment.Application.Clients.Learning;
 using Beyond8.Assessment.Application.Dtos.Quizzes;
 using Beyond8.Assessment.Application.Mappings.QuizMappings;
 using Beyond8.Assessment.Application.Mappings.QuizQuestionMappings;
@@ -13,7 +14,8 @@ namespace Beyond8.Assessment.Application.Services.Implements;
 public class QuizService(
     ILogger<QuizService> logger,
     IUnitOfWork unitOfWork,
-    ICatalogService catalogService) : IQuizService
+    ICatalogService catalogService,
+    ILearningClient learningClient) : IQuizService
 {
     public async Task<ApiResponse<QuizSimpleResponse>> GetQuizByIdForStudentAsync(Guid id)
     {
@@ -24,6 +26,33 @@ public class QuizService(
             {
                 logger.LogError("Quiz not found for id: {Id} for student", id);
                 return ApiResponse<QuizSimpleResponse>.FailureResponse("Quiz không tồn tại cho học sinh.");
+            }
+
+            // Lesson có IsPreview thì cho học sinh làm quiz không cần enroll
+            var previewResult = await catalogService.IsLessonPreviewByQuizIdAsync(id);
+            if (previewResult.IsSuccess && previewResult.Data)
+            {
+                logger.LogInformation("Quiz {QuizId} is preview lesson, allowing student access without enrollment", id);
+                return ApiResponse<QuizSimpleResponse>.SuccessResponse(quiz.ToSimpleResponse(quiz.QuizQuestions.Count), "Lấy quiz thành công.");
+            }
+
+            if (!quiz.CourseId.HasValue)
+            {
+                logger.LogWarning("Quiz {QuizId} has no CourseId, denying student access", id);
+                return ApiResponse<QuizSimpleResponse>.FailureResponse("Quiz không gắn khóa học. Không thể truy cập.");
+            }
+
+            var enrollmentResult = await learningClient.IsUserEnrolledInCourseAsync(quiz.CourseId.Value);
+            if (!enrollmentResult.IsSuccess)
+            {
+                logger.LogWarning("Learning client failed for quiz {QuizId}, course {CourseId}: {Message}", id, quiz.CourseId, enrollmentResult.Message);
+                return ApiResponse<QuizSimpleResponse>.FailureResponse(enrollmentResult.Message ?? "Không thể kiểm tra đăng ký khóa học.");
+            }
+
+            if (!enrollmentResult.Data)
+            {
+                logger.LogWarning("Student not enrolled in course {CourseId} for quiz {QuizId}", quiz.CourseId, id);
+                return ApiResponse<QuizSimpleResponse>.FailureResponse("Bạn chưa đăng ký khóa học. Vui lòng đăng ký khóa học trước khi làm quiz.");
             }
 
             return ApiResponse<QuizSimpleResponse>.SuccessResponse(quiz.ToSimpleResponse(quiz.QuizQuestions.Count), "Lấy quiz thành công.");
