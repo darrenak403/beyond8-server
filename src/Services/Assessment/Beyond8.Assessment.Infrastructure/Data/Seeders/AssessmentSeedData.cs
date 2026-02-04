@@ -6,10 +6,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Beyond8.Assessment.Infrastructure.Data.Seeders;
 
-/// <summary>
-/// Seed data cho Assessment service, tương ứng với Catalog seed (course ASP.NET Core).
-/// Quiz và Lesson ID phải khớp với CatalogSeedData.
-/// </summary>
 public static class AssessmentSeedData
 {
     // Khớp với Catalog seed

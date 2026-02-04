@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Net;
+using System.Text;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Beyond8.Integration.Application.Services.Interfaces;
@@ -275,9 +277,62 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
 
         private static string SanitizeFileName(string fileName)
         {
-            var invalidChars = Path.GetInvalidFileNameChars();
-            var sanitized = string.Join("_", fileName.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries));
-            return sanitized;
+            if (string.IsNullOrWhiteSpace(fileName))
+                return "file";
+
+            var extension = Path.GetExtension(fileName);
+            var nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
+
+            var normalized = RemoveDiacritics(nameWithoutExtension);
+
+            var sb = new StringBuilder();
+            foreach (var c in normalized)
+            {
+                if (char.IsLetterOrDigit(c))
+                {
+                    sb.Append(char.ToLowerInvariant(c));
+                }
+                else if (c == ' ' || c == '-' || c == '_')
+                {
+                    // Avoid consecutive hyphens
+                    if (sb.Length > 0 && sb[^1] != '-')
+                    {
+                        sb.Append('-');
+                    }
+                }
+            }
+
+            var sanitized = sb.ToString().Trim('-');
+
+            // Ensure we have a valid name
+            if (string.IsNullOrWhiteSpace(sanitized))
+                sanitized = "file";
+
+            if (sanitized.Length > 100)
+                sanitized = sanitized[..100].TrimEnd('-');
+
+            return sanitized + extension.ToLowerInvariant();
+        }
+
+
+        private static string RemoveDiacritics(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return text;
+
+            var normalizedString = text.Normalize(NormalizationForm.FormD);
+            var sb = new StringBuilder();
+
+            foreach (var c in normalizedString)
+            {
+                var unicodeCategory = CharUnicodeInfo.GetUnicodeCategory(c);
+                if (unicodeCategory != UnicodeCategory.NonSpacingMark)
+                {
+                    sb.Append(c);
+                }
+            }
+
+            return sb.ToString().Normalize(NormalizationForm.FormC);
         }
 
         private static readonly Dictionary<string, string> KeyExtensionMime = new(StringComparer.OrdinalIgnoreCase)

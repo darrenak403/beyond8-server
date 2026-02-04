@@ -4,10 +4,6 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Beyond8.Catalog.Infrastructure.Migrations
 {
-    /// <summary>
-    /// Adds SearchableText column (normalized in C# with RemoveDiacritics) so full-text search
-    /// matches Vietnamese without diacritics (e.g. "lap trinh" matches "Lập trình").
-    /// </summary>
     public partial class AddSearchableTextForVietnameseSearch : Migration
     {
         /// <inheritdoc />

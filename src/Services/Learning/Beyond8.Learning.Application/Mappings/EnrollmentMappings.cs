@@ -31,9 +31,6 @@ public static class EnrollmentMappings
         };
     }
 
-    /// <summary>
-    /// Maps section structure to a new SectionProgress entity for an enrollment.
-    /// </summary>
     public static SectionProgress ToSectionProgressEntity(
         this SectionStructureItem section,
         Guid userId,
@@ -50,9 +47,6 @@ public static class EnrollmentMappings
         };
     }
 
-    /// <summary>
-    /// Maps lesson structure to a new LessonProgress entity for an enrollment.
-    /// </summary>
     public static LessonProgress ToLessonProgressEntity(
         this LessonStructureItem lesson,
         Guid userId,

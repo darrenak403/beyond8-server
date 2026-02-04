@@ -19,9 +19,6 @@ public class QuizAttempt : BaseEntity
 
     public DateTime? SubmittedAt { get; set; }
 
-    /// <summary>
-    /// Seed for Fisher-Yates shuffle to reproduce the same order
-    /// </summary>
     public int ShuffleSeed { get; set; }
 
 
