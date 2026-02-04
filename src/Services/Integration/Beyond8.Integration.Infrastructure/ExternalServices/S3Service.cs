@@ -144,6 +144,37 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
         {
             if (string.IsNullOrWhiteSpace(fileKey)) return (null, null);
 
+            // Try with original key first
+            var result = await TryGetObjectAsync(fileKey, cancellationToken);
+            if (result.Data != null) return result;
+
+            // If not found and key contains non-ASCII characters, try URL-encoded version
+            if (fileKey.Any(c => c > 127))
+            {
+                var encodedKey = Uri.EscapeDataString(fileKey).Replace("%2F", "/");
+                _logger.LogDebug("Trying URL-encoded S3 key: {EncodedKey}", encodedKey);
+                result = await TryGetObjectAsync(encodedKey, cancellationToken);
+                if (result.Data != null) return result;
+            }
+
+            // If key looks URL-encoded, try decoded version
+            if (fileKey.Contains('%'))
+            {
+                var decodedKey = Uri.UnescapeDataString(fileKey);
+                if (decodedKey != fileKey)
+                {
+                    _logger.LogDebug("Trying URL-decoded S3 key: {DecodedKey}", decodedKey);
+                    result = await TryGetObjectAsync(decodedKey, cancellationToken);
+                    if (result.Data != null) return result;
+                }
+            }
+
+            _logger.LogDebug("S3 object not found with any key variation: {FileKey}", fileKey);
+            return (null, null);
+        }
+
+        private async Task<(byte[]? Data, string? ContentType)> TryGetObjectAsync(string fileKey, CancellationToken cancellationToken)
+        {
             try
             {
                 var request = new GetObjectRequest { BucketName = _s3Settings.BucketName, Key = fileKey };
@@ -154,11 +185,12 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                 var contentType = response.Headers?.ContentType?.Trim();
                 if (string.IsNullOrWhiteSpace(contentType))
                     contentType = InferMimeFromKey(fileKey);
+
+                _logger.LogDebug("Successfully retrieved S3 object with key: {FileKey}, Size: {Size} bytes", fileKey, data.Length);
                 return (data, contentType ?? "application/octet-stream");
             }
             catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.NotFound)
             {
-                _logger.LogDebug("S3 key not found: {FileKey}", fileKey);
                 return (null, null);
             }
             catch (Exception ex)
@@ -193,14 +225,29 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                     if (Uri.TryCreate(cfHost, UriKind.Absolute, out var cu))
                         cfHost = cu.Host;
                 }
+
+                string? rawPath = null;
                 if (!string.IsNullOrWhiteSpace(cfHost) && uri.Host.Equals(cfHost, StringComparison.OrdinalIgnoreCase))
-                    return uri.AbsolutePath.TrimStart('/');
+                {
+                    rawPath = uri.AbsolutePath.TrimStart('/');
+                }
+                else if (uri.Host.Contains("s3", StringComparison.OrdinalIgnoreCase))
+                {
+                    rawPath = uri.AbsolutePath.TrimStart('/');
+                }
 
-                // S3 URL (bucket.s3.region.amazonaws.com hoặc s3.region.amazonaws.com)
-                if (uri.Host.Contains("s3", StringComparison.OrdinalIgnoreCase))
-                    return uri.AbsolutePath.TrimStart('/');
+                if (rawPath == null) return string.Empty;
 
-                return string.Empty;
+                // Uri.AbsolutePath already decodes the path, but we need to ensure proper decoding
+                // for Vietnamese characters and special characters
+                var decodedPath = Uri.UnescapeDataString(rawPath);
+
+                _logger.LogDebug(
+                    "Extracted S3 key from URL. Original: {OriginalPath}, Decoded: {DecodedPath}",
+                    rawPath,
+                    decodedPath);
+
+                return decodedPath;
             }
             catch (Exception ex)
             {

@@ -8,7 +8,13 @@ namespace Beyond8.Integration.Application.Services.Interfaces
             Stream pdfStream,
             Guid courseId,
             Guid documentId,
+            string s3Key,
             Guid? lessonId = null);
+
+        /// <summary>
+        /// Check if S3 key already exists in course collection
+        /// </summary>
+        Task<bool> S3KeyExistsInCollectionAsync(Guid courseId, string s3Key);
 
         Task<List<VectorSearchResult>> SearchAsync(VectorSearchRequest request);
 

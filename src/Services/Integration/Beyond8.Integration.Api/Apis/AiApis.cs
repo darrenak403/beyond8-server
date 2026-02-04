@@ -162,6 +162,14 @@ namespace Beyond8.Integration.Api.Apis
             if (string.IsNullOrWhiteSpace(s3Key))
                 return Results.BadRequest(ApiResponse<EmbedCourseDocumentsResult>.FailureResponse("URL CloudFront không hợp lệ."));
 
+            var alreadyEmbedded = await embeddingService.S3KeyExistsAsync(request.CourseId, s3Key);
+            if (alreadyEmbedded)
+            {
+                return Results.Ok(ApiResponse<EmbedCourseDocumentsResult>.SuccessResponse(
+                    new EmbedCourseDocumentsResult { TotalChunks = 0, AlreadyEmbedded = true },
+                    "Tài liệu này đã được embed trước đó. Bỏ qua."));
+            }
+
             var (data, contentType) = await storageService.GetObjectAsync(s3Key);
             if (data == null || data.Length == 0)
                 return Results.BadRequest(ApiResponse<EmbedCourseDocumentsResult>.FailureResponse("File không tồn tại trên S3."));
@@ -171,7 +179,7 @@ namespace Beyond8.Integration.Api.Apis
                 return Results.BadRequest(ApiResponse<EmbedCourseDocumentsResult>.FailureResponse("Chỉ chấp nhận file PDF."));
 
             await using var stream = new MemoryStream(data);
-            var result = await embeddingService.EmbedCourseDocumentsAsync(stream, request);
+            var result = await embeddingService.EmbedCourseDocumentsAsync(stream, request, s3Key);
 
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
