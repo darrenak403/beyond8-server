@@ -144,24 +144,6 @@ git diff HEAD~1
 
 **Stores:** Architectural choices, known bugs, coding conventions
 
-### ☁️ AWS S3 MCP
-
-**Purpose:** Test S3 operations directly
-
-**Use for:** Verify media uploads, check buckets, test presigned URLs
-
-### 🐙 GitHub MCP
-
-**Purpose:** Create issues, PRs, check CI/CD status
-
-**Use for:** Bug tracking, automated PR creation
-
-### 💬 Slack MCP
-
-**Purpose:** Send team notifications
-
-**Use for:** Deployment alerts, error notifications, progress updates
-
 ## 🎯 MCP-Driven Development Workflow
 
 **CRITICAL: Follow this workflow for all development tasks:**
@@ -230,23 +212,28 @@ git diff HEAD~1
 4. Then: Implement with documented reasoning
 ```
 
-### 8️⃣ Testing Media Features
+### 8️⃣ Complete Bug Fix Workflow
 
 ```
-1. AWS S3 → Verify bucket configuration
-2. Docker → Check Integration service running
-3. PostgreSQL → Verify MediaFile table
-4. Then: Test upload workflow
+1. Git → Check recent changes that might have caused the issue
+2. PostgreSQL → Verify data integrity
+3. Docker → Check service health and logs
+4. Filesystem → Locate affected code files
+5. Brave Search → Research similar errors if needed
+6. Implement fix according to requirements
+7. Git → Commit with descriptive message
 ```
 
-### 9️⃣ Bug Tracking Workflow
+### 9️⃣ Feature Development Workflow
 
 ```
-1. Git → Check recent changes
-2. Docker → Verify services healthy
-3. Brave Search → Search for similar errors
-4. GitHub → Create issue
-5. Slack → Notify team
+1. Sequential Thinking → Plan implementation approach
+2. PostgreSQL → Check database schema
+3. Filesystem → Find similar feature implementations
+4. Git → Review related recent work
+5. Implement feature following established patterns
+6. Test thoroughly
+7. Git → Commit with clear description
 ```
 
 ## 📋 MCP Best Practices
@@ -257,13 +244,10 @@ git diff HEAD~1
 - **Check Docker status** before debugging connection issues
 - **Use Git history** to understand code evolution
 - **Search filesystem** before assuming files don't exist
-- **Combine multiple MCPs** for comprehensive context
+- **Combine multiple MCPs** for comprehensive context (PostgreSQL + Git + Docker)
 - **Research with Brave Search + Fetch** for unknown libraries
 - **Use Sequential Thinking** for complex decisions
 - **Store decisions in Memory** for consistency
-- **Test S3 via AWS MCP** before deploying media features
-- **Create GitHub issues** for bugs
-- **Notify team via Slack** for important updates
 
 ### ❌ DON'T:
 
@@ -275,8 +259,6 @@ git diff HEAD~1
 - Use outdated docs (use Brave Search + Fetch)
 - Rush complex decisions without sequential thinking
 - Forget to store decisions in Memory
-- Deploy media without testing S3
-- Keep bugs undocumented
 
 ## 🚀 Quick MCP Commands Reference
 
@@ -294,9 +276,6 @@ git diff HEAD~1
 | Read docs           | Fetch               | Fetch URL from search                                                                       |
 | Design architecture | Sequential Thinking | "Microservices vs monolith"                                                                 |
 | Store decision      | Memory              | "CQRS for Catalog service"                                                                  |
-| List S3 files       | AWS S3              | List bucket objects                                                                         |
-| Create issue        | GitHub              | Create in beyond8-server repo                                                               |
-| Notify team         | Slack               | Send to #dev-beyond8                                                                        |
 
 ## Technology Stack
 
@@ -1382,44 +1361,18 @@ When working with this codebase:
     - Track known bugs and workarounds
     - Keep user preferences across sessions
 
-### ☁️ AWS & Cloud Operations
+### � Complete Development Cycle
 
-37. **S3 Testing Workflow**:
-
-    ```csharp
-    // Before deploying media upload feature:
-    1. AWS S3 MCP → Verify bucket exists and permissions
-    2. Test presigned URL generation
-    3. Upload test file and verify
-    4. Check file is accessible
-    5. Clean up test files
+37. **Full Workflow Example**:
     ```
-
-38. **Media Service Integration**:
-    - Use AWS S3 MCP to verify actual S3 state
-    - Don't assume files exist - always check
-    - Test with actual AWS credentials in dev
-
-### 🐙 GitHub Integration
-
-39. **Issue Management**:
-    - Create issues for bugs found during development
-    - Tag with appropriate labels (bug, enhancement, etc.)
-    - Link to related PRs
-    - Update issue status as work progresses
-
-40. **PR Workflow**:
-    - Search for similar PRs before creating new ones
-    - Auto-generate PR descriptions from commits
-    - Check CI/CD status via GitHub MCP
-
-### 💬 Team Communication
-
-41. **Slack Notifications**:
-    - Notify #dev-beyond8 for deployment ready
-    - Alert #team-backend for critical errors
-    - Request reviews in #code-review
-    - Share progress updates
+    1. Git: "Show recent changes to related code" → Find context
+    2. PostgreSQL: "Check related table schema" → Verify data structure
+    3. Filesystem: "Find similar implementation patterns" → Locate code
+    4. Sequential Thinking: Plan implementation approach
+    5. Implement feature following established patterns
+    6. Docker: Check logs and verify service health
+    7. Git: Commit with clear description
+    ```
 
 ### 🔍 Before Every Task - MCP Checklist
 
@@ -1430,9 +1383,6 @@ When working with this codebase:
 - [ ] 🌐 **Brave Search + Fetch**: Research unknown libraries/errors
 - [ ] 🧠 **Sequential Thinking**: Plan complex architectural changes
 - [ ] 💾 **Memory**: Store/retrieve important decisions
-- [ ] ☁️ **AWS S3**: Test media operations if relevant
-- [ ] 🐙 **GitHub**: Create issues for bugs found
-- [ ] 💬 **Slack**: Notify team of important updates
 - [ ] ✅ Follow Clean Architecture layers
 - [ ] ✅ Return `ApiResponse<T>` from services
 - [ ] ✅ Use async/await properly
