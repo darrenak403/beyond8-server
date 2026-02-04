@@ -129,6 +129,15 @@ namespace Beyond8.Catalog.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<decimal?>("DiscountAmount")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<DateTime?>("DiscountEndsAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("DiscountPercent")
+                        .HasColumnType("decimal(5, 2)");
+
                     b.Property<Guid>("InstructorId")
                         .HasColumnType("uuid");
 
@@ -192,22 +201,13 @@ namespace Beyond8.Catalog.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<int>("TotalDurationMinutes")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TotalLessons")
+                    b.Property<int>("TotalStudents")
                         .HasColumnType("integer");
 
                     b.Property<int>("TotalRatings")
                         .HasColumnType("integer");
 
                     b.Property<int>("TotalReviews")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TotalSections")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TotalStudents")
                         .HasColumnType("integer");
 
                     b.Property<DateTime?>("UpdatedAt")

@@ -30,6 +30,7 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
             Stream pdfStream,
             Guid courseId,
             Guid documentId,
+            string s3Key,
             Guid? lessonId = null)
         {
             var stopwatch = Stopwatch.StartNew();
@@ -87,7 +88,7 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
 
             await DeleteDocumentPointsAsync(courseId, documentId, lessonId);
 
-            var upsertResult = await UpsertCourseDocumentsAsync(courseId, embeddings);
+            var upsertResult = await UpsertCourseDocumentsAsync(courseId, embeddings, s3Key);
             if (!upsertResult)
                 throw new InvalidOperationException("Không thể lưu chunks vào Qdrant.");
 
@@ -267,7 +268,8 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
 
         private async Task<bool> UpsertCourseDocumentsAsync(
             Guid courseId,
-            List<DocumentEmbedding> embeddings)
+            List<DocumentEmbedding> embeddings,
+            string s3Key)
         {
             var stopwatch = Stopwatch.StartNew();
             var collectionName = GetCollectionName(courseId);
@@ -288,6 +290,7 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                     {
                         ["courseId"] = courseId.ToString(),
                         ["documentId"] = embedding.DocumentId.ToString(),
+                        ["s3Key"] = s3Key,
                         ["pageNumber"] = embedding.PageNumber,
                         ["chunkIndex"] = embedding.ChunkIndex,
                         ["text"] = embedding.Text,
@@ -423,6 +426,58 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                 stopwatch.Stop();
                 logger.LogError(ex, "Error searching in course {CourseId}", courseId);
                 return [];
+            }
+        }
+
+        public async Task<bool> S3KeyExistsInCollectionAsync(Guid courseId, string s3Key)
+        {
+            try
+            {
+                var exists = await CourseCollectionExistsAsync(courseId);
+                if (!exists)
+                {
+                    return false;
+                }
+
+                var collectionName = GetCollectionName(courseId);
+                var filter = new Filter
+                {
+                    Must =
+                    {
+                        new Condition
+                        {
+                            Field = new FieldCondition
+                            {
+                                Key = "s3Key",
+                                Match = new Match { Text = s3Key }
+                            }
+                        }
+                    }
+                };
+
+                // Scroll with limit 1 to check if any point exists with this s3Key
+                var scrollResult = await qdrantClient.ScrollAsync(
+                    collectionName,
+                    filter: filter,
+                    limit: 1);
+
+                var pointExists = scrollResult.Result.Count > 0;
+
+                logger.LogDebug(
+                    "S3Key existence check for course {CourseId}, s3Key: {S3Key}, exists: {Exists}",
+                    courseId,
+                    s3Key,
+                    pointExists);
+
+                return pointExists;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex,
+                    "Error checking S3Key existence for course {CourseId}, s3Key: {S3Key}",
+                    courseId,
+                    s3Key);
+                return false;
             }
         }
 

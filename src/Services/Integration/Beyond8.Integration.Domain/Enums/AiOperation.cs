@@ -11,6 +11,7 @@ namespace Beyond8.Integration.Domain.Enums
         TextGeneration = 6,
         ChatCompletion = 7,
         FormatQuizQuestions = 8,
+        AssignmentGrading = 9,
         Custom = 99
     }
 }

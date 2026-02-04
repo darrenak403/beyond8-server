@@ -55,6 +55,20 @@ public static class QuizAttemptApis
             .Produces<ApiResponse<UserQuizAttemptsResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<UserQuizAttemptsResponse>>(StatusCodes.Status400BadRequest);
 
+        group.MapGet("/quiz/{quizId:guid}/check-in-progress", CheckQuizInProgressAsync)
+            .WithName("CheckQuizInProgress")
+            .WithDescription("Kiểm tra có bài quiz nào đang làm dở cho quiz này không")
+            .RequireAuthorization()
+            .Produces<ApiResponse<QuizInProgressCheckResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<QuizInProgressCheckResponse>>(StatusCodes.Status400BadRequest);
+
+        group.MapGet("/quiz/{quizId:guid}/current", GetCurrentQuizAttemptAsync)
+            .WithName("GetCurrentQuizAttempt")
+            .WithDescription("Lấy bài quiz đang làm dở để tiếp tục")
+            .RequireAuthorization()
+            .Produces<ApiResponse<CurrentQuizAttemptResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<CurrentQuizAttemptResponse>>(StatusCodes.Status400BadRequest);
+
         group.MapPost("/{attemptId:guid}/flag-question", FlagQuestionAsync)
             .WithName("FlagQuestion")
             .WithDescription("Đánh dấu hoặc bỏ đánh dấu câu hỏi để xem lại")
@@ -110,6 +124,24 @@ public static class QuizAttemptApis
         [FromServices] ICurrentUserService currentUserService)
     {
         var result = await quizAttemptService.GetUserQuizAttemptsAsync(quizId, currentUserService.UserId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> CheckQuizInProgressAsync(
+        [FromRoute] Guid quizId,
+        [FromServices] IQuizAttemptService quizAttemptService,
+        [FromServices] ICurrentUserService currentUserService)
+    {
+        var result = await quizAttemptService.CheckQuizInProgressAsync(quizId, currentUserService.UserId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> GetCurrentQuizAttemptAsync(
+        [FromRoute] Guid quizId,
+        [FromServices] IQuizAttemptService quizAttemptService,
+        [FromServices] ICurrentUserService currentUserService)
+    {
+        var result = await quizAttemptService.GetCurrentAttemptAsync(quizId, currentUserService.UserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 

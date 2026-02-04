@@ -523,6 +523,23 @@ public class LessonService(
         }
     }
 
+    public async Task<ApiResponse<bool>> IsLessonPreviewByQuizIdAsync(Guid quizId)
+    {
+        try
+        {
+            var lessonQuiz = await unitOfWork.LessonQuizRepository.AsQueryable()
+                .Include(lq => lq.Lesson)
+                .FirstOrDefaultAsync(lq => lq.QuizId == quizId);
+            var isPreview = lessonQuiz?.Lesson?.IsPreview ?? false;
+            return ApiResponse<bool>.SuccessResponse(isPreview, isPreview ? "Lesson là preview." : "Lesson không phải preview.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error checking IsPreview by quiz id: {QuizId}", quizId);
+            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi kiểm tra lesson preview.");
+        }
+    }
+
     public async Task<ApiResponse<bool>> SwitchLessonActivationAsync(Guid lessonId, bool isPublished, Guid currentUserId)
     {
         try

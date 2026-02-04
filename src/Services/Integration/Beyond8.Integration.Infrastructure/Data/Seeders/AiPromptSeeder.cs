@@ -8,23 +8,38 @@ namespace Beyond8.Integration.Infrastructure.Data.Seeders
   {
     public static async Task SeedAsync(IntegrationDbContext context)
     {
-      if (await context.AiPrompts.AnyAsync())
+      if (!await context.AiPrompts.AnyAsync())
       {
-        return; // Already seeded
+        var prompts = new List<AiPrompt>();
+        prompts.AddRange(GetCourseContentPrompts());
+        prompts.AddRange(GetAssessmentPrompts());
+        prompts.AddRange(GetFeedbackPrompts());
+        prompts.AddRange(GetContentAnalysisPrompts());
+        prompts.AddRange(GetTranslationPrompts());
+        prompts.AddRange(GetPersonalizationPrompts());
+        prompts.AddRange(GetModerationPrompts());
+
+        await context.AiPrompts.AddRangeAsync(prompts);
+        await context.SaveChangesAsync();
       }
 
-      var prompts = new List<AiPrompt>();
+      var allPrompts = new List<AiPrompt>();
+      allPrompts.AddRange(GetCourseContentPrompts());
+      allPrompts.AddRange(GetAssessmentPrompts());
+      allPrompts.AddRange(GetFeedbackPrompts());
+      allPrompts.AddRange(GetContentAnalysisPrompts());
+      allPrompts.AddRange(GetTranslationPrompts());
+      allPrompts.AddRange(GetPersonalizationPrompts());
+      allPrompts.AddRange(GetModerationPrompts());
 
-      // Add prompts from each category
-      prompts.AddRange(GetCourseContentPrompts());
-      prompts.AddRange(GetAssessmentPrompts());
-      prompts.AddRange(GetFeedbackPrompts());
-      prompts.AddRange(GetContentAnalysisPrompts());
-      prompts.AddRange(GetTranslationPrompts());
-      prompts.AddRange(GetPersonalizationPrompts());
-      prompts.AddRange(GetModerationPrompts());
+      foreach (var prompt in allPrompts)
+      {
+        if (!await context.AiPrompts.AnyAsync(p => p.Name == prompt.Name))
+        {
+          await context.AiPrompts.AddAsync(prompt);
+        }
+      }
 
-      await context.AiPrompts.AddRangeAsync(prompts);
       await context.SaveChangesAsync();
     }
 
@@ -91,6 +106,8 @@ OUTPUT SCHEMA (RAW JSON):
 }}"
         },
 
+        GetAssignmentGradingPrompt(),
+
         // PROMPT 2: FORMAT QUIZ
         new AiPrompt
         {
@@ -126,6 +143,64 @@ OUTPUT (RAW JSON ARRAY):
 ]"
         }
       ];
+    }
+
+    private static AiPrompt GetAssignmentGradingPrompt()
+    {
+      return new AiPrompt
+      {
+        Name = "Assignment Grading",
+        Description = "Chấm điểm bài tập dựa trên nội dung nộp, mô tả bài tập và rubric (nếu có). Trả về điểm số, nhận xét tổng quan, tiêu chí chi tiết và gợi ý cải thiện.",
+        Category = PromptCategory.Assessment,
+        Tags = "Education, Grading, Assignment, Rubric, Feedback",
+        SystemPrompt = "Bạn là trợ lý chấm bài chuyên nghiệp. Nhiệm vụ: Đọc bài nộp của học viên, đối chiếu với yêu cầu bài tập và rubric (nếu có), chấm điểm công bằng và đưa ra nhận xét mang tính xây dựng. Trả về đúng format JSON theo OUTPUT SCHEMA. Ngôn ngữ nhận xét: Tiếng Việt.",
+        Version = "1.0.0",
+        IsActive = true,
+        MaxTokens = 4096,
+        Temperature = 0.3m,
+        TopP = 0.9m,
+        Template = @"
+BÀI TẬP:
+- Tiêu đề: {AssignmentTitle}
+- Mô tả / Yêu cầu: {AssignmentDescription}
+- Thang điểm tối đa: {TotalPoints}
+
+RUBRIC / TIÊU CHÍ CHẤM (nếu có):
+{RubricContent}
+
+---
+NỘI DUNG BÀI NỘP CỦA HỌC VIÊN:
+---
+{SubmissionContent}
+---
+
+YÊU CẦU:
+1. Chấm điểm theo thang {TotalPoints}, có thể dùng số thập phân (ví dụ 7.5).
+2. Điểm số (score) phải trong khoảng 0 đến {TotalPoints}.
+3. Nhận xét tổng quan (summary/overallFeedback): ngắn gọn, mang tính xây dựng, bằng Tiếng Việt.
+4. criteriaResults: mảng các tiêu chí đã chấm (theo rubric hoặc tự đặt tên tiêu chí hợp lý), mỗi phần tử gồm: criteriaName, score, maxScore, level (Xuất sắc/Tốt/Khá/Trung bình/Yếu/Kém), feedback.
+5. strengths: mảng các điểm mạnh của bài (chuỗi).
+6. improvements hoặc areasForImprovement: mảng các điểm cần cải thiện (chuỗi).
+7. suggestions hoặc recommendations: mảng gợi ý cụ thể để học viên tiến bộ (chuỗi).
+
+OUTPUT SCHEMA (chỉ trả về JSON, không markdown):
+{
+  ""score"": <số từ 0 đến " + @"{TotalPoints}" + @">,
+  ""summary"": ""Nhận xét tổng quan ngắn gọn bằng Tiếng Việt"",
+  ""criteriaResults"": [
+    {
+      ""criteriaName"": ""Tên tiêu chí"",
+      ""score"": <số>,
+      ""maxScore"": <số>,
+      ""level"": ""Xuất sắc|Tốt|Khá|Trung bình|Yếu|Kém"",
+      ""feedback"": ""Nhận xét cho tiêu chí này""
+    }
+  ],
+  ""strengths"": [""Điểm mạnh 1"", ""Điểm mạnh 2""],
+  ""improvements"": [""Điểm cần cải thiện 1"", ""Điểm cần cải thiện 2""],
+  ""suggestions"": [""Gợi ý 1"", ""Gợi ý 2""]
+}"
+      };
     }
 
     private static List<AiPrompt> GetFeedbackPrompts()

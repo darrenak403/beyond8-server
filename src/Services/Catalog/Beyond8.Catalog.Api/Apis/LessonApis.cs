@@ -38,6 +38,15 @@ public static class LessonApis
             .Produces<ApiResponse<List<LessonResponse>>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
+        // Is lesson preview by quiz id (dùng bởi Assessment: quiz preview thì học sinh làm không cần enroll)
+        group.MapGet("/preview-by-quiz/{quizId:guid}", GetIsLessonPreviewByQuizIdAsync)
+            .WithName("GetIsLessonPreviewByQuizId")
+            .WithDescription("Kiểm tra lesson gắn quiz có IsPreview không")
+            .RequireAuthorization()
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
         // Get lesson by id
         group.MapGet("/{id}", GetLessonByIdAsync)
             .WithName("GetLessonById")
@@ -201,6 +210,14 @@ public static class LessonApis
     {
         var currentUserId = currentUserService.UserId;
         var result = await lessonService.GetLessonByIdAsync(id, currentUserId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> GetIsLessonPreviewByQuizIdAsync(
+        [FromRoute] Guid quizId,
+        [FromServices] ILessonService lessonService)
+    {
+        var result = await lessonService.IsLessonPreviewByQuizIdAsync(quizId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 

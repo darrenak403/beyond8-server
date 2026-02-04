@@ -1,5 +1,6 @@
 using Beyond8.Assessment.Api.Apis;
 using Beyond8.Assessment.Application.Consumers.Catalog;
+using Beyond8.Assessment.Application.Consumers.Integration;
 using Beyond8.Assessment.Application.Dtos.Questions;
 using Beyond8.Assessment.Application.Services.Interfaces;
 using Beyond8.Assessment.Application.Services.Implements;
@@ -10,7 +11,7 @@ using Beyond8.Common.Extensions;
 using Beyond8.Common.Utilities;
 using FluentValidation;
 using Beyond8.Assessment.Application.Clients.Catalog;
-using Microsoft.EntityFrameworkCore;
+using Beyond8.Assessment.Application.Clients.Learning;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Polly;
 using Polly.Extensions.Http;
@@ -24,13 +25,16 @@ namespace Beyond8.Assessment.Api.Bootstrapping
             builder.Services.AddOpenApi();
             builder.Services.AddValidatorsFromAssemblyContaining<QuestionRequest>();
             builder.AddCommonExtensions();
-            // Bỏ qua PendingModelChangesWarning khi pooling bật (tránh lỗi khi model thay đổi chưa tạo migration)
             builder.AddPostgresDatabase<AssessmentDbContext>(Const.AssessmentServiceDatabase, options =>
                 options.ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
             builder.AddServiceRedis(nameof(Assessment), connectionName: Const.Redis);
             builder.AddMassTransitWithRabbitMq(config =>
             {
+                // Catalog events
                 config.AddConsumer<LessonQuizUnlinkedEventConsumer>();
+
+                // Integration events (AI Grading)
+                config.AddConsumer<AiGradingCompletedConsumer>();
             });
             builder.AddClientServices();
 
@@ -40,6 +44,7 @@ namespace Beyond8.Assessment.Api.Bootstrapping
             builder.Services.AddScoped<IQuizService, QuizService>();
             builder.Services.AddScoped<IQuizAttemptService, QuizAttemptService>();
             builder.Services.AddScoped<IAssignmentService, AssignmentService>();
+            builder.Services.AddScoped<IAssignmentSubmissionService, AssignmentSubmissionService>();
 
             return builder;
         }
@@ -48,10 +53,19 @@ namespace Beyond8.Assessment.Api.Bootstrapping
         {
             var catalogBaseUrl = builder.Configuration["Clients:Catalog:BaseUrl"]
                                  ?? throw new ArgumentNullException("Catalog URL missing");
+            var learningBaseUrl = builder.Configuration["Clients:Learning:BaseUrl"]
+                                 ?? throw new ArgumentNullException("Learning URL missing");
 
             builder.Services.AddHttpClient<ICatalogService, CatalogService>(client =>
             {
                 client.BaseAddress = new Uri(catalogBaseUrl);
+                client.Timeout = TimeSpan.FromSeconds(30);
+            })
+            .AddPolicyHandler(GetResiliencePolicy());
+
+            builder.Services.AddHttpClient<ILearningClient, LearningClient>(client =>
+            {
+                client.BaseAddress = new Uri(learningBaseUrl);
                 client.Timeout = TimeSpan.FromSeconds(30);
             })
             .AddPolicyHandler(GetResiliencePolicy());

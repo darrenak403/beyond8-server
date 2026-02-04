@@ -38,6 +38,7 @@ namespace Beyond8.AppHost.Extensions
             var integrationDb = postgres.AddDatabase("integration-db", "Integrations");
             var catalogDb = postgres.AddDatabase("catalog-db", "Catalogs");
             var assessmentDb = postgres.AddDatabase("assessment-db", "Assessments");
+            var learningDb = postgres.AddDatabase("learning-db", "Learnings");
 
             var identityService = builder.AddProject<Projects.Beyond8_Identity_Api>("Identity-Service")
                 .WithReference(identityDb)
@@ -69,6 +70,15 @@ namespace Beyond8.AppHost.Extensions
                 .WithReference(assessmentDb)
                 .WithReference(redis)
                 .WithReference(rabbitMq)
+                .WaitFor(postgres)
+                .WaitFor(redis)
+                .WaitFor(rabbitMq);
+
+            var learningService = builder.AddProject<Projects.Beyond8_Learning_Api>("Learning-Service")
+                .WithReference(learningDb)
+                .WithReference(redis)
+                .WithReference(rabbitMq)
+                .WithReference(catalogService)
                 .WaitFor(postgres)
                 .WaitFor(redis)
                 .WaitFor(rabbitMq);
@@ -108,6 +118,9 @@ namespace Beyond8.AppHost.Extensions
                     config.AddRoute("/api/v1/assignments/{**catch-all}", assessmentCluster);
                     config.AddRoute("/api/v1/assignment-submissions/{**catch-all}", assessmentCluster);
 
+                    var learningCluster = config.AddProjectCluster(learningService);
+                    config.AddRoute("/api/v1/enrollments/{**catch-all}", learningCluster);
+
                     // SignalR hub route
                     config.AddRoute("/hubs/{**catch-all}", integrationCluster);
                 });
@@ -121,7 +134,8 @@ namespace Beyond8.AppHost.Extensions
                .WithApiReference(identityService, options => options.AddPreferredSecuritySchemes("Bearer"))
                .WithApiReference(integrationService, options => options.AddPreferredSecuritySchemes("Bearer"))
                .WithApiReference(catalogService, options => options.AddPreferredSecuritySchemes("Bearer"))
-               .WithApiReference(assessmentService, options => options.AddPreferredSecuritySchemes("Bearer"));
+               .WithApiReference(assessmentService, options => options.AddPreferredSecuritySchemes("Bearer"))
+               .WithApiReference(learningService, options => options.AddPreferredSecuritySchemes("Bearer"));
 
             return builder;
         }

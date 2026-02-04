@@ -17,6 +17,14 @@ public class CourseResponse
     public CourseLevel Level { get; set; }
     public string Language { get; set; } = "vi-VN";
     public decimal Price { get; set; }
+    /// Phần trăm giảm giá (0-100). Null = không giảm.
+    public decimal? DiscountPercent { get; set; }
+    /// Số tiền giảm cố định. Null = không giảm. Ưu tiên DiscountPercent nếu cả hai có.
+    public decimal? DiscountAmount { get; set; }
+    /// Thời hạn hết discount (UTC). Null = không giới hạn.
+    public DateTime? DiscountEndsAt { get; set; }
+    /// Giá sau khi áp dụng giảm giá (nếu còn hiệu lực). Bằng Price nếu không có discount.
+    public decimal FinalPrice { get; set; }
     public string ThumbnailUrl { get; set; } = string.Empty;
     public int TotalStudents { get; set; }
     public int TotalSections { get; set; }

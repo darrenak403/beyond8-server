@@ -30,12 +30,20 @@ namespace Beyond8.Assessment.Api.Apis
                 .Produces<ApiResponse<AssignmentSimpleResponse>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
-            group.MapGet("/{id}", GetAssignmentByIdAsync)
+            group.MapGet("/{id:guid}", GetAssignmentByIdAsync)
                 .WithName("GetAssignmentById")
                 .WithDescription("Lấy assignment theo ID")
                 .RequireAuthorization(x => x.RequireRole(Role.Instructor))
                 .Produces<ApiResponse<AssignmentResponse>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<AssignmentResponse>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
+            group.MapGet("/{id:guid}/student", GetAssignmentByIdForStudentAsync)
+                .WithName("GetAssignmentByIdForStudent")
+                .WithDescription("Lấy assignment theo ID cho học sinh")
+                .RequireAuthorization(x => x.RequireRole(Role.Student))
+                .Produces<ApiResponse<AssignmentSimpleResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<AssignmentSimpleResponse>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
             group.MapGet("/", GetAllAssignmentsAsync)
@@ -46,7 +54,7 @@ namespace Beyond8.Assessment.Api.Apis
                 .Produces<ApiResponse<List<AssignmentSimpleResponse>>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
-            group.MapDelete("/{id}", DeleteAssignmentAsync)
+            group.MapDelete("/{id:guid}", DeleteAssignmentAsync)
                 .WithName("DeleteAssignment")
                 .WithDescription("Xóa assignment")
                 .RequireAuthorization(x => x.RequireRole(Role.Instructor))
@@ -54,7 +62,7 @@ namespace Beyond8.Assessment.Api.Apis
                 .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
-            group.MapPut("/{id}", UpdateAssignmentAsync)
+            group.MapPut("/{id:guid}", UpdateAssignmentAsync)
                 .WithName("UpdateAssignment")
                 .WithDescription("Cập nhật assignment")
                 .RequireAuthorization(x => x.RequireRole(Role.Instructor))
@@ -78,6 +86,14 @@ namespace Beyond8.Assessment.Api.Apis
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
 
+        private static async Task<IResult> GetAssignmentByIdForStudentAsync(
+            [FromRoute] Guid id,
+            [FromServices] IAssignmentService assignmentService,
+            [FromServices] ICurrentUserService currentUserService)
+        {
+            var result = await assignmentService.GetAssignmentByIdForStudentAsync(id, currentUserService.UserId);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
         private static async Task<IResult> GetAssignmentByIdAsync(
             [FromRoute] Guid id,
             [FromServices] IAssignmentService assignmentService,

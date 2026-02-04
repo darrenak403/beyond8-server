@@ -68,6 +68,67 @@ public class QuizAttemptService(
         }
     }
 
+    public async Task<ApiResponse<QuizInProgressCheckResponse>> CheckQuizInProgressAsync(Guid quizId, Guid studentId)
+    {
+        try
+        {
+            var attempt = await unitOfWork.QuizAttemptRepository.FindOneAsync(a =>
+                a.QuizId == quizId && a.StudentId == studentId && a.Status == QuizAttemptStatus.InProgress);
+
+            var response = new QuizInProgressCheckResponse
+            {
+                HasInProgress = attempt != null,
+                AttemptId = attempt?.Id
+            };
+
+            return ApiResponse<QuizInProgressCheckResponse>.SuccessResponse(
+                response,
+                attempt != null ? "Có bài quiz đang làm dở." : "Không có bài quiz nào đang làm.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error checking quiz in progress: QuizId={QuizId}, StudentId={StudentId}", quizId, studentId);
+            return ApiResponse<QuizInProgressCheckResponse>.FailureResponse("Đã xảy ra lỗi khi kiểm tra trạng thái quiz.");
+        }
+    }
+
+    public async Task<ApiResponse<CurrentQuizAttemptResponse>> GetCurrentAttemptAsync(Guid quizId, Guid studentId)
+    {
+        try
+        {
+            var attempt = await unitOfWork.QuizAttemptRepository.FindOneAsync(a =>
+                a.QuizId == quizId && a.StudentId == studentId && a.Status == QuizAttemptStatus.InProgress);
+
+            if (attempt == null)
+                return ApiResponse<CurrentQuizAttemptResponse>.FailureResponse("Không có bài quiz nào đang làm. Vui lòng bắt đầu làm bài.");
+
+            var quiz = await unitOfWork.QuizRepository.FindOneAsync(q => q.Id == attempt.QuizId);
+            if (quiz == null)
+                return ApiResponse<CurrentQuizAttemptResponse>.FailureResponse("Quiz không tồn tại.");
+
+            var questionOrder = JsonSerializer.Deserialize<List<Guid>>(attempt.QuestionOrder) ?? [];
+            if (questionOrder.Count == 0)
+                return ApiResponse<CurrentQuizAttemptResponse>.FailureResponse("Bài làm quiz không hợp lệ (không có câu hỏi).");
+
+            var optionOrders = JsonSerializer.Deserialize<Dictionary<string, List<string>>>(attempt.OptionOrders) ?? [];
+            var questions = await unitOfWork.QuestionRepository.GetAllAsync(q => questionOrder.Contains(q.Id));
+            var questionDict = questions.ToDictionary(q => q.Id);
+
+            var response = attempt.ToCurrentQuizAttemptResponse(quiz, questionOrder, questionDict, optionOrders);
+
+            logger.LogInformation(
+                "Quiz attempt resumed: AttemptId={AttemptId}, QuizId={QuizId}, StudentId={StudentId}",
+                attempt.Id, quizId, studentId);
+
+            return ApiResponse<CurrentQuizAttemptResponse>.SuccessResponse(response, "Lấy bài quiz đang làm thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting current quiz attempt: QuizId={QuizId}, StudentId={StudentId}", quizId, studentId);
+            return ApiResponse<CurrentQuizAttemptResponse>.FailureResponse("Đã xảy ra lỗi khi lấy bài quiz đang làm.");
+        }
+    }
+
     public async Task<ApiResponse<QuizResultResponse>> SubmitQuizAttemptAsync(Guid attemptId, SubmitQuizRequest request, Guid studentId)
     {
         try

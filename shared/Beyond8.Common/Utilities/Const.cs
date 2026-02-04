@@ -10,6 +10,7 @@ namespace Beyond8.Common.Utilities
         public const string IntegrationServiceDatabase = "integration-db";
         public const string CatalogServiceDatabase = "catalog-db";
         public const string AssessmentServiceDatabase = "assessment-db";
+        public const string LearningServiceDatabase = "learning-db";
     }
 
     public static class Role

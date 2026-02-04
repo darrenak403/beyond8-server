@@ -5,7 +5,7 @@ using Beyond8.Integration.Application.Clients;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Profile;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Embedding;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Quiz;
-using Beyond8.Integration.Application.Helpers.AiService;
+using Beyond8.Integration.Application.Helpers;
 using Beyond8.Integration.Application.Services.Interfaces;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
@@ -34,7 +34,7 @@ namespace Beyond8.Integration.Api.Apis
                 .Produces<ApiResponse<AiProfileReviewResponse>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<AiProfileReviewResponse>>(StatusCodes.Status400BadRequest);
 
-            group.MapPost("/lesson/quiz/generate", GenerateQuiz)
+            group.MapPost("/quiz/generate", GenerateQuiz)
                 .WithName("GenerateQuiz")
                 .WithDescription("Sinh quiz từ ngữ cảnh khóa học. Chia 3 cấp độ Easy/Medium/Hard, số lượng theo request.")
                 .RequireAuthorization()
@@ -50,6 +50,7 @@ namespace Beyond8.Integration.Api.Apis
                 .Produces<ApiResponse<List<GenQuizResponse>>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<List<GenQuizResponse>>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
+
 
             // group.MapPost("/quiz/explain", ExplainQuiz)
             //     .WithName("ExplainQuiz")
@@ -161,6 +162,14 @@ namespace Beyond8.Integration.Api.Apis
             if (string.IsNullOrWhiteSpace(s3Key))
                 return Results.BadRequest(ApiResponse<EmbedCourseDocumentsResult>.FailureResponse("URL CloudFront không hợp lệ."));
 
+            var alreadyEmbedded = await embeddingService.S3KeyExistsAsync(request.CourseId, s3Key);
+            if (alreadyEmbedded)
+            {
+                return Results.Ok(ApiResponse<EmbedCourseDocumentsResult>.SuccessResponse(
+                    new EmbedCourseDocumentsResult { TotalChunks = 0, AlreadyEmbedded = true },
+                    "Tài liệu này đã được embed trước đó. Bỏ qua."));
+            }
+
             var (data, contentType) = await storageService.GetObjectAsync(s3Key);
             if (data == null || data.Length == 0)
                 return Results.BadRequest(ApiResponse<EmbedCourseDocumentsResult>.FailureResponse("File không tồn tại trên S3."));
@@ -170,7 +179,7 @@ namespace Beyond8.Integration.Api.Apis
                 return Results.BadRequest(ApiResponse<EmbedCourseDocumentsResult>.FailureResponse("Chỉ chấp nhận file PDF."));
 
             await using var stream = new MemoryStream(data);
-            var result = await embeddingService.EmbedCourseDocumentsAsync(stream, request);
+            var result = await embeddingService.EmbedCourseDocumentsAsync(stream, request, s3Key);
 
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }

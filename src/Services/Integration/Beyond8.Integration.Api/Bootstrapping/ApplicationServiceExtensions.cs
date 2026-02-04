@@ -5,6 +5,7 @@ using Beyond8.Common.Extensions;
 using Beyond8.Common.Utilities;
 using Beyond8.Integration.Api.Apis;
 using Beyond8.Integration.Application.Clients;
+using Beyond8.Integration.Application.Consumers.Assessment;
 using Beyond8.Integration.Application.Consumers.Catalog;
 using Beyond8.Integration.Application.Consumers.Identity;
 using Beyond8.Integration.Application.Dtos.MediaFiles;
@@ -133,6 +134,9 @@ namespace Beyond8.Integration.Api.Bootstrapping
 
                 // Register consumers from Transcoding events
                 config.AddConsumer<TranscodingVideoSuccessEventConsumer>();
+
+                // Register consumers from Assessment events
+                config.AddConsumer<AssignmentSubmittedConsumer>();
             });
 
             // Configure Qdrant - Use Aspire Qdrant Client

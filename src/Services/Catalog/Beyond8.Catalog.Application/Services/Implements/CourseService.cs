@@ -8,6 +8,7 @@ using Beyond8.Catalog.Domain.Enums;
 using Beyond8.Catalog.Domain.Repositories.Interfaces;
 using Beyond8.Common.Events.Catalog;
 using Beyond8.Common.Utilities;
+using Beyond8.Catalog.Application.Clients.Learning;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -18,6 +19,7 @@ public class CourseService(
     ILogger<CourseService> logger,
     IUnitOfWork unitOfWork,
     IIdentityClient identityClient,
+    ILearningClient learningClient,
     IPublishEndpoint publishEndpoint) : ICourseService
 {
 
@@ -259,11 +261,7 @@ public class CourseService(
                 return ApiResponse<bool>.FailureResponse("Không thể xóa khóa học đã xuất bản.");
             }
 
-            if (course!.TotalStudents > 0)
-            {
-                logger.LogWarning("Cannot delete course with enrolled students: {CourseId}", id);
-                return ApiResponse<bool>.FailureResponse("Không thể xóa khóa học có học viên đăng ký.");
-            }
+            // TODO: Kiểm tra số học viên qua Learning service trước khi cho phép xóa (nếu TotalStudents > 0 thì từ chối).
 
             course!.IsActive = false;
             course.DeletedAt = DateTime.UtcNow;
@@ -592,11 +590,7 @@ public class CourseService(
                 return ApiResponse<bool>.FailureResponse("Khóa học không ở trạng thái công khai.");
             }
 
-            if (course!.TotalStudents > 0)
-            {
-                logger.LogWarning("Cannot unpublish course with enrolled students: {CourseId}", courseId);
-                return ApiResponse<bool>.FailureResponse("Không thể ẩn khóa học có học viên đăng ký.");
-            }
+            // TODO: Kiểm tra số học viên qua Learning service (nếu > 0 thì từ chối unpublish).
 
             course.Status = CourseStatus.Approved;
             await unitOfWork.CourseRepository.UpdateAsync(courseId, course);
@@ -634,6 +628,33 @@ public class CourseService(
         {
             logger.LogError(ex, "Error updating course thumbnail: {CourseId}", courseId);
             return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi cập nhật ảnh đại diện khóa học.");
+        }
+    }
+
+    public async Task<ApiResponse<CourseResponse>> SetCourseDiscountAsync(Guid courseId, Guid currentUserId, SetCourseDiscountRequest request)
+    {
+        try
+        {
+            var (isValid, course, errorMessage) = await CheckCourseOwnershipAsync(courseId, currentUserId);
+            if (!isValid)
+                return ApiResponse<CourseResponse>.FailureResponse(errorMessage!);
+
+            if (course!.Status != CourseStatus.Published || course!.Status != CourseStatus.Approved)
+            {
+                return ApiResponse<CourseResponse>.FailureResponse("Chỉ có thể cập nhật giảm giá khóa học đã được công bố hoặc đã được phê duyệt.");
+            }
+
+            course.UpdateCourseDiscount(request);
+            await unitOfWork.CourseRepository.UpdateAsync(courseId, course);
+            await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation("Course discount updated successfully: {CourseId}", courseId);
+            return ApiResponse<CourseResponse>.SuccessResponse(course.ToResponse(), "Cập nhật giảm giá khóa học thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error setting course discount: {CourseId}", courseId);
+            return ApiResponse<CourseResponse>.FailureResponse("Đã xảy ra lỗi khi cập nhật giảm giá khóa học.");
         }
     }
 
@@ -688,6 +709,19 @@ public class CourseService(
     {
         try
         {
+            var enrollmentResult = await learningClient.IsUserEnrolledInCourseAsync(courseId);
+            if (!enrollmentResult.IsSuccess)
+            {
+                logger.LogWarning("Learning client failed for course {CourseId}: {Message}", courseId, enrollmentResult.Message);
+                return ApiResponse<CourseDetailResponse>.FailureResponse(enrollmentResult.Message ?? "Không thể kiểm tra đăng ký khóa học.");
+            }
+
+            if (!enrollmentResult.Data)
+            {
+                logger.LogWarning("Student not enrolled in course {CourseId}", courseId);
+                return ApiResponse<CourseDetailResponse>.FailureResponse("Bạn chưa đăng ký khóa học. Vui lòng đăng ký khóa học trước khi truy cập.");
+            }
+
             var course = await unitOfWork.CourseRepository
                 .AsQueryable()
                 .Include(c => c.Category)
@@ -708,13 +742,6 @@ public class CourseService(
                 logger.LogWarning("Course not found or not published: {CourseId}", courseId);
                 return ApiResponse<CourseDetailResponse>.FailureResponse("Khóa học không tồn tại hoặc chưa được xuất bản.");
             }
-
-            // TODO: Check enrollment when Enrollment service is ready
-            // var isEnrolled = await enrollmentClient.CheckEnrollmentAsync(userId, courseId);
-            // if (!isEnrolled)
-            // {
-            //     return ApiResponse<CourseDetailResponse>.FailureResponse("Bạn chưa đăng ký khóa học này.");
-            // }
 
             logger.LogInformation("User {UserId} accessed course details: {CourseId}", userId, courseId);
 

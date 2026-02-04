@@ -47,10 +47,12 @@ public static class QuizAttemptMappings
 
             var options = JsonSerializer.Deserialize<List<QuestionOptionItem>>(question.Options) ?? [];
             var shuffledOptionIds = optionOrders[questionId.ToString()];
-            var optionLookup = options.ToDictionary(o => o.Id);
+            var optionLookup = options
+                .Where(o => !string.IsNullOrEmpty(o.Id))
+                .ToDictionary(o => o.Id);
 
             var responseOptions = shuffledOptionIds
-                .Where(id => optionLookup.ContainsKey(id))
+                .Where(id => !string.IsNullOrEmpty(id) && optionLookup.ContainsKey(id))
                 .Select(id => new QuestionOptionForStudentResponse
                 {
                     Id = optionLookup[id].Id,
@@ -82,6 +84,36 @@ public static class QuizAttemptMappings
             TotalPoints = quiz.TotalPoints,
             PassScorePercent = quiz.PassScorePercent,
             Questions = responseQuestions
+        };
+    }
+
+    public static CurrentQuizAttemptResponse ToCurrentQuizAttemptResponse(
+        this QuizAttempt attempt,
+        Quiz quiz,
+        List<Guid> shuffledQuestionIds,
+        Dictionary<Guid, Question> questionDict,
+        Dictionary<string, List<string>> optionOrders)
+    {
+        var baseResponse = attempt.ToStartQuizResponse(quiz, shuffledQuestionIds, questionDict, optionOrders);
+        var savedAnswers = JsonSerializer.Deserialize<Dictionary<string, List<string>>>(attempt.Answers) ?? [];
+        var flaggedQuestions = JsonSerializer.Deserialize<List<Guid>>(attempt.FlaggedQuestions) ?? [];
+
+        return new CurrentQuizAttemptResponse
+        {
+            AttemptId = baseResponse.AttemptId,
+            QuizId = baseResponse.QuizId,
+            QuizTitle = baseResponse.QuizTitle,
+            QuizDescription = baseResponse.QuizDescription,
+            AttemptNumber = baseResponse.AttemptNumber,
+            StartedAt = baseResponse.StartedAt,
+            TimeLimitMinutes = baseResponse.TimeLimitMinutes,
+            TotalQuestions = baseResponse.TotalQuestions,
+            TotalPoints = baseResponse.TotalPoints,
+            PassScorePercent = baseResponse.PassScorePercent,
+            Questions = baseResponse.Questions,
+            SavedAnswers = savedAnswers,
+            TimeSpentSeconds = attempt.TimeSpentSeconds,
+            FlaggedQuestions = flaggedQuestions
         };
     }
 
@@ -320,7 +352,10 @@ public static class QuizAttemptMappings
             if (!questionDict.TryGetValue(questionId, out var question)) continue;
 
             var options = JsonSerializer.Deserialize<List<QuestionOptionItem>>(question.Options) ?? [];
-            var optionIds = options.Select(o => o.Id).ToList();
+            var optionIds = options
+                .Where(o => !string.IsNullOrEmpty(o.Id))
+                .Select(o => o.Id)
+                .ToList();
             var optionSeed = shuffleSeed ^ questionId.GetHashCode();
             var shuffledOptionIds = FisherYatesShuffler.ShuffleCopy(optionIds, optionSeed);
             optionOrders[questionId.ToString()] = shuffledOptionIds;

@@ -2,10 +2,6 @@ using Beyond8.Integration.Domain.Enums;
 
 namespace Beyond8.Integration.Application.Dtos.Notifications;
 
-/// <summary>
-/// Response DTO for admin notification log.
-/// Does NOT include Title and Message content for privacy.
-/// </summary>
 public class NotificationLogResponse
 {
     public Guid Id { get; set; }

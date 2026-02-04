@@ -8,7 +8,10 @@ namespace Beyond8.Integration.Application.Services.Interfaces
         Task<ApiResponse<EmbedCourseDocumentsResult>> EmbedCourseDocumentsAsync(
             Stream pdfStream,
             EmbedCourseDocumentsRequest request,
+            string s3Key,
             CancellationToken cancellationToken = default);
+
+        Task<bool> S3KeyExistsAsync(Guid courseId, string s3Key);
 
         Task<ApiResponse<bool>> CheckHealthAsync(CancellationToken cancellationToken = default);
     }

@@ -155,6 +155,14 @@ public static class CourseApis
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
+        group.MapPatch("/{id}/discount", SetCourseDiscountAsync)
+            .WithName("SetCourseDiscount")
+            .WithDescription("Đặt hoặc cập nhật giảm giá khóa học (phần trăm hoặc số tiền; thời hạn tùy chọn)")
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .Produces<ApiResponse<CourseResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<CourseResponse>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
         return group;
     }
 
@@ -172,6 +180,29 @@ public static class CourseApis
         }
 
         var result = await courseService.UpdateCourseThumbnailAsync(id, currentUserService.UserId, request);
+        return result.IsSuccess
+            ? Results.Ok(result)
+            : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> SetCourseDiscountAsync(
+        [FromRoute] Guid id,
+        [FromBody] SetCourseDiscountRequest request,
+        [FromServices] ICourseService courseService,
+        [FromServices] IValidator<SetCourseDiscountRequest> validator,
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IIdentityClient identityClient)
+    {
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
+        var (isVerified, message) = await CheckInstructorVerificationAsync(currentUserService, identityClient);
+        if (!isVerified)
+        {
+            return Results.BadRequest(ApiResponse<CourseResponse>.FailureResponse(message));
+        }
+
+        var result = await courseService.SetCourseDiscountAsync(id, currentUserService.UserId, request);
         return result.IsSuccess
             ? Results.Ok(result)
             : Results.BadRequest(result);
