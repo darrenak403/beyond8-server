@@ -187,7 +187,7 @@ Trong khóa học này, bạn sẽ học:
 
 Khóa học phù hợp cho cả người mới bắt đầu và những developer muốn nâng cao kỹ năng .NET.",
             ShortDescription = "Học ASP.NET Core từ zero đến hero với các dự án thực tế",
-            Price = 599000,
+            Price = 0,
             Status = CourseStatus.Published,
             Level = CourseLevel.Beginner,
             Language = "vi-VN",
