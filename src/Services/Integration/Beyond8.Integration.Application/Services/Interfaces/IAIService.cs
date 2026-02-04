@@ -1,4 +1,3 @@
-using Beyond8.Common.Events.Assessment;
 using Beyond8.Common.Utilities;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Grading;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Profile;

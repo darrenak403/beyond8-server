@@ -28,7 +28,6 @@ public class QuizService(
                 return ApiResponse<QuizSimpleResponse>.FailureResponse("Quiz không tồn tại cho học sinh.");
             }
 
-            // Lesson có IsPreview thì cho học sinh làm quiz không cần enroll
             var previewResult = await catalogService.IsLessonPreviewByQuizIdAsync(id);
             if (previewResult.IsSuccess && previewResult.Data)
             {

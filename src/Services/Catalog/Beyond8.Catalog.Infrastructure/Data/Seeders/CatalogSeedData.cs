@@ -6,9 +6,10 @@ namespace Beyond8.Catalog.Infrastructure.Data.Seeders;
 
 public static class CatalogSeedData
 {
-    // Fixed GUIDs for consistent seeding
+    // Fixed GUIDs for consistent seeding (instructor trùng Identity seed: instructor@gmail.com)
     private static readonly Guid SeedCourseId = Guid.Parse("33333333-3333-3333-3333-333333333333");
-    private static readonly Guid SeedInstructorId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+    private static readonly Guid PaidCourseId = Guid.Parse("33333333-3333-3333-3333-333333333334");
+    private static readonly Guid SeedInstructorId = Guid.Parse("00000000-0000-0000-0000-000000000006"); // Trần Thị Giảng Viên (Identity)
 
     // Section IDs
     private static readonly Guid Section1Id = Guid.Parse("44444444-4444-4444-4444-444444444401");
@@ -34,6 +35,11 @@ public static class CatalogSeedData
     // Quiz IDs (external - from Assessment Service)
     private static readonly Guid Quiz1Id = Guid.Parse("66666666-6666-6666-6666-666666666601");
     private static readonly Guid Quiz2Id = Guid.Parse("66666666-6666-6666-6666-666666666602");
+
+    // Paid course: 1 section, 2 lessons
+    private static readonly Guid PaidSectionId = Guid.Parse("44444444-4444-4444-4444-444444444404");
+    private static readonly Guid PaidLesson1Id = Guid.Parse("55555555-5555-5555-5555-555555550401");
+    private static readonly Guid PaidLesson2Id = Guid.Parse("55555555-5555-5555-5555-555555550402");
 
     public static async Task SeedCategoriesAsync(CatalogDbContext context)
     {
@@ -145,12 +151,6 @@ public static class CatalogSeedData
 
     public static async Task SeedCoursesAsync(CatalogDbContext context)
     {
-        // Check if already seeded
-        if (await context.Courses.AnyAsync(c => c.Id == SeedCourseId))
-        {
-            return;
-        }
-
         // Get the "Lập trình Web" category
         var webDevCategory = await context.Categories.FirstOrDefaultAsync(c => c.Slug == "lap-trinh-web");
         if (webDevCategory == null)
@@ -164,12 +164,30 @@ public static class CatalogSeedData
             return; // Cannot seed without categories
         }
 
-        // 1. Create Course
+        // Cập nhật khóa free (giá + discount 100% = miễn phí) nếu đã tồn tại
+        var existingFreeCourse = await context.Courses.FirstOrDefaultAsync(c => c.Id == SeedCourseId);
+        if (existingFreeCourse != null)
+        {
+            existingFreeCourse.Price = 500_000;
+            existingFreeCourse.DiscountPercent = 100;
+            existingFreeCourse.DiscountEndsAt = DateTime.UtcNow.AddMonths(3);
+            context.Courses.Update(existingFreeCourse);
+            await context.SaveChangesAsync();
+
+            // Thêm khóa có phí nếu chưa có
+            if (!await context.Courses.AnyAsync(c => c.Id == PaidCourseId))
+            {
+                await AddPaidCourseAsync(context, webDevCategory);
+            }
+            return;
+        }
+
+        // 1. Create Course (free: giá 500k, discount 100% = FinalPrice 0)
         var course = new Course
         {
             Id = SeedCourseId,
             InstructorId = SeedInstructorId,
-            InstructorName = "Nguyễn Văn Minh",
+            InstructorName = "Trần Thị Giảng Viên",
             InstructorVerificationStatus = InstructorVerificationStatus.Verified,
             CategoryId = webDevCategory.Id,
             Title = "Lập trình ASP.NET Core từ cơ bản đến nâng cao",
@@ -187,7 +205,9 @@ Trong khóa học này, bạn sẽ học:
 
 Khóa học phù hợp cho cả người mới bắt đầu và những developer muốn nâng cao kỹ năng .NET.",
             ShortDescription = "Học ASP.NET Core từ zero đến hero với các dự án thực tế",
-            Price = 0,
+            Price = 500_000,
+            DiscountPercent = 100,
+            DiscountEndsAt = DateTime.UtcNow.AddMonths(3),
             Status = CourseStatus.Published,
             Level = CourseLevel.Beginner,
             Language = "vi-VN",
@@ -255,6 +275,114 @@ Khóa học phù hợp cho cả người mới bắt đầu và những develope
         // 3. Create Lessons with Video, Text, Quiz types
         await SeedLessonsAsync(context);
 
+        // 4. Paid course (có phí)
+        await AddPaidCourseAsync(context, webDevCategory);
+
+        await context.SaveChangesAsync();
+    }
+
+    private static async Task AddPaidCourseAsync(CatalogDbContext context, Category webDevCategory)
+    {
+        if (await context.Courses.AnyAsync(c => c.Id == PaidCourseId))
+            return;
+
+        var paidCourse = new Course
+        {
+            Id = PaidCourseId,
+            InstructorId = SeedInstructorId,
+            InstructorName = "Trần Thị Giảng Viên",
+            InstructorVerificationStatus = InstructorVerificationStatus.Verified,
+            CategoryId = webDevCategory.Id,
+            Title = "Microservices với .NET và Docker",
+            Slug = "microservices-voi-dotnet-va-docker",
+            Description = "Xây dựng kiến trúc microservices với .NET, Docker, message queue. Phù hợp developer đã có kinh nghiệm ASP.NET Core.",
+            ShortDescription = "Kiến trúc microservices, container, messaging",
+            Price = 299_000,
+            DiscountPercent = null,
+            DiscountAmount = null,
+            DiscountEndsAt = null,
+            Status = CourseStatus.Published,
+            Level = CourseLevel.Intermediate,
+            Language = "vi-VN",
+            ThumbnailUrl = "https://d30z0qh7rhzgt8.cloudfront.net/course/thumbnails/microservices-docker.jpg",
+            Outcomes = "[\"Thiết kế và triển khai microservices\", \"Docker và container\", \"Giao tiếp giữa các service\"]",
+            Requirements = "[\"Đã học ASP.NET Core\", \"Hiểu REST API\"]",
+            TargetAudience = "[\"Backend developer\", \"DevOps\"]",
+            AvgRating = null,
+            TotalReviews = 0,
+            TotalRatings = 0,
+            ApprovedBy = Guid.Parse("99999999-9999-9999-9999-999999999999"),
+            ApprovedAt = DateTime.UtcNow.AddDays(-14),
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow.AddDays(-20)
+        };
+        await context.Courses.AddAsync(paidCourse);
+        webDevCategory.TotalCourses++;
+
+        var paidSection = new Section
+        {
+            Id = PaidSectionId,
+            CourseId = PaidCourseId,
+            Title = "Giới thiệu Microservices",
+            Description = "Khái niệm và kiến trúc",
+            OrderIndex = 1,
+            IsPublished = true,
+            TotalLessons = 2,
+            TotalDurationMinutes = 45,
+            CreatedAt = DateTime.UtcNow.AddDays(-18)
+        };
+        await context.Sections.AddAsync(paidSection);
+
+        var paidLesson1 = new Lesson
+        {
+            Id = PaidLesson1Id,
+            SectionId = PaidSectionId,
+            Title = "Tổng quan Microservices",
+            Description = "So sánh Monolith và Microservices",
+            Type = LessonType.Video,
+            OrderIndex = 1,
+            IsPreview = true,
+            IsPublished = true,
+            TotalViews = 0,
+            TotalCompletions = 0,
+            CreatedAt = DateTime.UtcNow.AddDays(-16)
+        };
+        var paidVideo1 = new LessonVideo
+        {
+            Id = Guid.NewGuid(),
+            LessonId = PaidLesson1Id,
+            VideoOriginalUrl = "https://storage.example.com/courses/paid/s1/lesson1-original.mp4",
+            VideoThumbnailUrl = "https://storage.example.com/courses/paid/s1/lesson1-thumb.jpg",
+            DurationSeconds = 1200,
+            HlsVariants = "{\"360p\": \"https://cdn.example.com/hls/paid/s1/l1/360p/index.m3u8\"}",
+            VideoQualities = "[\"360p\"]",
+            IsDownloadable = false
+        };
+
+        var paidLesson2 = new Lesson
+        {
+            Id = PaidLesson2Id,
+            SectionId = PaidSectionId,
+            Title = "Docker cơ bản",
+            Description = "Container và Dockerfile",
+            Type = LessonType.Text,
+            OrderIndex = 2,
+            IsPreview = false,
+            IsPublished = true,
+            TotalViews = 0,
+            TotalCompletions = 0,
+            CreatedAt = DateTime.UtcNow.AddDays(-15)
+        };
+        var paidText2 = new LessonText
+        {
+            Id = Guid.NewGuid(),
+            LessonId = PaidLesson2Id,
+            TextContent = "# Docker cơ bản\n\n## Container\n\nContainer đóng gói ứng dụng và dependencies..."
+        };
+
+        await context.Lessons.AddRangeAsync(paidLesson1, paidLesson2);
+        await context.LessonVideos.AddAsync(paidVideo1);
+        await context.LessonTexts.AddAsync(paidText2);
         await context.SaveChangesAsync();
     }
 

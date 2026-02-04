@@ -8,6 +8,7 @@ using Beyond8.Catalog.Domain.Enums;
 using Beyond8.Catalog.Domain.Repositories.Interfaces;
 using Beyond8.Common.Events.Catalog;
 using Beyond8.Common.Utilities;
+using Beyond8.Catalog.Application.Clients.Learning;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -18,6 +19,7 @@ public class CourseService(
     ILogger<CourseService> logger,
     IUnitOfWork unitOfWork,
     IIdentityClient identityClient,
+    ILearningClient learningClient,
     IPublishEndpoint publishEndpoint) : ICourseService
 {
 
@@ -707,6 +709,19 @@ public class CourseService(
     {
         try
         {
+            var enrollmentResult = await learningClient.IsUserEnrolledInCourseAsync(courseId);
+            if (!enrollmentResult.IsSuccess)
+            {
+                logger.LogWarning("Learning client failed for course {CourseId}: {Message}", courseId, enrollmentResult.Message);
+                return ApiResponse<CourseDetailResponse>.FailureResponse(enrollmentResult.Message ?? "Không thể kiểm tra đăng ký khóa học.");
+            }
+
+            if (!enrollmentResult.Data)
+            {
+                logger.LogWarning("Student not enrolled in course {CourseId}", courseId);
+                return ApiResponse<CourseDetailResponse>.FailureResponse("Bạn chưa đăng ký khóa học. Vui lòng đăng ký khóa học trước khi truy cập.");
+            }
+
             var course = await unitOfWork.CourseRepository
                 .AsQueryable()
                 .Include(c => c.Category)
@@ -727,13 +742,6 @@ public class CourseService(
                 logger.LogWarning("Course not found or not published: {CourseId}", courseId);
                 return ApiResponse<CourseDetailResponse>.FailureResponse("Khóa học không tồn tại hoặc chưa được xuất bản.");
             }
-
-            // TODO: Check enrollment when Enrollment service is ready
-            // var isEnrolled = await enrollmentClient.CheckEnrollmentAsync(userId, courseId);
-            // if (!isEnrolled)
-            // {
-            //     return ApiResponse<CourseDetailResponse>.FailureResponse("Bạn chưa đăng ký khóa học này.");
-            // }
 
             logger.LogInformation("User {UserId} accessed course details: {CourseId}", userId, courseId);
 

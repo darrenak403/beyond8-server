@@ -1,5 +1,6 @@
 using Beyond8.Catalog.Api.Apis;
 using Beyond8.Catalog.Application.Clients.Identity;
+using Beyond8.Catalog.Application.Clients.Learning;
 using Beyond8.Catalog.Application.Consumers.Identity;
 using Beyond8.Catalog.Application.Consumers.Learning;
 using Beyond8.Catalog.Application.Dtos.Categories;
@@ -47,10 +48,10 @@ namespace Beyond8.Catalog.Api.Bootstrapping
 
             builder.AddClientServices();
 
-            builder.Services.ConfigureHttpJsonOptions(options =>
-            {
-                options.SerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
-            });
+            // builder.Services.ConfigureHttpJsonOptions(options =>
+            // {
+            //     options.SerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+            // });
 
             return builder;
         }
@@ -65,6 +66,16 @@ namespace Beyond8.Catalog.Api.Bootstrapping
             builder.Services.AddHttpClient<IIdentityClient, IdentityClient>(client =>
             {
                 client.BaseAddress = new Uri(identityBaseUrl);
+                client.Timeout = TimeSpan.FromSeconds(30);
+            })
+            .AddPolicyHandler(GetResiliencePolicy());
+
+            var learningBaseUrl = builder.Configuration["Clients:Learning:BaseUrl"]
+                                 ?? throw new ArgumentNullException("Learning URL missing");
+
+            builder.Services.AddHttpClient<ILearningClient, LearningClient>(client =>
+            {
+                client.BaseAddress = new Uri(learningBaseUrl);
                 client.Timeout = TimeSpan.FromSeconds(30);
             })
             .AddPolicyHandler(GetResiliencePolicy());

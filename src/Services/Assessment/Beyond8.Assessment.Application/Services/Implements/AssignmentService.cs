@@ -15,9 +15,6 @@ public class AssignmentService(
     ICatalogService catalogService,
     ILearningClient learningClient) : IAssignmentService
 {
-    /// <summary>
-    /// Lấy assignment theo ID cho học sinh. Chỉ cho phép khi đã enroll vào khóa học (assignment.CourseId).
-    /// </summary>
     public async Task<ApiResponse<AssignmentSimpleResponse>> GetAssignmentByIdForStudentAsync(Guid id, Guid userId)
     {
         try

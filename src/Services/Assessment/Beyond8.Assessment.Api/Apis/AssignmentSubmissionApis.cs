@@ -1,6 +1,5 @@
 using Beyond8.Assessment.Application.Dtos.AssignmentSubmissions;
 using Beyond8.Assessment.Application.Services.Interfaces;
-using Beyond8.Assessment.Application.Validators.AssignmentSubmissions;
 using Beyond8.Common.Extensions;
 using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;

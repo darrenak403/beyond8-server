@@ -4,7 +4,6 @@ using Beyond8.Learning.Application.Clients.Catalog;
 using Beyond8.Learning.Application.Dtos.Enrollments;
 using Beyond8.Learning.Application.Mappings;
 using Beyond8.Learning.Application.Services.Interfaces;
-using Beyond8.Learning.Domain.Entities;
 using Beyond8.Learning.Domain.Repositories.Interfaces;
 using MassTransit;
 using Microsoft.Extensions.Logging;

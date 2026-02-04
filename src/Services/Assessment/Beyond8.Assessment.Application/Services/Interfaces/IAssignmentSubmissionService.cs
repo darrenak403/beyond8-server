@@ -1,4 +1,3 @@
-using System;
 using Beyond8.Assessment.Application.Dtos.AssignmentSubmissions;
 using Beyond8.Common.Utilities;
 

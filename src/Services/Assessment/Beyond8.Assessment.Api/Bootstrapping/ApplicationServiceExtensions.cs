@@ -12,7 +12,6 @@ using Beyond8.Common.Utilities;
 using FluentValidation;
 using Beyond8.Assessment.Application.Clients.Catalog;
 using Beyond8.Assessment.Application.Clients.Learning;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Polly;
 using Polly.Extensions.Http;

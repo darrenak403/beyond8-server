@@ -1,4 +1,3 @@
-using System;
 using System.ComponentModel.DataAnnotations.Schema;
 using Beyond8.Common.Data.Base;
 using Beyond8.Learning.Domain.Enums;
