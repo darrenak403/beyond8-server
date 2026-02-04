@@ -41,6 +41,10 @@ public static class CatalogSeedData
     private static readonly Guid PaidLesson1Id = Guid.Parse("55555555-5555-5555-5555-555555550401");
     private static readonly Guid PaidLesson2Id = Guid.Parse("55555555-5555-5555-5555-555555550402");
 
+    // Seed media URLs (CloudFront)
+    private const string SeedVideoUrl = "https://d30z0qh7rhzgt8.cloudfront.net/courses/hls/meo_con_lon_ton/meo_con_lon_ton_1080p.m3u8";
+    private const string SeedImageUrl = "https://d30z0qh7rhzgt8.cloudfront.net/course/thumbnails/00000000-0000-0000-0000-000000000006/7657afd45d724448a735735a95924605_615246363_1556413255931774_2968156490140092165_n.jpg";
+
     public static async Task SeedCategoriesAsync(CatalogDbContext context)
     {
         // Kiểm tra xem đã có dữ liệu chưa
@@ -211,7 +215,7 @@ Khóa học phù hợp cho cả người mới bắt đầu và những develope
             Status = CourseStatus.Published,
             Level = CourseLevel.Beginner,
             Language = "vi-VN",
-            ThumbnailUrl = "https://d30z0qh7rhzgt8.cloudfront.net/course/thumbnails/00000000-0000-0000-0000-000000000006/7657afd45d724448a735735a95924605_615246363_1556413255931774_2968156490140092165_n.jpg",
+            ThumbnailUrl = SeedImageUrl,
             Outcomes = "[\"Xây dựng ứng dụng web hoàn chỉnh với ASP.NET Core\", \"Thiết kế RESTful API theo best practices\", \"Làm việc với Entity Framework Core và PostgreSQL\", \"Triển khai Authentication/Authorization với JWT\", \"Áp dụng Clean Architecture trong dự án thực tế\", \"Deploy ứng dụng lên Azure/AWS\"]",
             Requirements = "[\"Kiến thức cơ bản về C#\", \"Hiểu biết về HTML, CSS, JavaScript\", \"Máy tính cài đặt .NET SDK 8.0 trở lên\"]",
             TargetAudience = "[\"Sinh viên CNTT muốn học lập trình web\", \"Developer muốn chuyển sang .NET\", \"Backend developer muốn nâng cao kỹ năng\"]",
@@ -304,7 +308,7 @@ Khóa học phù hợp cho cả người mới bắt đầu và những develope
             Status = CourseStatus.Published,
             Level = CourseLevel.Intermediate,
             Language = "vi-VN",
-            ThumbnailUrl = "https://d30z0qh7rhzgt8.cloudfront.net/course/thumbnails/microservices-docker.jpg",
+            ThumbnailUrl = SeedImageUrl,
             Outcomes = "[\"Thiết kế và triển khai microservices\", \"Docker và container\", \"Giao tiếp giữa các service\"]",
             Requirements = "[\"Đã học ASP.NET Core\", \"Hiểu REST API\"]",
             TargetAudience = "[\"Backend developer\", \"DevOps\"]",
@@ -351,11 +355,11 @@ Khóa học phù hợp cho cả người mới bắt đầu và những develope
         {
             Id = Guid.NewGuid(),
             LessonId = PaidLesson1Id,
-            VideoOriginalUrl = "https://storage.example.com/courses/paid/s1/lesson1-original.mp4",
-            VideoThumbnailUrl = "https://storage.example.com/courses/paid/s1/lesson1-thumb.jpg",
+            VideoOriginalUrl = SeedVideoUrl,
+            VideoThumbnailUrl = SeedImageUrl,
             DurationSeconds = 1200,
-            HlsVariants = "{\"360p\": \"https://cdn.example.com/hls/paid/s1/l1/360p/index.m3u8\"}",
-            VideoQualities = "[\"360p\"]",
+            HlsVariants = $"{{\"1080p\": \"{SeedVideoUrl}\"}}",
+            VideoQualities = "[\"1080p\"]",
             IsDownloadable = false
         };
 
@@ -409,11 +413,11 @@ Khóa học phù hợp cho cả người mới bắt đầu và những develope
         {
             Id = Guid.NewGuid(),
             LessonId = Lesson1_1Id,
-            VideoOriginalUrl = "https://storage.example.com/courses/aspnet/s1/lesson1-original.mp4",
-            VideoThumbnailUrl = "https://storage.example.com/courses/aspnet/s1/lesson1-thumb.jpg",
+            VideoOriginalUrl = SeedVideoUrl,
+            VideoThumbnailUrl = SeedImageUrl,
             DurationSeconds = 900,
-            HlsVariants = "{\"360p\": \"https://cdn.example.com/hls/aspnet/s1/l1/360p/index.m3u8\", \"720p\": \"https://cdn.example.com/hls/aspnet/s1/l1/720p/index.m3u8\", \"1080p\": \"https://cdn.example.com/hls/aspnet/s1/l1/1080p/index.m3u8\"}",
-            VideoQualities = "[\"360p\", \"720p\", \"1080p\"]",
+            HlsVariants = $"{{\"1080p\": \"{SeedVideoUrl}\"}}",
+            VideoQualities = "[\"1080p\"]",
             IsDownloadable = false
         };
 
@@ -460,11 +464,11 @@ Khóa học phù hợp cho cả người mới bắt đầu và những develope
         {
             Id = Guid.NewGuid(),
             LessonId = Lesson1_3Id,
-            VideoOriginalUrl = "https://storage.example.com/courses/aspnet/s1/lesson3-original.mp4",
-            VideoThumbnailUrl = "https://storage.example.com/courses/aspnet/s1/lesson3-thumb.jpg",
+            VideoOriginalUrl = SeedVideoUrl,
+            VideoThumbnailUrl = SeedImageUrl,
             DurationSeconds = 1800,
-            HlsVariants = "{\"360p\": \"https://cdn.example.com/hls/aspnet/s1/l3/360p/index.m3u8\", \"720p\": \"https://cdn.example.com/hls/aspnet/s1/l3/720p/index.m3u8\", \"1080p\": \"https://cdn.example.com/hls/aspnet/s1/l3/1080p/index.m3u8\"}",
-            VideoQualities = "[\"360p\", \"720p\", \"1080p\"]",
+            HlsVariants = $"{{\"1080p\": \"{SeedVideoUrl}\"}}",
+            VideoQualities = "[\"1080p\"]",
             IsDownloadable = true
         };
 
@@ -489,11 +493,11 @@ Khóa học phù hợp cho cả người mới bắt đầu và những develope
         {
             Id = Guid.NewGuid(),
             LessonId = Lesson2_1Id,
-            VideoOriginalUrl = "https://storage.example.com/courses/aspnet/s2/lesson1-original.mp4",
-            VideoThumbnailUrl = "https://storage.example.com/courses/aspnet/s2/lesson1-thumb.jpg",
+            VideoOriginalUrl = SeedVideoUrl,
+            VideoThumbnailUrl = SeedImageUrl,
             DurationSeconds = 2700,
-            HlsVariants = "{\"360p\": \"https://cdn.example.com/hls/aspnet/s2/l1/360p/index.m3u8\", \"720p\": \"https://cdn.example.com/hls/aspnet/s2/l1/720p/index.m3u8\", \"1080p\": \"https://cdn.example.com/hls/aspnet/s2/l1/1080p/index.m3u8\"}",
-            VideoQualities = "[\"360p\", \"720p\", \"1080p\"]",
+            HlsVariants = $"{{\"1080p\": \"{SeedVideoUrl}\"}}",
+            VideoQualities = "[\"1080p\"]",
             IsDownloadable = true
         };
 
@@ -540,11 +544,11 @@ Khóa học phù hợp cho cả người mới bắt đầu và những develope
         {
             Id = Guid.NewGuid(),
             LessonId = Lesson2_3Id,
-            VideoOriginalUrl = "https://storage.example.com/courses/aspnet/s2/lesson3-original.mp4",
-            VideoThumbnailUrl = "https://storage.example.com/courses/aspnet/s2/lesson3-thumb.jpg",
+            VideoOriginalUrl = SeedVideoUrl,
+            VideoThumbnailUrl = SeedImageUrl,
             DurationSeconds = 2400,
-            HlsVariants = "{\"360p\": \"https://cdn.example.com/hls/aspnet/s2/l3/360p/index.m3u8\", \"720p\": \"https://cdn.example.com/hls/aspnet/s2/l3/720p/index.m3u8\", \"1080p\": \"https://cdn.example.com/hls/aspnet/s2/l3/1080p/index.m3u8\"}",
-            VideoQualities = "[\"360p\", \"720p\", \"1080p\"]",
+            HlsVariants = $"{{\"1080p\": \"{SeedVideoUrl}\"}}",
+            VideoQualities = "[\"1080p\"]",
             IsDownloadable = true
         };
 
@@ -592,11 +596,11 @@ Khóa học phù hợp cho cả người mới bắt đầu và những develope
         {
             Id = Guid.NewGuid(),
             LessonId = Lesson3_1Id,
-            VideoOriginalUrl = "https://storage.example.com/courses/aspnet/s3/lesson1-original.mp4",
-            VideoThumbnailUrl = "https://storage.example.com/courses/aspnet/s3/lesson1-thumb.jpg",
+            VideoOriginalUrl = SeedVideoUrl,
+            VideoThumbnailUrl = SeedImageUrl,
             DurationSeconds = 3600,
-            HlsVariants = "{\"360p\": \"https://cdn.example.com/hls/aspnet/s3/l1/360p/index.m3u8\", \"720p\": \"https://cdn.example.com/hls/aspnet/s3/l1/720p/index.m3u8\", \"1080p\": \"https://cdn.example.com/hls/aspnet/s3/l1/1080p/index.m3u8\"}",
-            VideoQualities = "[\"360p\", \"720p\", \"1080p\"]",
+            HlsVariants = $"{{\"1080p\": \"{SeedVideoUrl}\"}}",
+            VideoQualities = "[\"1080p\"]",
             IsDownloadable = true
         };
 
