@@ -109,7 +109,6 @@ public class CourseService(
                     if (enrolledResult.IsSuccess)
                     {
                         excludedCourseIds = enrolledResult.Data;
-                        // Cache trong 10 phút
                         await cacheService.SetAsync(cacheKey, excludedCourseIds, TimeSpan.FromMinutes(10));
                         logger.LogInformation("Cached enrolled course IDs for user {UserId}", currentUserService.UserId);
                     }

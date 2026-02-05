@@ -3,7 +3,7 @@ using Beyond8.Catalog.Application.Clients.Identity;
 using Beyond8.Catalog.Application.Clients.Learning;
 using Beyond8.Catalog.Application.Consumers.Identity;
 using Beyond8.Catalog.Application.Consumers.Learning;
-using Beyond8.Catalog.Application.Consumers.Cache;  // Thêm namespace cho CacheInvalidateEventConsumer
+using Beyond8.Catalog.Application.Consumers.Cache; 
 using Beyond8.Catalog.Application.Dtos.Categories;
 using Beyond8.Catalog.Application.Services.Implements;
 using Beyond8.Catalog.Application.Services.Interfaces;

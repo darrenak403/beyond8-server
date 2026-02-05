@@ -1,5 +1,5 @@
 using Beyond8.Common.Events.Learning;
-using Beyond8.Common.Events.Cache;  // Thêm using cho CacheInvalidateEvent
+using Beyond8.Common.Events.Cache;
 using Beyond8.Common.Utilities;
 using Beyond8.Learning.Application.Clients.Catalog;
 using Beyond8.Learning.Application.Dtos.Enrollments;
@@ -17,7 +17,7 @@ public class EnrollmentService(
     ICatalogClient catalogClient,
     IPublishEndpoint publishEndpoint) : IEnrollmentService
 {
-    private const int CourseStatusPublished = 4; // Catalog.CourseStatus.Published
+    private const int CourseStatusPublished = 4;
 
     public async Task<ApiResponse<EnrollmentResponse>> EnrollFreeAsync(Guid userId, EnrollFreeRequest request)
     {
@@ -85,7 +85,6 @@ public class EnrollmentService(
             InstructorId: structure.InstructorId,
             Delta: 1));
 
-        // Invalidate cache sau khi enroll
         await publishEndpoint.Publish(new CacheInvalidateEvent($"enrolled_courses:{userId}"));
 
         logger.LogInformation("User {UserId} enrolled in free course {CourseId}, EnrollmentId {EnrollmentId}",
