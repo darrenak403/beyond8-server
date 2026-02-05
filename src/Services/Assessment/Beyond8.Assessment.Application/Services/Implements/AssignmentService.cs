@@ -4,7 +4,9 @@ using Beyond8.Assessment.Application.Dtos.Assignments;
 using Beyond8.Assessment.Application.Mappings.AssignmentMappings;
 using Beyond8.Assessment.Application.Services.Interfaces;
 using Beyond8.Assessment.Domain.Repositories.Interfaces;
+using Beyond8.Common.Events.Assessment;
 using Beyond8.Common.Utilities;
+using MassTransit;
 using Microsoft.Extensions.Logging;
 
 namespace Beyond8.Assessment.Application.Services.Implements;
@@ -13,7 +15,8 @@ public class AssignmentService(
     ILogger<AssignmentService> logger,
     IUnitOfWork unitOfWork,
     ICatalogService catalogService,
-    ILearningClient learningClient) : IAssignmentService
+    ILearningClient learningClient,
+    IPublishEndpoint publishEndpoint) : IAssignmentService
 {
     public async Task<ApiResponse<AssignmentSimpleResponse>> GetAssignmentByIdForStudentAsync(Guid id, Guid userId)
     {
@@ -165,15 +168,12 @@ public class AssignmentService(
                 return ApiResponse<bool>.FailureResponse("Assignment không tồn tại hoặc không thuộc về người dùng.");
             }
 
-            if (assignment.SectionId != null)
-            {
-                return ApiResponse<bool>.FailureResponse("Không thể xóa assignment đã gắn với chương, vui lòng xóa chương trước.");
-            }
-
             assignment.DeletedAt = DateTime.UtcNow;
             assignment.DeletedBy = userId;
             await unitOfWork.AssignmentRepository.UpdateAsync(id, assignment);
             await unitOfWork.SaveChangesAsync();
+
+            await publishEndpoint.Publish(new AssignmentDeletedEvent(id));
 
             logger.LogInformation("Assignment deleted: {AssignmentId}, InstructorId: {InstructorId}", id, userId);
             return ApiResponse<bool>.SuccessResponse(true, "Xóa assignment thành công.");

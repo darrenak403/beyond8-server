@@ -1,6 +1,7 @@
 using Beyond8.Catalog.Api.Apis;
 using Beyond8.Catalog.Application.Clients.Identity;
 using Beyond8.Catalog.Application.Clients.Learning;
+using Beyond8.Catalog.Application.Consumers.Assessment;
 using Beyond8.Catalog.Application.Consumers.Identity;
 using Beyond8.Catalog.Application.Consumers.Learning;
 using Beyond8.Catalog.Application.Consumers.Cache; 
@@ -35,6 +36,7 @@ namespace Beyond8.Catalog.Api.Bootstrapping
                 config.AddConsumer<InstructorApprovalEventConsumer>();
                 config.AddConsumer<CourseEnrollmentCountChangedEventConsumer>();
                 config.AddConsumer<CacheInvalidateEventConsumer>();
+                config.AddConsumer<AssignmentDeletedEventConsumer>();
             });
 
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();

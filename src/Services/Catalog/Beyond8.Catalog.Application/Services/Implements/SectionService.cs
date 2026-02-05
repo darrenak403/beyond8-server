@@ -213,6 +213,33 @@ public class SectionService(
         }
     }
 
+    public async Task<ApiResponse<bool>> UnlinkSectionsByAssignmentIdAsync(Guid assignmentId)
+    {
+        try
+        {
+            var sections = await unitOfWork.SectionRepository.AsQueryable()
+                .Where(s => s.AssignmentId == assignmentId && s.DeletedAt == null)
+                .ToListAsync();
+
+            foreach (var section in sections)
+            {
+                section.AssignmentId = null;
+                await unitOfWork.SectionRepository.UpdateAsync(section.Id, section);
+            }
+
+            if (sections.Count > 0)
+                await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation("Unlinked {Count} section(s) from assignment {AssignmentId}", sections.Count, assignmentId);
+            return ApiResponse<bool>.SuccessResponse(true, "Đã gỡ assignment khỏi các chương.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error unlinking sections for assignment: {AssignmentId}", assignmentId);
+            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi gỡ assignment khỏi các chương.");
+        }
+    }
+
     private async Task<(bool IsValid, string? ErrorMessage)> CheckCourseOwnershipAsync(Guid courseId, Guid currentUserId)
     {
         var course = await unitOfWork.CourseRepository.FindOneAsync(c => c.Id == courseId && c.InstructorId == currentUserId);
