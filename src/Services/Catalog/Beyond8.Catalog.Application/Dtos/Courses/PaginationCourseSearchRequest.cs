@@ -17,7 +17,6 @@ public class PaginationCourseSearchRequest : PaginationRequest
     public int? MinStudents { get; set; }
     public bool? IsDescendingPrice { get; set; }
     public bool? IsRandom { get; set; }
-    public bool ExcludeEnrolledCourses { get; set; } = false;
 }
 
 public class PaginationCourseInstructorSearchRequest : PaginationCourseSearchRequest

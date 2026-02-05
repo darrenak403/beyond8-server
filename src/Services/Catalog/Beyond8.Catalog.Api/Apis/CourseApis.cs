@@ -213,10 +213,6 @@ public static class CourseApis
         [AsParameters] PaginationCourseSearchRequest pagination,
         [FromServices] ICurrentUserService currentUserService)
     {
-        if (currentUserService.IsAuthenticated)
-        {
-            pagination.ExcludeEnrolledCourses = true;
-        }
         var result = await courseService.GetAllCoursesAsync(pagination);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
@@ -226,10 +222,6 @@ public static class CourseApis
         [AsParameters] FullTextSearchRequest pagination,
         [FromServices] ICurrentUserService currentUserService)
     {
-        if (currentUserService.IsAuthenticated)
-        {
-            pagination.ExcludeEnrolledCourses = true;
-        }
         var result = await courseService.FullTextSearchCoursesAsync(pagination);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
