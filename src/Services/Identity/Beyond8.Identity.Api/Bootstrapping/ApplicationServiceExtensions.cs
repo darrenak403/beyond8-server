@@ -37,6 +37,7 @@ namespace Beyond8.Identity.Api.Bootstrapping
                 config.AddConsumer<CoursePublishedEventConsumer>();
                 config.AddConsumer<CourseUnpublishedEventConsumer>();
                 config.AddConsumer<CourseEnrollmentCountChangedEventConsumer>();
+                config.AddConsumer<CourseRatingUpdatedEventConsumer>();
             });
 
             // Register services

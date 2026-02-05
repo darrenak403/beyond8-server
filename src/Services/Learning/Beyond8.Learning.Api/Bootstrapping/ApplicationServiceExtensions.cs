@@ -3,6 +3,7 @@ using Beyond8.Common.Utilities;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Beyond8.Learning.Api.Apis;
 using Beyond8.Learning.Application.Clients.Catalog;
+using Beyond8.Learning.Application.Consumers.Assessment;
 using Beyond8.Learning.Application.Services.Interfaces;
 using Beyond8.Learning.Application.Services.Implements;
 using Beyond8.Learning.Application.Dtos.Enrollments;
@@ -25,12 +26,20 @@ public static class ApplicationServiceExtensions
             options.ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
         builder.AddServiceRedis(nameof(Learning), connectionName: Const.Redis);
 
-        builder.AddMassTransitWithRabbitMq(_ => { });
+        builder.AddMassTransitWithRabbitMq(config =>
+        {
+            config.AddConsumer<QuizAttemptCompletedEventConsumer>();
+            config.AddConsumer<AssignmentSubmittedEventConsumer>();
+            config.AddConsumer<AiGradingCompletedEventConsumer>();
+            config.AddConsumer<AssignmentGradedEventConsumer>();
+        });
 
         builder.Services.AddValidatorsFromAssemblyContaining<EnrollFreeRequest>();
 
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
         builder.Services.AddScoped<IEnrollmentService, EnrollmentService>();
+        builder.Services.AddScoped<IProgressService, ProgressService>();
+        builder.Services.AddScoped<ICertificateService, CertificateService>();
 
         builder.AddCatalogClient();
 
@@ -87,6 +96,8 @@ public static class ApplicationServiceExtensions
         }
         app.UseHttpsRedirection();
         app.MapEnrollmentApi();
+        app.MapCertificateApi();
+        app.MapCourseReviewApi();
 
         return app;
     }

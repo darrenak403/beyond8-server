@@ -4,17 +4,6 @@
 
 **Learning Service** quản lý: enrollment, tiến độ học (video/quiz/assignment), ghi chú, đánh giá khóa học, chứng chỉ. Tích hợp với Catalog (cấu trúc khóa), Assessment (quiz/assignment), Sales (order → enrollment).
 
-| Thành phần                        | Trạng thái                                                        |
-| --------------------------------- | ----------------------------------------------------------------- |
-| Learning Domain (entities, enums) | ✅ Đã có                                                          |
-| Learning Application/Infra/Api    | ✅ Enroll free, Catalog client, CourseEnrollmentCountChangedEvent |
-| Catalog Service                   | ✅ Có API, consumer CourseEnrollmentCountChangedEvent             |
-| Assessment Service                | ✅ Có; chưa QuizAttemptCompletedEvent                             |
-| Sales Service                     | ❌ Chưa có                                                        |
-
-**Learning sở hữu:** Enrollment, LessonProgress, SectionProgress, LessonNote, CourseReview, Certificate.  
-**Không quản lý:** Nội dung khóa (Catalog), quiz/assignment (Assessment), order/payment (Sales).
-
 ---
 
 ## 2. Luồng mua khóa học

@@ -110,6 +110,7 @@ namespace Beyond8.Assessment.Api.Bootstrapping
             app.MapQuizApi();
             app.MapQuizAttemptApi();
             app.MapAssignmentApi();
+            app.MapAssignmentSubmissionApi();
 
             return app;
         }

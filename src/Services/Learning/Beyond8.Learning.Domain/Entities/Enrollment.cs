@@ -42,7 +42,6 @@ namespace Beyond8.Learning.Domain.Entities
 
         public virtual ICollection<LessonProgress> LessonProgresses { get; set; } = [];
         public virtual ICollection<SectionProgress> SectionProgresses { get; set; } = [];
-        public virtual ICollection<LessonNote> Notes { get; set; } = [];
         public virtual CourseReview? Review { get; set; }
         public virtual Certificate? Certificate { get; set; }
     }

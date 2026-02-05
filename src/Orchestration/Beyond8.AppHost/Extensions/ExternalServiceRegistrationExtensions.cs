@@ -120,6 +120,8 @@ namespace Beyond8.AppHost.Extensions
 
                     var learningCluster = config.AddProjectCluster(learningService);
                     config.AddRoute("/api/v1/enrollments/{**catch-all}", learningCluster);
+                    config.AddRoute("/api/v1/certificates/{**catch-all}", learningCluster);
+                    config.AddRoute("/api/v1/course-reviews/{**catch-all}", learningCluster);
 
                     // SignalR hub route
                     config.AddRoute("/hubs/{**catch-all}", integrationCluster);
