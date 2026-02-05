@@ -97,6 +97,7 @@ public static class ApplicationServiceExtensions
         app.UseHttpsRedirection();
         app.MapEnrollmentApi();
         app.MapCertificateApi();
+        app.MapCourseReviewApi();
 
         return app;
     }
