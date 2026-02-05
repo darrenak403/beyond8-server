@@ -4,6 +4,279 @@
 
 Beyond8 is a microservices-based ASP.NET Core application following Clean Architecture principles. The system is built using .NET Aspire for orchestration and consists of multiple services handling different business domains.
 
+## 🛠️ Available MCP Tools
+
+This project is equipped with **Model Context Protocol (MCP)** servers to provide real-time access to system resources. **ALWAYS use these tools FIRST** before making assumptions about the current state of the system.
+
+### 🐘 PostgreSQL MCP
+
+**Connection:** `postgresql://postgres:postgres@localhost:5432/beyond8_identity`
+
+**When to use:**
+
+- Query actual database schema before creating/modifying entities
+- Verify table structures, columns, constraints, and indexes
+- Check existing data before writing seed scripts
+- Validate foreign key relationships
+- Inspect migration history in `__EFMigrationsHistory` table
+
+**Example queries:**
+
+```sql
+-- Check Users table schema
+SELECT column_name, data_type, character_maximum_length, is_nullable
+FROM information_schema.columns
+WHERE table_name = 'Users';
+
+-- Verify relationships
+SELECT tc.constraint_name, tc.table_name, kcu.column_name,
+       ccu.table_name AS foreign_table_name, ccu.column_name AS foreign_column_name
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
+JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY';
+
+-- Check migration status
+SELECT * FROM "__EFMigrationsHistory" ORDER BY "MigrationId" DESC LIMIT 5;
+```
+
+### 🐳 Docker MCP
+
+**When to use:**
+
+- Verify service health before debugging connection issues
+- Check which containers are running
+- Inspect container logs for errors
+- Validate port mappings and network configurations
+- Monitor resource usage
+
+**Common checks:**
+
+```bash
+# List running containers
+docker ps
+
+# Check specific service
+docker ps --filter "name=beyond8"
+
+# View logs
+docker logs <container-id> --tail 50
+
+# Inspect network
+docker network inspect bridge
+```
+
+### 📁 Filesystem MCP
+
+**Workspace:** `${workspaceFolder}`
+
+**When to use:**
+
+- Navigate project structure efficiently
+- Find configuration files (appsettings.json, etc.)
+- Locate specific entity, DTO, or service files
+- Search for code patterns across multiple files
+- Verify file existence before creating new ones
+
+**Efficient search patterns:**
+
+- Find all DbContext: `**/Data/*DbContext.cs`
+- Find all entities: `**/Domain/Entities/*.cs`
+- Find all DTOs: `**/Application/Dtos/**/*.cs`
+- Find config files: `**/appsettings*.json`
+
+### 🔀 Git MCP
+
+**Repository:** `${workspaceFolder}`
+
+**When to use:**
+
+- Review recent commits before making changes
+- Check uncommitted changes and staged files
+- View file history to understand evolution
+- Identify who last modified a file
+- Check current branch and status
+
+**Useful commands:**
+
+```bash
+# Recent commits
+git log --oneline -10
+
+# Current status
+git status
+
+# File history
+git log --follow <file-path>
+
+# Show changes
+git diff HEAD~1
+```
+
+### 🌐 Brave Search MCP
+
+**API:** Brave Search API (requires free API key)
+
+**When to use:**
+
+- Find latest documentation for new libraries/frameworks
+- Search for recent solutions to specific errors
+- Discover best practices from current resources
+- Find updated API references (AWS SDK, EF Core, etc.)
+
+**Get API Key:** https://brave.com/search/api/ (2,000 requests/month free)
+
+### 📄 Fetch MCP
+
+**Purpose:** Read web page content after finding it via Brave Search
+
+**Workflow:** Brave Search → Find docs → Fetch → Read content → Implement
+
+### 🧠 Sequential Thinking MCP
+
+**Purpose:** Break complex problems into logical steps
+
+**Use for:** Architecture design, migrations, refactoring, complex debugging
+
+### 💾 Memory MCP
+
+**Purpose:** Remember decisions and patterns across sessions
+
+**Stores:** Architectural choices, known bugs, coding conventions
+
+## 🎯 MCP-Driven Development Workflow
+
+**CRITICAL: Follow this workflow for all development tasks:**
+
+### 1️⃣ Before Creating/Modifying Entities
+
+```
+1. Query PostgreSQL MCP → Check existing schema
+2. Review Git MCP → See related recent changes
+3. Search Filesystem MCP → Find similar entities
+4. Then: Create/modify entity with confidence
+```
+
+### 2️⃣ Before Adding Migrations
+
+```
+1. PostgreSQL MCP → Verify current database state
+2. Check __EFMigrationsHistory → Last migration
+3. Docker MCP → Ensure database container is running
+4. Then: Add migration with accurate Up/Down methods
+```
+
+### 3️⃣ Before Implementing Services
+
+```
+1. Filesystem MCP → Find similar service patterns
+2. PostgreSQL MCP → Understand data relationships
+3. Git MCP → Review related recent implementations
+4. Then: Implement service following established patterns
+```
+
+### 4️⃣ Before Debugging Issues
+
+```
+1. Docker MCP → Check service health
+2. PostgreSQL MCP → Verify data integrity
+3. Git MCP → Check recent changes that might have caused issues
+4. Filesystem MCP → Locate related configuration files
+5. Then: Debug with full context
+```
+
+### 5️⃣ Before Writing API Endpoints
+
+```
+1. Filesystem MCP → Find existing endpoint patterns
+2. PostgreSQL MCP → Understand data structure
+3. Git MCP → Review API conventions used in recent commits
+4. Then: Implement endpoint following project standards
+```
+
+### 6️⃣ When Learning New Technology
+
+```
+1. Brave Search → Find official docs
+2. Fetch → Read the documentation
+3. Memory → Store key patterns
+4. Then: Implement following best practices
+```
+
+### 7️⃣ For Complex Decisions
+
+```
+1. Sequential Thinking → Break down problem
+2. Memory → Check previous decisions
+3. Git → Review similar implementations
+4. Then: Implement with documented reasoning
+```
+
+### 8️⃣ Complete Bug Fix Workflow
+
+```
+1. Git → Check recent changes that might have caused the issue
+2. PostgreSQL → Verify data integrity
+3. Docker → Check service health and logs
+4. Filesystem → Locate affected code files
+5. Brave Search → Research similar errors if needed
+6. Implement fix according to requirements
+7. Git → Commit with descriptive message
+```
+
+### 9️⃣ Feature Development Workflow
+
+```
+1. Sequential Thinking → Plan implementation approach
+2. PostgreSQL → Check database schema
+3. Filesystem → Find similar feature implementations
+4. Git → Review related recent work
+5. Implement feature following established patterns
+6. Test thoroughly
+7. Git → Commit with clear description
+```
+
+## 📋 MCP Best Practices
+
+### ✅ DO:
+
+- **Query database schema** before creating entities or migrations
+- **Check Docker status** before debugging connection issues
+- **Use Git history** to understand code evolution
+- **Search filesystem** before assuming files don't exist
+- **Combine multiple MCPs** for comprehensive context (PostgreSQL + Git + Docker)
+- **Research with Brave Search + Fetch** for unknown libraries
+- **Use Sequential Thinking** for complex decisions
+- **Store decisions in Memory** for consistency
+
+### ❌ DON'T:
+
+- Assume database schema matches entity definitions
+- Create duplicate files without checking filesystem
+- Debug connection issues without checking Docker
+- Make breaking changes without reviewing Git history
+- Ignore migration history in database
+- Use outdated docs (use Brave Search + Fetch)
+- Rush complex decisions without sequential thinking
+- Forget to store decisions in Memory
+
+## 🚀 Quick MCP Commands Reference
+
+| Task                | MCP Tool            | Command/Query                                                                               |
+| ------------------- | ------------------- | ------------------------------------------------------------------------------------------- |
+| Check Users table   | PostgreSQL          | `SELECT tablename FROM pg_tables WHERE tablename = 'Users';`                                |
+| Services running    | Docker              | `docker ps --format "table {{.Names}}\t{{.Status}}"`                                        |
+| Find controllers    | Filesystem          | `**/*Controller.cs`                                                                         |
+| Last 5 commits      | Git                 | `git log --oneline -5`                                                                      |
+| Verify foreign keys | PostgreSQL          | `SELECT * FROM information_schema.table_constraints WHERE constraint_type = 'FOREIGN KEY';` |
+| Container logs      | Docker              | `docker logs <container> --tail 50`                                                         |
+| Find appsettings    | Filesystem          | `**/appsettings*.json`                                                                      |
+| Uncommitted changes | Git                 | `git status --short`                                                                        |
+| Find .NET docs      | Brave Search        | "ASP.NET Core 9 new features"                                                               |
+| Read docs           | Fetch               | Fetch URL from search                                                                       |
+| Design architecture | Sequential Thinking | "Microservices vs monolith"                                                                 |
+| Store decision      | Memory              | "CQRS for Catalog service"                                                                  |
+
 ## Technology Stack
 
 - **Framework**: ASP.NET Core (with .NET Aspire)
@@ -884,21 +1157,235 @@ For detailed ASP.NET Core best practices and coding standards, refer to:
 
 When working with this codebase:
 
-1. Follow Clean Architecture layer boundaries strictly
-2. Use the ApiResponse pattern for all service and API responses
-3. Apply proper async/await patterns throughout
-4. Use structured logging with ILogger
-5. Follow the Repository + Unit of Work pattern for data access
-6. Respect security best practices (password hashing, JWT validation)
-7. Validate inputs at both API and service layers
-8. Use dependency injection for all dependencies
-9. Keep error handling centralized in middleware
-10. Write meaningful error messages in Vietnamese for user-facing validation
-11. **Apply DRY principle** - identify and eliminate duplicate code by extracting common logic into reusable private methods
-12. Use tuple returns `(bool IsValid, string? ErrorMessage)` for validation helper methods
-13. **Use ICurrentUserService** to get authenticated user information in endpoints
-14. **Apply rate limiting** to all API endpoints: `.RequireRateLimiting("Fixed")`
-15. **Use MassTransit** for cross-service communication (events, not direct HTTP calls when possible)
-16. **Check instructor verification** before allowing course-related operations
-17. **Generate slugs** for courses using `SlugExtensions` from Beyond8.Common
-18. **Store JSON arrays** using JSONB column type for PostgreSQL
+### 🎯 Core Principles (MUST FOLLOW)
+
+1. **MCP-First Approach**: ALWAYS query relevant MCP tools BEFORE making assumptions
+   - PostgreSQL MCP → Before entity/migration work
+   - Docker MCP → Before debugging connections
+   - Git MCP → Before major refactoring
+   - Filesystem MCP → Before creating files
+
+2. **Clean Architecture**: Follow layer boundaries strictly
+   - Domain → No dependencies
+   - Application → Domain only
+   - Infrastructure → Domain + Application
+   - API → All layers
+
+3. **ApiResponse Pattern**: ALL services and APIs return `ApiResponse<T>`
+
+   ```csharp
+   // Success
+   return ApiResponse<UserDto>.SuccessResponse(user, "Success message");
+
+   // Failure (don't throw exceptions for business logic errors)
+   return ApiResponse<UserDto>.FailureResponse("Error message");
+
+   // Paginated
+   return ApiResponse<List<UserDto>>.SuccessPagedResponse(items, total, page, size, "Message");
+   ```
+
+4. **Async/Await**: Always use async patterns correctly
+   - ✅ `await _unitOfWork.SaveChangesAsync()`
+   - ❌ `.Result` or `.Wait()` (causes deadlocks)
+   - Suffix async methods with `Async`
+
+5. **Structured Logging**: Use named parameters, not string interpolation
+
+   ```csharp
+   // ✅ Correct
+   _logger.LogInformation("User {Email} registered successfully", email);
+
+   // ❌ Wrong
+   _logger.LogInformation($"User {email} registered");
+   ```
+
+### 🔐 Security & Validation
+
+6. **Password Security**: Always use `PasswordHasher<User>`, never store plain text
+7. **JWT Validation**: Validate tokens on endpoints AND in service layer
+8. **FluentValidation**: Use for all request validation
+   - Create validators in `Application/Validators`
+   - Inject: `IValidator<TRequest> validator`
+   - Validate: `if (!request.ValidateRequest(validator, out var result)) return result!;`
+   - Error messages in Vietnamese for user-facing validation
+
+9. **Authorization**: Apply at endpoint level
+
+   ```csharp
+   // Single role
+   .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+
+   // Multiple roles (OR)
+   .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
+
+   // Check in service
+   if (!_currentUserService.IsInAnyRole(Role.Admin, Role.Staff))
+       return ApiResponse<T>.FailureResponse("Không có quyền truy cập");
+   ```
+
+### 📊 Data Access Patterns
+
+10. **Repository + UnitOfWork**: Use for ALL data access
+
+    ```csharp
+    var user = await _unitOfWork.UserRepository.FindOneAsync(u => u.Email == email);
+    await _unitOfWork.SaveChangesAsync();
+    ```
+
+11. **Pagination**: ALWAYS use `PaginationRequest` for list endpoints
+
+    ```csharp
+    // Standard pagination
+    Task<ApiResponse<List<T>>> GetAsync([AsParameters] PaginationRequest pagination)
+
+    // Extended with filters (inherit from PaginationRequest)
+    public class DateRangePaginationRequest : PaginationRequest
+    {
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+    }
+    ```
+
+12. **Entity Guidelines**:
+    - Inherit from `BaseEntity` (Id, CreatedAt, UpdatedAt, DeletedAt, etc.)
+    - Use `Guid.CreateVersion7()` for IDs
+    - Configure relationships in `OnModelCreating`
+    - JSONB columns: `[Column(TypeName = "jsonb")]`
+
+### 🧹 Code Quality
+
+13. **DRY Principle**: Extract duplicate code into reusable private methods
+
+    ```csharp
+    // Use tuple returns for validation helpers
+    private async Task<(bool IsValid, string? ErrorMessage)> ValidateOtpAsync(
+        string cacheKey, string otpCode)
+    {
+        var cachedOtp = await _cacheService.GetAsync<string>(cacheKey);
+        if (string.IsNullOrEmpty(cachedOtp))
+            return (false, "OTP không hợp lệ hoặc đã hết hạn");
+        if (cachedOtp != otpCode)
+            return (false, "OTP không đúng");
+        return (true, null);
+    }
+    ```
+
+14. **Dependency Injection Lifetimes**:
+    - **Scoped**: Services with DbContext (IUnitOfWork, application services)
+    - **Transient**: Stateless services
+    - **Singleton**: Thread-safe services (caching, configuration)
+
+15. **Error Handling**: Let `GlobalExceptionsMiddleware` handle exceptions
+    - `UnauthorizedAccessException` → 401
+    - `ArgumentException` → 400
+    - `KeyNotFoundException` → 404
+    - Others → 500
+
+### 🔄 Inter-Service Communication
+
+16. **MassTransit Events**: Use for async operations (emails, notifications)
+
+    ```csharp
+    await _publishEndpoint.Publish(new OtpEmailEvent { ... });
+    ```
+
+17. **HTTP Clients**: Use for synchronous cross-service requests
+    ```csharp
+    var result = await _identityClient.CheckInstructorProfileVerifiedAsync(userId);
+    ```
+
+### 📝 API Conventions
+
+18. **Minimal APIs**: Use MapGroup for versioning `/api/v1/...`
+19. **Rate Limiting**: Add to all endpoints `.RequireRateLimiting("Fixed")`
+20. **OpenAPI Documentation**: Use `.Produces<T>()` and descriptive tags
+21. **Current User Access**: Use `ICurrentUserService`
+    ```csharp
+    var userId = _currentUserService.UserId;
+    var email = _currentUserService.Email;
+    var isAdmin = _currentUserService.IsInRole(Role.Admin);
+    ```
+
+### 🗄️ Database Operations
+
+22. **Before Migrations**: Query PostgreSQL MCP to verify current schema
+23. **Use Async Methods**: `FindOneAsync`, `AddAsync`, `UpdateAsync`, `SaveChangesAsync`
+24. **Soft Delete**: Check `DeletedAt == null` query filters
+25. **JSONB Fields**: For arrays/objects (outcomes, requirements, expertise)
+
+### 🎨 Naming & Style
+
+26. **PascalCase**: Classes, methods, properties, interfaces
+27. **camelCase**: Local variables, parameters
+28. **Interfaces**: Prefix with `I` (IAuthService, IUserRepository)
+29. **Async Methods**: Suffix with `Async` (RegisterUserAsync)
+30. **Vietnamese Messages**: Use for user-facing validation errors
+
+### 🌐 Research Capabilities
+
+31. **Unknown Libraries/Errors**: ALWAYS use Brave Search + Fetch
+
+    ```csharp
+    // ❌ Don't: Guess based on old training data
+    // ✅ Do: "Search for .NET 9 IHostedService best practices" → Read docs → Implement
+    ```
+
+32. **New Framework Features**: Research before implementing
+    - Search official documentation first
+    - Fetch and read actual docs pages
+    - Store key insights in Memory
+    - Check Filesystem for existing usage patterns
+
+33. **Error Messages**: Search for exact error text
+    - Copy full error to Brave Search
+    - Look for Stack Overflow, GitHub issues
+    - Read solutions via Fetch before applying
+
+### 🧠 Complex Logic & Architecture
+
+34. **Sequential Thinking for Complex Tasks**: REQUIRED for:
+    - System architecture design
+    - Multi-step refactoring
+    - Performance optimization strategies
+    - Migration planning (DB, framework)
+    - Debugging multi-service issues
+35. **Document Reasoning**: When using sequential thinking:
+    - List all constraints and requirements
+    - Evaluate alternatives with pros/cons
+    - Document decision rationale in Memory
+    - Consider edge cases before coding
+
+36. **Memory for Consistency**:
+    - Store architectural decisions
+    - Remember coding patterns specific to project
+    - Track known bugs and workarounds
+    - Keep user preferences across sessions
+
+### � Complete Development Cycle
+
+37. **Full Workflow Example**:
+    ```
+    1. Git: "Show recent changes to related code" → Find context
+    2. PostgreSQL: "Check related table schema" → Verify data structure
+    3. Filesystem: "Find similar implementation patterns" → Locate code
+    4. Sequential Thinking: Plan implementation approach
+    5. Implement feature following established patterns
+    6. Docker: Check logs and verify service health
+    7. Git: Commit with clear description
+    ```
+
+### 🔍 Before Every Task - MCP Checklist
+
+- [ ] 🐘 **PostgreSQL MCP**: Query schema if touching database
+- [ ] 🐳 **Docker MCP**: Check service health if debugging
+- [ ] 🔀 **Git MCP**: Review recent changes if refactoring
+- [ ] 📁 **Filesystem MCP**: Search for patterns before creating
+- [ ] 🌐 **Brave Search + Fetch**: Research unknown libraries/errors
+- [ ] 🧠 **Sequential Thinking**: Plan complex architectural changes
+- [ ] 💾 **Memory**: Store/retrieve important decisions
+- [ ] ✅ Follow Clean Architecture layers
+- [ ] ✅ Return `ApiResponse<T>` from services
+- [ ] ✅ Use async/await properly
+- [ ] ✅ Apply FluentValidation
+- [ ] ✅ Add rate limiting to endpoints
+- [ ] ✅ Use ICurrentUserService for user context

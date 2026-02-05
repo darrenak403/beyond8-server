@@ -6,6 +6,18 @@ namespace Beyond8.Catalog.Application.Clients.Learning;
 public class LearningClient(HttpClient httpClient, IHttpContextAccessor httpContextAccessor)
     : BaseClient(httpClient, httpContextAccessor), ILearningClient
 {
+    public async Task<ApiResponse<List<Guid>>> GetEnrolledCourseIdsAsync()
+    {
+        try
+        {
+            var enrolledCourseIds = await GetAsync<List<Guid>>("/api/v1/enrollments/my-course-ids");
+            return ApiResponse<List<Guid>>.SuccessResponse(enrolledCourseIds, "Lấy danh sách khóa học đã đăng ký thành công.");
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<List<Guid>>.FailureResponse(ex.Message);
+        }
+    }
     public async Task<ApiResponse<bool>> IsUserEnrolledInCourseAsync(Guid courseId)
     {
         try

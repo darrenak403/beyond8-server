@@ -1,4 +1,5 @@
 using Beyond8.Common.Events.Learning;
+using Beyond8.Common.Events.Cache;  // Thêm using cho CacheInvalidateEvent
 using Beyond8.Common.Utilities;
 using Beyond8.Learning.Application.Clients.Catalog;
 using Beyond8.Learning.Application.Dtos.Enrollments;
@@ -84,12 +85,31 @@ public class EnrollmentService(
             InstructorId: structure.InstructorId,
             Delta: 1));
 
+        // Invalidate cache sau khi enroll
+        await publishEndpoint.Publish(new CacheInvalidateEvent($"enrolled_courses:{userId}"));
+
         logger.LogInformation("User {UserId} enrolled in free course {CourseId}, EnrollmentId {EnrollmentId}",
             userId, courseId, enrollment.Id);
 
         return ApiResponse<EnrollmentResponse>.SuccessResponse(
             enrollment.ToResponse(),
             "Đăng ký khóa học miễn phí thành công.");
+    }
+
+    public async Task<ApiResponse<List<Guid>>> GetEnrolledCourseIdsAsync(Guid userId)
+    {
+        try
+        {
+            var enrolledCourseIds = await unitOfWork.EnrollmentRepository.GetEnrolledCourseIdsAsync(userId);
+            logger.LogInformation("Retrieved {Count} enrolled course IDs for user {UserId}", enrolledCourseIds.Count, userId);
+            return ApiResponse<List<Guid>>.SuccessResponse(enrolledCourseIds, "Lấy danh sách khóa học đã đăng ký thành công.");
+
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Lỗi khi lấy danh sách khóa học đã đăng ký cho người dùng {UserId}", userId);
+            return ApiResponse<List<Guid>>.FailureResponse("Lấy danh sách khóa học đã đăng ký thất bại.");
+        }
     }
 
     public async Task<ApiResponse<bool>> IsUserEnrolledInCourseAsync(Guid userId, Guid courseId)
