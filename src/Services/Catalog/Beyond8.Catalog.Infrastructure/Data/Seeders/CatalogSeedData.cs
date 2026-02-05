@@ -35,11 +35,13 @@ public static class CatalogSeedData
     // Quiz IDs (external - from Assessment Service)
     private static readonly Guid Quiz1Id = Guid.Parse("66666666-6666-6666-6666-666666666601");
     private static readonly Guid Quiz2Id = Guid.Parse("66666666-6666-6666-6666-666666666602");
+    private static readonly Guid Quiz3Id = Guid.Parse("66666666-6666-6666-6666-666666666603");
 
-    // Paid course: 1 section, 2 lessons
+    // Paid course: 1 section, 3 lessons (Video, Text, Quiz)
     private static readonly Guid PaidSectionId = Guid.Parse("44444444-4444-4444-4444-444444444404");
     private static readonly Guid PaidLesson1Id = Guid.Parse("55555555-5555-5555-5555-555555550401");
     private static readonly Guid PaidLesson2Id = Guid.Parse("55555555-5555-5555-5555-555555550402");
+    private static readonly Guid PaidLesson3Id = Guid.Parse("55555555-5555-5555-5555-555555550403");
 
     // Seed media URLs (CloudFront)
     private const string SeedVideoUrl = "https://d30z0qh7rhzgt8.cloudfront.net/courses/hls/meo_con_lon_ton/meo_con_lon_ton_1080p.m3u8";
@@ -288,7 +290,42 @@ Khóa học phù hợp cho cả người mới bắt đầu và những develope
     private static async Task AddPaidCourseAsync(CatalogDbContext context, Category webDevCategory)
     {
         if (await context.Courses.AnyAsync(c => c.Id == PaidCourseId))
+        {
+            // Paid course đã tồn tại: đảm bảo có lesson Quiz (Assessment Quiz3) nếu chưa có
+            if (!await context.Lessons.AnyAsync(l => l.Id == PaidLesson3Id))
+            {
+                var lesson3 = new Lesson
+                {
+                    Id = PaidLesson3Id,
+                    SectionId = PaidSectionId,
+                    Title = "Quiz: Kiểm tra Microservices & Docker",
+                    Description = "Kiểm tra kiến thức về Microservices và Docker cơ bản",
+                    Type = LessonType.Quiz,
+                    OrderIndex = 3,
+                    IsPreview = false,
+                    IsPublished = true,
+                    TotalViews = 0,
+                    TotalCompletions = 0,
+                    CreatedAt = DateTime.UtcNow.AddDays(-14)
+                };
+                var lessonQuiz3 = new LessonQuiz
+                {
+                    Id = Guid.NewGuid(),
+                    LessonId = PaidLesson3Id,
+                    QuizId = Quiz3Id
+                };
+                await context.Lessons.AddAsync(lesson3);
+                await context.LessonQuizzes.AddAsync(lessonQuiz3);
+                var section = await context.Sections.FindAsync(PaidSectionId);
+                if (section != null)
+                {
+                    section.TotalLessons = 3;
+                    section.TotalDurationMinutes = 60;
+                }
+                await context.SaveChangesAsync();
+            }
             return;
+        }
 
         var paidCourse = new Course
         {
@@ -331,8 +368,8 @@ Khóa học phù hợp cho cả người mới bắt đầu và những develope
             Description = "Khái niệm và kiến trúc",
             OrderIndex = 1,
             IsPublished = true,
-            TotalLessons = 2,
-            TotalDurationMinutes = 45,
+            TotalLessons = 3,
+            TotalDurationMinutes = 60,
             CreatedAt = DateTime.UtcNow.AddDays(-18)
         };
         await context.Sections.AddAsync(paidSection);
@@ -384,9 +421,33 @@ Khóa học phù hợp cho cả người mới bắt đầu và những develope
             TextContent = "# Docker cơ bản\n\n## Container\n\nContainer đóng gói ứng dụng và dependencies..."
         };
 
-        await context.Lessons.AddRangeAsync(paidLesson1, paidLesson2);
+        // Lesson 3 - Quiz (Assessment Service: Quiz3)
+        var paidLesson3 = new Lesson
+        {
+            Id = PaidLesson3Id,
+            SectionId = PaidSectionId,
+            Title = "Quiz: Kiểm tra Microservices & Docker",
+            Description = "Kiểm tra kiến thức về Microservices và Docker cơ bản",
+            Type = LessonType.Quiz,
+            OrderIndex = 3,
+            IsPreview = false,
+            IsPublished = true,
+            TotalViews = 0,
+            TotalCompletions = 0,
+            CreatedAt = DateTime.UtcNow.AddDays(-14)
+        };
+
+        var paidQuiz3 = new LessonQuiz
+        {
+            Id = Guid.NewGuid(),
+            LessonId = PaidLesson3Id,
+            QuizId = Quiz3Id
+        };
+
+        await context.Lessons.AddRangeAsync(paidLesson1, paidLesson2, paidLesson3);
         await context.LessonVideos.AddAsync(paidVideo1);
         await context.LessonTexts.AddAsync(paidText2);
+        await context.LessonQuizzes.AddAsync(paidQuiz3);
         await context.SaveChangesAsync();
     }
 
