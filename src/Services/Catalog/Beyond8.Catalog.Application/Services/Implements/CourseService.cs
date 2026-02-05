@@ -98,7 +98,7 @@ public class CourseService(
             var (pageNumber, pageSize) = NormalizePagination(request);
 
             List<Guid>? excludedCourseIds = null;
-            if (request.ExcludeEnrolledCourses)
+            if (currentUserService.IsAuthenticated)
             {
                 var cacheKey = $"enrolled_courses:{currentUserService.UserId}";
                 excludedCourseIds = await cacheService.GetAsync<List<Guid>>(cacheKey);
@@ -173,7 +173,7 @@ public class CourseService(
             };
 
             List<Guid>? excludedCourseIds = null;
-            if (request.ExcludeEnrolledCourses)
+            if (currentUserService.IsAuthenticated)
             {
                 var cacheKey = $"enrolled_courses:{currentUserService.UserId}";
                 excludedCourseIds = await cacheService.GetAsync<List<Guid>>(cacheKey);
