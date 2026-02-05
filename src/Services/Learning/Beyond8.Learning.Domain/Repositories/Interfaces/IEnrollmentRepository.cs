@@ -8,4 +8,5 @@ public interface IEnrollmentRepository : IGenericRepository<Entities.Enrollment>
     Task<int> CountActiveByCourseIdAsync(Guid courseId);
     Task<List<Guid>> GetEnrolledCourseIdsAsync(Guid userId);
     Task<List<Enrollment>> GetEnrolledCoursesAsync(Guid userId);
+    Task<bool> IsUserEnrolledInCourseAsync(Guid userId, Guid courseId);
 }
