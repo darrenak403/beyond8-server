@@ -93,4 +93,41 @@ public class CertificateService(
             return ApiResponse<CertificateVerificationResponse>.FailureResponse("Đã xảy ra lỗi khi kiểm tra chứng chỉ.");
         }
     }
+
+    public async Task<ApiResponse<List<CertificateSimpleResponse>>> GetMyCertificatesAsync(Guid userId)
+    {
+        try
+        {
+            var list = await unitOfWork.CertificateRepository.GetAllAsync(c => c.UserId == userId);
+            var items = list.OrderByDescending(c => c.IssuedDate).Select(c => c.ToSimpleResponse()).ToList();
+            return ApiResponse<List<CertificateSimpleResponse>>.SuccessResponse(
+                items,
+                "Lấy danh sách chứng chỉ thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting my certificates for user {UserId}", userId);
+            return ApiResponse<List<CertificateSimpleResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách chứng chỉ.");
+        }
+    }
+
+    public async Task<ApiResponse<CertificateDetailResponse>> GetByIdAsync(Guid id, Guid userId)
+    {
+        try
+        {
+            var cert = await unitOfWork.CertificateRepository.FindOneAsync(c => c.Id == id);
+            if (cert == null)
+                return ApiResponse<CertificateDetailResponse>.FailureResponse("Chứng chỉ không tồn tại.");
+            if (cert.UserId != userId)
+                return ApiResponse<CertificateDetailResponse>.FailureResponse("Bạn không có quyền xem chứng chỉ này.");
+            return ApiResponse<CertificateDetailResponse>.SuccessResponse(
+                cert.ToDetailResponse(),
+                "Lấy chi tiết chứng chỉ thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting certificate {Id} for user {UserId}", id, userId);
+            return ApiResponse<CertificateDetailResponse>.FailureResponse("Đã xảy ra lỗi khi lấy chi tiết chứng chỉ.");
+        }
+    }
 }

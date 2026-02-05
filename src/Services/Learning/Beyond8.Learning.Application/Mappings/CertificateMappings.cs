@@ -22,6 +22,40 @@ public static class CertificateMappings
         };
     }
 
+    public static CertificateSimpleResponse ToSimpleResponse(this Certificate entity)
+    {
+        return new CertificateSimpleResponse
+        {
+            Id = entity.Id,
+            CertificateNumber = entity.CertificateNumber,
+            CourseTitle = entity.CourseTitle,
+            IssuedDate = entity.IssuedDate,
+            VerificationHash = entity.VerificationHash
+        };
+    }
+
+    public static CertificateDetailResponse ToDetailResponse(this Certificate entity)
+    {
+        return new CertificateDetailResponse
+        {
+            Id = entity.Id,
+            EnrollmentId = entity.EnrollmentId,
+            CourseId = entity.CourseId,
+            CertificateNumber = entity.CertificateNumber,
+            StudentName = entity.StudentName,
+            CourseTitle = entity.CourseTitle,
+            InstructorName = entity.InstructorName,
+            CompletionDate = entity.CompletionDate,
+            IssuedDate = entity.IssuedDate,
+            CertificatePdfUrl = entity.CertificatePdfUrl,
+            CertificateImageUrl = entity.CertificateImageUrl,
+            VerificationHash = entity.VerificationHash,
+            IsValid = entity.IsValid,
+            RevokedAt = entity.RevokedAt,
+            RevocationReason = entity.RevocationReason
+        };
+    }
+
     public static Certificate ToCertificateEntity(
         this Enrollment enrollment,
         DateTime issuedAt,
