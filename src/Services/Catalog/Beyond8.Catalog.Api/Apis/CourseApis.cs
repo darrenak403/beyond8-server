@@ -50,6 +50,13 @@ public static class CourseApis
             .Produces<ApiResponse<CourseDetailResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<CourseDetailResponse>>(StatusCodes.Status400BadRequest);
 
+        group.MapGet("/{id}/admin-details", GetCourseDetailsForAdminAsync)
+            .WithName("GetCourseDetailsForAdmin")
+            .WithDescription("Lấy thông tin khóa học chi tiết theo ID cho instructor/admin/staff")
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor, Role.Admin, Role.Staff))
+            .Produces<ApiResponse<CourseDetailResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<CourseDetailResponse>>(StatusCodes.Status400BadRequest);
+
         // Instructor Operations
         group.MapPost("/", CreateCourseAsync)
             .WithName("CreateCourse")
@@ -240,6 +247,14 @@ public static class CourseApis
         [FromServices] ICurrentUserService currentUserService)
     {
         var result = await courseService.GetCourseDetailsAsync(id, currentUserService.UserId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> GetCourseDetailsForAdminAsync(
+        [FromRoute] Guid id,
+        [FromServices] ICourseService courseService)
+    {
+        var result = await courseService.GetCourseDetailsForAdminAsync(id);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 

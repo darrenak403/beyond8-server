@@ -78,6 +78,8 @@ _Kích hoạt khi: Viết Dockerfile, docker-compose.yml, CI/CD pipelines, Shell
 
 This project is equipped with **Model Context Protocol (MCP)** servers to provide real-time access to system resources. **ALWAYS use these tools FIRST** before making assumptions about the current state of the system.
 
+**🎯 CONTEXT-AWARE RULE:** Only read service-specific documentation when working on that specific service. If user asks about Catalog Service, read Catalog docs. If about Sale Service, read Sale docs. Don't read irrelevant service documentation.
+
 ### 🐘 PostgreSQL MCP
 
 **Connection:** `postgresql://postgres:postgres@localhost:5432/beyond8_identity`
@@ -221,40 +223,31 @@ git log --grep="order" --oneline
 
 **Get API Key:** https://brave.com/search/api/ (2,000 requests/month free)
 
-**🎯 Sale Service Specific Use Cases:**
+**🎯 Example Search Queries (Context-Aware):**
 
-1. **VNPay Integration Research:**
+- **For ASP.NET Core patterns:**
 
-   ```
-   Search: "VNPay ASP.NET Core integration 2026"
-   Search: "VNPay HMAC signature verification C#"
-   Search: "VNPay IPN callback best practices"
-   ```
+  ```
+  "ASP.NET Core 9 best practices"
+  "Entity Framework Core performance optimization"
+  "Minimal APIs validation FluentValidation"
+  ```
 
-2. **Payment Gateway Best Practices:**
+- **For Database/PostgreSQL:**
 
-   ```
-   Search: "Idempotent webhook handling ASP.NET Core"
-   Search: "Payment reconciliation patterns"
-   Search: "Escrow system implementation financial services"
-   ```
+  ```
+  "PostgreSQL JSONB indexing best practices"
+  "EF Core PostgreSQL full-text search"
+  "PostgreSQL migration strategies"
+  ```
 
-3. **Financial Calculations:**
+- **For Service-Specific (Payment/VNPay - ONLY when working on Sale Service):**
+  ```
+  "VNPay ASP.NET Core integration"
+  "Payment webhook security patterns"
+  ```
 
-   ```
-   Search: "Decimal vs Float for money C# best practices"
-   Search: "Revenue split calculation financial software"
-   Search: "ACID transaction patterns Entity Framework Core"
-   ```
-
-4. **Background Job Implementation:**
-   ```
-   Search: "IHostedService daily job ASP.NET Core"
-   Search: "Hangfire vs Quartz.NET for settlement jobs"
-   Search: "Distributed lock for background jobs"
-   ```
-
-**⚠️ IMPORTANT:** Sau khi search, LUÔN so sánh với requirements document (07-PAYMENT-ENROLLMENT.md). Nếu best practice từ web conflicts với requirements → Follow requirements!
+**⚠️ IMPORTANT:** Always compare search results with project requirements documents. If best practices conflict with requirements → Follow requirements!
 
 ### 📄 Fetch MCP
 
@@ -262,22 +255,22 @@ git log --grep="order" --oneline
 
 **Workflow:** 🔍 Brave Search → 🎯 Find docs → 📥 Fetch → 📖 Read content → 💻 Implement
 
-**🎯 Sale Service Specific Targets:**
+**🎯 Example Use Cases:**
 
-1. **VNPay Official Documentation:**
-   - Fetch VNPay API reference pages
-   - Read signature generation algorithms
-   - Understand callback parameters
+1. **Official Framework Documentation:**
+   - Fetch Microsoft ASP.NET Core docs
+   - Read Entity Framework Core guides
+   - Understand new .NET 9 features
 
-2. **ASP.NET Core Financial Patterns:**
-   - Microsoft docs on transaction handling
-   - EF Core best practices for money types
-   - FluentValidation for financial validation
+2. **Third-Party Integration (Context-Specific):**
+   - Payment gateway APIs (when working on Sale Service)
+   - AWS S3 SDK docs (when working on Integration Service)
+   - Firebase FCM docs (when working on Notifications)
 
-3. **Banking Integration Standards:**
-   - Payment gateway integration guides
-   - PCI DSS compliance basics (for understanding, not implementing)
-   - Webhook security patterns
+3. **Best Practice Guides:**
+   - Architecture patterns (Clean Architecture, CQRS)
+   - Security best practices
+   - Performance optimization techniques
 
 ---
 
@@ -287,64 +280,48 @@ git log --grep="order" --oneline
 
 **Use for:** 🏗️ Architecture design, 🔄 Migrations, ♻️ Refactoring, 🐛 Complex debugging
 
-**🎯 Sale Service Specific Scenarios:**
+**🎯 Example Scenarios (Context-Aware):**
 
-1. **14-Day Escrow Settlement Logic:**
+1. **Course Approval Workflow (Catalog Service):**
 
    ```
-   Sequential Thinking: "How to implement 14-day escrow with background job"
+   Sequential Thinking: "Design course approval workflow with status transitions"
 
    Output should include:
-   - Order.SettlementEligibleAt calculation
-   - TransactionLedger.AvailableAt field usage
-   - Background job query logic
-   - Balance movement (Pending → Available)
-   - Transaction status updates
+   - Status state machine (Draft → PendingApproval → Approved → Published)
+   - Validation rules per status
+   - Authorization checks (Instructor vs Admin)
+   - Event publishing for approval notifications
    ```
 
-2. **Payment Webhook Flow:**
+2. **Database Migration (Any Service):**
 
    ```
-   Sequential Thinking: "VNPay callback processing with idempotency"
+   Sequential Thinking: "Add new entity with relationships"
 
    Output should include:
-   - HMAC signature verification
-   - Idempotency check (prevent duplicate processing)
-   - Order status update
-   - Wallet balance update
-   - Transaction ledger creation
-   - Event publishing (OrderCompletedEvent)
+   - Check existing schema via PostgreSQL MCP
+   - Define entity with proper relationships
+   - Create migration with Up/Down methods
+   - Seed data if needed
+   - Test rollback scenario
    ```
 
-3. **Coupon Validation Logic:**
+3. **Background Job Implementation (Any Service):**
 
    ```
-   Sequential Thinking: "Validate coupon with multiple constraints"
+   Sequential Thinking: "Implement daily scheduled job"
 
    Output should include:
-   - Date range check (ValidFrom to ValidUntil)
-   - Global usage limit check
-   - Per-user usage limit check
-   - Applicability check (instructor/course/category)
-   - Minimum order amount check
-   - Discount calculation (percentage vs fixed)
+   - IHostedService vs Hangfire decision
+   - Timer configuration (cron expression)
+   - Query logic for eligible records
+   - Transaction handling
+   - Error handling and retry logic
+   - Logging and monitoring
    ```
 
-4. **Payout Approval Workflow:**
-
-   ```
-   Sequential Thinking: "Admin payout approval with balance movement"
-
-   Output should include:
-   - Balance validation (AvailableBalance >= Amount)
-   - Balance movement (Available → Hold)
-   - Admin approval action
-   - Bank transfer trigger (mock for Phase 2)
-   - Success: Hold → TotalWithdrawn
-   - Failure: Hold → Available (restore)
-   ```
-
-**⚠️ RULE:** Sequential Thinking output MUST reference requirements (REQ-07.xx, BR-xx) for each step!
+**⚠️ RULE:** Sequential Thinking output MUST reference relevant requirements documents (REQ-XX.xx, BR-xx) when applicable!
 
 ---
 
@@ -354,94 +331,137 @@ git log --grep="order" --oneline
 
 **Stores:** 📚 Architectural choices, 🐛 Known bugs, 📝 Coding conventions
 
-**🎯 Sale Service Specific Items to Store:**
+**⚠️ CONTEXT-AWARE USAGE:** Only store and recall memories relevant to the current service/context. Don't mix Sale Service memories when working on Catalog Service.
 
-**1. Business Rules (CRITICAL - Store these first!):**
+**🎯 What to Store (Examples by Category):**
 
-```
-Memory: Store "Sale Service - Revenue Split"
-Content: "Per BR-19: 70% Instructor - 30% Platform (NOT 80-20).
-         PlatformFeePercent = 0.30m (hardcoded, not configurable)"
-
-Memory: Store "Sale Service - Escrow Period"
-Content: "Per BR-19: 14 days escrow (hardcoded).
-         SettlementEligibleAt = PaidAt + 14 days.
-         Background job runs daily 2:00 AM UTC."
-
-Memory: Store "Sale Service - Payout Minimum"
-Content: "Per BR-19: Minimum withdrawal 500,000 VND.
-         Requires Admin approval. No auto-approval."
-
-Memory: Store "Sale Service - Refund Policy"
-Content: "Per BR-05: 14 days window, <10% progress.
-         Phase 3 implementation - DO NOT implement in Phase 2!"
-```
-
-**2. Architectural Decisions:**
+**1. Business Rules (Service-Specific):**
 
 ```
-Memory: Store "Sale Service - Payment Idempotency"
-Content: "Use Payment.ExternalTransactionId to detect duplicates.
-         Query before processing webhook:
-         WHERE ExternalTransactionId = @id AND Status != Pending"
+Memory: Store "[Service Name] - [Rule Name]"
+Content: "Per BR-XX: [Rule description].
+         Implementation: [How it's coded].
+         Edge cases: [Important notes]."
 
-Memory: Store "Sale Service - Coupon Cache Strategy"
-Content: "Cache active coupons for 5 minutes.
-         Key: 'active_coupons'. Invalidate on create/update/delete."
+Example (Catalog Service):
+Memory: Store "Catalog Service - Course Approval Flow"
+Content: "Per BR-03: Only Draft courses can submit for approval.
+         Status sequence: Draft → PendingApproval → Approved → Published.
+         Cannot edit content after PendingApproval (only metadata)."
+```
 
-Memory: Store "Sale Service - Settlement Job Design"
-Content: "Use IHostedService with Timer (daily 2:00 AM UTC).
-         Query: WHERE AvailableAt <= NOW() AND Status = Pending.
-         Use distributed lock if multiple instances."
+**2. Architectural Decisions (Service or Global):**
+
+```
+Memory: Store "[Service Name] - [Decision Topic]"
+Content: "Decision: [What was decided].
+         Rationale: [Why].
+         Implementation: [How to implement]."
+
+Example (Global):
+Memory: Store "Global - ApiResponse Pattern"
+Content: "Decision: All services return ApiResponse<T> wrapper.
+         Rationale: Consistent error handling across microservices.
+         Implementation: Services never throw exceptions for business logic errors."
 ```
 
 **3. Known Issues & Workarounds:**
 
 ```
-Memory: Store "Sale Service - VNPay Sandbox Quirks"
-Content: "[Document VNPay sandbox issues discovered during testing]"
-
-Memory: Store "Sale Service - Entity Revenue Split Discrepancy"
-Content: "OrderItem.PlatformFeePercent default = 20% (entity comment),
-         but BR-19 requires 30%. Always use 0.30m in code."
+Memory: Store "[Service Name] - [Issue Description]"
+Content: "Issue: [What happened].
+         Workaround: [Temporary solution].
+         TODO: [Permanent fix needed]."
 ```
 
-**4. Coding Patterns:**
+**4. Coding Patterns (Service or Global):**
 
 ```
-Memory: Store "Sale Service - Decimal Money Type"
-Content: "Per NFR-07.02: ALWAYS use decimal(18,2) for money.
-         NEVER use float/double. Round to 2 decimals."
+Memory: Store "[Service Name] - [Pattern Name]"
+Content: "Pattern: [Description].
+         When to use: [Scenarios].
+         Implementation: [Code pattern]."
 
-Memory: Store "Sale Service - Transaction Audit Trail"
-Content: "ALWAYS record BalanceBefore and BalanceAfter in TransactionLedger.
-         Format: BalanceBefore = wallet.CurrentBalance;
-                wallet.CurrentBalance += amount;
-                BalanceAfter = wallet.CurrentBalance;"
+Example (Global):
+Memory: Store "Global - Pagination Pattern"
+Content: "Pattern: All list endpoints use PaginationRequest.
+         For filters: Inherit from PaginationRequest.
+         Return: ApiResponse<List<T>>.SuccessPagedResponse()."
 ```
 
-**5. Integration Contracts:**
+**5. Integration Contracts (Between Services):**
 
 ```
-Memory: Store "Sale Service - Catalog Service Contract"
-Content: "Call ICatalogClient.GetCoursesByIdsAsync() before order creation.
-         Snapshot: CourseTitle, InstructorName, Price into OrderItem."
-
-Memory: Store "Sale Service - Learning Service Event"
-Content: "Publish OrderCompletedEvent with OrderItems[] after payment success.
-         Learning creates Enrollment. Include all course IDs."
+Memory: Store "[ServiceA] ↔ [ServiceB] Contract"
+Content: "API: [Endpoint or Event].
+         Request: [Format].
+         Response: [Format].
+         Error handling: [How to handle failures]."
 ```
 
 **🔄 Memory Recall Workflow:**
 
-Before implementing any Sale Service feature:
+Before implementing any feature:
 
-1. Recall: "What business rules apply?" → Check BR-19, BR-05, BR-11
-2. Recall: "Any architectural decisions for this?" → Check patterns
-3. Recall: "Any known issues?" → Avoid repeated mistakes
-4. Then: Implement with stored knowledge
+1. **Identify Context:** Which service am I working on? (e.g., Catalog, Sale, Identity)
+2. **Recall Relevant Memories:** Only search for memories tagged with current service
+3. **Check Requirements:** Verify memories against requirements documents
+4. **Implement:** Use stored patterns and decisions
 
-**⚠️ IMPORTANT:** Memory supplements requirements, NOT replaces them. Always verify Memory content against [07-PAYMENT-ENROLLMENT.md](../docs/requirements/07-PAYMENT-ENROLLMENT.md)!
+**⚠️ IMPORTANT:**
+
+- Memory supplements requirements, NOT replaces them
+- Always verify Memory content against relevant requirements documents
+- Don't apply Sale Service patterns to Catalog Service (or vice versa) unless explicitly global patterns
+
+---
+
+## 📚 SERVICE-SPECIFIC DOCUMENTATION
+
+**⚠️ CRITICAL RULE: Context-Aware Documentation Reading**
+
+When user asks about a specific service, ONLY read documentation for that service. Don't read all service docs.
+
+### How to Identify Current Service Context:
+
+1. **From File Path:**
+   - `src/Services/Catalog/**` → Working on Catalog Service
+   - `src/Services/Sale/**` → Working on Sale Service
+   - `src/Services/Identity/**` → Working on Identity Service
+   - etc.
+
+2. **From User Question:**
+   - "How to create course?" → Catalog Service
+   - "How to process payment?" → Sale Service
+   - "How to register user?" → Identity Service
+
+3. **From Active File:**
+   - Check current file in editor context
+   - Determine service from namespace or folder structure
+
+### Documentation Reading Matrix:
+
+| Working On          | Read These Docs                                                       | DON'T Read                                                            |
+| ------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Catalog Service     | 02-COURSE-MANAGEMENT.md<br>Catalog entities<br>CourseService patterns | 07-PAYMENT-ENROLLMENT.md<br>Sale Service entities<br>Payment patterns |
+| Sale Service        | 07-PAYMENT-ENROLLMENT.md<br>Sale entities<br>Payment patterns         | 02-COURSE-MANAGEMENT.md<br>Catalog Service specifics                  |
+| Identity Service    | 01-USER-MANAGEMENT.md<br>Auth patterns<br>JWT handling                | Service-specific payment/course logic                                 |
+| Integration Service | Integration docs<br>Media/AI/Notification patterns                    | Core business logic from other services                               |
+| Global/Shared       | Clean Architecture principles<br>Common patterns<br>ApiResponse usage | Service-specific business rules                                       |
+
+### When to Read Requirements Documents:
+
+- ✅ READ: When implementing a feature in that service
+- ✅ READ: When user explicitly asks about that module
+- ✅ READ: When debugging issues in that service
+- ❌ DON'T READ: When working on unrelated service
+- ❌ DON'T READ: When user doesn't mention that module
+
+**Example:**
+
+- User: "Sửa GetCourseDetails trong Catalog Service"
+- ✅ Read: Catalog Service code, 02-COURSE-MANAGEMENT.md
+- ❌ Don't Read: 07-PAYMENT-ENROLLMENT.md, Sale Service patterns
 
 ---
 
