@@ -9,7 +9,6 @@ public class LearningDbContext(DbContextOptions<LearningDbContext> options) : Ba
     public DbSet<Enrollment> Enrollments { get; set; } = null!;
     public DbSet<LessonProgress> LessonProgresses { get; set; } = null!;
     public DbSet<SectionProgress> SectionProgresses { get; set; } = null!;
-    public DbSet<LessonNote> LessonNotes { get; set; } = null!;
     public DbSet<CourseReview> CourseReviews { get; set; } = null!;
     public DbSet<Certificate> Certificates { get; set; } = null!;
 
@@ -49,18 +48,6 @@ public class LearningDbContext(DbContextOptions<LearningDbContext> options) : Ba
             entity.Property(e => e.AssignmentGrade).HasPrecision(5, 2);
             entity.HasOne(e => e.Enrollment)
                 .WithMany(en => en.SectionProgresses)
-                .HasForeignKey(e => e.EnrollmentId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        modelBuilder.Entity<LessonNote>(entity =>
-        {
-            entity.HasQueryFilter(e => e.DeletedAt == null);
-            entity.HasIndex(e => e.UserId);
-            entity.HasIndex(e => new { e.LessonId, e.UserId });
-            entity.HasIndex(e => e.EnrollmentId);
-            entity.HasOne(e => e.Enrollment)
-                .WithMany(en => en.Notes)
                 .HasForeignKey(e => e.EnrollmentId)
                 .OnDelete(DeleteBehavior.Cascade);
         });

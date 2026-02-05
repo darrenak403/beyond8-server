@@ -33,7 +33,7 @@ public static class EnrollmentApis
 
         group.MapGet("/{id:guid}/lesson/{lessonId:guid}", GetLessonProgressAsync)
             .WithName("GetLessonProgress")
-            .WithDescription("Lấy tiến độ bài học (resume: vị trí phát, trạng thái)")
+            .WithDescription("Lấy tiến độ bài học")
             .RequireAuthorization()
             .Produces<ApiResponse<LessonProgressResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<LessonProgressResponse>>(StatusCodes.Status400BadRequest)

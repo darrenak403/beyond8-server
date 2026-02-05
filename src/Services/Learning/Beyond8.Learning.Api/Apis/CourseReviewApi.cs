@@ -22,14 +22,14 @@ public static class CourseReviewApi
     {
         group.MapGet("/", GetCourseReviewsAsync)
             .WithName("GetCourseReviews")
-            .WithDescription("Danh sách đánh giá theo khóa học (phân trang)")
+            .WithDescription("Danh sách đánh giá theo khóa học")
             .AllowAnonymous()
             .Produces<ApiResponse<List<CourseReviewResponse>>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<List<CourseReviewResponse>>>(StatusCodes.Status400BadRequest);
 
         group.MapPost("/", CreateCourseReview)
             .WithName("CreateCourseReview")
-            .WithDescription("Tạo đánh giá khóa học (yêu cầu đã hoàn thành 100% khóa học)")
+            .WithDescription("Tạo đánh giá khóa học")
             .RequireAuthorization()
             .Produces<ApiResponse<CourseReviewResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<CourseReviewResponse>>(StatusCodes.Status400BadRequest)
