@@ -7,13 +7,17 @@ namespace Beyond8.Sale.Domain.Entities;
 
 public class Order : BaseEntity
 {
+    // User Reference (Logical - No FK)
     public Guid UserId { get; set; }
 
+    // Order Identification
     [Required, MaxLength(50)]
     public string OrderNumber { get; set; } = string.Empty;
 
+    // Order Status
     public OrderStatus Status { get; set; } = OrderStatus.Pending;
 
+    // Pricing Information
     [Column(TypeName = "decimal(18, 2)")]
     public decimal SubTotal { get; set; }
 
@@ -26,6 +30,7 @@ public class Order : BaseEntity
     [Column(TypeName = "decimal(18, 2)")]
     public decimal TotalAmount { get; set; }
 
+    // Coupon Reference
     public Guid? CouponId { get; set; }
 
     [ForeignKey(nameof(CouponId))]
@@ -34,6 +39,42 @@ public class Order : BaseEntity
     [MaxLength(10)]
     public string Currency { get; set; } = "VND";
 
+    // Payment Tracking
+    public DateTime? PaidAt { get; set; }
+
+    // Settlement (14-day escrow logic)
+    /// <summary>
+    /// Date when order becomes eligible for settlement to instructor wallet
+    /// Calculated as: PaidAt + 14 days
+    /// </summary>
+    public DateTime? SettlementEligibleAt { get; set; }
+
+    /// <summary>
+    /// Indicates if order amount has been settled to instructor wallet
+    /// </summary>
+    public bool IsSettled { get; set; } = false;
+
+    public DateTime? SettledAt { get; set; }
+
+    // Refund Information (TODO: Implement refund logic later)
+    // [Column(TypeName = "decimal(18, 2)")]
+    // public decimal TotalRefunded { get; set; } = 0;
+
+    // Audit & Security
+    [MaxLength(45)]
+    public string? IpAddress { get; set; }
+
+    [MaxLength(500)]
+    public string? UserAgent { get; set; }
+
+    [MaxLength(1000)]
+    public string? Notes { get; set; }
+
+    // Payment Details (JSON for flexibility)
+    [Column(TypeName = "jsonb")]
+    public string? PaymentDetails { get; set; }
+
+    // Navigation Properties
     public virtual ICollection<OrderItem> OrderItems { get; set; } = [];
     public virtual ICollection<Payment> Payments { get; set; } = [];
 }

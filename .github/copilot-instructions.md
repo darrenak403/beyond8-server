@@ -78,6 +78,8 @@ _Kích hoạt khi: Viết Dockerfile, docker-compose.yml, CI/CD pipelines, Shell
 
 This project is equipped with **Model Context Protocol (MCP)** servers to provide real-time access to system resources. **ALWAYS use these tools FIRST** before making assumptions about the current state of the system.
 
+**🎯 CONTEXT-AWARE RULE:** Only read service-specific documentation when working on that specific service. If user asks about Catalog Service, read Catalog docs. If about Sale Service, read Sale docs. Don't read irrelevant service documentation.
+
 ### 🐘 PostgreSQL MCP
 
 **Connection:** `postgresql://postgres:postgres@localhost:5432/beyond8_identity`
@@ -221,11 +223,54 @@ git log --grep="order" --oneline
 
 **Get API Key:** https://brave.com/search/api/ (2,000 requests/month free)
 
+**🎯 Example Search Queries (Context-Aware):**
+
+- **For ASP.NET Core patterns:**
+
+  ```
+  "ASP.NET Core 9 best practices"
+  "Entity Framework Core performance optimization"
+  "Minimal APIs validation FluentValidation"
+  ```
+
+- **For Database/PostgreSQL:**
+
+  ```
+  "PostgreSQL JSONB indexing best practices"
+  "EF Core PostgreSQL full-text search"
+  "PostgreSQL migration strategies"
+  ```
+
+- **For Service-Specific (Payment/VNPay - ONLY when working on Sale Service):**
+  ```
+  "VNPay ASP.NET Core integration"
+  "Payment webhook security patterns"
+  ```
+
+**⚠️ IMPORTANT:** Always compare search results with project requirements documents. If best practices conflict with requirements → Follow requirements!
+
 ### 📄 Fetch MCP
 
 **Purpose:** 📥 Read web page content after finding it via Brave Search
 
 **Workflow:** 🔍 Brave Search → 🎯 Find docs → 📥 Fetch → 📖 Read content → 💻 Implement
+
+**🎯 Example Use Cases:**
+
+1. **Official Framework Documentation:**
+   - Fetch Microsoft ASP.NET Core docs
+   - Read Entity Framework Core guides
+   - Understand new .NET 9 features
+
+2. **Third-Party Integration (Context-Specific):**
+   - Payment gateway APIs (when working on Sale Service)
+   - AWS S3 SDK docs (when working on Integration Service)
+   - Firebase FCM docs (when working on Notifications)
+
+3. **Best Practice Guides:**
+   - Architecture patterns (Clean Architecture, CQRS)
+   - Security best practices
+   - Performance optimization techniques
 
 ---
 
@@ -235,6 +280,49 @@ git log --grep="order" --oneline
 
 **Use for:** 🏗️ Architecture design, 🔄 Migrations, ♻️ Refactoring, 🐛 Complex debugging
 
+**🎯 Example Scenarios (Context-Aware):**
+
+1. **Course Approval Workflow (Catalog Service):**
+
+   ```
+   Sequential Thinking: "Design course approval workflow with status transitions"
+
+   Output should include:
+   - Status state machine (Draft → PendingApproval → Approved → Published)
+   - Validation rules per status
+   - Authorization checks (Instructor vs Admin)
+   - Event publishing for approval notifications
+   ```
+
+2. **Database Migration (Any Service):**
+
+   ```
+   Sequential Thinking: "Add new entity with relationships"
+
+   Output should include:
+   - Check existing schema via PostgreSQL MCP
+   - Define entity with proper relationships
+   - Create migration with Up/Down methods
+   - Seed data if needed
+   - Test rollback scenario
+   ```
+
+3. **Background Job Implementation (Any Service):**
+
+   ```
+   Sequential Thinking: "Implement daily scheduled job"
+
+   Output should include:
+   - IHostedService vs Hangfire decision
+   - Timer configuration (cron expression)
+   - Query logic for eligible records
+   - Transaction handling
+   - Error handling and retry logic
+   - Logging and monitoring
+   ```
+
+**⚠️ RULE:** Sequential Thinking output MUST reference relevant requirements documents (REQ-XX.xx, BR-xx) when applicable!
+
 ---
 
 ### 💾 Memory MCP
@@ -242,6 +330,138 @@ git log --grep="order" --oneline
 **Purpose:** 💾 Remember decisions and patterns across sessions
 
 **Stores:** 📚 Architectural choices, 🐛 Known bugs, 📝 Coding conventions
+
+**⚠️ CONTEXT-AWARE USAGE:** Only store and recall memories relevant to the current service/context. Don't mix Sale Service memories when working on Catalog Service.
+
+**🎯 What to Store (Examples by Category):**
+
+**1. Business Rules (Service-Specific):**
+
+```
+Memory: Store "[Service Name] - [Rule Name]"
+Content: "Per BR-XX: [Rule description].
+         Implementation: [How it's coded].
+         Edge cases: [Important notes]."
+
+Example (Catalog Service):
+Memory: Store "Catalog Service - Course Approval Flow"
+Content: "Per BR-03: Only Draft courses can submit for approval.
+         Status sequence: Draft → PendingApproval → Approved → Published.
+         Cannot edit content after PendingApproval (only metadata)."
+```
+
+**2. Architectural Decisions (Service or Global):**
+
+```
+Memory: Store "[Service Name] - [Decision Topic]"
+Content: "Decision: [What was decided].
+         Rationale: [Why].
+         Implementation: [How to implement]."
+
+Example (Global):
+Memory: Store "Global - ApiResponse Pattern"
+Content: "Decision: All services return ApiResponse<T> wrapper.
+         Rationale: Consistent error handling across microservices.
+         Implementation: Services never throw exceptions for business logic errors."
+```
+
+**3. Known Issues & Workarounds:**
+
+```
+Memory: Store "[Service Name] - [Issue Description]"
+Content: "Issue: [What happened].
+         Workaround: [Temporary solution].
+         TODO: [Permanent fix needed]."
+```
+
+**4. Coding Patterns (Service or Global):**
+
+```
+Memory: Store "[Service Name] - [Pattern Name]"
+Content: "Pattern: [Description].
+         When to use: [Scenarios].
+         Implementation: [Code pattern]."
+
+Example (Global):
+Memory: Store "Global - Pagination Pattern"
+Content: "Pattern: All list endpoints use PaginationRequest.
+         For filters: Inherit from PaginationRequest.
+         Return: ApiResponse<List<T>>.SuccessPagedResponse()."
+```
+
+**5. Integration Contracts (Between Services):**
+
+```
+Memory: Store "[ServiceA] ↔ [ServiceB] Contract"
+Content: "API: [Endpoint or Event].
+         Request: [Format].
+         Response: [Format].
+         Error handling: [How to handle failures]."
+```
+
+**🔄 Memory Recall Workflow:**
+
+Before implementing any feature:
+
+1. **Identify Context:** Which service am I working on? (e.g., Catalog, Sale, Identity)
+2. **Recall Relevant Memories:** Only search for memories tagged with current service
+3. **Check Requirements:** Verify memories against requirements documents
+4. **Implement:** Use stored patterns and decisions
+
+**⚠️ IMPORTANT:**
+
+- Memory supplements requirements, NOT replaces them
+- Always verify Memory content against relevant requirements documents
+- Don't apply Sale Service patterns to Catalog Service (or vice versa) unless explicitly global patterns
+
+---
+
+## 📚 SERVICE-SPECIFIC DOCUMENTATION
+
+**⚠️ CRITICAL RULE: Context-Aware Documentation Reading**
+
+When user asks about a specific service, ONLY read documentation for that service. Don't read all service docs.
+
+### How to Identify Current Service Context:
+
+1. **From File Path:**
+   - `src/Services/Catalog/**` → Working on Catalog Service
+   - `src/Services/Sale/**` → Working on Sale Service
+   - `src/Services/Identity/**` → Working on Identity Service
+   - etc.
+
+2. **From User Question:**
+   - "How to create course?" → Catalog Service
+   - "How to process payment?" → Sale Service
+   - "How to register user?" → Identity Service
+
+3. **From Active File:**
+   - Check current file in editor context
+   - Determine service from namespace or folder structure
+
+### Documentation Reading Matrix:
+
+| Working On          | Read These Docs                                                       | DON'T Read                                                            |
+| ------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Catalog Service     | 02-COURSE-MANAGEMENT.md<br>Catalog entities<br>CourseService patterns | 07-PAYMENT-ENROLLMENT.md<br>Sale Service entities<br>Payment patterns |
+| Sale Service        | 07-PAYMENT-ENROLLMENT.md<br>Sale entities<br>Payment patterns         | 02-COURSE-MANAGEMENT.md<br>Catalog Service specifics                  |
+| Identity Service    | 01-USER-MANAGEMENT.md<br>Auth patterns<br>JWT handling                | Service-specific payment/course logic                                 |
+| Integration Service | Integration docs<br>Media/AI/Notification patterns                    | Core business logic from other services                               |
+| Global/Shared       | Clean Architecture principles<br>Common patterns<br>ApiResponse usage | Service-specific business rules                                       |
+
+### When to Read Requirements Documents:
+
+- ✅ READ: When implementing a feature in that service
+- ✅ READ: When user explicitly asks about that module
+- ✅ READ: When debugging issues in that service
+- ❌ DON'T READ: When working on unrelated service
+- ❌ DON'T READ: When user doesn't mention that module
+
+**Example:**
+
+- User: "Sửa GetCourseDetails trong Catalog Service"
+- ✅ Read: Catalog Service code, 02-COURSE-MANAGEMENT.md
+- ❌ Don't Read: 07-PAYMENT-ENROLLMENT.md, Sale Service patterns
 
 ---
 
@@ -1454,6 +1674,318 @@ Published → Unpublished (Hidden) → Published
 - **Lesson**: Individual lessons within sections
 - **CourseDocument**: Attached documents for courses
 - **LessonDocument**: Attached documents for lessons
+
+### Sale Service
+
+Handles payment processing, order management, instructor wallets, and revenue distribution for the e-learning platform:
+
+#### ⚠️ CRITICAL: Required Reading Before Implementation
+
+**MANDATORY DOCUMENT:** [docs/requirements/07-PAYMENT-ENROLLMENT.md](../docs/requirements/07-PAYMENT-ENROLLMENT.md)
+
+This document contains ALL requirements and business rules for Sale Service. **DO NOT** start any implementation without reading it first.
+
+**Requirements Mapping:**
+
+- **REQ-07.01**: Free course enrollment (Order with Amount=0)
+- **REQ-07.02**: VNPay payment integration (Checkout, Callback/IPN, snapshot OrderItems)
+- **REQ-07.03**: Coupon validation and application (usage limits, expiry, applicability)
+- **REQ-07.04**: Transaction history for students
+- **REQ-07.06**: Refund requests (14-day window, <10% progress) - **Phase 3, NOT Phase 2**
+- **REQ-07.09**: Instructor wallet & payout (14-day escrow, admin approval, 500k VND minimum)
+
+**Business Rules:**
+
+- **BR-04**: Free courses enroll immediately without payment
+- **BR-05**: Refund policy - 14 days, <10% progress
+- **BR-11**: Payment rules - VNPay, Decimal for money, HMAC signature verification
+- **BR-19**: Revenue split - **70% Instructor, 30% Platform** (NOT 80-20!), 14-day escrow, min 500k payout
+- **NFR-07.01**: Security - Checksum verification, Idempotency for webhooks
+- **NFR-07.02**: Financial accuracy - Decimal type, ACID transactions
+
+#### 🚫 SCOPE CONSTRAINTS - DO NOT IMPLEMENT
+
+**Phase 2 Scope Limitations:**
+
+1. ❌ **Refund logic** - Commented out in entities, planned for Phase 3
+2. ❌ **PayOS/ZaloPay integration** - Focus VNPay only per REQ-07.02
+3. ❌ **Partial refunds** - Enum exists but commented, not in scope
+4. ❌ **Multiple currencies** - VND only per BR-11
+5. ❌ **Installment payments** - Not in requirements
+6. ❌ **Auto-approve payouts** - Requires admin approval per REQ-07.09
+7. ❌ **Configurable revenue split** - Hardcoded 70-30 per BR-19
+8. ❌ **Configurable escrow period** - Hardcoded 14 days per BR-19
+
+**If you think a feature should be added but it's not in requirements → Document it for backlog discussion, DO NOT implement.**
+
+#### Core Features
+
+**Order Management:**
+
+- Create orders from cart (free and paid)
+- Track order status (Pending → Paid → Cancelled)
+- Snapshot course data in OrderItems (prevents data loss if course deleted)
+- Calculate totals with coupon discounts
+- 14-day settlement tracking (`SettlementEligibleAt = PaidAt + 14 days`)
+
+**Payment Processing:**
+
+- VNPay integration (ATM, Visa, QR Code)
+- Webhook handling with HMAC signature verification
+- Payment status tracking (Pending → Processing → Completed/Failed)
+- Idempotent callback processing (prevent duplicate processing)
+- Payment expiry handling (15-minute timeout)
+
+**Coupon System:**
+
+- Percentage and FixedAmount discount types
+- Global usage limits and per-user limits
+- Applicability constraints (instructor-specific, course-specific, platform-wide)
+- Date range validation (ValidFrom to ValidUntil)
+- Minimum order amount enforcement
+
+**Instructor Wallet (3-Tier Balance):**
+
+- **PendingBalance**: Funds in 14-day escrow (cannot withdraw)
+- **AvailableBalance**: Funds ready to withdraw (after settlement)
+- **HoldBalance**: Funds on hold (during payout processing or disputes)
+- Bank account info stored as encrypted JSONB
+- Lifetime statistics (TotalEarnings, TotalWithdrawn)
+
+**Settlement Service (14-Day Escrow):**
+
+- Background job runs daily at 2:00 AM UTC
+- Processes orders where `SettlementEligibleAt <= NOW()`
+- Moves funds: `PendingBalance` → `AvailableBalance`
+- Updates `TransactionLedger` status: Pending → Completed
+- Protects platform from refund requests (14-day window per BR-05)
+
+**Payout Management:**
+
+- Instructor requests withdrawal (minimum 500k VND per BR-19)
+- Admin approval workflow (Requested → Approved → Processing → Completed)
+- Balance movement: `AvailableBalance` → `HoldBalance` → `TotalWithdrawn`
+- Bank transfer integration (mock for Phase 2, real API Phase 3)
+- Rejection restores balance to Available
+
+**Transaction Ledger (Audit Trail):**
+
+- Immutable log of all wallet transactions
+- Records `BalanceBefore` and `BalanceAfter` for reconciliation
+- Polymorphic references (ReferenceId + ReferenceType for Order/Payout/Refund)
+- Tracks `AvailableAt` date for 14-day escrow logic
+- Supports transaction types: Sale, Payout, Settlement, PlatformFee, Adjustment
+
+#### API Endpoints
+
+**Order Endpoints** (`/api/v1/orders`):
+
+- `POST /` - Create order (Authenticated)
+- `GET /{id}` - Get order details (Owner/Admin)
+- `POST /{id}/cancel` - Cancel order (Owner/Admin, only if Pending)
+- `GET /my-orders` - Get user orders (Authenticated, paginated)
+- `GET /instructor/{instructorId}` - Get instructor sales (Instructor/Admin)
+- `GET /status/{status}` - Filter by status (Admin)
+- `GET /statistics` - Revenue statistics (Admin/Instructor)
+
+**Payment Endpoints** (`/api/v1/payments`):
+
+- `POST /process` - Initiate payment (Authenticated)
+- `POST /vnpay/callback` - VNPay webhook (AllowAnonymous, HMAC verification)
+- `GET /{id}/status` - Check payment status (Authenticated)
+- `GET /order/{orderId}` - Get payments for order (Owner/Admin)
+- `GET /my-payments` - Get user payments (Authenticated, paginated)
+
+**Coupon Endpoints** (`/api/v1/coupons`):
+
+- `POST /` - Create coupon (Admin/Instructor)
+- `GET /{code}` - Get coupon by code (Public)
+- `POST /validate` - Validate coupon (Public)
+- `PUT /{id}` - Update coupon (Admin/Instructor)
+- `PATCH /{id}/toggle-status` - Activate/deactivate (Admin)
+- `GET /active` - Get active coupons (Public, cached)
+
+**Wallet Endpoints** (`/api/v1/wallets`):
+
+- `GET /my-wallet` - Get instructor wallet (Instructor)
+- `GET /{instructorId}/transactions` - Get transaction history (Instructor/Admin, paginated)
+
+**Payout Endpoints** (`/api/v1/payouts`):
+
+- `POST /request` - Request payout (Instructor)
+- `POST /{id}/approve` - Approve payout (Admin)
+- `POST /{id}/reject` - Reject payout with reason (Admin)
+- `GET /my-requests` - Get own payout requests (Instructor)
+- `GET /` - Get all payout requests (Admin, paginated)
+
+**Settlement Endpoints** (`/api/v1/settlements`) - Admin Only:
+
+- `POST /process` - Manual settlement trigger (emergency use)
+- `GET /pending` - Get pending settlements (paginated)
+- `GET /statistics` - Settlement statistics
+- `GET /{orderId}/status` - Get settlement status
+
+#### Entity Design Rationale
+
+**Why Order has `SettlementEligibleAt`?**
+
+- Calculated as `PaidAt + 14 days` to trigger automatic settlement
+- Enables background job to process settlements efficiently
+
+**Why OrderItem snapshots course data?**
+
+- Course prices can change over time
+- Instructors can rename courses
+- Maintains accurate historical records for reporting
+
+**Why Payment has `ExternalTransactionId`?**
+
+- Required for reconciliation with VNPay provider
+- Enables refund API calls (Phase 3)
+
+**Why InstructorWallet has 3 balance types?**
+
+- **Pending**: Escrow protection (14-day refund window per BR-05)
+- **Available**: Funds ready to withdraw
+- **Hold**: Reserves funds during payout processing
+
+**Why TransactionLedger records `BalanceBefore` and `BalanceAfter`?**
+
+- Audit trail for financial reconciliation
+- Detects balance tampering
+- Enables balance verification at any point in time
+
+**Why PayoutRequest requires Admin approval?**
+
+- Fraud prevention
+- Bank account verification
+- Compliance with financial regulations
+
+#### Revenue Split Calculation
+
+```csharp
+// Per BR-19: 70% Instructor - 30% Platform
+SubTotal = Sum(Course.OriginalPrice)
+DiscountAmount = ApplyCoupon(SubTotal) // From coupon validation
+TotalAmount = SubTotal - DiscountAmount
+
+// Per OrderItem:
+FinalPrice = OriginalPrice * (1 - DiscountPercent)
+PlatformFeePercent = 0.30m  // 30% platform fee (NOT 20%!)
+PlatformFeeAmount = FinalPrice * PlatformFeePercent
+InstructorEarnings = FinalPrice - PlatformFeeAmount // 70%
+```
+
+**⚠️ CRITICAL:** Entity comments may say 20%, but **BR-19 requires 30%**. Follow BR-19.
+
+#### 14-Day Escrow Workflow
+
+```
+T0: Payment Success
+  → Order.Status = Paid
+  → Order.PaidAt = Now
+  → Order.SettlementEligibleAt = Now + 14 days
+
+T1: Create Transaction
+  → TransactionLedger.Type = Sale
+  → TransactionLedger.Status = Pending
+  → TransactionLedger.AvailableAt = Order.SettlementEligibleAt
+  → InstructorWallet.PendingBalance += InstructorEarnings
+
+T14 days: Settlement Job (runs daily 2:00 AM UTC)
+  → Query: WHERE AvailableAt <= NOW() AND Status = Pending
+  → TransactionLedger.Status = Completed
+  → InstructorWallet.PendingBalance -= Amount
+  → InstructorWallet.AvailableBalance += Amount
+  → Order.IsSettled = true, SettledAt = Now
+
+T14+ days: Payout
+  → Instructor creates PayoutRequest
+  → Admin approves
+  → AvailableBalance → HoldBalance → TotalWithdrawn
+```
+
+#### Service Implementation Priority
+
+**Phase 2 - Core Services (Current Focus):**
+
+1. **OrderService** (P0 - Critical) - Foundation for everything
+2. **PaymentService** (P0 - Critical) - VNPay integration
+3. **CouponService** (P1 - High) - Can develop in parallel
+4. **CouponUsageService** (P1 - High) - Validation logic
+5. **InstructorWalletService** (P1 - High) - Balance management
+6. **TransactionService** (P2 - Medium) - Audit logging
+7. **SettlementService** (P1 - High) - Background job
+8. **PayoutService** (P2 - Medium) - Withdrawal workflow
+
+**Required Reading per Service:**
+
+| Service                 | REQs                | BRs                                | Implementation Notes                 |
+| ----------------------- | ------------------- | ---------------------------------- | ------------------------------------ |
+| OrderService            | 07.01, 07.02, 07.04 | BR-04, BR-11                       | Snapshot logic, status state machine |
+| PaymentService          | 07.02               | BR-11, BR-19, NFR-07.01, NFR-07.02 | HMAC verification, idempotency       |
+| CouponService           | 07.03               | BR-11                              | Usage limits, expiry validation      |
+| CouponUsageService      | 07.03               | BR-11                              | Per-user tracking                    |
+| InstructorWalletService | 07.09               | BR-19, NFR-07.02                   | 3-tier balance system                |
+| SettlementService       | 07.09               | BR-05, BR-19                       | Background job, 14-day escrow        |
+| PayoutService           | 07.09               | BR-19                              | Admin approval, 500k minimum         |
+| TransactionService      | 07.09               | BR-19, NFR-07.02                   | Immutable audit trail                |
+
+#### Integration with Other Services
+
+**→ Catalog Service (HTTP Client):**
+
+- Validate course existence and pricing before order creation
+- Update course statistics (TotalStudents) after enrollment
+
+**→ Identity Service (HTTP Client):**
+
+- Verify instructor status before allowing course creation
+- Consume `InstructorApprovalEvent` to create wallet
+
+**→ Learning Service (Events):**
+
+- Publish `OrderCompletedEvent` after payment success
+- Learning service creates Enrollment
+- Consume `FreeEnrollmentOrderRequestEvent` for free courses
+
+**→ Integration Service (Events):**
+
+- Publish `SettlementCompletedEvent` → Email notification
+- Publish `PayoutCompletedEvent` → Email notification
+
+#### Development Workflow Rules
+
+**BEFORE writing ANY code for Sale Service:**
+
+1. ✅ Read [docs/requirements/07-PAYMENT-ENROLLMENT.md](../docs/requirements/07-PAYMENT-ENROLLMENT.md)
+2. ✅ Review business rules (BR-04, BR-05, BR-11, BR-19, NFR-07.01, NFR-07.02)
+3. ✅ Check entity design in [src/Services/Sale/Beyond8.Sale.Domain/Entities/](../src/Services/Sale/Beyond8.Sale.Domain/Entities/)
+4. ✅ Review interface definitions in [src/Services/Sale/Beyond8.Sale.Application/Interfaces/](../src/Services/Sale/Beyond8.Sale.Application/Interfaces/)
+
+**DURING implementation:**
+
+1. ✅ Cross-check every feature against requirements
+2. ✅ Add code comments referencing requirements: `// Per BR-19: 70-30 split`
+3. ✅ Use Decimal for all monetary values (not Float per NFR-07.02)
+4. ✅ Implement HMAC signature verification for webhooks (NFR-07.01)
+5. ✅ Follow idempotency pattern for payment callbacks
+6. ❌ DO NOT add features not in requirements
+7. ❌ DO NOT implement refund logic (Phase 3)
+
+**BEFORE committing:**
+
+1. ✅ Verify no scope creep (all features in requirements)
+2. ✅ All acceptance criteria met
+3. ✅ Unit tests cover business rules
+4. ✅ Error messages in Vietnamese for user-facing validation
+
+**When in doubt:**
+
+- ❌ DO NOT guess or make assumptions
+- ✅ ASK team/lead for clarification
+- ✅ Document questions in standup
+- **Priority order**: Requirements > Implementation Plan > Entity Comments
 
 ## Event-Driven Architecture
 

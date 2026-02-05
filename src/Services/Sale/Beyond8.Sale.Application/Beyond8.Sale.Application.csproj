@@ -7,7 +7,20 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\..\shared\Beyond8.Common\Beyond8.Common.csproj" />
     <ProjectReference Include="..\Beyond8.Sale.Domain\Beyond8.Sale.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Clients\" />
+    <Folder Include="Consumers\" />
+    <Folder Include="Dtos\" />
+    <Folder Include="Helpers\" />
+    <Folder Include="Mappings\" />
+    <Folder Include="Services\" />
+    <Folder Include="Services\Implements\" />
+    <Folder Include="Services\Interfaces\" />
+    <Folder Include="Validators\" />
   </ItemGroup>
 
 </Project>

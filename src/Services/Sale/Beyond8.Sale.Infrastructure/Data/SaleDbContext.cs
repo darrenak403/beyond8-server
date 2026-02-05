@@ -21,48 +21,134 @@ public class SaleDbContext : BaseDbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
+
+        // Order Configuration
         modelBuilder.Entity<Order>(entity =>
         {
             entity.HasQueryFilter(e => e.DeletedAt == null);
+
+            // Unique Constraints
             entity.HasIndex(e => e.OrderNumber).IsUnique();
+
+            // Performance Indexes
             entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.PaidAt);
+            entity.HasIndex(e => new { e.Status, e.PaidAt });
+            entity.HasIndex(e => e.SettlementEligibleAt)
+                .HasFilter("\"IsSettled\" = false AND \"SettlementEligibleAt\" IS NOT NULL");
+
+            // JSONB Column
+            entity.Property(e => e.PaymentDetails)
+                .HasColumnType("jsonb");
         });
 
+        // OrderItem Configuration
         modelBuilder.Entity<OrderItem>(entity =>
         {
             entity.HasQueryFilter(e => e.DeletedAt == null);
+
+            entity.HasIndex(e => e.OrderId);
+            entity.HasIndex(e => e.CourseId);
+            entity.HasIndex(e => e.InstructorId);
         });
 
+        // Payment Configuration
         modelBuilder.Entity<Payment>(entity =>
         {
             entity.HasQueryFilter(e => e.DeletedAt == null);
+
+            // Unique Constraints
+            entity.HasIndex(e => e.PaymentNumber).IsUnique();
+
+            // Performance Indexes
+            entity.HasIndex(e => e.OrderId);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => new { e.Provider, e.Status });
+            entity.HasIndex(e => e.ExternalTransactionId);
+            entity.HasIndex(e => e.PaidAt);
+
+            // JSONB Column
+            entity.Property(e => e.Metadata)
+                .HasColumnType("jsonb");
         });
 
+        // Coupon Configuration
         modelBuilder.Entity<Coupon>(entity =>
         {
             entity.HasQueryFilter(e => e.DeletedAt == null);
+
+            // Unique Constraints
             entity.HasIndex(e => e.Code).IsUnique();
+
+            // Performance Indexes
+            entity.HasIndex(e => new { e.IsActive, e.ValidFrom, e.ValidTo });
+            entity.HasIndex(e => e.ApplicableInstructorId)
+                .HasFilter("\"ApplicableInstructorId\" IS NOT NULL");
+            entity.HasIndex(e => e.ApplicableCourseId)
+                .HasFilter("\"ApplicableCourseId\" IS NOT NULL");
         });
 
+        // CouponUsage Configuration
         modelBuilder.Entity<CouponUsage>(entity =>
         {
             entity.HasQueryFilter(e => e.DeletedAt == null);
+
+            entity.HasIndex(e => e.CouponId);
+            entity.HasIndex(e => e.OrderId);
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => new { e.CouponId, e.UserId });
         });
 
+        // InstructorWallet Configuration
         modelBuilder.Entity<InstructorWallet>(entity =>
         {
             entity.HasQueryFilter(e => e.DeletedAt == null);
+
+            // Unique Constraints
             entity.HasIndex(e => e.InstructorId).IsUnique();
+
+            // Performance Indexes
+            entity.HasIndex(e => new { e.IsActive, e.AvailableBalance });
+
+            // JSONB Column
+            entity.Property(e => e.BankAccountInfo)
+                .HasColumnType("jsonb");
         });
 
+        // PayoutRequest Configuration
         modelBuilder.Entity<PayoutRequest>(entity =>
         {
             entity.HasQueryFilter(e => e.DeletedAt == null);
+
+            // Unique Constraints
+            entity.HasIndex(e => e.RequestNumber).IsUnique();
+
+            // Performance Indexes
+            entity.HasIndex(e => e.WalletId);
+            entity.HasIndex(e => e.InstructorId);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.RequestedAt);
+            entity.HasIndex(e => new { e.Status, e.RequestedAt });
         });
 
+        // TransactionLedger Configuration
         modelBuilder.Entity<TransactionLedger>(entity =>
         {
             entity.HasQueryFilter(e => e.DeletedAt == null);
+
+            // Performance Indexes
+            entity.HasIndex(e => new { e.WalletId, e.CreatedAt });
+            entity.HasIndex(e => new { e.ReferenceId, e.ReferenceType });
+            entity.HasIndex(e => e.Type);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.AvailableAt)
+                .HasFilter("\"Status\" = 0 AND \"AvailableAt\" IS NOT NULL");
+
+            // JSONB Column
+            entity.Property(e => e.Metadata)
+                .HasColumnType("jsonb");
         });
     }
 }

@@ -1,5 +1,10 @@
 namespace Beyond8.Sale.Domain.Enums;
 
+/// <summary>
+/// Payout request workflow status
+/// Requested -> Approved -> Processing -> Completed
+/// Requested -> Rejected
+/// </summary>
 public enum PayoutStatus
 {
     Requested = 0,

@@ -816,4 +816,42 @@ public class CourseService(
             return ApiResponse<CourseDetailResponse>.FailureResponse("Đã xảy ra lỗi khi lấy chi tiết khóa học.");
         }
     }
+
+    public async Task<ApiResponse<CourseDetailResponse>> GetCourseDetailsForAdminAsync(Guid courseId)
+    {
+        try
+        {
+            var course = await unitOfWork.CourseRepository
+                .AsQueryable()
+                .Include(c => c.Category)
+                .Include(c => c.Documents)
+                .Include(c => c.Sections)
+                    .ThenInclude(s => s.Lessons)
+                        .ThenInclude(l => l.Video)
+                .Include(c => c.Sections)
+                    .ThenInclude(s => s.Lessons)
+                        .ThenInclude(l => l.Text)
+                .Include(c => c.Sections)
+                    .ThenInclude(s => s.Lessons)
+                        .ThenInclude(l => l.Quiz)
+                .FirstOrDefaultAsync(c => c.Id == courseId && c.IsActive);
+
+            if (course == null)
+            {
+                logger.LogWarning("Course not found: {CourseId}", courseId);
+                return ApiResponse<CourseDetailResponse>.FailureResponse("Khóa học không tồn tại.");
+            }
+
+            logger.LogInformation("Admin/Instructor accessed course details: {CourseId}", courseId);
+
+            return ApiResponse<CourseDetailResponse>.SuccessResponse(
+                course.ToDetailResponse(),
+                "Lấy chi tiết khóa học thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting course details for admin: {CourseId}", courseId);
+            return ApiResponse<CourseDetailResponse>.FailureResponse("Đã xảy ra lỗi khi lấy chi tiết khóa học.");
+        }
+    }
 }
