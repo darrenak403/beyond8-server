@@ -35,6 +35,7 @@ namespace Beyond8.Catalog.Api.Bootstrapping
                 config.AddConsumer<InstructorHiddenEventConsumer>();
                 config.AddConsumer<InstructorApprovalEventConsumer>();
                 config.AddConsumer<CourseEnrollmentCountChangedEventConsumer>();
+                config.AddConsumer<CourseRatingUpdatedEventConsumer>();
                 config.AddConsumer<CacheInvalidateEventConsumer>();
                 config.AddConsumer<AssignmentDeletedEventConsumer>();
             });
