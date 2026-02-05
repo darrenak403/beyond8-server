@@ -22,7 +22,8 @@ namespace Beyond8.Catalog.Domain.Repositories.Interfaces
             bool? isActive,
             bool? isDescending,
             bool? isDescendingPrice,
-            bool? isRandom);
+            bool? isRandom,
+            List<Guid>? excludedCourseIds = null);
 
         Task<(List<Course> Items, int TotalCount)> SearchCoursesInstructorAsync(
             int pageNumber,
@@ -64,6 +65,7 @@ namespace Beyond8.Catalog.Domain.Repositories.Interfaces
         Task<(List<Course> Items, int TotalCount)> FullTextSearchCoursesAsync(
             int pageNumber,
             int pageSize,
-            string keyword);
+            string keyword,
+            List<Guid>? excludedCourseIds = null);
     }
 }

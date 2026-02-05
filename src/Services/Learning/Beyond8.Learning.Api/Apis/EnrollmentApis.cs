@@ -38,7 +38,24 @@ public static class EnrollmentApis
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
+        group.MapGet("/my-course-ids", GetMyEnrolledCourseIdsAsync)
+            .WithName("GetMyEnrolledCourseIds")
+            .WithDescription("Lấy danh sách ID khóa học đã đăng ký của user hiện tại")
+            .RequireAuthorization()
+            .Produces<ApiResponse<List<Guid>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<List<Guid>>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
         return group;
+    }
+
+    private static async Task<IResult> GetMyEnrolledCourseIdsAsync(
+        [FromServices] IEnrollmentService enrollmentService,
+        [FromServices] ICurrentUserService currentUserService
+    )
+    {
+        var result = await enrollmentService.GetEnrolledCourseIdsAsync(currentUserService.UserId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
     private static async Task<IResult> CheckEnrollmentAsync(

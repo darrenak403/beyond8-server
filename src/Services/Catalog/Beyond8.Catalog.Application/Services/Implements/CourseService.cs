@@ -12,6 +12,8 @@ using Beyond8.Catalog.Application.Clients.Learning;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Beyond8.Common.Caching;
+using Beyond8.Common.Security;
 
 namespace Beyond8.Catalog.Application.Services.Implements;
 
@@ -20,6 +22,8 @@ public class CourseService(
     IUnitOfWork unitOfWork,
     IIdentityClient identityClient,
     ILearningClient learningClient,
+    ICacheService cacheService,
+    ICurrentUserService currentUserService,
     IPublishEndpoint publishEndpoint) : ICourseService
 {
 
@@ -93,6 +97,32 @@ public class CourseService(
         {
             var (pageNumber, pageSize) = NormalizePagination(request);
 
+            List<Guid>? excludedCourseIds = null;
+            if (currentUserService.IsAuthenticated)
+            {
+                var cacheKey = $"enrolled_courses:{currentUserService.UserId}";
+                excludedCourseIds = await cacheService.GetAsync<List<Guid>>(cacheKey);
+
+                if (excludedCourseIds == null)
+                {
+                    var enrolledResult = await learningClient.GetEnrolledCourseIdsAsync();
+                    if (enrolledResult.IsSuccess)
+                    {
+                        excludedCourseIds = enrolledResult.Data;
+                        // Cache trong 10 phút
+                        await cacheService.SetAsync(cacheKey, excludedCourseIds, TimeSpan.FromMinutes(10));
+                        logger.LogInformation("Cached enrolled course IDs for user {UserId}", currentUserService.UserId);
+                    }
+                    else
+                    {
+                        logger.LogWarning("Failed to get enrolled courses for exclusion: {Error}", enrolledResult.Message);
+                    }
+                }
+                else
+                {
+                    logger.LogInformation("Retrieved enrolled course IDs from cache for user {UserId}", currentUserService.UserId);
+                }
+            }
             // Public endpoint: always filter by Published status and active courses
             var (courses, totalCount) = await unitOfWork.CourseRepository.SearchCoursesAsync(
                 pageNumber,
@@ -110,7 +140,8 @@ public class CourseService(
                 isActive: true,
                 isDescending: request.IsDescending,
                 isDescendingPrice: request.IsDescendingPrice,
-                isRandom: request.IsRandom
+                isRandom: request.IsRandom,
+                excludedCourseIds: excludedCourseIds
             );
 
             var courseResponses = courses.Select(c => c.ToSimpleResponse()).ToList();
@@ -141,12 +172,42 @@ public class CourseService(
                 _ => request.PageSize
             };
 
+            List<Guid>? excludedCourseIds = null;
+            if (currentUserService.IsAuthenticated)
+            {
+                var cacheKey = $"enrolled_courses:{currentUserService.UserId}";
+                excludedCourseIds = await cacheService.GetAsync<List<Guid>>(cacheKey);
+
+                if (excludedCourseIds == null)
+                {
+                    var enrolledResult = await learningClient.GetEnrolledCourseIdsAsync();
+                    if (enrolledResult.IsSuccess)
+                    {
+                        excludedCourseIds = enrolledResult.Data;
+                        // Cache trong 10 phút
+                        await cacheService.SetAsync(cacheKey, excludedCourseIds, TimeSpan.FromMinutes(10));
+                        logger.LogInformation("Cached enrolled course IDs for user {UserId}", currentUserService.UserId);
+                    }
+                    else
+                    {
+                        logger.LogWarning("Failed to get enrolled courses for exclusion: {Error}", enrolledResult.Message);
+                    }
+                }
+                else
+                {
+                    logger.LogInformation("Retrieved enrolled course IDs from cache for user {UserId}", currentUserService.UserId);
+                }
+            }
+
             logger.LogInformation("Full text search courses with keyword: {Keyword}", request.Keyword);
+
 
             var (courses, totalCount) = await unitOfWork.CourseRepository.FullTextSearchCoursesAsync(
                 pageNumber,
                 pageSize,
-                request.Keyword ?? string.Empty
+                request.Keyword ?? string.Empty,
+
+                excludedCourseIds: excludedCourseIds
             );
 
             var courseResponses = courses.Select(c => c.ToResponse()).ToList();

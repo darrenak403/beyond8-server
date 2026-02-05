@@ -53,7 +53,8 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
             bool? isActive,
             bool? isDescending,
             bool? isDescendingPrice,
-            bool? isRandom)
+            bool? isRandom,
+            List<Guid>? excludedCourseIds = null)
         {
             var query = context.Courses
                 .Include(c => c.Category)
@@ -110,6 +111,11 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
             if (minRating.HasValue)
             {
                 query = query.Where(c => c.AvgRating >= minRating.Value);
+            }
+
+            if (excludedCourseIds != null && excludedCourseIds.Any())
+            {
+                query = query.Where(c => !excludedCourseIds.Contains(c.Id));
             }
 
             // minStudents: không lưu trên Course nữa; có thể lấy từ Learning service sau nếu cần filter.
@@ -401,7 +407,8 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
         public async Task<(List<Course> Items, int TotalCount)> FullTextSearchCoursesAsync(
             int pageNumber,
             int pageSize,
-            string keyword)
+            string keyword,
+            List<Guid>? excludedCourseIds = null)
         {
             var query = context.Courses
                 .Include(c => c.Category).ThenInclude(cat => cat.Parent)
@@ -413,6 +420,11 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
             if (!string.IsNullOrWhiteSpace(keyword))
             {
                 query = ApplyFullTextSearch(query, keyword);
+            }
+
+            if (excludedCourseIds != null && excludedCourseIds.Any())
+            {
+                query = query.Where(c => !excludedCourseIds.Contains(c.Id));
             }
 
             var totalCount = await query.CountAsync();

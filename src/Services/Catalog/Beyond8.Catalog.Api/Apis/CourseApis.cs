@@ -210,7 +210,8 @@ public static class CourseApis
 
     private static async Task<IResult> GetAllCoursesAsync(
         [FromServices] ICourseService courseService,
-        [AsParameters] PaginationCourseSearchRequest pagination)
+        [AsParameters] PaginationCourseSearchRequest pagination,
+        [FromServices] ICurrentUserService currentUserService)
     {
         var result = await courseService.GetAllCoursesAsync(pagination);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
@@ -218,9 +219,10 @@ public static class CourseApis
 
     private static async Task<IResult> FullTextSearchCoursesAsync(
         [FromServices] ICourseService courseService,
-        [AsParameters] FullTextSearchRequest request)
+        [AsParameters] FullTextSearchRequest pagination,
+        [FromServices] ICurrentUserService currentUserService)
     {
-        var result = await courseService.FullTextSearchCoursesAsync(request);
+        var result = await courseService.FullTextSearchCoursesAsync(pagination);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 

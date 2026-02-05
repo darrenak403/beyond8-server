@@ -368,4 +368,6 @@ FodyWeavers.xsd
 !vicobi.user/
 
 .vscode
+# Keep VS Code settings private (contains sensitive DB credentials)
+.vscode/settings.json
 NUL

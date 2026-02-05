@@ -7,4 +7,5 @@ public interface IEnrollmentService
 {
     Task<ApiResponse<EnrollmentResponse>> EnrollFreeAsync(Guid userId, EnrollFreeRequest request);
     Task<ApiResponse<bool>> IsUserEnrolledInCourseAsync(Guid userId, Guid courseId);
+    Task<ApiResponse<List<Guid>>> GetEnrolledCourseIdsAsync(Guid userId);
 }
