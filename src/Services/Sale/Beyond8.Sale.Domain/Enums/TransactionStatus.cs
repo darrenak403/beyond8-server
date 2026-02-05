@@ -1,5 +1,8 @@
 namespace Beyond8.Sale.Domain.Enums;
 
+/// <summary>
+/// Status of a transaction in ledger
+/// </summary>
 public enum TransactionStatus
 {
     Pending = 0,

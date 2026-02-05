@@ -1,17 +1,59 @@
 # Sale Service Implementation Plan
 
+**Last Updated:** February 5, 2026  
+**Status:** Phase 1 Completed ✅ | Phase 2 In Progress 🚧  
+**Detailed Tasks:** See [sale-service-tasks.md](sale-service-tasks.md)
+
 ## 📋 Tổng quan Implementation
 
 Sale Service là một microservice quan trọng trong hệ thống Beyond8, xử lý tất cả các hoạt động thương mại bao gồm:
 
 - Quản lý đơn hàng (Orders)
-- Xử lý thanh toán (Payments)
-- Quản lý mã giảm giá (Coupons)
-- Ví giảng viên (Instructor Wallets)
+- Xử lý thanh toán (Payments) với VNPay/PayOS
+- Quản lý mã giảm giá (Coupons) và usage tracking
+- Ví giảng viên (Instructor Wallets) với 14-day escrow
 - Thanh toán cho giảng viên (Payouts)
 - Ghi log giao dịch (Transactions)
+- **Tự động settlement** sau 14 ngày (background job)
 
-## 🎯 Thứ tự Ưu tiên Triển khai
+## �️ Architecture Status
+
+### ✅ Phase 1: Foundation (COMPLETED)
+
+**Database Schema:**
+
+- ✅ All 8 entities updated with ~30 new fields
+- ✅ All 6 enums enhanced with documentation
+- ✅ DbContext configured with 30+ indexes (UNIQUE, filtered, composite)
+- ✅ JSONB columns configured (PaymentDetails, Metadata, BankAccountInfo)
+- ✅ Migration generated and ready: `20260205085030_UpdateSaleEntities`
+
+**Service Interfaces (8 total):**
+
+1. ✅ **ICouponService** (9 methods - refactored)
+   - GetActiveCouponsAsync, GetCouponsByInstructorAsync, ToggleCouponStatusAsync
+2. ✅ **ICouponUsageService** (8 methods - NEW)
+   - ValidateCouponAsync, RecordUsageAsync, GetCouponUsageStatisticsAsync
+3. ✅ **IOrderService** (8 methods - refactored)
+   - GetOrdersByStatusAsync, GetOrderStatisticsAsync
+4. ✅ **IPaymentService** (8 methods - refactored)
+   - HandleVNPayCallbackAsync, HandlePayOSCallbackAsync, CheckPaymentStatusAsync
+5. ✅ **IInstructorWalletService** (4 methods)
+6. ✅ **ITransactionService** (5 methods)
+7. ✅ **ISettlementService** (7 methods - NEW)
+   - ProcessPendingSettlementsAsync, SettleOrderAsync, ForceSettleAsync
+8. ✅ **IPayoutService** (6 methods)
+
+**DTOs Created (9 new classes):**
+
+- ✅ Settlement DTOs: SettlementStatusResponse, SettlementStatisticsResponse
+- ✅ Order DTOs: OrderStatisticsResponse
+- ✅ CouponUsage DTOs: CouponValidationResult, CouponUsageResponse, CouponUsageStatisticsResponse, CreateCouponUsageRequest
+- ✅ Payment DTOs: VNPayCallbackRequest, PayOSCallbackRequest
+
+---
+
+## �🎯 Thứ tự Ưu tiên Triển khai
 
 ### 1️⃣ IOrderService (Ưu tiên cao nhất - Core functionality)
 
@@ -156,125 +198,265 @@ Sale Service là một microservice quan trọng trong hệ thống Beyond8, x�
 4. Integrate với tất cả other services
 5. Test với comprehensive transaction data
 
-## 📈 Workflow Dependencies
+---
 
-```mermaid
-graph TD
-    A[IOrderService] --> B[IPaymentService]
-    B --> D[IInstructorWalletService]
-    D --> E[IPayoutService]
-    A --> C[ICouponService]
-    B --> F[ITransactionService]
-    C --> F
-    D --> F
-    E --> F
+## 📦 PHASE 3: API Endpoints & Validation
+
+### Task 3.1: Coupon API Endpoints
+
+**Priority:** P1 - High | **Estimate:** 5 SP | **Dependencies:** Task 2.1, Task 2.2
+
+**Endpoints:**
+
+- POST /api/v1/coupons (Admin/Instructor)
+- GET /api/v1/coupons/{code} (Public)
+- PUT /api/v1/coupons/{id}, DELETE /api/v1/coupons/{id}
+- GET /api/v1/coupons, GET /api/v1/coupons/active (cached)
+- GET /api/v1/coupons/instructor/{instructorId}
+- PATCH /api/v1/coupons/{id}/toggle-status
+- POST /api/v1/coupons/validate
+
+**Tasks:** Create CouponEndpoints.cs, add rate limiting, authorization, OpenAPI docs, test with Postman
+
+---
+
+### Task 3.2: Order API Endpoints
+
+**Priority:** P0 - Critical | **Estimate:** 5 SP | **Dependencies:** Task 2.3
+
+**Endpoints:**
+
+- POST /api/v1/orders, GET /api/v1/orders/{id}
+- PATCH /api/v1/orders/{id}/status, POST /api/v1/orders/{id}/cancel
+- GET /api/v1/orders/my-orders, GET /api/v1/orders/instructor/{instructorId}
+- GET /api/v1/orders/status/{status}, GET /api/v1/orders/statistics
+
+**Tasks:** Create OrderEndpoints.cs, add rate limiting, authorization, OpenAPI docs, test all endpoints
+
+---
+
+### Task 3.3: Payment API Endpoints
+
+**Priority:** P0 - Critical | **Estimate:** 5 SP | **Dependencies:** Task 2.4
+
+**Endpoints:**
+
+- POST /api/v1/payments/process
+- POST /api/v1/payments/vnpay/callback (AllowAnonymous)
+- POST /api/v1/payments/payos/callback (AllowAnonymous)
+- GET /api/v1/payments/{id}/status, GET /api/v1/payments/order/{orderId}
+- GET /api/v1/payments/my-payments
+
+**Tasks:** Create PaymentEndpoints.cs, webhook authentication, error handling, test with provider sandbox
+
+---
+
+### Task 3.4: Wallet & Payout API Endpoints
+
+**Priority:** P2 - Medium | **Estimate:** 3 SP | **Dependencies:** Task 2.5, Task 2.8
+
+**Wallet Endpoints:**
+
+- GET /api/v1/wallets/my-wallet (Instructor)
+- GET /api/v1/wallets/{instructorId} (Admin)
+- GET /api/v1/wallets/{instructorId}/transactions
+
+**Payout Endpoints:**
+
+- POST /api/v1/payouts/request, GET /api/v1/payouts/{id}
+- POST /api/v1/payouts/{id}/approve, POST /api/v1/payouts/{id}/reject
+- GET /api/v1/payouts, GET /api/v1/payouts/my-requests
+
+**Tasks:** Create WalletEndpoints.cs & PayoutEndpoints.cs, authorization, OpenAPI docs
+
+---
+
+### Task 3.5: Settlement API Endpoints (Admin Only)
+
+**Priority:** P2 - Medium | **Estimate:** 3 SP | **Dependencies:** Task 2.7
+
+**Endpoints:**
+
+- POST /api/v1/settlements/process (manual trigger)
+- POST /api/v1/settlements/{orderId}/settle
+- POST /api/v1/settlements/{orderId}/force-settle
+- GET /api/v1/settlements/pending, GET /api/v1/settlements/{orderId}/status
+- GET /api/v1/settlements/upcoming, GET /api/v1/settlements/statistics
+
+**Tasks:** Create SettlementEndpoints.cs, Admin-only authorization, OpenAPI docs
+
+---
+
+## 📦 PHASE 4: Event-Driven Integration
+
+### Task 4.1: Event Definitions
+
+**Priority:** P1 - High | **Estimate:** 2 SP
+
+**Events to create:**
+
+- OrderCreatedEvent, OrderCompletedEvent, OrderCancelledEvent, OrderRefundedEvent
+- SettlementCompletedEvent, PayoutRequestedEvent, PayoutCompletedEvent
+
+---
+
+### Task 4.2: Event Publishers
+
+**Priority:** P1 - High | **Estimate:** 3 SP | **Dependencies:** Task 4.1, Task 2.3, Task 2.4
+
+**Tasks:** Publish OrderCompletedEvent, OrderCancelledEvent, SettlementCompletedEvent, PayoutCompletedEvent, add retry policy
+
+---
+
+### Task 4.3: Event Consumers
+
+**Priority:** P1 - High | **Estimate:** 5 SP | **Dependencies:** Task 4.1
+
+**Tasks:** Create FreeEnrollmentOrderRequestConsumer, InstructorApprovalEventConsumer, error handling, test event flow
+
+---
+
+## 📦 PHASE 5: Testing & Quality Assurance
+
+### Task 5.1: Unit Tests
+
+**Priority:** P1 - High | **Estimate:** 13 SP
+
+**Coverage:** 80% minimum for all 8 services, mock external dependencies
+
+---
+
+### Task 5.2: Integration Tests
+
+**Priority:** P1 - High | **Estimate:** 8 SP
+
+**Tests:** End-to-end order flow, coupon scenarios, webhook handling, settlement job, event pub/sub
+
+---
+
+### Task 5.3: Load & Performance Tests
+
+**Priority:** P2 - Medium | **Estimate:** 5 SP
+
+**Tests:** 1000 orders/min, concurrent webhooks, 10k order settlement, query optimization
+
+---
+
+## 📦 PHASE 6: Documentation & Deployment
+
+### Task 6.1: API Documentation
+
+**Priority:** P2 - Medium | **Estimate:** 3 SP
+
+**Tasks:** Complete OpenAPI/Swagger, XML comments, Postman collection, API usage guide
+
+---
+
+### Task 6.2: Architecture Documentation
+
+**Priority:** P2 - Medium | **Estimate:** 2 SP
+
+**Tasks:** Update CONCEPTUAL_DATA_MODEL.md, sequence diagrams, event-driven architecture docs
+
+---
+
+### Task 6.3: Deployment Configuration
+
+**Priority:** P1 - High | **Estimate:** 3 SP
+
+**Tasks:** Configure AppHost, connection strings, VNPay credentials (User Secrets), RabbitMQ, background job schedule, docker-compose, health checks
+
+---
+
+## 📊 Summary & Sprint Planning
+
+| Phase                           | Tasks  | Story Points | Duration       |
+| ------------------------------- | ------ | ------------ | -------------- |
+| Phase 1: Foundation (DONE)      | 4      | ~13 SP       | ✅ Complete    |
+| Phase 2: Core Services          | 8      | 81 SP        | 4 sprints      |
+| Phase 3: API Endpoints          | 5      | 21 SP        | 2 sprints      |
+| Phase 4: Event Integration      | 3      | 10 SP        | 1 sprint       |
+| Phase 5: Testing                | 3      | 26 SP        | 2 sprints      |
+| Phase 6: Documentation & Deploy | 3      | 8 SP         | 1 sprint       |
+| **TOTAL**                       | **26** | **159 SP**   | **10 sprints** |
+
+**Sprint Allocation (2 weeks each):**
+
+- Sprint 1-2: Tasks 2.1, 2.2, 2.3 (Coupon + Order)
+- Sprint 3-4: Tasks 2.4, 3.1, 3.2 (Payment + Endpoints)
+- Sprint 5-6: Tasks 2.5, 2.6, 3.3, 4.1 (Wallet + Transaction + Events)
+- Sprint 7-8: Tasks 2.7, 3.5, 4.2, 4.3 (Settlement + Event Integration)
+- Sprint 9: Tasks 2.8, 3.4, 5.1 (Payout + Unit Tests)
+- Sprint 10: Tasks 5.2, 5.3, 6.1, 6.2, 6.3 (Integration Tests + Docs + Deploy)
+
+**Estimated Completion:** 20 weeks (5 months)
+
+---
+
+## 🚀 Quick Start for Development
+
+### Immediate Actions:
+
+1. ✅ Phase 1 completed - Database ready
+2. 🚧 Start Task 2.1 (CouponService) - No dependencies
+3. 🚧 Setup VNPay sandbox account for Task 2.4
+4. 🚧 Define API contracts with Catalog service
+5. 🚧 Setup test database for integration tests
+
+## 📋 ClickUp Import Format
+
+**For quick ClickUp import, use this task naming format:**
+
+### Sprint 1-2 Tasks (Coupon + Order):
+
+```
+[BE-2.1] Implement CouponService - CRUD + validation + caching (5 SP)
+[BE-2.2] Implement CouponUsageService - Validation + tracking + statistics (8 SP)
+[BE-2.3] Implement OrderService - Cart to order + status management + events (13 SP)
 ```
 
-## 💡 Khuyến nghị Implementation
-
-### Phase 1: Core Foundation
-
-1. **Bắt đầu với IOrderService** - Test với data sample
-2. **Tiếp theo IPaymentService** - Integrate VNPay sandbox
-
-### Phase 2: Parallel Development
-
-3. **Parallel với ICouponService** - Nếu team có nhiều người
-
-### Phase 3: Revenue Management
-
-4. **Sau đó IInstructorWalletService** - Khi payment flow hoàn chỉnh
-
-### Phase 4: Finalization
-
-5. **Cuối cùng IPayoutService & ITransactionService** - Khi core flows ổn
-
-## ✅ Benefits của Thứ tự này
-
-- **Minimal Dependencies**: Mỗi service có thể test độc lập
-- **Incremental Testing**: Có thể deploy và test từng phần
-- **Risk Mitigation**: Core functionality được đảm bảo trước
-- **Parallel Development**: Coupon service có thể làm song song
-- **Business Value**: Payment flow hoàn chỉnh sớm
-
-## 🚀 Next Steps
-
-1. Bắt đầu implement `OrderService` với basic CRUD
-2. Setup VNPay integration cho `PaymentService`
-3. Tạo unit tests cho từng service
-4. Implement API endpoints theo thứ tự
-5. Integration testing giữa các services
-
-## 📋 ClickUp Tasks
-
-### 🔥 **PHASE 1: CORE FOUNDATION (Ưu tiên Cao)**
-
-#### **1. IOrderService Implementation**
+### Sprint 3-4 Tasks (Payment + Endpoints):
 
 ```
-[BE] Implement CreateOrderAsync - Tạo đơn hàng từ cart với validation và coupon áp dụng
-[BE] Implement GetOrderByIdAsync - Lấy thông tin chi tiết đơn hàng theo ID
-[BE] Implement UpdateOrderStatusAsync - Cập nhật trạng thái đơn hàng (Pending->Paid->Completed)
-[BE] Implement CancelOrderAsync - Hủy đơn hàng với business rules validation
-[BE] Implement GetOrdersByUserAsync - Lấy danh sách đơn hàng của user với pagination
-[BE] Implement GetOrdersByInstructorAsync - Lấy đơn hàng chứa courses của instructor
+[BE-2.4] Implement PaymentService - VNPay integration + webhooks + 14-day escrow (21 SP)
+[BE-3.1] Create Coupon API Endpoints - Minimal APIs + authorization (5 SP)
+[BE-3.2] Create Order API Endpoints - Minimal APIs + authorization (5 SP)
 ```
 
-#### **2. IPaymentService Implementation**
+### Sprint 5-6 Tasks (Wallet + Events):
 
 ```
-[BE] Implement ProcessPaymentAsync - Tích hợp VNPay gateway, tạo payment URL
-[BE] Implement ConfirmPaymentAsync - Xử lý webhook confirm từ VNPay
-[BE] Implement RefundPaymentAsync - Xử lý hoàn tiền với VNPay API
-[BE] Implement GetPaymentsByOrderAsync - Lấy lịch sử thanh toán của đơn hàng
-[BE] Implement GetPaymentsByUserAsync - Lấy lịch sử thanh toán của user
+[BE-2.5] Implement InstructorWalletService - Balance management + transactions (8 SP)
+[BE-2.6] Implement TransactionService - Logging + reporting (5 SP)
+[BE-3.3] Create Payment API Endpoints - Webhooks + status checks (5 SP)
+[BE-4.1] Define Sale Service Events - OrderCompleted, Settlement, Payout (2 SP)
 ```
 
-### 🔄 **PHASE 2: PARALLEL DEVELOPMENT (Ưu tiên Trung bình)**
-
-#### **3. ICouponService Implementation**
+### Sprint 7-8 Tasks (Settlement):
 
 ```
-[BE] Implement CreateCouponAsync - Tạo coupon với validation (code unique, type, value)
-[BE] Implement GetCouponByCodeAsync - Lấy coupon theo code để validate
-[BE] Implement UpdateCouponAsync - Cập nhật thông tin coupon
-[BE] Implement DeleteCouponAsync - Xóa coupon (soft delete)
-[BE] Implement GetCouponsAsync - Lấy danh sách coupon cho admin management
-[BE] Implement ApplyCouponAsync - Validate và tính toán giảm giá cho order
+[BE-2.7] Implement SettlementService - 14-day processing + background job (13 SP)
+[BE-3.5] Create Settlement API Endpoints - Admin endpoints (3 SP)
+[BE-4.2] Implement Event Publishers - Publish on state changes (3 SP)
+[BE-4.3] Implement Event Consumers - Free enrollment + wallet creation (5 SP)
 ```
 
-### 💰 **PHASE 3: REVENUE MANAGEMENT (Ưu tiên Trung bình)**
-
-#### **4. IInstructorWalletService Implementation**
+### Sprint 9 Tasks (Payout + Tests):
 
 ```
-[BE] Implement GetWalletByInstructorAsync - Lấy thông tin ví và số dư
-[BE] Implement AddFundsAsync - Thêm tiền vào ví từ sales revenue
-[BE] Implement DeductFundsAsync - Trừ tiền từ ví cho payouts
-[BE] Implement GetWalletTransactionsAsync - Lịch sử giao dịch ví
+[BE-2.8] Implement PayoutService - Withdrawal workflow + approval (8 SP)
+[BE-3.4] Create Wallet & Payout API Endpoints - Instructor + Admin (3 SP)
+[BE-5.1] Write Unit Tests - 80% coverage for all services (13 SP)
 ```
 
-### 🏦 **PHASE 4: FINALIZATION (Ưu tiên Thấp)**
-
-#### **5. IPayoutService Implementation**
+### Sprint 10 Tasks (Final):
 
 ```
-[BE] Implement CreatePayoutRequestAsync - Tạo yêu cầu rút tiền với validation
-[BE] Implement GetPayoutRequestByIdAsync - Lấy chi tiết payout request
-[BE] Implement ApprovePayoutRequestAsync - Admin approve payout và transfer tiền
-[BE] Implement RejectPayoutRequestAsync - Admin reject với lý do
-[BE] Implement GetPayoutRequestsAsync - Admin xem tất cả payout requests
-[BE] Implement GetPayoutRequestsByInstructorAsync - Instructor xem lịch sử payouts
-```
-
-#### **6. ITransactionService Implementation**
-
-```
-[BE] Implement CreateTransactionAsync - Ghi log tất cả giao dịch
-[BE] Implement GetTransactionByIdAsync - Lấy chi tiết transaction
-[BE] Implement GetTransactionsByUserAsync - Lịch sử giao dịch của user
-[BE] Implement GetAllTransactionsAsync - Admin xem tất cả transactions
-[BE] Implement GetTotalRevenueAsync - Báo cáo doanh thu theo khoảng thời gian
+[BE-5.2] Write Integration Tests - End-to-end flows (8 SP)
+[BE-5.3] Load & Performance Tests - Optimization (5 SP)
+[BE-6.1] Complete API Documentation - Swagger + Postman (3 SP)
+[BE-6.2] Update Architecture Documentation - Sequence diagrams (2 SP)
+[BE-6.3] Configure Deployment - AppHost + Docker + Health checks (3 SP)
 ```
 
 ---
