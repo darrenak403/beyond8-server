@@ -85,4 +85,18 @@ public static class EnrollmentMappings
             LastAccessedLessonId = entity.LastAccessedLessonId
         };
     }
+
+    public static EnrollmentSimpleResponse ToSimpleResponse(this Enrollment entity)
+    {
+        return new EnrollmentSimpleResponse
+        {
+            Id = entity.Id,
+            CourseId = entity.CourseId,
+            CourseTitle = entity.CourseTitle,
+            CourseThumbnailUrl = entity.CourseThumbnailUrl,
+            InstructorId = entity.InstructorId,
+            InstructorName = entity.InstructorName,
+            ProgressPercent = entity.ProgressPercent
+        };
+    }
 }

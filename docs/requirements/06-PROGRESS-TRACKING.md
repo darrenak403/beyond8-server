@@ -69,7 +69,7 @@
 
 **Tiêu Chí Chấp Nhận:**
 
-- **Điều kiện:** 100% Lesson hoàn thành + Điểm trung bình Quiz >= 70% (nếu có).
+- **Điều kiện:** 100% Lesson hoàn thành + Điểm trung bình Quiz >= 70% (nếu có quiz) + Điểm trung bình Assignment >= 5 (nếu có assignment; tất cả bài nộp phải đã được chấm).
 - **Process:**
   - Learning Service kiểm tra điều kiện sau mỗi lần `LessonCompleted`.
   - Nếu đủ điều kiện -> Generate PDF -> Upload S3 -> Lưu URL vào bảng `Certificate`.

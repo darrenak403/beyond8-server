@@ -7,4 +7,5 @@ public interface IUnitOfWork : IBaseUnitOfWork
     IEnrollmentRepository EnrollmentRepository { get; }
     ILessonProgressRepository LessonProgressRepository { get; }
     ISectionProgressRepository SectionProgressRepository { get; }
+    ICertificateRepository CertificateRepository { get; }
 }

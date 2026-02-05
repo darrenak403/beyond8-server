@@ -9,6 +9,7 @@ public class UnitOfWork(LearningDbContext context) : BaseUnitOfWork<LearningDbCo
     private IEnrollmentRepository? _enrollmentRepository;
     private ILessonProgressRepository? _lessonProgressRepository;
     private ISectionProgressRepository? _sectionProgressRepository;
+    private ICertificateRepository? _certificateRepository;
 
     public IEnrollmentRepository EnrollmentRepository =>
         _enrollmentRepository ??= new EnrollmentRepository(context);
@@ -18,4 +19,7 @@ public class UnitOfWork(LearningDbContext context) : BaseUnitOfWork<LearningDbCo
 
     public ISectionProgressRepository SectionProgressRepository =>
         _sectionProgressRepository ??= new SectionProgressRepository(context);
+
+    public ICertificateRepository CertificateRepository =>
+        _certificateRepository ??= new CertificateRepository(context);
 }

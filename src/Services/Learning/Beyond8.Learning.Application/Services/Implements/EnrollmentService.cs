@@ -39,11 +39,6 @@ public class EnrollmentService(
             return ApiResponse<EnrollmentResponse>.FailureResponse("Khóa học không miễn phí. Vui lòng thanh toán để đăng ký.");
         }
 
-        if (structure.Status != CourseStatusPublished)
-        {
-            return ApiResponse<EnrollmentResponse>.FailureResponse("Khóa học chưa được xuất bản hoặc không khả dụng.");
-        }
-
         var existing = await unitOfWork.EnrollmentRepository.FindOneAsync(e =>
             e.UserId == userId && e.CourseId == courseId && e.DeletedAt == null);
         if (existing != null)
@@ -78,14 +73,16 @@ public class EnrollmentService(
         await unitOfWork.SaveChangesAsync();
 
         var totalStudents = await unitOfWork.EnrollmentRepository.CountActiveByCourseIdAsync(courseId);
-        await publishEndpoint.Publish(new CourseEnrollmentCountChangedEvent(
-            courseId,
-            totalStudents,
-            DateTime.UtcNow,
-            InstructorId: structure.InstructorId,
-            Delta: 1));
 
-        await publishEndpoint.Publish(new CacheInvalidateEvent($"enrolled_courses:{userId}"));
+        await Task.WhenAll(
+            publishEndpoint.Publish(new CourseEnrollmentCountChangedEvent(
+                courseId, totalStudents, DateTime.UtcNow, structure.InstructorId, 1)),
+
+            publishEndpoint.Publish(new CacheInvalidateEvent($"enrolled_courses:{userId}")),
+
+            publishEndpoint.Publish(new FreeEnrollmentOrderRequestEvent(
+                userId, courseId, enrollment.Id, 0))
+        );
 
         logger.LogInformation("User {UserId} enrolled in free course {CourseId}, EnrollmentId {EnrollmentId}",
             userId, courseId, enrollment.Id);
@@ -116,5 +113,37 @@ public class EnrollmentService(
         var enrollment = await unitOfWork.EnrollmentRepository.FindOneAsync(e =>
             e.UserId == userId && e.CourseId == courseId && e.DeletedAt == null);
         return ApiResponse<bool>.SuccessResponse(enrollment != null, enrollment != null ? "Đã đăng ký khóa học." : "Chưa đăng ký khóa học.");
+    }
+
+    public async Task<ApiResponse<List<EnrollmentSimpleResponse>>> GetEnrolledCoursesAsync(Guid userId)
+    {
+        try
+        {
+            var enrollments = await unitOfWork.EnrollmentRepository.GetEnrolledCoursesAsync(userId);
+            return ApiResponse<List<EnrollmentSimpleResponse>>.SuccessResponse(enrollments.Select(e => e.ToSimpleResponse()).ToList(), "Lấy danh sách khóa học đã đăng ký thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Lỗi khi lấy danh sách khóa học đã đăng ký cho người dùng {UserId}", userId);
+            return ApiResponse<List<EnrollmentSimpleResponse>>.FailureResponse("Lấy danh sách khóa học đã đăng ký thất bại.");
+        }
+    }
+
+    public async Task<ApiResponse<EnrollmentResponse>> GetEnrollmentByIdAsync(Guid id, Guid userId)
+    {
+        try
+        {
+            var enrollment = await unitOfWork.EnrollmentRepository.FindOneAsync(e => e.Id == id && e.UserId == userId && e.DeletedAt == null);
+            if (enrollment == null)
+            {
+                return ApiResponse<EnrollmentResponse>.FailureResponse("Khóa học đã đăng ký không tồn tại.");
+            }
+            return ApiResponse<EnrollmentResponse>.SuccessResponse(enrollment.ToResponse(), "Lấy thông tin khóa học đã đăng ký thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Lỗi khi lấy thông tin khóa học đã đăng ký theo ID {Id} cho người dùng {UserId}", id, userId);
+            return ApiResponse<EnrollmentResponse>.FailureResponse("Lấy thông tin khóa học đã đăng ký thất bại.");
+        }
     }
 }

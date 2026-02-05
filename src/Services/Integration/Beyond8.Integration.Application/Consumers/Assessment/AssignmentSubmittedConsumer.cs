@@ -53,6 +53,7 @@ public class AssignmentSubmittedConsumer(
                 await publishEndpoint.Publish(new AiGradingCompletedEvent(
                     SubmissionId: message.SubmissionId,
                     AssignmentId: message.AssignmentId,
+                    SectionId: message.SectionId,
                     StudentId: message.StudentId,
                     AiScore: gradingResult.Data.Score,
                     AiFeedback: feedbackJson,
@@ -70,6 +71,7 @@ public class AssignmentSubmittedConsumer(
                 await publishEndpoint.Publish(new AiGradingCompletedEvent(
                     SubmissionId: message.SubmissionId,
                     AssignmentId: message.AssignmentId,
+                    SectionId: message.SectionId,
                     StudentId: message.StudentId,
                     AiScore: 0,
                     AiFeedback: "{}",
@@ -92,6 +94,7 @@ public class AssignmentSubmittedConsumer(
             await publishEndpoint.Publish(new AiGradingCompletedEvent(
                 SubmissionId: message.SubmissionId,
                 AssignmentId: message.AssignmentId,
+                SectionId: message.SectionId,
                 StudentId: message.StudentId,
                 AiScore: 0,
                 AiFeedback: "{}",

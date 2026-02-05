@@ -21,4 +21,12 @@ public class EnrollmentRepository(LearningDbContext context) : PostgresRepositor
             .Select(e => e.CourseId)
             .ToListAsync();
     }
+
+    public async Task<List<Enrollment>> GetEnrolledCoursesAsync(Guid userId)
+    {
+        return await context.Enrollments
+            .Where(e => e.UserId == userId && e.DeletedAt == null)
+            .ToListAsync();
+    }
 }
+
