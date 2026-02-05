@@ -16,6 +16,96 @@ Sale Service là một microservice quan trọng trong hệ thống Beyond8, x�
 - Ghi log giao dịch (Transactions)
 - **Tự động settlement** sau 14 ngày (background job)
 
+## 📚 Required Reading Before Implementation
+
+⚠️ **QUAN TRỌNG:** Đọc kỹ tài liệu requirements TRƯỚC KHI CODE. KHÔNG TỰ Ý MỞ RỘNG SCOPE!
+
+### Main Requirements Document
+
+📖 **[docs/requirements/07-PAYMENT-ENROLLMENT.md](../requirements/07-PAYMENT-ENROLLMENT.md)** - YÊU CẦU BẮT BUỘC ĐỌC
+
+Document này chứa TẤT CẢ requirements và business rules cho Sale Service:
+
+- **REQ-07.01:** Enroll Khóa Học Miễn Phí
+- **REQ-07.02:** Thanh Toán Qua VNPay
+- **REQ-07.03:** Áp Dụng Mã Giảm Giá (Coupon)
+- **REQ-07.04:** Lịch Sử Giao Dịch (Student)
+- **REQ-07.06:** Yêu Cầu Hoàn Tiền (Refund)
+- **REQ-07.09:** Quản Lý Ví & Rút Tiền (Instructor Payout)
+
+### Business Rules
+
+- **BR-04:** Truy Cập & Enrollment (Free courses enroll immediately)
+- **BR-05:** Chính Sách Hoàn Tiền (14 days, <10% progress)
+- **BR-11:** Thanh Toán (VNPay, Coupon rules, Transaction encryption)
+- **BR-19:** Phân Chia Doanh Thu & Rút Tiền (70-30 split, 14-day escrow, minimum 500k VND)
+- **NFR-07.01:** Bảo Mật Thanh Toán (Checksum, Idempotency)
+- **NFR-07.02:** Độ Chính Xác Tài Chính (Decimal for money, ACID transactions)
+
+### Required Reading per Service
+
+| Service                     | Required REQs                   | Required BRs                       |
+| --------------------------- | ------------------------------- | ---------------------------------- |
+| **OrderService**            | REQ-07.01, REQ-07.02, REQ-07.04 | BR-04, BR-11                       |
+| **PaymentService**          | REQ-07.02                       | BR-11, BR-19, NFR-07.01, NFR-07.02 |
+| **CouponService**           | REQ-07.03                       | BR-11                              |
+| **CouponUsageService**      | REQ-07.03                       | BR-11                              |
+| **InstructorWalletService** | REQ-07.09                       | BR-19, NFR-07.02                   |
+| **SettlementService**       | REQ-07.09                       | BR-05, BR-19                       |
+| **PayoutService**           | REQ-07.09                       | BR-19                              |
+| **TransactionService**      | REQ-07.09                       | BR-19, NFR-07.02                   |
+
+### ⚠️ Common Scope Creep Warnings
+
+**KHÔNG TỰ Ý THÊM CÁC TÍNH NĂNG SAU:**
+
+1. ❌ **Refund Logic** - Đã comment out trong entities, requirements có nhắc nhưng là Phase 3 (KHÔNG làm ở Phase 2)
+2. ❌ **PayOS/ZaloPay Integration** - Chỉ focus VNPay theo REQ-07.02, các gateway khác là optional
+3. ❌ **Extra Coupon Types** - Chỉ Percentage và FixedAmount theo CouponType enum
+4. ❌ **Extra Transaction Types** - Follow TransactionType enum exactly (Sale, Payout, Settlement, PlatformFee, Adjustment)
+5. ❌ **Custom Revenue Split** - Mặc định 70% Instructor - 30% Platform (BR-19), KHÔNG làm configurable
+6. ❌ **Auto-approve Payouts** - Requires Admin approval theo REQ-07.09
+7. ❌ **Partial Refunds** - Enum có nhưng đã comment, KHÔNG implement
+8. ❌ **Subscription/Recurring Payments** - Out of scope hoàn toàn
+
+### 🔍 Validation Checklist
+
+**Trước khi code:**
+
+- ✅ Đã đọc requirements document (07-PAYMENT-ENROLLMENT.md)
+- ✅ Đã hiểu business rules liên quan
+- ✅ Đã xem entity design và relationships
+- ✅ Đã review interface methods cần implement
+
+**Trong khi code:**
+
+- ✅ Cross-check mỗi feature với requirements
+- ✅ KHÔNG thêm fields/properties ngoài entity design
+- ✅ KHÔNG thêm methods ngoài interface đã define
+- ✅ Follow exactly error messages và validation rules từ requirements
+
+**Trước khi PR:**
+
+- ✅ Verify KHÔNG có scope creep (features không có trong requirements)
+- ✅ All acceptance criteria met
+- ✅ Code comments reference requirements (e.g., "// Per BR-19: 70-30 split")
+
+### 🚨 When Requirements Conflict
+
+Nếu gặp xung đột giữa documents:
+
+1. **Requirements (07-PAYMENT-ENROLLMENT.md) > Implementation Plan > Entity Comments**
+2. Nếu business rule không rõ → ASK, đừng tự ý quyết định
+3. Nếu có idea hay nhưng không trong requirements → Document lại để discuss sau, KHÔNG implement ngay
+
+**Ví dụ xung đột đã phát hiện:**
+
+- Entity OrderItem có `PlatformFeePercent` default 20%
+- BR-19 yêu cầu Platform 30% - Instructor 70%
+- **Resolution:** Follow BR-19 (requirements win)
+
+---
+
 ## �️ Architecture Status
 
 ### ✅ Phase 1: Foundation (COMPLETED)

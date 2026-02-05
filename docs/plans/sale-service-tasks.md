@@ -56,6 +56,18 @@
 **Estimate:** 5 story points  
 **Dependencies:** None
 
+📖 **Required Reading:**
+
+- [docs/requirements/07-PAYMENT-ENROLLMENT.md](../../requirements/07-PAYMENT-ENROLLMENT.md) - REQ-07.03 (Áp Dụng Mã Giảm Giá)
+- Business Rules: BR-11 (Thanh Toán - Coupon expiry, usage limits)
+
+🚫 **Out of Scope:**
+
+- ❌ Extra coupon types beyond Percentage/FixedAmount
+- ❌ Subscription-based coupons
+- ❌ Referral code system
+- ❌ Auto-apply coupons
+
 **Subtasks:**
 
 - [ ] Implement CouponService class
@@ -88,6 +100,17 @@
 **Priority:** P1 - High  
 **Estimate:** 8 story points  
 **Dependencies:** Task 2.1
+
+📖 **Required Reading:**
+
+- [docs/requirements/07-PAYMENT-ENROLLMENT.md](../../requirements/07-PAYMENT-ENROLLMENT.md) - REQ-07.03 (Coupon Validation)
+- Business Rules: BR-11 (Usage limits, date validation)
+
+🚫 **Out of Scope:**
+
+- ❌ Coupon analytics dashboard (separate task)
+- ❌ Real-time usage notifications
+- ❌ Coupon recommendation engine
 
 **Subtasks:**
 
@@ -126,7 +149,19 @@
 **Estimate:** 13 story points  
 **Dependencies:** Task 2.1, Task 2.2
 
-**Subtasks:**
+📖 **Required Reading:**
+
+- [docs/requirements/07-PAYMENT-ENROLLMENT.md](../../requirements/07-PAYMENT-ENROLLMENT.md) - REQ-07.01 (Free Enrollment), REQ-07.02 (Payment Flow), REQ-07.04 (History)
+- Business Rules: BR-04 (Enrollment rules), BR-11 (Checkout, snapshot data), NFR-07.02 (Decimal for money)
+
+🚫 **Out of Scope:**
+
+- ❌ Refund logic (Phase 3 - future implementation)
+- ❌ Order editing/modification after creation
+- ❌ Multi-currency support (VND only per BR-11)
+- ❌ Installment payments
+
+**Subtasks:\*\***
 
 - [ ] Implement OrderService class
   - [ ] CreateOrderAsync (cart → order conversion)
@@ -175,8 +210,19 @@
 **Priority:** P0 - Critical  
 **Estimate:** 21 story points  
 **Dependencies:** Task 2.3
+📖 **Required Reading:**
 
-**Subtasks:**
+- [docs/requirements/07-PAYMENT-ENROLLMENT.md](../../requirements/07-PAYMENT-ENROLLMENT.md) - REQ-07.02 (VNPay Integration, Callback/IPN handling)
+- Business Rules: BR-11 (Payment methods), BR-19 (Revenue split 70-30, 14-day escrow), NFR-07.01 (Checksum, Idempotency), NFR-07.02 (Decimal, ACID)
+
+🚫 **Out of Scope:**
+
+- ❌ PayOS/ZaloPay integration (focus VNPay only)
+- ❌ Refund API integration (Phase 3)
+- ❌ Partial payments
+- ❌ Payment retry mechanism (handled by user re-checkout)
+- ❌ Saved payment methods
+  **Subtasks:**
 
 - [ ] Setup VNPay Integration
   - [ ] Add VNPay configuration to appsettings.json
@@ -237,7 +283,19 @@
 **Estimate:** 8 story points  
 **Dependencies:** Task 2.4
 
-**Subtasks:**
+📖 **Required Reading:**
+
+- [docs/requirements/07-PAYMENT-ENROLLMENT.md](../../requirements/07-PAYMENT-ENROLLMENT.md) - REQ-07.09 (Wallet Management, 3-tier balance system)
+- Business Rules: BR-19 (Pending Balance escrow 14 days, Available Balance withdrawal), NFR-07.02 (ACID, no negative balance)
+
+🚫 **Out of Scope:**
+
+- ❌ Multi-currency wallets
+- ❌ Wallet-to-wallet transfers
+- ❌ Loan/credit features
+- ❌ Interest on balance
+
+**Subtasks:\*\***
 
 - [ ] Implement InstructorWalletService class
   - [ ] GetWalletByInstructorAsync (create if not exists)
@@ -269,7 +327,18 @@
 **Estimate:** 5 story points  
 **Dependencies:** Task 2.5
 
-**Subtasks:**
+📖 **Required Reading:**
+
+- [docs/requirements/07-PAYMENT-ENROLLMENT.md](../../requirements/07-PAYMENT-ENROLLMENT.md) - REQ-07.09 (Transaction history, ledger)
+- Business Rules: BR-19 (Audit trail), NFR-07.02 (ACID, BalanceBefore/BalanceAfter)
+
+🚫 **Out of Scope:**
+
+- ❌ Manual transaction adjustments (admin can create Adjustment type, but no UI in Phase 2)
+- ❌ Transaction export to accounting software
+- ❌ Tax calculation
+
+**Subtasks:\*\***
 
 - [ ] Implement TransactionService class
   - [ ] CreateTransactionAsync (with polymorphic ReferenceId/Type)
@@ -294,7 +363,18 @@
 **Estimate:** 13 story points  
 **Dependencies:** Task 2.4, Task 2.5, Task 2.6
 
-**Subtasks:**
+📖 **Required Reading:**
+
+- [docs/requirements/07-PAYMENT-ENROLLMENT.md](../../requirements/07-PAYMENT-ENROLLMENT.md) - REQ-07.09 (Settlement job: "Sau 14 ngày (Job chạy)")
+- Business Rules: BR-05 (14-day refund window), BR-19 (Pending → Available conversion after 14 days)
+
+🚫 **Out of Scope:**
+
+- ❌ Manual settlement (admin cannot force settle before 14 days in Phase 2)
+- ❌ Configurable escrow period (hardcoded 14 days)
+- ❌ Settlement notifications (Phase 4 - Events)
+
+**Subtasks:\*\***
 
 - [ ] Implement SettlementService class
   - [ ] ProcessPendingSettlementsAsync (background job logic)
@@ -338,7 +418,19 @@
 **Estimate:** 8 story points  
 **Dependencies:** Task 2.5, Task 2.7
 
-**Subtasks:**
+📖 **Required Reading:**
+
+- [docs/requirements/07-PAYMENT-ENROLLMENT.md](../../requirements/07-PAYMENT-ENROLLMENT.md) - REQ-07.09 (Payout Request workflow, Admin approval, minimum 500k VND)
+- Business Rules: BR-19 (Available Balance withdrawal, admin approval 1-3 days, minimum 500k VND)
+
+🚫 **Out of Scope:**
+
+- ❌ Auto-approve payouts (requires admin per BR-19)
+- ❌ Bank transfer API integration (mock for Phase 2)
+- ❌ Payout scheduling (immediate request only)
+- ❌ Batch payouts
+
+**Subtasks:\*\***
 
 - [ ] Implement PayoutService class
   - [ ] CreatePayoutRequestAsync (instructor withdrawal)
@@ -381,7 +473,12 @@
 **Estimate:** 5 story points  
 **Dependencies:** Task 2.1, Task 2.2
 
-**Subtasks:**
+📖 **Required Reading:**
+
+- [docs/requirements/07-PAYMENT-ENROLLMENT.md](../../requirements/07-PAYMENT-ENROLLMENT.md) - REQ-07.03 (Coupon validation, public vs admin endpoints)
+- Review CouponService interface for all methods to expose
+
+**Subtasks:\*\***
 
 - [ ] Create CouponEndpoints.cs (Minimal API)
   - [ ] POST /api/v1/coupons (Admin/Instructor)
@@ -412,7 +509,12 @@
 **Estimate:** 5 story points  
 **Dependencies:** Task 2.3
 
-**Subtasks:**
+📖 **Required Reading:**
+
+- [docs/requirements/07-PAYMENT-ENROLLMENT.md](../../requirements/07-PAYMENT-ENROLLMENT.md) - REQ-07.01 (Free enrollment), REQ-07.04 (History view)
+- Review IOrderService interface for all methods to expose
+
+**Subtasks:\*\***
 
 - [ ] Create OrderEndpoints.cs (Minimal API)
   - [ ] POST /api/v1/orders (Authenticated)
@@ -442,7 +544,15 @@
 **Estimate:** 5 story points  
 **Dependencies:** Task 2.4
 
-**Subtasks:**
+📖 **Required Reading:**
+
+- [docs/requirements/07-PAYMENT-ENROLLMENT.md](../../requirements/07-PAYMENT-ENROLLMENT.md) - REQ-07.02 (VNPay callback endpoint)
+- NFR-07.01 (Webhook signature verification, idempotency)
+- Review IPaymentService interface, especially webhook handlers
+
+⚠️ **Critical Security:** Callback endpoints MUST verify HMAC signature per NFR-07.01!
+
+**Subtasks:\*\***
 
 - [ ] Create PaymentEndpoints.cs (Minimal API)
   - [ ] POST /api/v1/payments/process (Authenticated)
@@ -501,7 +611,15 @@
 **Estimate:** 3 story points  
 **Dependencies:** Task 2.7
 
-**Subtasks:**
+📖 **Required Reading:**
+
+- [docs/requirements/07-PAYMENT-ENROLLMENT.md](../../requirements/07-PAYMENT-ENROLLMENT.md) - REQ-07.09 (Settlement job)
+- Business Rules: BR-19 (14-day automatic settlement)
+- Review ISettlementService interface
+
+⚠️ **Note:** Manual trigger is for admin emergency use only. Normal settlement is automatic via background job.
+
+**Subtasks:\*\***
 
 - [ ] Create SettlementEndpoints.cs
   - [ ] POST /api/v1/settlements/process (Admin, manual trigger)
@@ -531,7 +649,13 @@
 **Estimate:** 2 story points  
 **Dependencies:** None
 
-**Subtasks:**
+📖 **Required Reading:**
+
+- [docs/requirements/07-PAYMENT-ENROLLMENT.md](../../requirements/07-PAYMENT-ENROLLMENT.md) - REQ-07.02 ("Tạo Enrollment" after payment success)
+- Review existing events in Beyond8.Common.Events for naming patterns
+- Check Learning Service expectations for OrderCompletedEvent
+
+**Subtasks:\*\***
 
 - [ ] Create event classes in Beyond8.Common.Events.Sale
   - [ ] OrderCreatedEvent
@@ -735,3 +859,113 @@
 - [ ] VNPay sandbox credentials obtained?
 - [ ] Catalog service API contract agreed?
 - [ ] Learning service consumer for OrderCompletedEvent ready?
+
+---
+
+## ⚠️ IMPLEMENTATION GUIDELINES - READ THIS FIRST!
+
+### 📚 Mandatory Reading Before Any Task
+
+**LUÔN LUÔN đọc requirements document TRƯỚC KHI code:**
+
+🔴 **[docs/requirements/07-PAYMENT-ENROLLMENT.md](../../requirements/07-PAYMENT-ENROLLMENT.md)**
+
+Document này chứa:
+
+- **Requirements (REQ-07.xx):** Chức năng phải làm
+- **Business Rules (BR-xx):** Quy tắc nghiệp vụ
+- **Non-Functional Requirements (NFR-xx):** Yêu cầu kỹ thuật (security, performance)
+
+### 🚫 Scope Management Rules
+
+**KHÔNG TỰ Ý:**
+
+1. ❌ Thêm features không có trong requirements
+2. ❌ Thay đổi business rules (VD: 14 days → 7 days)
+3. ❌ Thêm fields vào entity ngoài design đã approved
+4. ❌ Thêm methods vào interface ngoài đã define
+5. ❌ Implement refund logic (Phase 3, not Phase 2)
+6. ❌ Support multiple payment gateways beyond VNPay (focus one first)
+
+### ✅ Development Workflow
+
+**Trước khi code:**
+
+1. Đọc requirements cho task đó (section "📖 Required Reading")
+2. Review business rules liên quan
+3. Xem entity design và relationships
+4. Check interface methods cần implement
+
+**Trong khi code:**
+
+1. Cross-check mỗi feature với requirements
+2. Comment references đến requirements (e.g., `// Per BR-19: 70-30 split`)
+3. Follow exactly validation rules từ requirements
+4. KHÔNG thêm "nice to have" features
+
+**Trước khi commit:**
+
+1. Verify không có scope creep
+2. All acceptance criteria met
+3. Code comments reference requirements
+4. Unit tests cover business rules
+
+### 🔍 When in Doubt
+
+**Nếu gặp xung đột giữa documents:**
+
+- **Requirements (07-PAYMENT-ENROLLMENT.md) > Implementation Plan > Entity Comments**
+
+**Nếu business rule không rõ:**
+
+- ❌ ĐỪNG tự ý quyết định
+- ✅ ASK trong team chat/standup
+
+**Nếu có idea hay nhưng không trong requirements:**
+
+- ❌ ĐỪNG implement ngay
+- ✅ Document lại để discuss sau (backlog)
+
+### 📋 Code Review Checklist
+
+Reviewer PHẢI check:
+
+- [ ] Code chỉ implement đúng requirements (no scope creep)
+- [ ] Business rules được follow chính xác
+- [ ] Entity fields không bị thêm/sửa ngoài design
+- [ ] Error messages match requirements (Vietnamese for user-facing)
+- [ ] All "Required Reading" documents đã được đọc
+- [ ] No hardcoded values (use configuration)
+- [ ] Decimal used for money (not Float)
+- [ ] ACID transactions for wallet operations
+
+---
+
+## 🎯 Success Metrics
+
+**Phase 2 Complete When:**
+
+- [ ] All 8 services implement đầy đủ interface methods
+- [ ] Unit test coverage >= 80%
+- [ ] Zero compilation errors
+- [ ] All business rules validated
+
+**Phase 3 Complete When:**
+
+- [ ] All API endpoints functional
+- [ ] Swagger documentation complete
+- [ ] Authorization working correctly
+- [ ] Integration tests pass
+
+**Final Acceptance:**
+
+- [ ] VNPay payment flow works end-to-end
+- [ ] 14-day escrow settlement tested
+- [ ] Payout workflow complete
+- [ ] All requirements (REQ-07.xx) satisfied
+
+---
+
+**Last Updated:** February 5, 2026  
+**Document Owner:** Development Team  
+**Review Frequency:** After each sprint
