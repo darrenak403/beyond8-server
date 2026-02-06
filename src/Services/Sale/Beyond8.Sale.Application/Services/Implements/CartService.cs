@@ -1,0 +1,222 @@
+using Beyond8.Common.Utilities;
+using Beyond8.Sale.Application.Clients.Catalog;
+using Beyond8.Sale.Application.Dtos.Carts;
+using Beyond8.Sale.Application.Dtos.OrderItems;
+using Beyond8.Sale.Application.Dtos.Orders;
+using Beyond8.Sale.Application.Mappings.Carts;
+using Beyond8.Sale.Application.Services.Interfaces;
+using Beyond8.Sale.Domain.Entities;
+using Beyond8.Sale.Domain.Repositories.Interfaces;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+
+namespace Beyond8.Sale.Application.Services.Implements;
+
+public class CartService(
+    ILogger<CartService> logger,
+    IUnitOfWork unitOfWork,
+    ICatalogClient catalogClient,
+    IOrderService orderService) : ICartService
+{
+    public async Task<ApiResponse<CartResponse>> GetCartAsync(Guid userId)
+    {
+        try
+        {
+            var cart = await GetOrCreateCartAsync(userId);
+            return ApiResponse<CartResponse>.SuccessResponse(cart.ToResponse(), "Lấy giỏ hàng thành công");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get cart for user {UserId}", userId);
+            throw;
+        }
+    }
+
+    public async Task<ApiResponse<CartResponse>> AddToCartAsync(Guid userId, AddToCartRequest request)
+    {
+        try
+        {
+            var cart = await GetOrCreateCartAsync(userId);
+
+            // Check if course already in cart
+            var existingItem = cart.CartItems.FirstOrDefault(ci => ci.CourseId == request.CourseId);
+            if (existingItem != null)
+                return ApiResponse<CartResponse>.FailureResponse("Khóa học đã có trong giỏ hàng");
+
+            // Get course details from Catalog service
+            var courseResult = await catalogClient.GetCourseByIdAsync(request.CourseId);
+            if (!courseResult.IsSuccess || courseResult.Data == null)
+                return ApiResponse<CartResponse>.FailureResponse("Khóa học không tồn tại");
+
+            var course = courseResult.Data;
+
+            // Create cart item with course snapshot
+            var cartItem = new CartItem
+            {
+                CartId = cart.Id,
+                CourseId = course.Id,
+                CourseTitle = course.Title,
+                CourseThumbnail = course.Thumbnail,
+                InstructorId = course.InstructorId,
+                InstructorName = course.InstructorName,
+                OriginalPrice = course.OriginalPrice
+            };
+
+            cart.CartItems.Add(cartItem);
+            await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation("Course {CourseId} added to cart for user {UserId}", request.CourseId, userId);
+
+            return ApiResponse<CartResponse>.SuccessResponse(cart.ToResponse(), "Thêm vào giỏ hàng thành công");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to add course {CourseId} to cart for user {UserId}", request.CourseId, userId);
+            throw;
+        }
+    }
+
+    public async Task<ApiResponse<CartResponse>> RemoveFromCartAsync(Guid userId, Guid courseId)
+    {
+        try
+        {
+            var cart = await GetOrCreateCartAsync(userId);
+
+            var cartItem = cart.CartItems.FirstOrDefault(ci => ci.CourseId == courseId);
+            if (cartItem == null)
+                return ApiResponse<CartResponse>.FailureResponse("Khóa học không có trong giỏ hàng");
+
+            cart.CartItems.Remove(cartItem);
+            await unitOfWork.CartItemRepository.DeleteAsync(cartItem.Id);
+            await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation("Course {CourseId} removed from cart for user {UserId}", courseId, userId);
+
+            return ApiResponse<CartResponse>.SuccessResponse(cart.ToResponse(), "Xóa khỏi giỏ hàng thành công");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to remove course {CourseId} from cart for user {UserId}", courseId, userId);
+            throw;
+        }
+    }
+
+    public async Task<ApiResponse<bool>> ClearCartAsync(Guid userId)
+    {
+        try
+        {
+            var cart = await GetCartByUserIdAsync(userId);
+            if (cart == null)
+                return ApiResponse<bool>.SuccessResponse(true, "Giỏ hàng đã trống");
+
+            // Delete all cart items
+            foreach (var item in cart.CartItems.ToList())
+            {
+                await unitOfWork.CartItemRepository.DeleteAsync(item.Id);
+            }
+
+            await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation("Cart cleared for user {UserId}", userId);
+
+            return ApiResponse<bool>.SuccessResponse(true, "Xóa giỏ hàng thành công");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to clear cart for user {UserId}", userId);
+            throw;
+        }
+    }
+
+    public async Task<ApiResponse<OrderResponse>> CheckoutCartAsync(Guid userId, CheckoutCartRequest request)
+    {
+        try
+        {
+            var cart = await GetCartByUserIdAsync(userId);
+            if (cart == null || !cart.CartItems.Any())
+                return ApiResponse<OrderResponse>.FailureResponse("Giỏ hàng trống, không thể thanh toán");
+
+            // Determine which items to checkout
+            IEnumerable<CartItem> itemsToCheckout;
+            if (request.SelectedCourseIds.Any())
+            {
+                // Checkout only selected items
+                itemsToCheckout = cart.CartItems
+                    .Where(ci => request.SelectedCourseIds.Contains(ci.CourseId))
+                    .ToList();
+
+                if (!itemsToCheckout.Any())
+                    return ApiResponse<OrderResponse>.FailureResponse("Không tìm thấy khóa học được chọn trong giỏ hàng");
+
+                // Validate all selected courseIds exist in cart
+                var missingCourseIds = request.SelectedCourseIds
+                    .Except(cart.CartItems.Select(ci => ci.CourseId))
+                    .ToList();
+
+                if (missingCourseIds.Any())
+                    return ApiResponse<OrderResponse>.FailureResponse(
+                        $"Các khóa học sau không có trong giỏ hàng: {string.Join(", ", missingCourseIds)}");
+            }
+            else
+            {
+                // Checkout all items if no selection
+                itemsToCheckout = cart.CartItems.ToList();
+            }
+
+            // Convert selected cart items to order request
+            var orderRequest = new CreateOrderRequest
+            {
+                Items = itemsToCheckout.Select(ci => new OrderItemRequest { CourseId = ci.CourseId }).ToList(),
+                CouponCode = request.CouponCode,
+                Notes = request.Notes
+            };
+
+            // Create order using existing OrderService
+            var orderResult = await orderService.CreateOrderAsync(orderRequest, userId);
+
+            if (orderResult.IsSuccess)
+            {
+                // Remove only checked out items from cart
+                foreach (var item in itemsToCheckout)
+                {
+                    await unitOfWork.CartItemRepository.DeleteAsync(item.Id);
+                }
+                await unitOfWork.SaveChangesAsync();
+
+                logger.LogInformation(
+                    "Cart checked out for user {UserId}, order {OrderId}, {ItemCount} items removed from cart",
+                    userId, orderResult.Data!.Id, itemsToCheckout.Count());
+            }
+
+            return orderResult;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to checkout cart for user {UserId}", userId);
+            throw;
+        }
+    }
+
+    // Helper methods
+
+    private async Task<Cart?> GetCartByUserIdAsync(Guid userId)
+    {
+        return await unitOfWork.CartRepository.AsQueryable()
+            .Include(c => c.CartItems)
+            .FirstOrDefaultAsync(c => c.UserId == userId);
+    }
+
+    private async Task<Cart> GetOrCreateCartAsync(Guid userId)
+    {
+        var cart = await GetCartByUserIdAsync(userId);
+        if (cart != null)
+            return cart;
+
+        // Create new cart for the user
+        cart = new Cart { UserId = userId };
+        await unitOfWork.CartRepository.AddAsync(cart);
+        await unitOfWork.SaveChangesAsync();
+
+        return cart;
+    }
+}

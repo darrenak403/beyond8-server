@@ -37,6 +37,7 @@ public static class ApplicationServiceExtensions
         // Register services
         builder.Services.AddScoped<IOrderService, OrderService>();
         builder.Services.AddScoped<ICouponService, CouponService>();
+        builder.Services.AddScoped<ICartService, CartService>();
         builder.Services.AddValidatorsFromAssemblyContaining<CreateOrderRequest>();
 
         // Register HTTP clients with Polly retry policy
@@ -74,6 +75,7 @@ public static class ApplicationServiceExtensions
 
         // Map API endpoints
         app.MapOrderApi();
+        app.MapCartApi();
         // app.MapPaymentApi();
         // app.MapCouponApi();
         // app.MapWalletApi();

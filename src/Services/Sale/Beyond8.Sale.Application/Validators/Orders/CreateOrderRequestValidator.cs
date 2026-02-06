@@ -7,10 +7,6 @@ public class CreateOrderRequestValidator : AbstractValidator<CreateOrderRequest>
 {
     public CreateOrderRequestValidator()
     {
-        RuleFor(x => x.UserId)
-            .NotEmpty()
-            .WithMessage("UserId không được để trống");
-
         RuleFor(x => x.Items)
             .NotEmpty()
             .WithMessage("Danh sách sản phẩm không được để trống")
@@ -23,11 +19,6 @@ public class CreateOrderRequestValidator : AbstractValidator<CreateOrderRequest>
                 items.RuleFor(item => item.CourseId)
                     .NotEmpty()
                     .WithMessage("CourseId không được để trống");
-
-                // Per BR-04: Free courses have Price = 0
-                items.RuleFor(item => item.Price)
-                    .GreaterThanOrEqualTo(0)
-                    .WithMessage("Giá sản phẩm không được âm");
             });
 
         RuleFor(x => x.CouponCode)

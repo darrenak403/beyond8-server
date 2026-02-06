@@ -14,6 +14,8 @@ public class UnitOfWork(SaleDbContext context) : BaseUnitOfWork<SaleDbContext>(c
     private IInstructorWalletRepository? _instructorWalletRepository;
     private IPayoutRequestRepository? _payoutRequestRepository;
     private ITransactionLedgerRepository? _transactionLedgerRepository;
+    private ICartRepository? _cartRepository;
+    private ICartItemRepository? _cartItemRepository;
 
     public IOrderRepository OrderRepository => _orderRepository ??= new OrderRepository(context);
     public IOrderItemRepository OrderItemRepository => _orderItemRepository ??= new OrderItemRepository(context);
@@ -23,4 +25,6 @@ public class UnitOfWork(SaleDbContext context) : BaseUnitOfWork<SaleDbContext>(c
     public IInstructorWalletRepository InstructorWalletRepository => _instructorWalletRepository ??= new InstructorWalletRepository(context);
     public IPayoutRequestRepository PayoutRequestRepository => _payoutRequestRepository ??= new PayoutRequestRepository(context);
     public ITransactionLedgerRepository TransactionLedgerRepository => _transactionLedgerRepository ??= new TransactionLedgerRepository(context);
+    public ICartRepository CartRepository => _cartRepository ??= new CartRepository(context);
+    public ICartItemRepository CartItemRepository => _cartItemRepository ??= new CartItemRepository(context);
 }

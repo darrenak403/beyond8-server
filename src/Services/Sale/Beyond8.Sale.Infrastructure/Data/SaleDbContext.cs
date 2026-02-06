@@ -18,6 +18,8 @@ public class SaleDbContext : BaseDbContext
     public DbSet<InstructorWallet> InstructorWallets { get; set; } = null!;
     public DbSet<PayoutRequest> PayoutRequests { get; set; } = null!;
     public DbSet<TransactionLedger> TransactionLedgers { get; set; } = null!;
+    public DbSet<Cart> Carts { get; set; } = null!;
+    public DbSet<CartItem> CartItems { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -184,6 +186,33 @@ public class SaleDbContext : BaseDbContext
             // JSONB Column
             entity.Property(e => e.Metadata)
                 .HasColumnType("jsonb");
+        });
+
+        // Cart Configuration
+        modelBuilder.Entity<Cart>(entity =>
+        {
+            entity.HasQueryFilter(e => e.DeletedAt == null);
+
+            // One cart per user
+            entity.HasIndex(e => e.UserId).IsUnique();
+
+            // Relationships
+            entity.HasMany(c => c.CartItems)
+                .WithOne(ci => ci.Cart)
+                .HasForeignKey(ci => ci.CartId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // CartItem Configuration
+        modelBuilder.Entity<CartItem>(entity =>
+        {
+            entity.HasQueryFilter(e => e.DeletedAt == null);
+
+            entity.HasIndex(e => e.CartId);
+            entity.HasIndex(e => e.CourseId);
+
+            // Prevent duplicate courses in one cart
+            entity.HasIndex(e => new { e.CartId, e.CourseId }).IsUnique();
         });
     }
 }
