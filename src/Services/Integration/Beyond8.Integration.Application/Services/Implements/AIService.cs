@@ -320,10 +320,23 @@ namespace Beyond8.Integration.Application.Services.Implements
 
                 var prompt = promptRes.Data;
 
-                // Build submission content
+                List<(string FileName, string Content)>? downloadedFileContents = null;
+                if (request.FileUrls != null && request.FileUrls.Count > 0)
+                {
+                    downloadedFileContents = new List<(string, string)>();
+                    foreach (var fileUrl in request.FileUrls)
+                    {
+                        var item = await DownloadAndExtractFileContentAsync(fileUrl);
+                        if (item.HasValue)
+                            downloadedFileContents.Add(item.Value);
+                    }
+                }
+
+                // Build submission content (with extracted file text when available)
                 var submissionContent = AiServiceGradingHelper.BuildSubmissionContent(
                     request.TextContent,
-                    request.FileUrls);
+                    request.FileUrls,
+                    downloadedFileContents);
 
                 if (string.IsNullOrWhiteSpace(submissionContent))
                     return ApiResponse<AiGradingResponse>.FailureResponse(
@@ -405,6 +418,107 @@ namespace Beyond8.Integration.Application.Services.Implements
                 return ApiResponse<AiGradingResponse>.FailureResponse(
                     "Đã xảy ra lỗi khi chấm điểm bằng AI.");
             }
+        }
+
+        private async Task<(string FileName, string Content)?> DownloadAndExtractFileContentAsync(string fileUrl)
+        {
+            if (string.IsNullOrWhiteSpace(fileUrl)) return null;
+
+            try
+            {
+                byte[]? data = null;
+                string? contentType = null;
+
+                var isHttpUrl = fileUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                    || fileUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+
+                if (isHttpUrl)
+                {
+                    var key = storageService.ExtractKeyFromUrl(fileUrl);
+                    if (!string.IsNullOrEmpty(key))
+                    {
+                        var (s3Data, s3ContentType) = await storageService.GetObjectAsync(key);
+                        data = s3Data;
+                        contentType = s3ContentType;
+                    }
+                    if (data == null || data.Length == 0)
+                    {
+                        var (httpData, mime) = await urlContentDownloader.DownloadAsync(fileUrl);
+                        data = httpData;
+                        contentType = mime;
+                    }
+                }
+                else
+                {
+                    var (s3Data, s3ContentType) = await storageService.GetObjectAsync(fileUrl);
+                    data = s3Data;
+                    contentType = s3ContentType;
+                }
+
+                if (data == null || data.Length == 0)
+                {
+                    logger.LogDebug("No data downloaded for file {Url}", fileUrl);
+                    return null;
+                }
+
+                var fileName = GetFileNameFromUrlOrKey(fileUrl);
+                var content = ExtractTextFromBytes(data, contentType);
+                return (fileName, content);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to download or extract content from {FileUrl}", fileUrl);
+                return null;
+            }
+        }
+
+        private static string GetFileNameFromUrlOrKey(string urlOrKey)
+        {
+            var path = urlOrKey.AsSpan();
+            var q = path.IndexOf('?');
+            if (q >= 0) path = path[..q];
+            var last = path.LastIndexOf('/');
+            if (last >= 0) path = path[(last + 1)..];
+            return path.Length > 0 ? path.ToString() : "file";
+        }
+
+        private string ExtractTextFromBytes(byte[] data, string? contentType)
+        {
+            var isPdf = (contentType?.Contains("pdf", StringComparison.OrdinalIgnoreCase) ?? false)
+                || data.Length >= 5 && data[0] == 0x25 && data[1] == 0x50 && data[2] == 0x44 && data[3] == 0x46; // %PDF
+
+            if (isPdf)
+            {
+                try
+                {
+                    using var stream = new MemoryStream(data);
+                    return pdfChunkService.ExtractTextFromPdf(stream) ?? "[Không trích xuất được nội dung PDF.]";
+                }
+                catch (Exception ex)
+                {
+                    logger.LogDebug(ex, "PDF text extraction failed");
+                    return "[Không trích xuất được nội dung PDF.]";
+                }
+            }
+
+            var isText = contentType != null && (
+                contentType.Contains("text/", StringComparison.OrdinalIgnoreCase) ||
+                contentType.Contains("json", StringComparison.OrdinalIgnoreCase) ||
+                contentType.Contains("xml", StringComparison.OrdinalIgnoreCase));
+
+            if (isText)
+            {
+                try
+                {
+                    return System.Text.Encoding.UTF8.GetString(data);
+                }
+                catch
+                {
+                    return "[Lỗi giải mã văn bản.]";
+                }
+            }
+
+            return "[File nhị phân, không trích xuất được nội dung văn bản để chấm điểm.]";
         }
 
         private async Task<string?> DownloadRubricContentAsync(string rubricUrl)

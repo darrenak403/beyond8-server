@@ -20,6 +20,7 @@ public static class EnrollmentMappings
             CourseId = courseId,
             CourseTitle = structure.Title,
             CourseThumbnailUrl = structure.ThumbnailUrl,
+            CourseSlug = structure.Slug,
             InstructorId = structure.InstructorId,
             InstructorName = structure.InstructorName,
             PricePaid = pricePaid,
@@ -72,6 +73,7 @@ public static class EnrollmentMappings
             CourseId = entity.CourseId,
             CourseTitle = entity.CourseTitle,
             CourseThumbnailUrl = entity.CourseThumbnailUrl,
+            CourseSlug = entity.CourseSlug,
             InstructorId = entity.InstructorId,
             InstructorName = entity.InstructorName,
             PricePaid = entity.PricePaid,
@@ -94,6 +96,7 @@ public static class EnrollmentMappings
             CourseId = entity.CourseId,
             CourseTitle = entity.CourseTitle,
             CourseThumbnailUrl = entity.CourseThumbnailUrl,
+            CourseSlug = entity.CourseSlug,
             InstructorId = entity.InstructorId,
             InstructorName = entity.InstructorName,
             ProgressPercent = entity.ProgressPercent
