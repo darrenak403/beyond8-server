@@ -15,8 +15,8 @@ namespace Beyond8.Learning.Domain.Entities
 
         public string? CourseThumbnailUrl { get; set; }
 
-        public string? CourseSlug { get; set; } = string.Empty;
-    
+        public string? Slug { get; set; } = string.Empty;
+
         public Guid InstructorId { get; set; }
 
         [MaxLength(200)]

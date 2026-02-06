@@ -243,9 +243,9 @@ namespace Beyond8.Identity.Infrastructure.Data.Seeders
                 VerificationStatus = VerificationStatus.Verified,
                 VerifiedBy = adminId,
                 VerifiedAt = DateTime.UtcNow,
-                TotalStudents = 150,
-                TotalCourses = 5,
-                AvgRating = 4.8m,
+                TotalStudents = 0,
+                TotalCourses = 1,
+                AvgRating = 0m,
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = Guid.Empty
             };

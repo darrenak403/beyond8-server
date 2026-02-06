@@ -126,7 +126,7 @@ namespace Beyond8.Identity.Application.Services.Implements
 
                 logger.LogInformation("User registered successfully: {Email}", normalizedEmail);
                 return ApiResponse<UserSimpleResponse>.SuccessResponse(
-                    newUser.ToUserSimpleResponse(),
+                    newUser.ToUserSimpleResponse()!,
                     "Đăng ký người dùng thành công, vui lòng kiểm tra email để xác thực OTP");
             }
             catch (Exception ex)
@@ -248,7 +248,7 @@ namespace Beyond8.Identity.Application.Services.Implements
                 await unitOfWork.SaveChangesAsync();
 
                 logger.LogInformation("Password changed successfully for user with ID {UserId}", userId);
-                return ApiResponse<UserSimpleResponse>.SuccessResponse(u.ToUserSimpleResponse(), "Đổi mật khẩu thành công.");
+                return ApiResponse<UserSimpleResponse>.SuccessResponse(u.ToUserSimpleResponse()!, "Đổi mật khẩu thành công.");
             }
             catch (Exception ex)
             {

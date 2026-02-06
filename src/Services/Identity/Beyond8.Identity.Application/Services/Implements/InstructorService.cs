@@ -364,9 +364,18 @@ namespace Beyond8.Identity.Application.Services.Implements
                         "Hồ sơ giảng viên không tồn tại hoặc chưa được duyệt.");
                 }
 
-                var user = profile.User;
+                var user = await unitOfWork.UserRepository.AsQueryable()
+                    .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                    .FirstOrDefaultAsync(u => u.Id == profile.UserId);
+                if (user == null)
+                {
+                    logger.LogError("User {UserId} not found for instructor profile {ProfileId}", profile.UserId, profileId);
+                    return ApiResponse<InstructorProfileResponse>.FailureResponse(
+                        "Hồ sơ giảng viên không hợp lệ.");
+                }
 
-                var response = profile!.ToInstructorProfileResponse(user!);
+                var response = profile.ToInstructorProfileResponse(user);
                 return ApiResponse<InstructorProfileResponse>.SuccessResponse(
                     response,
                     "Lấy hồ sơ giảng viên thành công.");
@@ -398,9 +407,14 @@ namespace Beyond8.Identity.Application.Services.Implements
                     .Include(u => u.UserRoles)
                     .ThenInclude(ur => ur.Role)
                     .FirstOrDefaultAsync(u => u.Id == profile.UserId);
-                profile.User = user!;
+                if (user == null)
+                {
+                    logger.LogError("User {UserId} not found for instructor profile {ProfileId}", profile.UserId, profileId);
+                    return ApiResponse<InstructorProfileAdminResponse>.FailureResponse(
+                        "Người dùng của hồ sơ giảng viên không tồn tại.");
+                }
 
-                var response = profile.ToInstructorProfileAdminResponse(user!);
+                var response = profile.ToInstructorProfileAdminResponse(user);
                 return ApiResponse<InstructorProfileAdminResponse>.SuccessResponse(
                     response,
                     "Lấy hồ sơ giảng viên thành công.");

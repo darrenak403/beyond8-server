@@ -6,7 +6,6 @@ namespace Beyond8.Catalog.Infrastructure.Data.Seeders;
 
 public static class CatalogSeedData
 {
-    // Fixed GUIDs for consistent seeding (instructor trùng Identity seed: instructor@gmail.com)
     private static readonly Guid SeedCourseId = Guid.Parse("33333333-3333-3333-3333-333333333333");
     private static readonly Guid PaidCourseId = Guid.Parse("33333333-3333-3333-3333-333333333334");
     private static readonly Guid SeedInstructorId = Guid.Parse("00000000-0000-0000-0000-000000000006"); // Trần Thị Giảng Viên (Identity)
