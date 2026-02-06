@@ -229,12 +229,14 @@ public static class LessonMappings
             // Video-specific (metadata only, no streaming URLs)
             DurationSeconds = lesson.Video?.DurationSeconds,
             VideoThumbnailUrl = lesson.Video?.VideoThumbnailUrl,
+            VideoOriginalUrl = lesson.Video?.VideoOriginalUrl,
+            HlsVariants = lesson.Video?.HlsVariants,
 
             // Quiz-specific
             QuizId = lesson.Quiz?.QuizId,
 
             // Text-specific
-            HasTextContent = lesson.Text != null && !string.IsNullOrEmpty(lesson.Text.TextContent)
+            TextContent = lesson.Text?.TextContent,
         };
     }
 
