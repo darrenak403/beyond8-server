@@ -9,14 +9,14 @@ namespace Beyond8.Sale.Application.Mappings.Orders;
 
 public static class OrderMappings
 {
-    public static Order ToEntity(this CreateOrderRequest request, string orderNumber, decimal totalAmount, decimal discountAmount, Guid? couponId)
+    public static Order ToEntity(this CreateOrderRequest request, string orderNumber, decimal subTotal, decimal totalAmount, decimal discountAmount, Guid? couponId, Guid userId)
     {
         return new Order
         {
-            UserId = request.UserId,
+            UserId = userId,
             OrderNumber = orderNumber,
             Status = totalAmount == 0 ? OrderStatus.Paid : OrderStatus.Pending,
-            SubTotal = request.Items.Sum(i => i.Price),
+            SubTotal = subTotal,
             DiscountAmount = discountAmount,
             TotalAmount = totalAmount,
             CouponId = couponId,

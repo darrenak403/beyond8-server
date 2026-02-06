@@ -36,6 +36,7 @@ public static class ApplicationServiceExtensions
 
         // Register services
         builder.Services.AddScoped<IOrderService, OrderService>();
+        builder.Services.AddScoped<ICouponService, CouponService>();
         builder.Services.AddValidatorsFromAssemblyContaining<CreateOrderRequest>();
 
         // Register HTTP clients with Polly retry policy

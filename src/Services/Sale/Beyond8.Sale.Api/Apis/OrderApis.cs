@@ -108,11 +108,7 @@ public static class OrderApis
         if (!request.ValidateRequest(validator, out var validationResult))
             return validationResult!;
 
-        // Validate authorization: userId must be current user or admin
-        if (request.UserId != currentUserService.UserId && !currentUserService.IsInRole(Role.Admin))
-            return Results.Forbid();
-
-        var result = await orderService.CreateOrderAsync(request);
+        var result = await orderService.CreateOrderAsync(request, currentUserService.UserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 

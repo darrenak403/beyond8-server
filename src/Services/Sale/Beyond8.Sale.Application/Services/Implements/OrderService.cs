@@ -23,7 +23,7 @@ public class OrderService(
     ICouponService couponService,
     IPublishEndpoint publishEndpoint) : IOrderService
 {
-    public async Task<ApiResponse<OrderResponse>> CreateOrderAsync(CreateOrderRequest request)
+    public async Task<ApiResponse<OrderResponse>> CreateOrderAsync(CreateOrderRequest request, Guid userId)
     {
         // Validate and calculate totals
         var calculation = await CalculateOrderTotalsAsync(request.Items, request.CouponCode);
@@ -32,7 +32,7 @@ public class OrderService(
 
         // Create order with mapping
         var orderNumber = GenerateOrderNumber();
-        var order = request.ToEntity(orderNumber, calculation.TotalAmount, calculation.DiscountAmount, calculation.CouponId);
+        var order = request.ToEntity(orderNumber, calculation.SubTotal, calculation.TotalAmount, calculation.DiscountAmount, calculation.CouponId, userId);
 
         // Add order items with snapshot using mapping
         foreach (var item in calculation.Items)
@@ -43,14 +43,14 @@ public class OrderService(
         await unitOfWork.OrderRepository.AddAsync(order);
         await unitOfWork.SaveChangesAsync();
 
-        logger.LogInformation("Order created: {OrderId} for user {UserId}", order.Id, request.UserId);
+        logger.LogInformation("Order created: {OrderId} for user {UserId}", order.Id, userId);
 
         // Publish event for free courses (BR-04)
         if (order.Status == OrderStatus.Paid)
         {
             await publishEndpoint.Publish(new OrderCompletedEvent(
                 order.Id,
-                request.UserId,
+                userId,
                 request.Items.Select(i => i.CourseId).ToList()));
             logger.LogInformation("Free enrollment event published for order {OrderId}", order.Id);
         }
@@ -231,7 +231,7 @@ public class OrderService(
                 return (false, "Dữ liệu khóa học không hợp lệ", 0, 0, 0, null, orderItems);
 
             var course = courseResult.Data;
-            var unitPrice = item.Price;
+            var unitPrice = course.OriginalPrice;
             if (unitPrice != course.OriginalPrice)
                 return (false, $"Giá khóa học không hợp lệ (giá yêu cầu: {unitPrice}, giá thực tế: {course.OriginalPrice})", 0, 0, 0, null, orderItems);
 
