@@ -54,6 +54,7 @@ public class QuizAttemptCompletedEventConsumer(
             if (enrollment.CompletedLessons >= enrollment.TotalLessons && enrollment.TotalLessons > 0)
                 enrollment.CompletedAt = enrollment.CompletedAt ?? msg.CompletedAt;
             await unitOfWork.EnrollmentRepository.UpdateAsync(enrollment.Id, enrollment);
+
         }
 
         await unitOfWork.SaveChangesAsync();

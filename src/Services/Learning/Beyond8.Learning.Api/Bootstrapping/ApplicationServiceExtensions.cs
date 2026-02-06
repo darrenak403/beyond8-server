@@ -3,6 +3,7 @@ using Beyond8.Common.Utilities;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Beyond8.Learning.Api.Apis;
 using Beyond8.Learning.Application.Clients.Catalog;
+using Beyond8.Learning.Application.Clients.Identity;
 using Beyond8.Learning.Application.Consumers.Assessment;
 using Beyond8.Learning.Application.Services.Interfaces;
 using Beyond8.Learning.Application.Services.Implements;
@@ -43,6 +44,22 @@ public static class ApplicationServiceExtensions
         builder.Services.AddScoped<ICourseReviewService, CourseReviewService>();
 
         builder.AddCatalogClient();
+        builder.AddIdentityClient();
+
+        return builder;
+    }
+
+    private static IHostApplicationBuilder AddIdentityClient(this IHostApplicationBuilder builder)
+    {
+        var identityBaseUrl = builder.Configuration["Clients:Identity:BaseUrl"]
+            ?? throw new InvalidOperationException("Clients:Identity:BaseUrl is required for Learning service.");
+
+        builder.Services.AddHttpClient<IIdentityClient, IdentityClient>(client =>
+        {
+            client.BaseAddress = new Uri(identityBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(30);
+        })
+        .AddPolicyHandler(GetResiliencePolicy());
 
         return builder;
     }
