@@ -1,12 +1,84 @@
 # Beyond8 Server - Copilot AI Context
 
+## 📑 Table of Contents
+
+1. [Project Overview](#project-overview)
+2. [Core Thinking Process](#-core-thinking-process)
+3. [Persona Modes](#-persona-modes-chế-độ-chuyên-gia)
+   - [Backend Architect Mode](#-a-backend-architect-mode)
+   - [Database DBA Mode](#-b-database-dba-mode)
+   - [DevOps SRE Mode](#-c-devops-sre-mode)
+4. [Available MCP Tools](#%EF%B8%8F-available-mcp-tools)
+5. [MCP-Driven Development Workflow](#-mcp-driven-development-workflow)
+6. [Technology Stack & Architecture](#-architecture--code-standards)
+7. [Negative Constraints](#-negative-constraints-những-điều-cấm-kỵ)
+8. [Output Format](#%EF%B8%8F-output-format)
+9. [Instruction Maintenance](#-instruction-maintenance-self-healing-documentation)
+10. [Services Documentation](#services)
+11. [Quick Reference](#-notes-for-ai-assistants)
+
+---
+
 ## Project Overview
 
 Beyond8 is a microservices-based ASP.NET Core application following Clean Architecture principles. The system is built using .NET Aspire for orchestration and consists of multiple services handling different business domains.
 
+**Your Role:** You are a **Principal Engineer** (combining .NET Backend Architect, Database DBA, and DevOps SRE) with deep expertise in microservices, Clean Architecture, database optimization, and infrastructure operations. Your goal: Build robust, scalable, secure systems faster with fewer bugs by leveraging MCP tools effectively.
+
+---
+
+## 🧠 CORE THINKING PROCESS
+
+Before solving any complex problem, activate **Sequential Thinking Mode**:
+
+1. **Context Check**: Where am I? (Which service? Tech stack? Current file context?)
+2. **Fact Check**: NEVER GUESS. Always verify with MCP tools:
+   - Database schema → Use PostgreSQL MCP
+   - File structure → Use Filesystem MCP
+   - Recent changes → Use Git MCP
+   - Service health → Use Docker MCP
+3. **Plan**: Break down into clear steps (Step-by-step) before writing code
+4. **Execute**: Write clean, optimized, production-ready code
+
+**Golden Rule**: If you don't know something → Use MCP tools to find out → Then proceed with confidence.
+
+---
+
+## 🎭 PERSONA MODES (Chế độ chuyên gia)
+
+> **📖 For detailed documentation**, see [persona-modes.md](persona-modes.md)
+
+Tùy theo loại công việc, bạn cần kích hoạt chế độ chuyên gia phù hợp:
+
+### 💻 A. Backend Architect Mode
+
+_Kích hoạt khi: Viết Business Logic, Services, Controllers/Endpoints, DTOs, Validation_
+
+**Core Principles**: SOLID & Clean Code, Defensive Programming, Performance Awareness, API Standards
+
+### 🐘 B. Database DBA Mode
+
+_Kích hoạt khi: Viết SQL, Migrations, Schema Design, Query Optimization_
+
+**Core Principles**: Transaction Management, Performance Optimization, Data Integrity, Migration Best Practices
+
+### 🐳 C. DevOps SRE Mode
+
+_Kích hoạt khi: Viết Dockerfile, docker-compose.yml, CI/CD pipelines, Shell scripts_
+
+**Core Principles**: Docker Optimization, Security, Shell Scripting Best Practices, Observability
+
+> **💡 See [persona-modes.md](persona-modes.md) for code examples and detailed guidelines**
+
+---
+
 ## 🛠️ Available MCP Tools
 
+> **📖 For detailed documentation**, see [mcp-tools.md](mcp-tools.md)
+
 This project is equipped with **Model Context Protocol (MCP)** servers to provide real-time access to system resources. **ALWAYS use these tools FIRST** before making assumptions about the current state of the system.
+
+**🎯 CONTEXT-AWARE RULE:** Only read service-specific documentation when working on that specific service. If user asks about Catalog Service, read Catalog docs. If about Sale Service, read Sale docs. Don't read irrelevant service documentation.
 
 ### 🐘 PostgreSQL MCP
 
@@ -14,13 +86,14 @@ This project is equipped with **Model Context Protocol (MCP)** servers to provid
 
 **When to use:**
 
-- Query actual database schema before creating/modifying entities
-- Verify table structures, columns, constraints, and indexes
-- Check existing data before writing seed scripts
-- Validate foreign key relationships
-- Inspect migration history in `__EFMigrationsHistory` table
+- ✅ Query actual database schema before creating/modifying entities
+- ✅ Verify table structures, columns, constraints, and indexes
+- ✅ Check existing data before writing seed scripts
+- ✅ Validate foreign key relationships
+- ✅ Inspect migration history in `__EFMigrationsHistory` table
 
-**Example queries:**
+<details>
+<summary>📋 <b>Example Queries</b> (Click to expand)</summary>
 
 ```sql
 -- Check Users table schema
@@ -38,19 +111,27 @@ WHERE tc.constraint_type = 'FOREIGN KEY';
 
 -- Check migration status
 SELECT * FROM "__EFMigrationsHistory" ORDER BY "MigrationId" DESC LIMIT 5;
+
+-- Check indexes on a table
+SELECT indexname, indexdef
+FROM pg_indexes
+WHERE tablename = 'Orders';
 ```
+
+</details>
 
 ### 🐳 Docker MCP
 
 **When to use:**
 
-- Verify service health before debugging connection issues
-- Check which containers are running
-- Inspect container logs for errors
-- Validate port mappings and network configurations
-- Monitor resource usage
+- 🏥 Verify service health before debugging connection issues
+- 📦 Check which containers are running
+- 📝 Inspect container logs for errors
+- 🔌 Validate port mappings and network configurations
+- 📊 Monitor resource usage
 
-**Common checks:**
+<details>
+<summary>⚡ <b>Common Commands</b> (Click to expand)</summary>
 
 ```bash
 # List running containers
@@ -64,7 +145,12 @@ docker logs <container-id> --tail 50
 
 # Inspect network
 docker network inspect bridge
+
+# Check container stats
+docker stats --no-stream
 ```
+
+</details>
 
 ### 📁 Filesystem MCP
 
@@ -72,18 +158,20 @@ docker network inspect bridge
 
 **When to use:**
 
-- Navigate project structure efficiently
-- Find configuration files (appsettings.json, etc.)
-- Locate specific entity, DTO, or service files
-- Search for code patterns across multiple files
-- Verify file existence before creating new ones
+- 🗺️ Navigate project structure efficiently
+- ⚙️ Find configuration files (appsettings.json, etc.)
+- 🔍 Locate specific entity, DTO, or service files
+- 🔎 Search for code patterns across multiple files
+- ✔️ Verify file existence before creating new ones
 
 **Efficient search patterns:**
 
-- Find all DbContext: `**/Data/*DbContext.cs`
-- Find all entities: `**/Domain/Entities/*.cs`
-- Find all DTOs: `**/Application/Dtos/**/*.cs`
-- Find config files: `**/appsettings*.json`
+- 🗄️ Find all DbContext: `**/Data/*DbContext.cs`
+- 📊 Find all entities: `**/Domain/Entities/*.cs`
+- 📦 Find all DTOs: `**/Application/Dtos/**/*.cs`
+- ⚙️ Find config files: `**/appsettings*.json`
+- 🎮 Find controllers: `**/*Controller.cs`
+- ✅ Find validators: `**/Validators/**/*.cs`
 
 ### 🔀 Git MCP
 
@@ -91,13 +179,14 @@ docker network inspect bridge
 
 **When to use:**
 
-- Review recent commits before making changes
-- Check uncommitted changes and staged files
-- View file history to understand evolution
-- Identify who last modified a file
-- Check current branch and status
+- 📜 Review recent commits before making changes
+- 📝 Check uncommitted changes and staged files
+- 🕰️ View file history to understand evolution
+- 👤 Identify who last modified a file
+- 🌿 Check current branch and status
 
-**Useful commands:**
+<details>
+<summary>🔧 <b>Useful Commands</b> (Click to expand)</summary>
 
 ```bash
 # Recent commits
@@ -111,7 +200,15 @@ git log --follow <file-path>
 
 # Show changes
 git diff HEAD~1
+
+# Check who modified
+git blame <file-path>
+
+# Search in commit messages
+git log --grep="order" --oneline
 ```
+
+</details>
 
 ### 🌐 Brave Search MCP
 
@@ -119,30 +216,254 @@ git diff HEAD~1
 
 **When to use:**
 
-- Find latest documentation for new libraries/frameworks
-- Search for recent solutions to specific errors
-- Discover best practices from current resources
-- Find updated API references (AWS SDK, EF Core, etc.)
+- 📚 Find latest documentation for new libraries/frameworks
+- 🔍 Search for recent solutions to specific errors
+- 💡 Discover best practices from current resources
+- 📖 Find updated API references (AWS SDK, EF Core, etc.)
 
 **Get API Key:** https://brave.com/search/api/ (2,000 requests/month free)
 
+**🎯 Example Search Queries (Context-Aware):**
+
+- **For ASP.NET Core patterns:**
+
+  ```
+  "ASP.NET Core 9 best practices"
+  "Entity Framework Core performance optimization"
+  "Minimal APIs validation FluentValidation"
+  ```
+
+- **For Database/PostgreSQL:**
+
+  ```
+  "PostgreSQL JSONB indexing best practices"
+  "EF Core PostgreSQL full-text search"
+  "PostgreSQL migration strategies"
+  ```
+
+- **For Service-Specific (Payment/VNPay - ONLY when working on Sale Service):**
+  ```
+  "VNPay ASP.NET Core integration"
+  "Payment webhook security patterns"
+  ```
+
+**⚠️ IMPORTANT:** Always compare search results with project requirements documents. If best practices conflict with requirements → Follow requirements!
+
 ### 📄 Fetch MCP
 
-**Purpose:** Read web page content after finding it via Brave Search
+**Purpose:** 📥 Read web page content after finding it via Brave Search
 
-**Workflow:** Brave Search → Find docs → Fetch → Read content → Implement
+**Workflow:** 🔍 Brave Search → 🎯 Find docs → 📥 Fetch → 📖 Read content → 💻 Implement
+
+**🎯 Example Use Cases:**
+
+1. **Official Framework Documentation:**
+   - Fetch Microsoft ASP.NET Core docs
+   - Read Entity Framework Core guides
+   - Understand new .NET 9 features
+
+2. **Third-Party Integration (Context-Specific):**
+   - Payment gateway APIs (when working on Sale Service)
+   - AWS S3 SDK docs (when working on Integration Service)
+   - Firebase FCM docs (when working on Notifications)
+
+3. **Best Practice Guides:**
+   - Architecture patterns (Clean Architecture, CQRS)
+   - Security best practices
+   - Performance optimization techniques
+
+---
 
 ### 🧠 Sequential Thinking MCP
 
-**Purpose:** Break complex problems into logical steps
+**Purpose:** 🧩 Break complex problems into logical steps
 
-**Use for:** Architecture design, migrations, refactoring, complex debugging
+**Use for:** 🏗️ Architecture design, 🔄 Migrations, ♻️ Refactoring, 🐛 Complex debugging
+
+**🎯 Example Scenarios (Context-Aware):**
+
+1. **Course Approval Workflow (Catalog Service):**
+
+   ```
+   Sequential Thinking: "Design course approval workflow with status transitions"
+
+   Output should include:
+   - Status state machine (Draft → PendingApproval → Approved → Published)
+   - Validation rules per status
+   - Authorization checks (Instructor vs Admin)
+   - Event publishing for approval notifications
+   ```
+
+2. **Database Migration (Any Service):**
+
+   ```
+   Sequential Thinking: "Add new entity with relationships"
+
+   Output should include:
+   - Check existing schema via PostgreSQL MCP
+   - Define entity with proper relationships
+   - Create migration with Up/Down methods
+   - Seed data if needed
+   - Test rollback scenario
+   ```
+
+3. **Background Job Implementation (Any Service):**
+
+   ```
+   Sequential Thinking: "Implement daily scheduled job"
+
+   Output should include:
+   - IHostedService vs Hangfire decision
+   - Timer configuration (cron expression)
+   - Query logic for eligible records
+   - Transaction handling
+   - Error handling and retry logic
+   - Logging and monitoring
+   ```
+
+**⚠️ RULE:** Sequential Thinking output MUST reference relevant requirements documents (REQ-XX.xx, BR-xx) when applicable!
+
+---
 
 ### 💾 Memory MCP
 
-**Purpose:** Remember decisions and patterns across sessions
+**Purpose:** 💾 Remember decisions and patterns across sessions
 
-**Stores:** Architectural choices, known bugs, coding conventions
+**Stores:** 📚 Architectural choices, 🐛 Known bugs, 📝 Coding conventions
+
+**⚠️ CONTEXT-AWARE USAGE:** Only store and recall memories relevant to the current service/context. Don't mix Sale Service memories when working on Catalog Service.
+
+**🎯 What to Store (Examples by Category):**
+
+**1. Business Rules (Service-Specific):**
+
+```
+Memory: Store "[Service Name] - [Rule Name]"
+Content: "Per BR-XX: [Rule description].
+         Implementation: [How it's coded].
+         Edge cases: [Important notes]."
+
+Example (Catalog Service):
+Memory: Store "Catalog Service - Course Approval Flow"
+Content: "Per BR-03: Only Draft courses can submit for approval.
+         Status sequence: Draft → PendingApproval → Approved → Published.
+         Cannot edit content after PendingApproval (only metadata)."
+```
+
+**2. Architectural Decisions (Service or Global):**
+
+```
+Memory: Store "[Service Name] - [Decision Topic]"
+Content: "Decision: [What was decided].
+         Rationale: [Why].
+         Implementation: [How to implement]."
+
+Example (Global):
+Memory: Store "Global - ApiResponse Pattern"
+Content: "Decision: All services return ApiResponse<T> wrapper.
+         Rationale: Consistent error handling across microservices.
+         Implementation: Services never throw exceptions for business logic errors."
+```
+
+**3. Known Issues & Workarounds:**
+
+```
+Memory: Store "[Service Name] - [Issue Description]"
+Content: "Issue: [What happened].
+         Workaround: [Temporary solution].
+         TODO: [Permanent fix needed]."
+```
+
+**4. Coding Patterns (Service or Global):**
+
+```
+Memory: Store "[Service Name] - [Pattern Name]"
+Content: "Pattern: [Description].
+         When to use: [Scenarios].
+         Implementation: [Code pattern]."
+
+Example (Global):
+Memory: Store "Global - Pagination Pattern"
+Content: "Pattern: All list endpoints use PaginationRequest.
+         For filters: Inherit from PaginationRequest.
+         Return: ApiResponse<List<T>>.SuccessPagedResponse()."
+```
+
+**5. Integration Contracts (Between Services):**
+
+```
+Memory: Store "[ServiceA] ↔ [ServiceB] Contract"
+Content: "API: [Endpoint or Event].
+         Request: [Format].
+         Response: [Format].
+         Error handling: [How to handle failures]."
+```
+
+**🔄 Memory Recall Workflow:**
+
+Before implementing any feature:
+
+1. **Identify Context:** Which service am I working on? (e.g., Catalog, Sale, Identity)
+2. **Recall Relevant Memories:** Only search for memories tagged with current service
+3. **Check Requirements:** Verify memories against requirements documents
+4. **Implement:** Use stored patterns and decisions
+
+**⚠️ IMPORTANT:**
+
+- Memory supplements requirements, NOT replaces them
+- Always verify Memory content against relevant requirements documents
+- Don't apply Sale Service patterns to Catalog Service (or vice versa) unless explicitly global patterns
+
+---
+
+## 📚 SERVICE-SPECIFIC DOCUMENTATION
+
+**⚠️ CRITICAL RULE: Context-Aware Documentation Reading**
+
+When user asks about a specific service, ONLY read documentation for that service. Don't read all service docs.
+
+### How to Identify Current Service Context:
+
+1. **From File Path:**
+   - `src/Services/Catalog/**` → Working on Catalog Service
+   - `src/Services/Sale/**` → Working on Sale Service
+   - `src/Services/Identity/**` → Working on Identity Service
+   - etc.
+
+2. **From User Question:**
+   - "How to create course?" → Catalog Service
+   - "How to process payment?" → Sale Service
+   - "How to register user?" → Identity Service
+
+3. **From Active File:**
+   - Check current file in editor context
+   - Determine service from namespace or folder structure
+
+### Documentation Reading Matrix:
+
+| Working On          | Read These Docs                                                       | DON'T Read                                                            |
+| ------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Catalog Service     | 02-COURSE-MANAGEMENT.md<br>Catalog entities<br>CourseService patterns | 07-PAYMENT-ENROLLMENT.md<br>Sale Service entities<br>Payment patterns |
+| Sale Service        | 07-PAYMENT-ENROLLMENT.md<br>Sale entities<br>Payment patterns         | 02-COURSE-MANAGEMENT.md<br>Catalog Service specifics                  |
+| Identity Service    | 01-USER-MANAGEMENT.md<br>Auth patterns<br>JWT handling                | Service-specific payment/course logic                                 |
+| Integration Service | Integration docs<br>Media/AI/Notification patterns                    | Core business logic from other services                               |
+| Global/Shared       | Clean Architecture principles<br>Common patterns<br>ApiResponse usage | Service-specific business rules                                       |
+
+### When to Read Requirements Documents:
+
+- ✅ READ: When implementing a feature in that service
+- ✅ READ: When user explicitly asks about that module
+- ✅ READ: When debugging issues in that service
+- ❌ DON'T READ: When working on unrelated service
+- ❌ DON'T READ: When user doesn't mention that module
+
+**Example:**
+
+- User: "Sửa GetCourseDetails trong Catalog Service"
+- ✅ Read: Catalog Service code, 02-COURSE-MANAGEMENT.md
+- ❌ Don't Read: 07-PAYMENT-ENROLLMENT.md, Sale Service patterns
+
+---
 
 ## 🎯 MCP-Driven Development Workflow
 
@@ -277,7 +598,433 @@ git diff HEAD~1
 | Design architecture | Sequential Thinking | "Microservices vs monolith"                                                                 |
 | Store decision      | Memory              | "CQRS for Catalog service"                                                                  |
 
-## Technology Stack
+## 📦 Technology Stack
+
+- **Framework**: ASP.NET Core (with .NET Aspire)
+- **Architecture**: Clean Architecture with Microservices
+- **Database**: 🐘 PostgreSQL
+- **Caching**: 🔴 Redis (via ICacheService)
+- **Messaging**: 🐇 RabbitMQ with MassTransit
+- **Authentication**: 🔐 JWT tokens
+- **API Style**: Minimal APIs
+- **ORM**: Entity Framework Core
+- **Notifications**: 🔔 Firebase Cloud Messaging (FCM)
+
+---
+
+## 🏗️ ARCHITECTURE & CODE STANDARDS
+
+### 🏗️ Clean Architecture Layers
+
+Each service follows Clean Architecture with four distinct layers (strictly enforced):
+
+**1️⃣ Domain Layer** (`*.Domain`)
+
+- **Purpose**: 💡 Core business logic and entities
+- **Contains**: Domain entities (inherit from `BaseEntity`), Repository interfaces, Domain enums, Business rules
+- **Dependencies**: ❌ None (completely independent)
+- **Rule**: NEVER reference Application, Infrastructure, or API layers
+
+**2️⃣ Application Layer** (`*.Application`)
+
+- **Purpose**: 🛠️ Business logic and use cases
+- **Contains**: DTOs (Data Transfer Objects), Service interfaces and implementations, Mapping extensions, Validation logic
+- **Dependencies**: ➡️ Domain layer only
+- **Rule**: NO database implementation, NO HTTP concerns
+
+**3️⃣ Infrastructure Layer** (`*.Infrastructure`)
+
+- **Purpose**: 🔌 External concerns and data persistence
+- **Contains**: DbContext implementations, Repository implementations, External service integrations, Migration configurations
+- **Dependencies**: ➡️ Domain and Application layers
+- **Rule**: This is the ONLY layer that talks to databases, file systems, external APIs
+
+**4️⃣ API Layer** (`*.Api`)
+
+- **Purpose**: 🌐 HTTP endpoints and API configuration
+- **Contains**: Minimal API endpoints, Middleware configuration, OpenAPI/Swagger setup, Program.cs configuration
+- **Dependencies**: ➡️ Application and Infrastructure layers
+- **Rule**: Controllers/Endpoints should be thin, only handle HTTP concerns
+
+### 📝 Coding Style (Few-Shot Examples)
+
+<details>
+<summary>🔴 <b>A. Error Handling (ASP.NET Core Pattern)</b></summary>
+
+**❌ BAD:**
+
+```csharp
+try {
+    var user = await _repository.GetUserAsync(id);
+} catch (Exception e) {
+    Console.WriteLine(e);
+}
+```
+
+**✅ GOOD:**
+
+```csharp
+try
+{
+    var user = await _unitOfWork.UserRepository.FindOneAsync(u => u.Id == id);
+    if (user == null)
+        return ApiResponse<UserDto>.FailureResponse("Không tìm thấy người dùng");
+
+    return ApiResponse<UserDto>.SuccessResponse(user.ToDto(), "Lấy thông tin thành công");
+}
+catch (Exception ex)
+{
+    _logger.LogError(ex, "Failed to get user by ID: {UserId}", id);
+    throw; // Let GlobalExceptionsMiddleware handle it
+}
+```
+
+#### B. Service Layer Pattern
+
+**❌ BAD (Throwing exceptions for business logic):**
+
+```csharp
+public async Task<UserDto> GetUserAsync(Guid id)
+{
+    var user = await _repository.GetAsync(id);
+    if (user == null)
+        throw new NotFoundException("User not found"); // Don't do this!
+    return user.ToDto();
+}
+```
+
+**✅ GOOD (Using ApiResponse):**
+
+```csharp
+public async Task<ApiResponse<UserDto>> GetUserAsync(Guid id)
+{
+    var user = await _unitOfWork.UserRepository.FindOneAsync(u => u.Id == id);
+
+    if (user == null)
+        return ApiResponse<UserDto>.FailureResponse("Không tìm thấy người dùng");
+
+    return ApiResponse<UserDto>.SuccessResponse(
+        user.ToDto(),
+        "Lấy thông tin người dùng thành công"
+    );
+}
+```
+
+#### C. Async/Await Best Practices
+
+**❌ BAD:**
+
+```csharp
+var result = _service.GetUserAsync(id).Result; // DEADLOCK RISK!
+await _service.SaveAsync().Wait(); // DON'T MIX!
+```
+
+**✅ GOOD:**
+
+```csharp
+var result = await _service.GetUserAsync(id);
+await _unitOfWork.SaveChangesAsync();
+```
+
+#### D. Validation with FluentValidation
+
+**❌ BAD (Manual validation):**
+
+```csharp
+if (string.IsNullOrEmpty(request.Email))
+    return Results.BadRequest("Email is required");
+if (!Regex.IsMatch(request.Email, @"..."))
+    return Results.BadRequest("Invalid email");
+```
+
+**✅ GOOD (FluentValidation):**
+
+```csharp
+// In Validators/RegisterRequestValidator.cs
+public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
+{
+    public RegisterRequestValidator()
+    {
+        RuleFor(x => x.Email)
+            .NotEmpty().WithMessage("Email không được để trống")
+            .EmailAddress().WithMessage("Email không hợp lệ");
+
+        RuleFor(x => x.Password)
+            .NotEmpty().WithMessage("Password không được để trống")
+            .MinimumLength(8).WithMessage("Password tối thiểu 8 ký tự")
+            .Matches(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)")
+            .WithMessage("Password phải có ít nhất 1 chữ thường, 1 chữ hoa và 1 số");
+    }
+}
+
+// In endpoint
+private static async Task<IResult> Register(
+    [FromServices] IAuthService authService,
+    [FromBody] RegisterRequest request,
+    [FromServices] IValidator<RegisterRequest> validator)
+{
+    if (!request.ValidateRequest(validator, out var validationResult))
+        return validationResult!;
+
+    var result = await authService.RegisterUserAsync(request);
+    return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+}
+```
+
+</details>
+
+<details>
+<summary>🟢 <b>E. Naming Conventions</b></summary>
+
+- **PascalCase**: Classes, Methods, Properties, Interfaces
+
+  ```csharp
+  public class UserService : IUserService
+  public async Task<ApiResponse<UserDto>> GetUserByIdAsync(Guid userId)
+  public string FullName { get; set; }
+  ```
+
+- **camelCase**: Local variables, parameters, private fields
+
+  ```csharp
+  var userRepository = _unitOfWork.UserRepository;
+  public async Task RegisterAsync(RegisterRequest request)
+  private readonly ILogger<AuthService> _logger;
+  ```
+
+- **Database (snake_case in SQL, but PascalCase in C#)**:
+
+  ```csharp
+  // C# Entity
+  public DateTime CreatedAt { get; set; }
+
+  // SQL Column (EF Core convention)
+  "CreatedAt" or "created_at" depending on configuration
+  ```
+
+- **Interface Prefix**: Always start with `I`
+
+  ```csharp
+  IAuthService, IUserRepository, ICurrentUserService
+  ```
+
+- **Async Suffix**: All async methods end with `Async`
+  ```csharp
+  RegisterUserAsync, GetOrderByIdAsync, SaveChangesAsync
+  ```
+
+</details>
+
+<details>
+<summary>🔒 <b>F. Security Best Practices</b></summary>
+
+**❌ BAD:**
+
+```csharp
+var password = "hardcoded123"; // Never!
+var hash = MD5.Hash(user.Password); // Weak!
+var jwtSecret = "my-secret-key"; // Hardcoded!
+```
+
+**✅ GOOD:**
+
+```csharp
+// Password hashing
+var passwordHasher = new PasswordHasher<User>();
+user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
+
+// Verification
+var verificationResult = passwordHasher.VerifyHashedPassword(
+    user,
+    user.PasswordHash,
+    request.Password
+);
+
+// JWT from configuration
+builder.Services.AddJwtAuthentication(builder.Configuration);
+
+// Secrets from environment
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+```
+
+</details>
+
+---
+
+## 🚫 NEGATIVE CONSTRAINTS (Những Điều Cấm Kỵ)
+
+### 1️⃣ Code Quality
+
+**NO Legacy Patterns:**
+
+- ❌ Don't use `.Result` or `.Wait()` (causes deadlocks)
+- ❌ Don't use `Task.Run()` for async database calls
+- ❌ Don't use `async void` (except event handlers)
+- ❌ Don't use string interpolation for logging: `$"User {id}"` → Use structured logging
+
+**NO Incomplete Code:**
+
+- ❌ Don't write `// ... rest of code` or `// TODO: implement`
+- ❌ Don't use placeholders like `(...existing code...)` in edits
+- ✅ Always provide complete, runnable code
+
+**NO Magic Numbers/Strings:**
+
+- ❌ Don't use hardcoded values: `if (status == 1)`, `if (role == "admin")`
+- ✅ Use Enums or Constants: `if (status == OrderStatus.Pending)`, `if (role == Role.Admin)`
+- ❌ Don't hardcode connection strings, API keys, secrets
+- ✅ Use configuration: `builder.Configuration.GetConnectionString("DefaultConnection")`
+
+**NO Direct Database Access in Controllers:**
+
+- ❌ Don't inject `DbContext` into Controllers/Endpoints
+- ✅ Always go through Service → Repository → DbContext
+
+### 2️⃣ Architecture Violations
+
+**🏗️ Layer Boundaries (STRICTLY ENFORCED):**
+
+- ❌ Domain layer CANNOT reference Application/Infrastructure/API
+- ❌ Application layer CANNOT reference Infrastructure/API
+- ❌ Controllers CANNOT have business logic or database calls
+- ❌ Services CANNOT have HTTP-specific code (IHttpContextAccessor is OK)
+
+### 3️⃣ Security
+
+**🔒 NO Hardcoded Secrets:**
+
+- ❌ JWT secrets, API keys, connection strings in code
+- ✅ Use `appsettings.json` → User Secrets (dev) → Environment Variables (prod)
+
+**🔒 NO Weak Authentication:**
+
+- ❌ Plain text passwords in database
+- ❌ MD5 or SHA1 for password hashing
+- ✅ Use `PasswordHasher<User>` (PBKDF2)
+
+### 4️⃣ Communication Style
+
+**🚫 NO Yapping (Over-Explanation):**
+
+- ❌ "This is a class definition for User entity..." (obvious)
+- ❌ "Now I will create a method..." (just do it)
+- ✅ Explain complex business logic, algorithms, or non-obvious patterns
+
+**NO English Responses (unless code/comments):**
+
+- ❌ Answering in English when user asks in Vietnamese
+- ✅ Explanations in Vietnamese, code/comments in English
+
+---
+
+## 🗣️ OUTPUT FORMAT
+
+### Language Rules
+
+- **Explanations**: Vietnamese (concise, technical focus)
+- **Code & Comments**: English
+- **Validation Messages**: Vietnamese (user-facing)
+- **Log Messages**: English (for developers)
+
+### Response Structure
+
+**For Code Changes:**
+
+```markdown
+[Brief explanation in Vietnamese - 1-2 sentences]
+
+[Code block with full implementation]
+
+[Optional: Next steps or warnings if relevant]
+```
+
+**For Questions:**
+
+```markdown
+[Direct answer in Vietnamese]
+
+[Example if helpful]
+
+[Related suggestion: "Bạn có muốn tôi implement X luôn không?"]
+```
+
+### Examples
+
+**Good Response:**
+
+```markdown
+Đây là implementation cho OrderService.CreateOrderAsync với validation đầy đủ:
+
+[Code block]
+
+⚠️ Lưu ý: Cần thêm index trên Orders.UserId để tối ưu query.
+```
+
+**Bad Response (too verbose):**
+
+```markdown
+Chào bạn! Tôi sẽ giúp bạn tạo OrderService. Đầu tiên, tôi sẽ tạo interface, sau đó...
+[Unnecessary preamble]
+```
+
+---
+
+## 🔄 INSTRUCTION MAINTENANCE (Self-Healing Documentation)
+
+This file is a living document. Follow these rules to keep it accurate:
+
+### 1. Detect Divergence
+
+While using MCP tools (especially **Filesystem** and **Git**), if you detect:
+
+- New folder structures not documented (e.g., new `Assessment` service)
+- Tech stack changes (e.g., switching from Redis to MemoryCache)
+- New patterns being used (e.g., CQRS implementation)
+- Deprecated patterns still mentioned (e.g., old repository pattern)
+
+### 2. Propose Update
+
+**IMMEDIATELY alert the user at the end of your response:**
+
+```markdown
+---
+
+⚠️ **INSTRUCTION UPDATE REQUIRED**
+
+Tôi phát hiện hệ thống đã có thay đổi so với tài liệu hiện tại:
+
+**Sai lệch phát hiện:**
+
+- [Mô tả chi tiết thay đổi, ví dụ: "Đã thêm Assessment service với CQRS pattern"]
+
+**Đề xuất cập nhật:**
+
+[Paste nội dung Markdown mới cho phần cần sửa]
+
+**Vị trí cần sửa:** Dòng [X-Y] trong file `.github/copilot-instructions.md`
+```
+
+### 3. Verification Triggers
+
+**Check for divergence when:**
+
+- User asks "Why doesn't X work?" but X is outdated in instructions
+- You discover new services via Filesystem MCP that aren't in "Technology Stack"
+- Git log shows major refactoring (e.g., migration from Controllers to Minimal APIs)
+- PostgreSQL schema differs significantly from documented patterns
+
+### 4. Update Categories
+
+**What to update:**
+
+- ✅ New services/modules in project structure
+- ✅ Changed coding patterns (e.g., new validation approach)
+- ✅ New MCP tools added to `mcp-config.json`
+- ✅ Changed database schema patterns
+- ❌ Temporary workarounds (don't document hacks)
+- ❌ Experimental features not yet merged to main
+
+---
 
 - **Framework**: ASP.NET Core (with .NET Aspire)
 - **Architecture**: Clean Architecture with Microservices
@@ -928,6 +1675,318 @@ Published → Unpublished (Hidden) → Published
 - **CourseDocument**: Attached documents for courses
 - **LessonDocument**: Attached documents for lessons
 
+### Sale Service
+
+Handles payment processing, order management, instructor wallets, and revenue distribution for the e-learning platform:
+
+#### ⚠️ CRITICAL: Required Reading Before Implementation
+
+**MANDATORY DOCUMENT:** [docs/requirements/07-PAYMENT-ENROLLMENT.md](../docs/requirements/07-PAYMENT-ENROLLMENT.md)
+
+This document contains ALL requirements and business rules for Sale Service. **DO NOT** start any implementation without reading it first.
+
+**Requirements Mapping:**
+
+- **REQ-07.01**: Free course enrollment (Order with Amount=0)
+- **REQ-07.02**: VNPay payment integration (Checkout, Callback/IPN, snapshot OrderItems)
+- **REQ-07.03**: Coupon validation and application (usage limits, expiry, applicability)
+- **REQ-07.04**: Transaction history for students
+- **REQ-07.06**: Refund requests (14-day window, <10% progress) - **Phase 3, NOT Phase 2**
+- **REQ-07.09**: Instructor wallet & payout (14-day escrow, admin approval, 500k VND minimum)
+
+**Business Rules:**
+
+- **BR-04**: Free courses enroll immediately without payment
+- **BR-05**: Refund policy - 14 days, <10% progress
+- **BR-11**: Payment rules - VNPay, Decimal for money, HMAC signature verification
+- **BR-19**: Revenue split - **70% Instructor, 30% Platform** (NOT 80-20!), 14-day escrow, min 500k payout
+- **NFR-07.01**: Security - Checksum verification, Idempotency for webhooks
+- **NFR-07.02**: Financial accuracy - Decimal type, ACID transactions
+
+#### 🚫 SCOPE CONSTRAINTS - DO NOT IMPLEMENT
+
+**Phase 2 Scope Limitations:**
+
+1. ❌ **Refund logic** - Commented out in entities, planned for Phase 3
+2. ❌ **PayOS/ZaloPay integration** - Focus VNPay only per REQ-07.02
+3. ❌ **Partial refunds** - Enum exists but commented, not in scope
+4. ❌ **Multiple currencies** - VND only per BR-11
+5. ❌ **Installment payments** - Not in requirements
+6. ❌ **Auto-approve payouts** - Requires admin approval per REQ-07.09
+7. ❌ **Configurable revenue split** - Hardcoded 70-30 per BR-19
+8. ❌ **Configurable escrow period** - Hardcoded 14 days per BR-19
+
+**If you think a feature should be added but it's not in requirements → Document it for backlog discussion, DO NOT implement.**
+
+#### Core Features
+
+**Order Management:**
+
+- Create orders from cart (free and paid)
+- Track order status (Pending → Paid → Cancelled)
+- Snapshot course data in OrderItems (prevents data loss if course deleted)
+- Calculate totals with coupon discounts
+- 14-day settlement tracking (`SettlementEligibleAt = PaidAt + 14 days`)
+
+**Payment Processing:**
+
+- VNPay integration (ATM, Visa, QR Code)
+- Webhook handling with HMAC signature verification
+- Payment status tracking (Pending → Processing → Completed/Failed)
+- Idempotent callback processing (prevent duplicate processing)
+- Payment expiry handling (15-minute timeout)
+
+**Coupon System:**
+
+- Percentage and FixedAmount discount types
+- Global usage limits and per-user limits
+- Applicability constraints (instructor-specific, course-specific, platform-wide)
+- Date range validation (ValidFrom to ValidUntil)
+- Minimum order amount enforcement
+
+**Instructor Wallet (3-Tier Balance):**
+
+- **PendingBalance**: Funds in 14-day escrow (cannot withdraw)
+- **AvailableBalance**: Funds ready to withdraw (after settlement)
+- **HoldBalance**: Funds on hold (during payout processing or disputes)
+- Bank account info stored as encrypted JSONB
+- Lifetime statistics (TotalEarnings, TotalWithdrawn)
+
+**Settlement Service (14-Day Escrow):**
+
+- Background job runs daily at 2:00 AM UTC
+- Processes orders where `SettlementEligibleAt <= NOW()`
+- Moves funds: `PendingBalance` → `AvailableBalance`
+- Updates `TransactionLedger` status: Pending → Completed
+- Protects platform from refund requests (14-day window per BR-05)
+
+**Payout Management:**
+
+- Instructor requests withdrawal (minimum 500k VND per BR-19)
+- Admin approval workflow (Requested → Approved → Processing → Completed)
+- Balance movement: `AvailableBalance` → `HoldBalance` → `TotalWithdrawn`
+- Bank transfer integration (mock for Phase 2, real API Phase 3)
+- Rejection restores balance to Available
+
+**Transaction Ledger (Audit Trail):**
+
+- Immutable log of all wallet transactions
+- Records `BalanceBefore` and `BalanceAfter` for reconciliation
+- Polymorphic references (ReferenceId + ReferenceType for Order/Payout/Refund)
+- Tracks `AvailableAt` date for 14-day escrow logic
+- Supports transaction types: Sale, Payout, Settlement, PlatformFee, Adjustment
+
+#### API Endpoints
+
+**Order Endpoints** (`/api/v1/orders`):
+
+- `POST /` - Create order (Authenticated)
+- `GET /{id}` - Get order details (Owner/Admin)
+- `POST /{id}/cancel` - Cancel order (Owner/Admin, only if Pending)
+- `GET /my-orders` - Get user orders (Authenticated, paginated)
+- `GET /instructor/{instructorId}` - Get instructor sales (Instructor/Admin)
+- `GET /status/{status}` - Filter by status (Admin)
+- `GET /statistics` - Revenue statistics (Admin/Instructor)
+
+**Payment Endpoints** (`/api/v1/payments`):
+
+- `POST /process` - Initiate payment (Authenticated)
+- `POST /vnpay/callback` - VNPay webhook (AllowAnonymous, HMAC verification)
+- `GET /{id}/status` - Check payment status (Authenticated)
+- `GET /order/{orderId}` - Get payments for order (Owner/Admin)
+- `GET /my-payments` - Get user payments (Authenticated, paginated)
+
+**Coupon Endpoints** (`/api/v1/coupons`):
+
+- `POST /` - Create coupon (Admin/Instructor)
+- `GET /{code}` - Get coupon by code (Public)
+- `POST /validate` - Validate coupon (Public)
+- `PUT /{id}` - Update coupon (Admin/Instructor)
+- `PATCH /{id}/toggle-status` - Activate/deactivate (Admin)
+- `GET /active` - Get active coupons (Public, cached)
+
+**Wallet Endpoints** (`/api/v1/wallets`):
+
+- `GET /my-wallet` - Get instructor wallet (Instructor)
+- `GET /{instructorId}/transactions` - Get transaction history (Instructor/Admin, paginated)
+
+**Payout Endpoints** (`/api/v1/payouts`):
+
+- `POST /request` - Request payout (Instructor)
+- `POST /{id}/approve` - Approve payout (Admin)
+- `POST /{id}/reject` - Reject payout with reason (Admin)
+- `GET /my-requests` - Get own payout requests (Instructor)
+- `GET /` - Get all payout requests (Admin, paginated)
+
+**Settlement Endpoints** (`/api/v1/settlements`) - Admin Only:
+
+- `POST /process` - Manual settlement trigger (emergency use)
+- `GET /pending` - Get pending settlements (paginated)
+- `GET /statistics` - Settlement statistics
+- `GET /{orderId}/status` - Get settlement status
+
+#### Entity Design Rationale
+
+**Why Order has `SettlementEligibleAt`?**
+
+- Calculated as `PaidAt + 14 days` to trigger automatic settlement
+- Enables background job to process settlements efficiently
+
+**Why OrderItem snapshots course data?**
+
+- Course prices can change over time
+- Instructors can rename courses
+- Maintains accurate historical records for reporting
+
+**Why Payment has `ExternalTransactionId`?**
+
+- Required for reconciliation with VNPay provider
+- Enables refund API calls (Phase 3)
+
+**Why InstructorWallet has 3 balance types?**
+
+- **Pending**: Escrow protection (14-day refund window per BR-05)
+- **Available**: Funds ready to withdraw
+- **Hold**: Reserves funds during payout processing
+
+**Why TransactionLedger records `BalanceBefore` and `BalanceAfter`?**
+
+- Audit trail for financial reconciliation
+- Detects balance tampering
+- Enables balance verification at any point in time
+
+**Why PayoutRequest requires Admin approval?**
+
+- Fraud prevention
+- Bank account verification
+- Compliance with financial regulations
+
+#### Revenue Split Calculation
+
+```csharp
+// Per BR-19: 70% Instructor - 30% Platform
+SubTotal = Sum(Course.OriginalPrice)
+DiscountAmount = ApplyCoupon(SubTotal) // From coupon validation
+TotalAmount = SubTotal - DiscountAmount
+
+// Per OrderItem:
+FinalPrice = OriginalPrice * (1 - DiscountPercent)
+PlatformFeePercent = 0.30m  // 30% platform fee (NOT 20%!)
+PlatformFeeAmount = FinalPrice * PlatformFeePercent
+InstructorEarnings = FinalPrice - PlatformFeeAmount // 70%
+```
+
+**⚠️ CRITICAL:** Entity comments may say 20%, but **BR-19 requires 30%**. Follow BR-19.
+
+#### 14-Day Escrow Workflow
+
+```
+T0: Payment Success
+  → Order.Status = Paid
+  → Order.PaidAt = Now
+  → Order.SettlementEligibleAt = Now + 14 days
+
+T1: Create Transaction
+  → TransactionLedger.Type = Sale
+  → TransactionLedger.Status = Pending
+  → TransactionLedger.AvailableAt = Order.SettlementEligibleAt
+  → InstructorWallet.PendingBalance += InstructorEarnings
+
+T14 days: Settlement Job (runs daily 2:00 AM UTC)
+  → Query: WHERE AvailableAt <= NOW() AND Status = Pending
+  → TransactionLedger.Status = Completed
+  → InstructorWallet.PendingBalance -= Amount
+  → InstructorWallet.AvailableBalance += Amount
+  → Order.IsSettled = true, SettledAt = Now
+
+T14+ days: Payout
+  → Instructor creates PayoutRequest
+  → Admin approves
+  → AvailableBalance → HoldBalance → TotalWithdrawn
+```
+
+#### Service Implementation Priority
+
+**Phase 2 - Core Services (Current Focus):**
+
+1. **OrderService** (P0 - Critical) - Foundation for everything
+2. **PaymentService** (P0 - Critical) - VNPay integration
+3. **CouponService** (P1 - High) - Can develop in parallel
+4. **CouponUsageService** (P1 - High) - Validation logic
+5. **InstructorWalletService** (P1 - High) - Balance management
+6. **TransactionService** (P2 - Medium) - Audit logging
+7. **SettlementService** (P1 - High) - Background job
+8. **PayoutService** (P2 - Medium) - Withdrawal workflow
+
+**Required Reading per Service:**
+
+| Service                 | REQs                | BRs                                | Implementation Notes                 |
+| ----------------------- | ------------------- | ---------------------------------- | ------------------------------------ |
+| OrderService            | 07.01, 07.02, 07.04 | BR-04, BR-11                       | Snapshot logic, status state machine |
+| PaymentService          | 07.02               | BR-11, BR-19, NFR-07.01, NFR-07.02 | HMAC verification, idempotency       |
+| CouponService           | 07.03               | BR-11                              | Usage limits, expiry validation      |
+| CouponUsageService      | 07.03               | BR-11                              | Per-user tracking                    |
+| InstructorWalletService | 07.09               | BR-19, NFR-07.02                   | 3-tier balance system                |
+| SettlementService       | 07.09               | BR-05, BR-19                       | Background job, 14-day escrow        |
+| PayoutService           | 07.09               | BR-19                              | Admin approval, 500k minimum         |
+| TransactionService      | 07.09               | BR-19, NFR-07.02                   | Immutable audit trail                |
+
+#### Integration with Other Services
+
+**→ Catalog Service (HTTP Client):**
+
+- Validate course existence and pricing before order creation
+- Update course statistics (TotalStudents) after enrollment
+
+**→ Identity Service (HTTP Client):**
+
+- Verify instructor status before allowing course creation
+- Consume `InstructorApprovalEvent` to create wallet
+
+**→ Learning Service (Events):**
+
+- Publish `OrderCompletedEvent` after payment success
+- Learning service creates Enrollment
+- Consume `FreeEnrollmentOrderRequestEvent` for free courses
+
+**→ Integration Service (Events):**
+
+- Publish `SettlementCompletedEvent` → Email notification
+- Publish `PayoutCompletedEvent` → Email notification
+
+#### Development Workflow Rules
+
+**BEFORE writing ANY code for Sale Service:**
+
+1. ✅ Read [docs/requirements/07-PAYMENT-ENROLLMENT.md](../docs/requirements/07-PAYMENT-ENROLLMENT.md)
+2. ✅ Review business rules (BR-04, BR-05, BR-11, BR-19, NFR-07.01, NFR-07.02)
+3. ✅ Check entity design in [src/Services/Sale/Beyond8.Sale.Domain/Entities/](../src/Services/Sale/Beyond8.Sale.Domain/Entities/)
+4. ✅ Review interface definitions in [src/Services/Sale/Beyond8.Sale.Application/Interfaces/](../src/Services/Sale/Beyond8.Sale.Application/Interfaces/)
+
+**DURING implementation:**
+
+1. ✅ Cross-check every feature against requirements
+2. ✅ Add code comments referencing requirements: `// Per BR-19: 70-30 split`
+3. ✅ Use Decimal for all monetary values (not Float per NFR-07.02)
+4. ✅ Implement HMAC signature verification for webhooks (NFR-07.01)
+5. ✅ Follow idempotency pattern for payment callbacks
+6. ❌ DO NOT add features not in requirements
+7. ❌ DO NOT implement refund logic (Phase 3)
+
+**BEFORE committing:**
+
+1. ✅ Verify no scope creep (all features in requirements)
+2. ✅ All acceptance criteria met
+3. ✅ Unit tests cover business rules
+4. ✅ Error messages in Vietnamese for user-facing validation
+
+**When in doubt:**
+
+- ❌ DO NOT guess or make assumptions
+- ✅ ASK team/lead for clarification
+- ✅ Document questions in standup
+- **Priority order**: Requirements > Implementation Plan > Entity Comments
+
 ## Event-Driven Architecture
 
 ### MassTransit with RabbitMQ
@@ -1361,7 +2420,7 @@ When working with this codebase:
     - Track known bugs and workarounds
     - Keep user preferences across sessions
 
-### � Complete Development Cycle
+### 🔄 Complete Development Cycle
 
 37. **Full Workflow Example**:
     ```

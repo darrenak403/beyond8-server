@@ -23,6 +23,7 @@ public interface ICourseService
     Task<ApiResponse<List<CourseResponse>>> FullTextSearchCoursesAsync(FullTextSearchRequest request);
     Task<ApiResponse<CourseSummaryResponse>> GetCourseSummaryAsync(Guid courseId);
     Task<ApiResponse<CourseDetailResponse>> GetCourseDetailsAsync(Guid courseId, Guid userId);
+    Task<ApiResponse<CourseDetailResponse>> GetCourseDetailsForAdminAsync(Guid courseId);
 
     // Đăng Ký Học // luồng 3
     // Task<ApiResponse<bool>> CheckCourseAccessAsync(Guid courseId, Guid userId);
