@@ -9,9 +9,7 @@ public interface IPaymentService
     Task<ApiResponse<PaymentResponse>> ProcessPaymentAsync(Guid orderId, ProcessPaymentRequest request);
     Task<ApiResponse<bool>> ConfirmPaymentAsync(string transactionId);
     Task<ApiResponse<bool>> HandleVNPayCallbackAsync(VNPayCallbackRequest request);
-    Task<ApiResponse<bool>> HandlePayOSCallbackAsync(PayOSCallbackRequest request);
     Task<ApiResponse<PaymentResponse>> CheckPaymentStatusAsync(Guid paymentId);
-    Task<ApiResponse<bool>> RefundPaymentAsync(Guid orderId, RefundPaymentRequest request);
     Task<ApiResponse<List<PaymentResponse>>> GetPaymentsByOrderAsync(Guid orderId);
     Task<ApiResponse<List<PaymentResponse>>> GetPaymentsByUserAsync(PaginationRequest pagination, Guid userId);
 }

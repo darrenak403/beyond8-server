@@ -40,15 +40,15 @@ public class OrderItem : BaseEntity
     [Column(TypeName = "decimal(18, 2)")]
     public decimal LineTotal { get; set; } // UnitPrice * Quantity (before platform coupon)
 
-    // Revenue Split (Platform Fee)
+    // Revenue Split (Platform Fee - Per BR-19: 30% platform, 70% instructor)
     [Column(TypeName = "decimal(5, 2)")]
-    public decimal PlatformFeePercent { get; set; } = 20; // Default 20% platform commission
+    public decimal PlatformFeePercent { get; set; } = 30; // 30% platform commission
 
     [Column(TypeName = "decimal(18, 2)")]
     public decimal PlatformFeeAmount { get; set; } = 0;
 
     [Column(TypeName = "decimal(18, 2)")]
-    public decimal InstructorEarnings { get; set; } = 0; // Amount instructor will receive after fee
+    public decimal InstructorEarnings { get; set; } = 0; // 70% - Amount instructor receives immediately after payment
 
     // Refund Information (TODO: Implement refund logic later)
     // [Column(TypeName = "decimal(18, 2)")]

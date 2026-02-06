@@ -42,24 +42,6 @@ public class Order : BaseEntity
     // Payment Tracking
     public DateTime? PaidAt { get; set; }
 
-    // Settlement (14-day escrow logic)
-    /// <summary>
-    /// Date when order becomes eligible for settlement to instructor wallet
-    /// Calculated as: PaidAt + 14 days
-    /// </summary>
-    public DateTime? SettlementEligibleAt { get; set; }
-
-    /// <summary>
-    /// Indicates if order amount has been settled to instructor wallet
-    /// </summary>
-    public bool IsSettled { get; set; } = false;
-
-    public DateTime? SettledAt { get; set; }
-
-    // Refund Information (TODO: Implement refund logic later)
-    // [Column(TypeName = "decimal(18, 2)")]
-    // public decimal TotalRefunded { get; set; } = 0;
-
     // Audit & Security
     [MaxLength(45)]
     public string? IpAddress { get; set; }

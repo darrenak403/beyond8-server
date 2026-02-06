@@ -36,8 +36,6 @@ public class SaleDbContext : BaseDbContext
             entity.HasIndex(e => e.Status);
             entity.HasIndex(e => e.PaidAt);
             entity.HasIndex(e => new { e.Status, e.PaidAt });
-            entity.HasIndex(e => e.SettlementEligibleAt)
-                .HasFilter("\"IsSettled\" = false AND \"SettlementEligibleAt\" IS NOT NULL");
 
             // JSONB Column
             entity.Property(e => e.PaymentDetails)
@@ -143,8 +141,6 @@ public class SaleDbContext : BaseDbContext
             entity.HasIndex(e => new { e.ReferenceId, e.ReferenceType });
             entity.HasIndex(e => e.Type);
             entity.HasIndex(e => e.Status);
-            entity.HasIndex(e => e.AvailableAt)
-                .HasFilter("\"Status\" = 0 AND \"AvailableAt\" IS NOT NULL");
 
             // JSONB Column
             entity.Property(e => e.Metadata)

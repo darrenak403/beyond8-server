@@ -5,9 +5,8 @@ namespace Beyond8.Sale.Domain.Enums;
 /// </summary>
 public enum TransactionType
 {
-    Sale = 0,
-    Payout = 2,
-    Settlement = 3,
-    PlatformFee = 4,
-    Adjustment = 5
+    Sale = 0,         // Instructor earnings from course sale (credited immediately)
+    Payout = 1,       // Instructor withdrawal
+    PlatformFee = 2,  // Platform commission deducted
+    Adjustment = 3    // Manual adjustment by admin
 }
