@@ -38,7 +38,7 @@ namespace Beyond8.Catalog.Api.Bootstrapping
                 config.AddConsumer<CourseRatingUpdatedEventConsumer>();
                 config.AddConsumer<CacheInvalidateEventConsumer>();
                 config.AddConsumer<AssignmentDeletedEventConsumer>();
-            });
+            }, queueNamePrefix: "catalog");
 
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 

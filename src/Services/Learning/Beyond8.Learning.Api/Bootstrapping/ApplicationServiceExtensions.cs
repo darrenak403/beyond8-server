@@ -32,7 +32,7 @@ public static class ApplicationServiceExtensions
             config.AddConsumer<AssignmentSubmittedEventConsumer>();
             config.AddConsumer<AiGradingCompletedEventConsumer>();
             config.AddConsumer<AssignmentGradedEventConsumer>();
-        });
+        }, queueNamePrefix: "learning");
 
         builder.Services.AddValidatorsFromAssemblyContaining<EnrollFreeRequest>();
 
@@ -40,6 +40,7 @@ public static class ApplicationServiceExtensions
         builder.Services.AddScoped<IEnrollmentService, EnrollmentService>();
         builder.Services.AddScoped<IProgressService, ProgressService>();
         builder.Services.AddScoped<ICertificateService, CertificateService>();
+        builder.Services.AddScoped<ICourseReviewService, CourseReviewService>();
 
         builder.AddCatalogClient();
 

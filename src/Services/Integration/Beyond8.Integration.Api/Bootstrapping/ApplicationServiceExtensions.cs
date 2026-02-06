@@ -137,7 +137,7 @@ namespace Beyond8.Integration.Api.Bootstrapping
 
                 // Register consumers from Assessment events
                 config.AddConsumer<AssignmentSubmittedConsumer>();
-            });
+            }, queueNamePrefix: "integration");
 
             // Configure Qdrant - Use Aspire Qdrant Client
             builder.AddQdrantClient(Const.Qdrant);

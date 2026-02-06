@@ -38,7 +38,7 @@ namespace Beyond8.Identity.Api.Bootstrapping
                 config.AddConsumer<CourseUnpublishedEventConsumer>();
                 config.AddConsumer<CourseEnrollmentCountChangedEventConsumer>();
                 config.AddConsumer<CourseRatingUpdatedEventConsumer>();
-            });
+            }, queueNamePrefix: "identity");
 
             // Register services
             builder.Services.AddScoped<PasswordHasher<User>>();

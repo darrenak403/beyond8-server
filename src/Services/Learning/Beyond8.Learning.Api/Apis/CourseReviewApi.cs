@@ -1,7 +1,9 @@
+using Beyond8.Common.Extensions;
 using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
 using Beyond8.Learning.Application.Dtos.CourseReview;
 using Beyond8.Learning.Application.Services.Interfaces;
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Beyond8.Learning.Api.Apis;
@@ -40,18 +42,26 @@ public static class CourseReviewApi
 
     private static async Task<IResult> GetCourseReviewsAsync(
         [FromServices] ICourseReviewService courseReviewService,
+        [FromServices] IValidator<GetCourseReviewsRequest> validator,
         [AsParameters] GetCourseReviewsRequest request)
     {
-        var result = await courseReviewService.GetReviewsByCourseIdAsync(request);
+        if (request != null && !request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
+        var result = await courseReviewService.GetReviewsByCourseIdAsync(request!);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
     private static async Task<IResult> CreateCourseReview(
         [FromBody] CreateCourseReviewRequest request,
         [FromServices] ICourseReviewService courseReviewService,
-        [FromServices] ICurrentUserService currentUserService)
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IValidator<CreateCourseReviewRequest> validator)
     {
-        var result = await courseReviewService.CreateCourseReviewAsync(request, currentUserService.UserId);
+        if (request != null && !request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
+        var result = await courseReviewService.CreateCourseReviewAsync(request!, currentUserService.UserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 }
