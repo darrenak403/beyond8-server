@@ -61,12 +61,6 @@ public class Coupon : BaseEntity
     // Status
     public bool IsActive { get; set; } = true;
 
-    // Creator Tracking
-    /// <summary>
-    /// Admin or Instructor UserId who created this coupon
-    /// </summary>
-    public Guid? CreatedBy { get; set; }
-
     // Navigation Properties
     public virtual ICollection<CouponUsage> CouponUsages { get; set; } = [];
 }

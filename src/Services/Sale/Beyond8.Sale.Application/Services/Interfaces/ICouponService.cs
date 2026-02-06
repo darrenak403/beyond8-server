@@ -15,4 +15,5 @@ public interface ICouponService
     Task<ApiResponse<List<CouponResponse>>> GetCouponsByInstructorAsync(Guid instructorId);
     Task<ApiResponse<bool>> ToggleCouponStatusAsync(Guid couponId);
     Task<ApiResponse<decimal>> ApplyCouponAsync(string code, decimal orderTotal);
+    Task<ApiResponse<(bool IsValid, string? ErrorMessage, decimal DiscountAmount, Guid? CouponId)>> ValidateAndApplyCouponAsync(string code, decimal orderTotal, List<Guid> courseIds);
 }

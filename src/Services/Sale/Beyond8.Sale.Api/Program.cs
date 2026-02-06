@@ -11,5 +11,4 @@ var app = builder.Build();
 await app.MigrateDbContextAsync<SaleDbContext>();
 
 app.UseApplicationServices();
-app.MapGet("/", () => "Beyond8 Sale Service");
 app.Run();
