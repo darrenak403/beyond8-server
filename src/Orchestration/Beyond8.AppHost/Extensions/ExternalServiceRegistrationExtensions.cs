@@ -34,6 +34,7 @@ namespace Beyond8.AppHost.Extensions
                 .WithImageTag("dev")
                 .WithDataVolume();
 
+            var hangfireDb = postgres.AddDatabase("hangfire-db", "Hangfires");
             var identityDb = postgres.AddDatabase("identity-db", "Identities");
             var integrationDb = postgres.AddDatabase("integration-db", "Integrations");
             var catalogDb = postgres.AddDatabase("catalog-db", "Catalogs");
@@ -44,6 +45,7 @@ namespace Beyond8.AppHost.Extensions
                 .WithReference(identityDb)
                 .WithReference(redis)
                 .WithReference(rabbitMq)
+                .WithReference(hangfireDb)
                 .WaitFor(postgres)
                 .WaitFor(redis)
                 .WaitFor(rabbitMq);
@@ -53,6 +55,7 @@ namespace Beyond8.AppHost.Extensions
                 .WithReference(redis)
                 .WithReference(rabbitMq)
                 .WithReference(qdrant)
+                .WithReference(hangfireDb)
                 .WaitFor(postgres)
                 .WaitFor(redis)
                 .WaitFor(rabbitMq)
