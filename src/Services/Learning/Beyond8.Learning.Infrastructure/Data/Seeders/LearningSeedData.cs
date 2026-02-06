@@ -1,6 +1,5 @@
 using Beyond8.Learning.Domain.Entities;
 using Beyond8.Learning.Domain.Enums;
-using Beyond8.Learning.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace Beyond8.Learning.Infrastructure.Data.Seeders;

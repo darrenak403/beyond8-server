@@ -17,8 +17,6 @@ public class EnrollmentService(
     ICatalogClient catalogClient,
     IPublishEndpoint publishEndpoint) : IEnrollmentService
 {
-    private const int CourseStatusPublished = 4;
-
     public async Task<ApiResponse<EnrollmentResponse>> EnrollFreeAsync(Guid userId, EnrollFreeRequest request)
     {
         var courseId = request.CourseId;
@@ -112,7 +110,10 @@ public class EnrollmentService(
     {
         var enrollment = await unitOfWork.EnrollmentRepository.FindOneAsync(e =>
             e.UserId == userId && e.CourseId == courseId && e.DeletedAt == null);
-        return ApiResponse<bool>.SuccessResponse(enrollment != null, enrollment != null ? "Đã đăng ký khóa học." : "Chưa đăng ký khóa học.");
+
+        var result = enrollment != null;
+
+        return ApiResponse<bool>.SuccessResponse(result, result ? "Đã đăng ký khóa học." : "Chưa đăng ký khóa học.", metadata: new { EnrollmentId = enrollment?.Id });
     }
 
     public async Task<ApiResponse<List<EnrollmentSimpleResponse>>> GetEnrolledCoursesAsync(Guid userId)
