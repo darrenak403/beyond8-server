@@ -50,6 +50,20 @@ public static class LessonMappings
         return response;
     }
 
+    public static LessonVideoResponse ToVideoResponse(this LessonVideo video)
+    {
+        return new LessonVideoResponse
+        {
+            LessonId = video.LessonId,
+            HlsVariants = video.HlsVariants,
+            VideoOriginalUrl = video.VideoOriginalUrl,
+            VideoThumbnailUrl = video.VideoThumbnailUrl,
+            DurationSeconds = video.DurationSeconds,
+            VideoQualities = video.VideoQualities,
+            IsDownloadable = video.IsDownloadable
+        };
+    }
+
     public static LessonSimpleResponse ToSimpleResponse(this Lesson lesson)
     {
         return new LessonSimpleResponse
