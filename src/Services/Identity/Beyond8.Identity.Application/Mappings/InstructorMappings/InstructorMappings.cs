@@ -9,12 +9,12 @@ namespace Beyond8.Identity.Application.Mappings
 {
     public static class InstructorProfileMappings
     {
-        public static InstructorProfileResponse ToInstructorProfileResponse(this InstructorProfile instructorProfile, User user)
+        public static InstructorProfileResponse ToInstructorProfileResponse(this InstructorProfile instructorProfile, User? user)
         {
             return new InstructorProfileResponse
             {
                 Id = instructorProfile.Id,
-                User = user.ToUserSimpleResponse(),
+                User = user?.ToUserSimpleResponse(),
                 Bio = instructorProfile.Bio,
                 Headline = instructorProfile.Headline,
                 ExpertiseAreas = string.IsNullOrEmpty(instructorProfile.ExpertiseAreas)
@@ -44,12 +44,12 @@ namespace Beyond8.Identity.Application.Mappings
             };
         }
 
-        public static InstructorProfileAdminResponse ToInstructorProfileAdminResponse(this InstructorProfile instructorProfile, User user)
+        public static InstructorProfileAdminResponse ToInstructorProfileAdminResponse(this InstructorProfile instructorProfile, User? user)
         {
             return new InstructorProfileAdminResponse
             {
                 Id = instructorProfile.Id,
-                User = user.ToUserSimpleResponse(),
+                User = user?.ToUserSimpleResponse(),
                 Bio = instructorProfile.Bio,
                 Headline = instructorProfile.Headline,
                 ExpertiseAreas = string.IsNullOrEmpty(instructorProfile.ExpertiseAreas)

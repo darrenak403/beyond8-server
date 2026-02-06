@@ -6,7 +6,6 @@ namespace Beyond8.Catalog.Infrastructure.Data.Seeders;
 
 public static class CatalogSeedData
 {
-    // Fixed GUIDs for consistent seeding (instructor trùng Identity seed: instructor@gmail.com)
     private static readonly Guid SeedCourseId = Guid.Parse("33333333-3333-3333-3333-333333333333");
     private static readonly Guid PaidCourseId = Guid.Parse("33333333-3333-3333-3333-333333333334");
     private static readonly Guid SeedInstructorId = Guid.Parse("00000000-0000-0000-0000-000000000006"); // Trần Thị Giảng Viên (Identity)
@@ -227,9 +226,9 @@ Khóa học phù hợp cho cả người mới bắt đầu và những develope
             Outcomes = "[\"Xây dựng ứng dụng web hoàn chỉnh với ASP.NET Core\", \"Thiết kế RESTful API theo best practices\", \"Làm việc với Entity Framework Core và PostgreSQL\", \"Triển khai Authentication/Authorization với JWT\", \"Áp dụng Clean Architecture trong dự án thực tế\", \"Deploy ứng dụng lên Azure/AWS\"]",
             Requirements = "[\"Kiến thức cơ bản về C#\", \"Hiểu biết về HTML, CSS, JavaScript\", \"Máy tính cài đặt .NET SDK 8.0 trở lên\"]",
             TargetAudience = "[\"Sinh viên CNTT muốn học lập trình web\", \"Developer muốn chuyển sang .NET\", \"Backend developer muốn nâng cao kỹ năng\"]",
-            AvgRating = 4.8m,
-            TotalReviews = 320,
-            TotalRatings = 450,
+            AvgRating = 0m,
+            TotalReviews = 0,
+            TotalRatings = 0,
             ApprovedBy = Guid.Parse("99999999-9999-9999-9999-999999999999"),
             ApprovedAt = DateTime.UtcNow.AddDays(-30),
             IsActive = true,
