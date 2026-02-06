@@ -590,5 +590,32 @@ namespace Beyond8.Identity.Application.Services.Implements
                 return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi kiểm tra trạng thái hồ sơ giảng viên.");
             }
         }
+
+        public async Task<ApiResponse<InstructorProfileResponse>> GetInstructorProfileByUserIdAsync(Guid userId)
+        {
+            try
+            {
+                var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(p => p.UserId == userId && p.VerificationStatus == VerificationStatus.Verified);
+                if (profile == null)
+                {
+                    return ApiResponse<InstructorProfileResponse>.FailureResponse("Hồ sơ giảng viên không tồn tại hoặc chưa được duyệt.");
+                }
+                var user = await unitOfWork.UserRepository.AsQueryable()
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == profile.UserId);
+                if (user == null)
+                {
+                    return ApiResponse<InstructorProfileResponse>.FailureResponse("Người dùng không tồn tại.");
+                }
+                var response = profile.ToInstructorProfileResponse(user);
+                return ApiResponse<InstructorProfileResponse>.SuccessResponse(response, "Lấy hồ sơ giảng viên thành công.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error retrieving instructor profile for user {UserId}", userId);
+                return ApiResponse<InstructorProfileResponse>.FailureResponse("Đã xảy ra lỗi khi lấy hồ sơ giảng viên.");
+            }
+        }
     }
 }

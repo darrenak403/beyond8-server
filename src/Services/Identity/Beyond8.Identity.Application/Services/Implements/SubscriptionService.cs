@@ -2,6 +2,7 @@ using Beyond8.Common.Utilities;
 using Beyond8.Identity.Application.Dtos.Users;
 using Beyond8.Identity.Application.Mappings.SubscriptionMappings;
 using Beyond8.Identity.Application.Services.Interfaces;
+using Beyond8.Identity.Domain.Enums;
 using Beyond8.Identity.Domain.Repositories.Interfaces;
 using Microsoft.Extensions.Logging;
 
@@ -11,6 +12,20 @@ public class SubscriptionService(
     ILogger<SubscriptionService> logger,
     IUnitOfWork unitOfWork) : ISubscriptionService
 {
+    public async Task<ApiResponse<List<SubscriptionResponse>>> GetAllSubscriptionsAsync()
+    {
+        try
+        {
+            var subscriptions = await unitOfWork.UserSubscriptionRepository.GetActiveSubscriptionsWithPlanAsync();
+            return ApiResponse<List<SubscriptionResponse>>.SuccessResponse([.. subscriptions.Select(s => s.ToSubscriptionResponse())], "Lấy danh sách gói đăng ký thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting all subscriptions");
+            return ApiResponse<List<SubscriptionResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách gói đăng ký.");
+        }
+    }
+
     public async Task<ApiResponse<SubscriptionResponse>> GetMySubscriptionStatsAsync(Guid userId)
     {
         try
@@ -69,6 +84,45 @@ public class SubscriptionService(
         {
             logger.LogError(ex, "Error updating subscription for user {UserId}", userId);
             return ApiResponse<SubscriptionResponse>.FailureResponse("Đã xảy ra lỗi khi cập nhật gói đăng ký.");
+        }
+    }
+
+    public async Task ResetWeeklyRequestsAsync()
+    {
+        try
+        {
+            var subscriptions = await unitOfWork.UserSubscriptionRepository.GetActiveSubscriptionsWithPlanAsync();
+            foreach (var subscription in subscriptions)
+            {
+                subscription.RemainingRequestsPerWeek = subscription.Plan?.MaxRequestsPerWeek ?? subscription.RemainingRequestsPerWeek;
+                subscription.RequestLimitedEndsAt = null;
+            }
+            await unitOfWork.SaveChangesAsync();
+            logger.LogInformation("Reset weekly requests completed. Updated {Count} active subscriptions.", subscriptions.Count);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error resetting weekly requests for active subscriptions.");
+            throw;
+        }
+    }
+
+    public async Task ExpireSubscriptionsAsync()
+    {
+        try
+        {
+            var subscriptions = await unitOfWork.UserSubscriptionRepository.GetActiveSubscriptionsWhereExpiredAsync();
+            foreach (var subscription in subscriptions)
+            {
+                subscription.Status = SubscriptionStatus.Expired;
+            }
+            await unitOfWork.SaveChangesAsync();
+            logger.LogInformation("Expired {Count} subscriptions.", subscriptions.Count);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error expiring subscriptions.");
+            throw;
         }
     }
 }
