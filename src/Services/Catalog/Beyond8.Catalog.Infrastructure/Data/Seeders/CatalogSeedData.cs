@@ -37,6 +37,12 @@ public static class CatalogSeedData
     private static readonly Guid Quiz2Id = Guid.Parse("66666666-6666-6666-6666-666666666602");
     private static readonly Guid Quiz3Id = Guid.Parse("66666666-6666-6666-6666-666666666603");
 
+    // Assignment IDs (external - from Assessment Service)
+    private static readonly Guid Assignment1Id = Guid.Parse("66666666-6666-6666-6666-666666666701");
+    private static readonly Guid Assignment2Id = Guid.Parse("66666666-6666-6666-6666-666666666702");
+    private static readonly Guid Assignment3Id = Guid.Parse("66666666-6666-6666-6666-666666666703");
+    private static readonly Guid Assignment4Id = Guid.Parse("66666666-6666-6666-6666-666666666704");
+
     // Paid course: 1 section, 3 lessons (Video, Text, Quiz)
     private static readonly Guid PaidSectionId = Guid.Parse("44444444-4444-4444-4444-444444444404");
     private static readonly Guid PaidLesson1Id = Guid.Parse("55555555-5555-5555-5555-555555550401");
@@ -248,6 +254,7 @@ Khóa học phù hợp cho cả người mới bắt đầu và những develope
                 IsPublished = true,
                 TotalLessons = 3,
                 TotalDurationMinutes = 90,
+                AssignmentId = Assignment1Id,
                 CreatedAt = DateTime.UtcNow.AddDays(-55)
             },
             new()
@@ -260,6 +267,7 @@ Khóa học phù hợp cho cả người mới bắt đầu và những develope
                 IsPublished = true,
                 TotalLessons = 4,
                 TotalDurationMinutes = 180,
+                AssignmentId = Assignment2Id,
                 CreatedAt = DateTime.UtcNow.AddDays(-50)
             },
             new()
@@ -272,6 +280,7 @@ Khóa học phù hợp cho cả người mới bắt đầu và những develope
                 IsPublished = true,
                 TotalLessons = 3,
                 TotalDurationMinutes = 210,
+                AssignmentId = Assignment3Id,
                 CreatedAt = DateTime.UtcNow.AddDays(-45)
             }
         };
@@ -370,6 +379,7 @@ Khóa học phù hợp cho cả người mới bắt đầu và những develope
             IsPublished = true,
             TotalLessons = 3,
             TotalDurationMinutes = 60,
+            AssignmentId = Assignment4Id,
             CreatedAt = DateTime.UtcNow.AddDays(-18)
         };
         await context.Sections.AddAsync(paidSection);
