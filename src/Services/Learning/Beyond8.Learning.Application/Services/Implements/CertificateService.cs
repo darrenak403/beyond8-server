@@ -1,8 +1,11 @@
+using Beyond8.Common.Events.Learning;
 using Beyond8.Common.Utilities;
+using Beyond8.Learning.Application.Clients.Identity;
 using Beyond8.Learning.Application.Dtos.Certificates;
 using Beyond8.Learning.Application.Mappings;
 using Beyond8.Learning.Application.Services.Interfaces;
 using Beyond8.Learning.Domain.Repositories.Interfaces;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -10,10 +13,12 @@ namespace Beyond8.Learning.Application.Services.Implements;
 
 public class CertificateService(
     ILogger<CertificateService> logger,
-    IUnitOfWork unitOfWork) : ICertificateService
+    IUnitOfWork unitOfWork,
+    IIdentityClient identityClient,
+    IPublishEndpoint publishEndpoint) : ICertificateService
 {
     private const decimal QuizAverageThresholdPercent = 70m;
-    private const decimal AssignmentAverageThreshold = 5m;
+    private const decimal AssignmentAverageThresholdPercent = 50m;
 
     public async Task TryIssueCertificateIfEligibleAsync(Guid enrollmentId)
     {
@@ -44,7 +49,7 @@ public class CertificateService(
                 var graded = assignmentSections.Where(sp => sp.AssignmentGrade.HasValue).ToList();
                 if (graded.Count < assignmentSections.Count)
                     return;
-                if (graded.Select(sp => sp.AssignmentGrade!.Value).Average() < AssignmentAverageThreshold)
+                if (graded.Select(sp => sp.AssignmentGrade!.Value).Average() < AssignmentAverageThresholdPercent)
                     return;
             }
 
@@ -56,6 +61,25 @@ public class CertificateService(
             enrollment.CertificateIssuedAt = now;
             await unitOfWork.EnrollmentRepository.UpdateAsync(enrollment.Id, enrollment);
             await unitOfWork.SaveChangesAsync();
+
+            string? userEmail = null;
+            string? userFullName = null;
+            var userResponse = await identityClient.GetUserByIdAsync(enrollment.UserId);
+            if (userResponse.IsSuccess && userResponse.Data != null)
+            {
+                userEmail = userResponse.Data.Email;
+                userFullName = userResponse.Data.FullName;
+            }
+
+            await publishEndpoint.Publish(new CourseCompletedEvent(
+                enrollment.Id,
+                enrollment.UserId,
+                enrollment.CourseId,
+                enrollment.CourseTitle,
+                enrollment.CompletedAt ?? now,
+                CertificateId: cert.Id,
+                UserEmail: userEmail,
+                UserFullName: userFullName));
 
             logger.LogInformation(
                 "Certificate issued: EnrollmentId {EnrollmentId}, CertificateId {CertificateId}, UserId {UserId}, CourseId {CourseId}",

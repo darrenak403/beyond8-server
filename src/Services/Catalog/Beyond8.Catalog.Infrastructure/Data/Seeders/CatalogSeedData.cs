@@ -48,6 +48,13 @@ public static class CatalogSeedData
     private static readonly Guid PaidLesson2Id = Guid.Parse("55555555-5555-5555-5555-555555550402");
     private static readonly Guid PaidLesson3Id = Guid.Parse("55555555-5555-5555-5555-555555550403");
 
+    // Third course: Clean Architecture - 1 section, 3 lessons
+    private static readonly Guid ThirdCourseId = Guid.Parse("33333333-3333-3333-3333-333333333335");
+    private static readonly Guid ThirdSectionId = Guid.Parse("44444444-4444-4444-4444-444444444405");
+    private static readonly Guid ThirdLesson1Id = Guid.Parse("55555555-5555-5555-5555-555555550501");
+    private static readonly Guid ThirdLesson2Id = Guid.Parse("55555555-5555-5555-5555-555555550502");
+    private static readonly Guid ThirdLesson3Id = Guid.Parse("55555555-5555-5555-5555-555555550503");
+
     // Seed media URLs (CloudFront)
     private const string SeedVideoUrl = "https://d30z0qh7rhzgt8.cloudfront.net/courses/hls/meo_con_lon_ton/meo_con_lon_ton_1080p.m3u8";
     private const string SeedImageUrl = "https://d30z0qh7rhzgt8.cloudfront.net/course/thumbnails/00000000-0000-0000-0000-000000000006/7657afd45d724448a735735a95924605_615246363_1556413255931774_2968156490140092165_n.jpg";
@@ -185,11 +192,11 @@ public static class CatalogSeedData
             context.Courses.Update(existingFreeCourse);
             await context.SaveChangesAsync();
 
-            // Thêm khóa có phí nếu chưa có
+            // Thêm khóa có phí và khóa thứ 3 nếu chưa có
             if (!await context.Courses.AnyAsync(c => c.Id == PaidCourseId))
-            {
                 await AddPaidCourseAsync(context, webDevCategory);
-            }
+            if (!await context.Courses.AnyAsync(c => c.Id == ThirdCourseId))
+                await AddThirdCourseAsync(context, webDevCategory);
             return;
         }
 
@@ -291,6 +298,9 @@ Khóa học phù hợp cho cả người mới bắt đầu và những develope
 
         // 4. Paid course (có phí)
         await AddPaidCourseAsync(context, webDevCategory);
+
+        // 5. Third course: Clean Architecture
+        await AddThirdCourseAsync(context, webDevCategory);
 
         await context.SaveChangesAsync();
     }
@@ -457,6 +467,138 @@ Khóa học phù hợp cho cả người mới bắt đầu và những develope
         await context.LessonVideos.AddAsync(paidVideo1);
         await context.LessonTexts.AddAsync(paidText2);
         await context.LessonQuizzes.AddAsync(paidQuiz3);
+        await context.SaveChangesAsync();
+    }
+
+    private static async Task AddThirdCourseAsync(CatalogDbContext context, Category webDevCategory)
+    {
+        if (await context.Courses.AnyAsync(c => c.Id == ThirdCourseId))
+            return;
+
+        var thirdCourse = new Course
+        {
+            Id = ThirdCourseId,
+            InstructorId = SeedInstructorId,
+            InstructorName = "Trần Thị Giảng Viên",
+            InstructorVerificationStatus = InstructorVerificationStatus.Verified,
+            CategoryId = webDevCategory.Id,
+            Title = "Clean Architecture với .NET",
+            Slug = "clean-architecture-voi-dotnet",
+            Description = "Thiết kế và xây dựng ứng dụng .NET theo Clean Architecture: Domain, Application, Infrastructure, API.",
+            ShortDescription = "Kiến trúc sạch, DDD, CQRS và best practices",
+            Price = 199_000,
+            DiscountPercent = 20,
+            DiscountEndsAt = DateTime.UtcNow.AddMonths(2),
+            Status = CourseStatus.Published,
+            Level = CourseLevel.Intermediate,
+            Language = "vi-VN",
+            ThumbnailUrl = SeedImageUrl,
+            Outcomes = "[\"Áp dụng Clean Architecture\", \"Tách biệt Domain và Infrastructure\", \"Viết code dễ test và bảo trì\"]",
+            Requirements = "[\"Đã học ASP.NET Core cơ bản\", \"Hiểu OOP và Dependency Injection\"]",
+            TargetAudience = "[\"Backend developer\", \"Tech lead\"]",
+            AvgRating = null,
+            TotalReviews = 0,
+            TotalRatings = 0,
+            ApprovedBy = Guid.Parse("99999999-9999-9999-9999-999999999999"),
+            ApprovedAt = DateTime.UtcNow.AddDays(-10),
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow.AddDays(-15)
+        };
+        await context.Courses.AddAsync(thirdCourse);
+        webDevCategory.TotalCourses++;
+
+        var thirdSection = new Section
+        {
+            Id = ThirdSectionId,
+            CourseId = ThirdCourseId,
+            Title = "Kiến trúc và nguyên tắc",
+            Description = "Tổng quan Clean Architecture và các layer",
+            OrderIndex = 1,
+            IsPublished = true,
+            TotalLessons = 3,
+            TotalDurationMinutes = 45,
+            AssignmentId = null,
+            CreatedAt = DateTime.UtcNow.AddDays(-12)
+        };
+        await context.Sections.AddAsync(thirdSection);
+
+        var thirdLesson1 = new Lesson
+        {
+            Id = ThirdLesson1Id,
+            SectionId = ThirdSectionId,
+            Title = "Giới thiệu Clean Architecture",
+            Description = "Các layer và dependency rule",
+            Type = LessonType.Video,
+            OrderIndex = 1,
+            IsPreview = true,
+            IsPublished = true,
+            TotalViews = 0,
+            TotalCompletions = 0,
+            CreatedAt = DateTime.UtcNow.AddDays(-11)
+        };
+        var thirdVideo1 = new LessonVideo
+        {
+            Id = Guid.NewGuid(),
+            LessonId = ThirdLesson1Id,
+            VideoOriginalUrl = SeedVideoUrl,
+            VideoThumbnailUrl = SeedImageUrl,
+            DurationSeconds = 900,
+            HlsVariants = $"{{\"1080p\": \"{SeedVideoUrl}\"}}",
+            VideoQualities = "[\"1080p\"]",
+            IsDownloadable = false
+        };
+
+        var thirdLesson2 = new Lesson
+        {
+            Id = ThirdLesson2Id,
+            SectionId = ThirdSectionId,
+            Title = "Domain layer và Entities",
+            Description = "Xây dựng domain model thuần",
+            Type = LessonType.Text,
+            OrderIndex = 2,
+            IsPreview = false,
+            IsPublished = true,
+            TotalViews = 0,
+            TotalCompletions = 0,
+            CreatedAt = DateTime.UtcNow.AddDays(-10)
+        };
+        var thirdText2 = new LessonText
+        {
+            Id = Guid.NewGuid(),
+            LessonId = ThirdLesson2Id,
+            TextContent = "# Domain Layer\n\nDomain chứa entities và business logic thuần túy..."
+        };
+
+        var thirdLesson3 = new Lesson
+        {
+            Id = ThirdLesson3Id,
+            SectionId = ThirdSectionId,
+            Title = "Application layer và Use Cases",
+            Description = "Các use case và DTOs",
+            Type = LessonType.Video,
+            OrderIndex = 3,
+            IsPreview = false,
+            IsPublished = true,
+            TotalViews = 0,
+            TotalCompletions = 0,
+            CreatedAt = DateTime.UtcNow.AddDays(-9)
+        };
+        var thirdVideo3 = new LessonVideo
+        {
+            Id = Guid.NewGuid(),
+            LessonId = ThirdLesson3Id,
+            VideoOriginalUrl = SeedVideoUrl,
+            VideoThumbnailUrl = SeedImageUrl,
+            DurationSeconds = 1200,
+            HlsVariants = $"{{\"1080p\": \"{SeedVideoUrl}\"}}",
+            VideoQualities = "[\"1080p\"]",
+            IsDownloadable = false
+        };
+
+        await context.Lessons.AddRangeAsync(thirdLesson1, thirdLesson2, thirdLesson3);
+        await context.LessonVideos.AddAsync(thirdVideo1);
+        await context.LessonTexts.AddAsync(thirdText2);
+        await context.LessonVideos.AddAsync(thirdVideo3);
         await context.SaveChangesAsync();
     }
 

@@ -102,15 +102,17 @@ public class AssignmentSubmissionService(
             await unitOfWork.SaveChangesAsync();
 
             var score = submission.FinalScore ?? request.FinalScore;
+            var gradedAt = submission.GradedAt ?? DateTime.UtcNow;
             if (assignment.SectionId.HasValue)
             {
                 await publishEndpoint.Publish(new AssignmentGradedEvent(
                     SubmissionId: submission.Id,
                     AssignmentId: assignment.Id,
+                    AssignmentTitle: assignment.Title,
                     SectionId: assignment.SectionId,
                     StudentId: submission.StudentId,
                     Score: score,
-                    GradedAt: submission.GradedAt ?? DateTime.UtcNow,
+                    GradedAt: gradedAt,
                     GradedBy: userId
                 ));
             }

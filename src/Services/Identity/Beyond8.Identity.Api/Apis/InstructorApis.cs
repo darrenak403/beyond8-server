@@ -115,7 +115,6 @@ namespace Beyond8.Identity.Api.Apis
                 .Produces(StatusCodes.Status401Unauthorized)
                 .Produces(StatusCodes.Status403Forbidden);
 
-
             group.MapGet("/{id:Guid}/verified", CheckInstructorProfileVerifiedAsync)
                 .WithName("CheckInstructorProfileVerified")
                 .WithDescription("Kiểm tra trạng thái hồ sơ giảng viên có được xác minh hay không")
@@ -123,7 +122,24 @@ namespace Beyond8.Identity.Api.Apis
                 .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest);
 
+            group.MapGet("/users/{userId:guid}", GetInstructorProfileByUserIdAsync)
+                .WithName("GetInstructorProfileByUserId")
+                .WithDescription("Lấy thông tin chi tiết hồ sơ giảng viên theo ID người dùng (Public)")
+                .AllowAnonymous()
+                .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<InstructorProfileResponse>>(StatusCodes.Status404NotFound);
+
             return group;
+        }
+
+        private static async Task<IResult> GetInstructorProfileByUserIdAsync(
+            [FromRoute] Guid userId,
+            [FromServices] IInstructorService instructorService)
+        {
+            var response = await instructorService.GetInstructorProfileByUserIdAsync(userId);
+            return response.IsSuccess
+                            ? Results.Ok(response)
+                            : Results.NotFound(response);
         }
 
         private static async Task<IResult> UnHiddenInstructorProfileAsync(

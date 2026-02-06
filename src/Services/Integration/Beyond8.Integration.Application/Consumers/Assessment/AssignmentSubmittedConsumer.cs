@@ -49,6 +49,7 @@ public class AssignmentSubmittedConsumer(
             if (gradingResult.IsSuccess && gradingResult.Data != null)
             {
                 var feedbackJson = AiServiceGradingHelper.ToFeedbackJson(gradingResult.Data, JsonOptions);
+                var gradedAt = DateTime.UtcNow;
 
                 await publishEndpoint.Publish(new AiGradingCompletedEvent(
                     SubmissionId: message.SubmissionId,
@@ -59,7 +60,18 @@ public class AssignmentSubmittedConsumer(
                     AiFeedback: feedbackJson,
                     IsSuccess: true,
                     ErrorMessage: null,
-                    GradedAt: DateTime.UtcNow
+                    GradedAt: gradedAt
+                ));
+
+                await publishEndpoint.Publish(new AiAssignmentGradedEvent(
+                    SubmissionId: message.SubmissionId,
+                    AssignmentId: message.AssignmentId,
+                    SectionId: message.SectionId,
+                    StudentId: message.StudentId,
+                    AssignmentTitle: message.AssignmentTitle,
+                    Score: gradingResult.Data.Score,
+                    AiFeedback: feedbackJson,
+                    GradedAt: gradedAt
                 ));
 
                 logger.LogInformation(

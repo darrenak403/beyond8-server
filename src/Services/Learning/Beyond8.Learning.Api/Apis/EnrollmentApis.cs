@@ -71,6 +71,14 @@ public static class EnrollmentApis
             .Produces<ApiResponse<List<EnrollmentSimpleResponse>>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
+        group.MapGet("/{id:guid}/curriculum-progress", GetCurriculumProgressByEnrollmentIdAsync)
+            .WithName("GetCurriculumProgressByEnrollmentId")
+            .WithDescription("Lấy tiến độ khung chương trình theo enrollment Id")
+            .RequireAuthorization()
+            .Produces<ApiResponse<CurriculumProgressResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<CurriculumProgressResponse>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
         group.MapGet("/{id:guid}", GetEnrollmentByIdAsync)
             .WithName("GetEnrollmentById")
             .WithDescription("Lấy thông tin khóa học đã đăng ký theo ID")
@@ -106,6 +114,15 @@ public static class EnrollmentApis
         [FromServices] ICurrentUserService currentUserService)
     {
         var result = await progressService.GetLessonProgressAsync(id, lessonId, currentUserService.UserId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> GetCurriculumProgressByEnrollmentIdAsync(
+        [FromRoute] Guid id,
+        [FromServices] IProgressService progressService,
+        [FromServices] ICurrentUserService currentUserService)
+    {
+        var result = await progressService.GetCurriculumProgressByEnrollmentIdAsync(id, currentUserService.UserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 

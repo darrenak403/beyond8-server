@@ -100,6 +100,25 @@ public class LessonService(
         }
     }
 
+    public async Task<ApiResponse<LessonVideoResponse>> GetVideoByLessonIdAsync(Guid lessonId)
+    {
+        try
+        {
+            var video = await unitOfWork.LessonVideoRepository.FindOneAsync(v => v.LessonId == lessonId);
+            if (video == null)
+                return ApiResponse<LessonVideoResponse>.FailureResponse("Bài học không có video hoặc không tồn tại.");
+
+            return ApiResponse<LessonVideoResponse>.SuccessResponse(
+                video.ToVideoResponse(),
+                "Lấy thông tin video thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting video by lesson id: {LessonId}", lessonId);
+            return ApiResponse<LessonVideoResponse>.FailureResponse("Đã xảy ra lỗi khi lấy thông tin video.");
+        }
+    }
+
     public async Task<ApiResponse<bool>> DeleteLessonAsync(Guid lessonId, Guid currentUserId)
     {
         try

@@ -8,4 +8,6 @@ public interface IProgressService
     Task<ApiResponse<LessonProgressResponse>> UpdateLessonProgressAsync(Guid lessonId, Guid userId, LessonProgressHeartbeatRequest request);
 
     Task<ApiResponse<LessonProgressResponse>> GetLessonProgressAsync(Guid enrollmentId, Guid lessonId, Guid userId);
+
+    Task<ApiResponse<CurriculumProgressResponse>> GetCurriculumProgressByEnrollmentIdAsync(Guid enrollmentId, Guid userId);
 }

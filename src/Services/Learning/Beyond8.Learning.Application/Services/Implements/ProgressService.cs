@@ -1,4 +1,5 @@
 using Beyond8.Common.Utilities;
+using Beyond8.Learning.Application.Clients.Catalog;
 using Beyond8.Learning.Application.Dtos.Progress;
 using Beyond8.Learning.Application.Mappings;
 using Beyond8.Learning.Application.Services.Interfaces;
@@ -11,7 +12,8 @@ namespace Beyond8.Learning.Application.Services.Implements;
 public class ProgressService(
     ILogger<ProgressService> logger,
     IUnitOfWork unitOfWork,
-    ICertificateService certificateService) : IProgressService
+    ICertificateService certificateService,
+    ICatalogClient catalogClient) : IProgressService
 {
     public async Task<ApiResponse<LessonProgressResponse>> UpdateLessonProgressAsync(Guid lessonId, Guid userId, LessonProgressHeartbeatRequest request)
     {
@@ -125,6 +127,42 @@ public class ProgressService(
         {
             logger.LogError(ex, "Error getting lesson progress: EnrollmentId {EnrollmentId}, LessonId {LessonId}", enrollmentId, lessonId);
             return ApiResponse<LessonProgressResponse>.FailureResponse("Đã xảy ra lỗi khi lấy tiến độ bài học.");
+        }
+    }
+
+    public async Task<ApiResponse<CurriculumProgressResponse>> GetCurriculumProgressByEnrollmentIdAsync(Guid enrollmentId, Guid userId)
+    {
+        try
+        {
+            var enrollment = await unitOfWork.EnrollmentRepository.FindOneAsync(e =>
+                e.Id == enrollmentId && e.UserId == userId && e.DeletedAt == null);
+            if (enrollment == null)
+            {
+                logger.LogWarning("Enrollment not found or access denied: {EnrollmentId}, UserId {UserId}", enrollmentId, userId);
+                return ApiResponse<CurriculumProgressResponse>.FailureResponse("Khóa học đã đăng ký không tồn tại hoặc không có quyền truy cập.");
+            }
+
+            var structureResult = await catalogClient.GetCourseStructureAsync(enrollment.CourseId);
+            if (!structureResult.IsSuccess || structureResult.Data == null)
+            {
+                logger.LogWarning("Failed to get course structure for CourseId {CourseId}", enrollment.CourseId);
+                return ApiResponse<CurriculumProgressResponse>.FailureResponse(
+                    structureResult.Message ?? "Không thể lấy khung chương trình khóa học.");
+            }
+
+            var structure = structureResult.Data;
+            var lessonProgressList = (await unitOfWork.LessonProgressRepository.GetAllAsync(lp =>
+                lp.EnrollmentId == enrollmentId)).ToList();
+            var lessonProgressDict = lessonProgressList.ToDictionary(lp => lp.LessonId);
+
+            var response = enrollment.ToCurriculumProgressResponse(structure, lessonProgressDict);
+
+            return ApiResponse<CurriculumProgressResponse>.SuccessResponse(response, "Lấy tiến độ khung chương trình thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting curriculum progress: EnrollmentId {EnrollmentId}, UserId {UserId}", enrollmentId, userId);
+            return ApiResponse<CurriculumProgressResponse>.FailureResponse("Đã xảy ra lỗi khi lấy tiến độ khung chương trình.");
         }
     }
 }

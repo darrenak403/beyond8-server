@@ -8,6 +8,7 @@ public interface ILessonService
     Task<ApiResponse<bool>> CallbackHlsAsync(VideoCallbackRequest request);
     Task<ApiResponse<List<LessonResponse>>> GetLessonsBySectionIdAsync(Guid sectionId, Guid currentUserId);
     Task<ApiResponse<LessonResponse>> GetLessonByIdAsync(Guid lessonId, Guid currentUserId);
+    Task<ApiResponse<LessonVideoResponse>> GetVideoByLessonIdAsync(Guid lessonId);
     Task<ApiResponse<bool>> DeleteLessonAsync(Guid lessonId, Guid currentUserId);
     Task<ApiResponse<LessonResponse>> CreateVideoLessonAsync(CreateVideoLessonRequest request, Guid currentUserId);
     Task<ApiResponse<LessonResponse>> CreateTextLessonAsync(CreateTextLessonRequest request, Guid currentUserId);

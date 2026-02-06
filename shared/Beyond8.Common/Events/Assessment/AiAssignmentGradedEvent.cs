@@ -1,12 +1,12 @@
 namespace Beyond8.Common.Events.Assessment;
 
-public record AssignmentGradedEvent(
+public record AiAssignmentGradedEvent(
     Guid SubmissionId,
     Guid AssignmentId,
-    string? AssignmentTitle,
     Guid? SectionId,
     Guid StudentId,
+    string? AssignmentTitle,
     decimal Score,
-    DateTime GradedAt,
-    Guid GradedBy
+    string? AiFeedback,
+    DateTime GradedAt
 );
