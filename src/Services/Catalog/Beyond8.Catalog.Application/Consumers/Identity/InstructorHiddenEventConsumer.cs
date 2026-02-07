@@ -24,10 +24,6 @@ public class InstructorHiddenEventConsumer(ILogger<InstructorHiddenEventConsumer
         foreach (var course in courses)
         {
             course.InstructorVerificationStatus = InstructorVerificationStatus.Hidden;
-            if (course.Status == CourseStatus.Published)
-            {
-                course.Status = CourseStatus.Suspended;
-            }
             await unitOfWork.CourseRepository.UpdateAsync(course.Id, course);
         }
 

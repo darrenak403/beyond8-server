@@ -12,6 +12,7 @@ namespace Beyond8.Integration.Domain.Enums
         ChatCompletion = 7,
         FormatQuizQuestions = 8,
         AssignmentGrading = 9,
+        ExplainQuizQuestion = 10,
         Custom = 99
     }
 }

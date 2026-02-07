@@ -1119,6 +1119,51 @@ Each service follows Clean Architecture with four distinct layers:
 - Specific repositories expose domain-specific queries
 - Example: `_unitOfWork.UserRepository.FindOneAsync(u => u.Email == email)`
 
+**⚠️ CRITICAL: `FindOneAsync` Limitations:**
+
+`FindOneAsync` uses `AsNoTracking()` and does **NOT** support `Include()`. This means:
+
+- ❌ Navigation properties will NOT be loaded (always empty/null)
+- ❌ Returned entities are NOT tracked by EF Core (can't `SaveChangesAsync` changes)
+
+**When to use which method:**
+
+| Need                                 | Method                                                            | Tracking |
+| ------------------------------------ | ----------------------------------------------------------------- | -------- |
+| Simple read, no navigation props     | `FindOneAsync(predicate)`                                         | ❌ No    |
+| Read with navigation props           | `AsQueryable().Include(...).AsNoTracking().FirstOrDefaultAsync()` | ❌ No    |
+| Read + update entity                 | `AsQueryable().Include(...).FirstOrDefaultAsync()`                | ✅ Yes   |
+| Paginated list with navigation props | `GetPagedAsync(..., includes: q => q.Include(...))`               | ❌ No    |
+
+**Examples:**
+
+```csharp
+// ❌ BAD: OrderItems will always be empty
+var order = await unitOfWork.OrderRepository.FindOneAsync(o => o.Id == id);
+var items = order.OrderItems; // Always empty!
+
+// ✅ GOOD: Read-only with navigation properties
+var order = await unitOfWork.OrderRepository.AsQueryable()
+    .Include(o => o.OrderItems)
+    .AsNoTracking()
+    .FirstOrDefaultAsync(o => o.Id == id);
+
+// ✅ GOOD: Read + Update (needs EF tracking)
+var order = await unitOfWork.OrderRepository.AsQueryable()
+    .Include(o => o.OrderItems)
+    .FirstOrDefaultAsync(o => o.Id == id);
+order.Status = OrderStatus.Cancelled;
+await unitOfWork.SaveChangesAsync(); // Works because entity is tracked
+
+// ✅ GOOD: Paginated list with includes
+var orders = await unitOfWork.OrderRepository.GetPagedAsync(
+    pageNumber: pagination.PageNumber,
+    pageSize: pagination.PageSize,
+    filter: o => o.UserId == userId,
+    orderBy: q => q.OrderByDescending(o => o.CreatedAt),
+    includes: q => q.Include(o => o.OrderItems));
+```
+
 ### 2. ApiResponse Wrapper
 
 All API responses use a consistent wrapper pattern:
@@ -1348,9 +1393,11 @@ All API endpoints use rate limiting:
 ### Database Operations
 
 - Always use async methods: `FindOneAsync`, `AddAsync`, `UpdateAsync`, `SaveChangesAsync`
-- Entities inherit from `BaseEntity` (Id, CreatedAt, UpdatedAt)
-- Configure relationships in `OnModelCreating`
+- Entities inherit from `BaseEntity` (Id, CreatedAt, UpdatedAt, CreatedBy, DeletedAt, etc.)
+- Configure relationships explicitly in `OnModelCreating` with `.HasMany()/.WithOne()/.HasForeignKey()/.OnDelete()`
+- Do NOT rely solely on `[ForeignKey]` attributes — always add fluent configuration
 - Use migrations for schema changes
+- **⚠️ `FindOneAsync` uses `AsNoTracking` with no Include support** — see Repository Pattern section for alternatives
 
 ## Services
 
@@ -1692,14 +1739,14 @@ This document contains ALL requirements and business rules for Sale Service. **D
 - **REQ-07.03**: Coupon validation and application (usage limits, expiry, applicability)
 - **REQ-07.04**: Transaction history for students
 - **REQ-07.06**: Refund requests (14-day window, <10% progress) - **Phase 3, NOT Phase 2**
-- **REQ-07.09**: Instructor wallet & payout (14-day escrow, admin approval, 500k VND minimum)
+- **REQ-07.09**: Instructor wallet & payout (~~14-day escrow~~ removed Phase 2, admin approval, 500k VND minimum)
 
 **Business Rules:**
 
 - **BR-04**: Free courses enroll immediately without payment
-- **BR-05**: Refund policy - 14 days, <10% progress
+- **BR-05**: Refund policy - 14 days, <10% progress (Phase 3)
 - **BR-11**: Payment rules - VNPay, Decimal for money, HMAC signature verification
-- **BR-19**: Revenue split - **70% Instructor, 30% Platform** (NOT 80-20!), 14-day escrow, min 500k payout
+- **BR-19**: Revenue split - **70% Instructor, 30% Platform** (NOT 80-20!), ~~14-day escrow~~ removed Phase 2, min 500k payout
 - **NFR-07.01**: Security - Checksum verification, Idempotency for webhooks
 - **NFR-07.02**: Financial accuracy - Decimal type, ACID transactions
 
@@ -1714,9 +1761,18 @@ This document contains ALL requirements and business rules for Sale Service. **D
 5. ❌ **Installment payments** - Not in requirements
 6. ❌ **Auto-approve payouts** - Requires admin approval per REQ-07.09
 7. ❌ **Configurable revenue split** - Hardcoded 70-30 per BR-19
-8. ❌ **Configurable escrow period** - Hardcoded 14 days per BR-19
+8. ❌ **Escrow/Settlement logic** - Removed from Phase 2, will re-implement in Phase 3
+9. ❌ **SettlementService** - Removed from Phase 2 scope
 
 **If you think a feature should be added but it's not in requirements → Document it for backlog discussion, DO NOT implement.**
+
+#### ⚠️ Phase 2 Simplification: No Escrow
+
+> **Ngày thay đổi**: 2026-02-06
+> **Chi tiết**: Xem [docs/plans/sale-service-escrow-removed.md](../docs/plans/sale-service-escrow-removed.md)
+>
+> Phase 2 đã bỏ 14-day escrow/settlement logic. Payment success → Credit trực tiếp vào AvailableBalance.
+> Phase 3 sẽ re-implement escrow theo BR-05, BR-19.
 
 #### Core Features
 
@@ -1726,7 +1782,7 @@ This document contains ALL requirements and business rules for Sale Service. **D
 - Track order status (Pending → Paid → Cancelled)
 - Snapshot course data in OrderItems (prevents data loss if course deleted)
 - Calculate totals with coupon discounts
-- 14-day settlement tracking (`SettlementEligibleAt = PaidAt + 14 days`)
+- Free courses auto-set `Status = Paid` and publish `OrderCompletedEvent` (per BR-04)
 
 **Payment Processing:**
 
@@ -1744,27 +1800,18 @@ This document contains ALL requirements and business rules for Sale Service. **D
 - Date range validation (ValidFrom to ValidUntil)
 - Minimum order amount enforcement
 
-**Instructor Wallet (3-Tier Balance):**
+**Instructor Wallet (1-Tier Balance — Phase 2):**
 
-- **PendingBalance**: Funds in 14-day escrow (cannot withdraw)
-- **AvailableBalance**: Funds ready to withdraw (after settlement)
-- **HoldBalance**: Funds on hold (during payout processing or disputes)
-- Bank account info stored as encrypted JSONB
+- **AvailableBalance**: Funds credited immediately after payment success (no escrow)
+- Bank account info stored as JSONB
 - Lifetime statistics (TotalEarnings, TotalWithdrawn)
-
-**Settlement Service (14-Day Escrow):**
-
-- Background job runs daily at 2:00 AM UTC
-- Processes orders where `SettlementEligibleAt <= NOW()`
-- Moves funds: `PendingBalance` → `AvailableBalance`
-- Updates `TransactionLedger` status: Pending → Completed
-- Protects platform from refund requests (14-day window per BR-05)
+- Phase 3 sẽ thêm `PendingBalance` (escrow) và `HoldBalance` (payout processing)
 
 **Payout Management:**
 
 - Instructor requests withdrawal (minimum 500k VND per BR-19)
 - Admin approval workflow (Requested → Approved → Processing → Completed)
-- Balance movement: `AvailableBalance` → `HoldBalance` → `TotalWithdrawn`
+- Balance movement: `AvailableBalance` → `TotalWithdrawn`
 - Bank transfer integration (mock for Phase 2, real API Phase 3)
 - Rejection restores balance to Available
 
@@ -1772,23 +1819,24 @@ This document contains ALL requirements and business rules for Sale Service. **D
 
 - Immutable log of all wallet transactions
 - Records `BalanceBefore` and `BalanceAfter` for reconciliation
-- Polymorphic references (ReferenceId + ReferenceType for Order/Payout/Refund)
-- Tracks `AvailableAt` date for 14-day escrow logic
-- Supports transaction types: Sale, Payout, Settlement, PlatformFee, Adjustment
+- Polymorphic references (ReferenceId + ReferenceType for Order/Payout)
+- Default status: `Completed` (no escrow pending in Phase 2)
+- Supports transaction types: Sale, Payout, PlatformFee, Adjustment
 
 #### API Endpoints
 
-**Order Endpoints** (`/api/v1/orders`):
+**Order Endpoints** (`/api/v1/orders`) — ✅ IMPLEMENTED:
 
 - `POST /` - Create order (Authenticated)
-- `GET /{id}` - Get order details (Owner/Admin)
-- `POST /{id}/cancel` - Cancel order (Owner/Admin, only if Pending)
-- `GET /my-orders` - Get user orders (Authenticated, paginated)
-- `GET /instructor/{instructorId}` - Get instructor sales (Instructor/Admin)
+- `GET /{orderId}` - Get order details (Owner/Admin)
+- `POST /{orderId}/cancel` - Cancel order (Owner/Admin, only if Pending)
+- `GET /user/{userId}` - Get user orders (Owner/Admin, paginated)
+- `GET /instructor/{instructorId}` - Get instructor sales (Instructor/Admin, paginated)
 - `GET /status/{status}` - Filter by status (Admin)
-- `GET /statistics` - Revenue statistics (Admin/Instructor)
+- `PATCH /{orderId}/status` - Update order status (Admin)
+- `GET /statistics` - Revenue statistics (Instructor/Admin)
 
-**Payment Endpoints** (`/api/v1/payments`):
+**Payment Endpoints** (`/api/v1/payments`) — ❌ NOT YET IMPLEMENTED:
 
 - `POST /process` - Initiate payment (Authenticated)
 - `POST /vnpay/callback` - VNPay webhook (AllowAnonymous, HMAC verification)
@@ -1796,7 +1844,7 @@ This document contains ALL requirements and business rules for Sale Service. **D
 - `GET /order/{orderId}` - Get payments for order (Owner/Admin)
 - `GET /my-payments` - Get user payments (Authenticated, paginated)
 
-**Coupon Endpoints** (`/api/v1/coupons`):
+**Coupon Endpoints** (`/api/v1/coupons`) — ❌ NOT YET IMPLEMENTED:
 
 - `POST /` - Create coupon (Admin/Instructor)
 - `GET /{code}` - Get coupon by code (Public)
@@ -1805,12 +1853,12 @@ This document contains ALL requirements and business rules for Sale Service. **D
 - `PATCH /{id}/toggle-status` - Activate/deactivate (Admin)
 - `GET /active` - Get active coupons (Public, cached)
 
-**Wallet Endpoints** (`/api/v1/wallets`):
+**Wallet Endpoints** (`/api/v1/wallets`) — ❌ NOT YET IMPLEMENTED:
 
 - `GET /my-wallet` - Get instructor wallet (Instructor)
 - `GET /{instructorId}/transactions` - Get transaction history (Instructor/Admin, paginated)
 
-**Payout Endpoints** (`/api/v1/payouts`):
+**Payout Endpoints** (`/api/v1/payouts`) — ❌ NOT YET IMPLEMENTED:
 
 - `POST /request` - Request payout (Instructor)
 - `POST /{id}/approve` - Approve payout (Admin)
@@ -1818,19 +1866,7 @@ This document contains ALL requirements and business rules for Sale Service. **D
 - `GET /my-requests` - Get own payout requests (Instructor)
 - `GET /` - Get all payout requests (Admin, paginated)
 
-**Settlement Endpoints** (`/api/v1/settlements`) - Admin Only:
-
-- `POST /process` - Manual settlement trigger (emergency use)
-- `GET /pending` - Get pending settlements (paginated)
-- `GET /statistics` - Settlement statistics
-- `GET /{orderId}/status` - Get settlement status
-
 #### Entity Design Rationale
-
-**Why Order has `SettlementEligibleAt`?**
-
-- Calculated as `PaidAt + 14 days` to trigger automatic settlement
-- Enables background job to process settlements efficiently
 
 **Why OrderItem snapshots course data?**
 
@@ -1843,11 +1879,11 @@ This document contains ALL requirements and business rules for Sale Service. **D
 - Required for reconciliation with VNPay provider
 - Enables refund API calls (Phase 3)
 
-**Why InstructorWallet has 3 balance types?**
+**Why InstructorWallet has only AvailableBalance (Phase 2)?**
 
-- **Pending**: Escrow protection (14-day refund window per BR-05)
-- **Available**: Funds ready to withdraw
-- **Hold**: Reserves funds during payout processing
+- Phase 2 simplified: no escrow, credit immediately
+- Phase 3 will add `PendingBalance` (escrow) + `HoldBalance` (payout processing)
+- See [sale-service-escrow-removed.md](../docs/plans/sale-service-escrow-removed.md)
 
 **Why TransactionLedger records `BalanceBefore` and `BalanceAfter`?**
 
@@ -1878,45 +1914,39 @@ InstructorEarnings = FinalPrice - PlatformFeeAmount // 70%
 
 **⚠️ CRITICAL:** Entity comments may say 20%, but **BR-19 requires 30%**. Follow BR-19.
 
-#### 14-Day Escrow Workflow
+#### Payment Workflow (Phase 2 — No Escrow)
 
 ```
 T0: Payment Success
   → Order.Status = Paid
   → Order.PaidAt = Now
-  → Order.SettlementEligibleAt = Now + 14 days
+  → InstructorWallet.AvailableBalance += InstructorEarnings (credited immediately)
+  → TransactionLedger.Type = Sale, Status = Completed
+  → Publish OrderCompletedEvent
 
-T1: Create Transaction
-  → TransactionLedger.Type = Sale
-  → TransactionLedger.Status = Pending
-  → TransactionLedger.AvailableAt = Order.SettlementEligibleAt
-  → InstructorWallet.PendingBalance += InstructorEarnings
-
-T14 days: Settlement Job (runs daily 2:00 AM UTC)
-  → Query: WHERE AvailableAt <= NOW() AND Status = Pending
-  → TransactionLedger.Status = Completed
-  → InstructorWallet.PendingBalance -= Amount
-  → InstructorWallet.AvailableBalance += Amount
-  → Order.IsSettled = true, SettledAt = Now
-
-T14+ days: Payout
-  → Instructor creates PayoutRequest
+T0+: Payout
+  → Instructor creates PayoutRequest (min 500k VND)
   → Admin approves
-  → AvailableBalance → HoldBalance → TotalWithdrawn
+  → AvailableBalance -= Amount → TotalWithdrawn += Amount
 ```
 
-#### Service Implementation Priority
+> **Phase 3** sẽ re-implement 14-day escrow workflow. Xem [sale-service-escrow-removed.md](../docs/plans/sale-service-escrow-removed.md) để biết chi tiết.
+
+#### Service Implementation Status & Priority
 
 **Phase 2 - Core Services (Current Focus):**
 
-1. **OrderService** (P0 - Critical) - Foundation for everything
-2. **PaymentService** (P0 - Critical) - VNPay integration
-3. **CouponService** (P1 - High) - Can develop in parallel
-4. **CouponUsageService** (P1 - High) - Validation logic
-5. **InstructorWalletService** (P1 - High) - Balance management
-6. **TransactionService** (P2 - Medium) - Audit logging
-7. **SettlementService** (P1 - High) - Background job
-8. **PayoutService** (P2 - Medium) - Withdrawal workflow
+| #   | Service                     | Priority    | Status         | Notes                               |
+| --- | --------------------------- | ----------- | -------------- | ----------------------------------- |
+| 1   | **OrderService**            | P0 Critical | ✅ Implemented | Snapshot logic, free order handling |
+| 2   | **PaymentService**          | P0 Critical | ❌ Not started | VNPay integration                   |
+| 3   | **CouponService**           | P1 High     | ❌ Not started | Usage limits, expiry validation     |
+| 4   | **CouponUsageService**      | P1 High     | ❌ Not started | Per-user tracking                   |
+| 5   | **InstructorWalletService** | P1 High     | ❌ Not started | 1-tier balance (Phase 2)            |
+| 6   | **TransactionService**      | P2 Medium   | ❌ Not started | Immutable audit trail               |
+| 7   | **PayoutService**           | P2 Medium   | ❌ Not started | Admin approval, 500k minimum        |
+
+> **SettlementService**: Removed from Phase 2 scope. Will be re-implemented in Phase 3.
 
 **Required Reading per Service:**
 
@@ -1926,8 +1956,7 @@ T14+ days: Payout
 | PaymentService          | 07.02               | BR-11, BR-19, NFR-07.01, NFR-07.02 | HMAC verification, idempotency       |
 | CouponService           | 07.03               | BR-11                              | Usage limits, expiry validation      |
 | CouponUsageService      | 07.03               | BR-11                              | Per-user tracking                    |
-| InstructorWalletService | 07.09               | BR-19, NFR-07.02                   | 3-tier balance system                |
-| SettlementService       | 07.09               | BR-05, BR-19                       | Background job, 14-day escrow        |
+| InstructorWalletService | 07.09               | BR-19, NFR-07.02                   | 1-tier balance (no escrow Phase 2)   |
 | PayoutService           | 07.09               | BR-19                              | Admin approval, 500k minimum         |
 | TransactionService      | 07.09               | BR-19, NFR-07.02                   | Immutable audit trail                |
 
@@ -1951,8 +1980,68 @@ T14+ days: Payout
 
 **→ Integration Service (Events):**
 
-- Publish `SettlementCompletedEvent` → Email notification
 - Publish `PayoutCompletedEvent` → Email notification
+
+#### Known Issues & TODOs in Current Sale Service Code
+
+> **✅ CẬP NHẬT 2026-02-06**: Tất cả 12 issues đã được fix. Danh sách dưới đây giữ lại để reference.
+
+**1. ✅ FIXED — Free Course Enrollment Blocked:**
+
+- `CreateOrderRequestValidator` changed from `GreaterThan(0)` → `GreaterThanOrEqualTo(0)` per BR-04
+
+**2. ✅ FIXED — Missing Include for OrderItems:**
+
+- `GetOrderByIdAsync`, `UpdateOrderStatusAsync`, `CancelOrderAsync` now use `AsQueryable().Include(o => o.OrderItems)` instead of `FindOneAsync`
+- All `GetPagedAsync` calls now pass `includes: q => q.Include(o => o.OrderItems)`
+- Read-only methods use `.AsNoTracking()`, update methods omit it for EF tracking
+
+**3. ✅ FIXED — Free Order PaidAt Not Set:**
+
+- `OrderMappings.ToEntity()` now sets `PaidAt = totalAmount == 0 ? DateTime.UtcNow : null`
+
+**4. ✅ FIXED — Coupon DTOs Mismatch:**
+
+- `CreateCouponRequest`, `CouponResponse`, `UpdateCouponRequest` updated to match entity: `CouponType` enum, `ValidFrom`/`ValidTo`, `MaxDiscountAmount`, `UsagePerUser`, `ApplicableInstructorId`, `ApplicableCourseId`, `Description`
+
+**5. ✅ FIXED — PaymentResponse Mismatch:**
+
+- Updated with `PaymentNumber`, `PaymentStatus` enum, `Currency`, `Provider`, `ExternalTransactionId`, `ExpiredAt`, `FailureReason`
+
+**6. ✅ FIXED — PayoutRequestResponse Mismatch:**
+
+- Updated with `RequestNumber`, `WalletId`, `PayoutStatus` enum, `Currency`, `BankAccountNumber`, `BankAccountName`, `ApprovedBy/At`, `RejectedBy/At`
+
+**7. ⏭️ SKIPPED — SaleDbContext Constructor Style:**
+
+- Kept old-style constructor (consistent with Catalog service which also uses old-style). Both Identity (primary) and Catalog (old-style) are acceptable patterns.
+
+**8. ✅ FIXED — Missing Explicit Relationship Configuration:**
+
+- `SaleDbContext.OnModelCreating` now has explicit `HasMany/WithOne/HasForeignKey/OnDelete` for: Order→OrderItems (Cascade), Order→Payments (Cascade), Order→Coupon (SetNull), Coupon→CouponUsages (Cascade), CouponUsage→Order (Restrict), InstructorWallet→Transactions (Cascade), InstructorWallet→PayoutRequests (Cascade)
+
+**9. ✅ FIXED — GetOrderStatisticsAsync Performance:**
+
+- Refactored to use `AsQueryable()` with database-level `CountAsync()` and `SumAsync()` instead of `GetAllAsync()` loading all records into memory
+
+**10. ✅ FIXED — Program.cs Extra Line:**
+
+- Removed `app.MapGet("/", () => "Beyond8 Sale Service")`
+
+**11. ✅ FIXED — File-Scoped Namespace Inconsistency:**
+
+- All 6 validators now use file-scoped namespaces (`namespace X;`)
+
+**12. ✅ FIXED — CreatePayoutRequest Min Amount Validation:**
+
+- Changed from `GreaterThan(0)` → `GreaterThanOrEqualTo(500000)` per BR-19
+
+**Additional Fixes Applied:**
+
+- **✅ Coupon entity**: Removed shadow `public Guid? CreatedBy` that conflicted with `BaseEntity.CreatedBy`
+- **✅ CatalogClient**: Now uses `BaseClient.GetAsync<T>()` instead of bypassing directly to `httpClient.GetAsync()` (fixes auth token forwarding, deserialization, adds structured logging)
+- **✅ CreatePayoutRequest DTO**: Updated field names to match entity (`BankAccountNumber`, `BankAccountName`, `Note`)
+- **✅ Validators**: `CreateCouponRequestValidator` and `UpdateCouponRequestValidator` now validate `CouponType` enum with `.IsInEnum()` instead of string matching
 
 #### Development Workflow Rules
 
@@ -1961,7 +2050,8 @@ T14+ days: Payout
 1. ✅ Read [docs/requirements/07-PAYMENT-ENROLLMENT.md](../docs/requirements/07-PAYMENT-ENROLLMENT.md)
 2. ✅ Review business rules (BR-04, BR-05, BR-11, BR-19, NFR-07.01, NFR-07.02)
 3. ✅ Check entity design in [src/Services/Sale/Beyond8.Sale.Domain/Entities/](../src/Services/Sale/Beyond8.Sale.Domain/Entities/)
-4. ✅ Review interface definitions in [src/Services/Sale/Beyond8.Sale.Application/Interfaces/](../src/Services/Sale/Beyond8.Sale.Application/Interfaces/)
+4. ✅ Review interface definitions in [src/Services/Sale/Beyond8.Sale.Application/Services/Interfaces/](../src/Services/Sale/Beyond8.Sale.Application/Services/Interfaces/)
+5. ✅ Follow established patterns: `AsQueryable().Include()` for navigation props, `BaseClient.GetAsync<T>()` for HTTP clients
 
 **DURING implementation:**
 
@@ -2038,6 +2128,37 @@ public interface IIdentityClient : IBaseClient
     Task<ApiResponse<bool>> CheckInstructorProfileVerifiedAsync(Guid userId);
     Task<ApiResponse<SubscriptionResponse>> GetUserSubscriptionAsync(Guid userId);
 }
+```
+
+**⚠️ CRITICAL: Always use `BaseClient` helper methods in implementations:**
+
+```csharp
+// ✅ GOOD: Uses BaseClient.GetAsync<T>() — handles auth token, deserialization, logging
+public class CatalogClient(
+    HttpClient httpClient,
+    IHttpContextAccessor httpContextAccessor,
+    ILogger<CatalogClient> logger)
+    : BaseClient(httpClient, httpContextAccessor), ICatalogClient
+{
+    public async Task<ApiResponse<CourseDto>> GetCourseByIdAsync(Guid courseId)
+    {
+        try
+        {
+            var data = await GetAsync<CourseDto>($"/api/v1/courses/{courseId}");
+            return ApiResponse<CourseDto>.SuccessResponse(data, "OK");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get course: {CourseId}", courseId);
+            return ApiResponse<CourseDto>.FailureResponse(ex.Message);
+        }
+    }
+}
+
+// ❌ BAD: Bypasses BaseClient — no auth token, no PropertyNameCaseInsensitive
+var response = await httpClient.GetAsync($"/api/v1/courses/{courseId}");
+var json = await response.Content.ReadAsStringAsync();
+return JsonSerializer.Deserialize<ApiResponse<T>>(json); // Missing auth + wrong deserialization
 ```
 
 ## Database
@@ -2291,6 +2412,11 @@ When working with this codebase:
     await _unitOfWork.SaveChangesAsync();
     ```
 
+    **⚠️ `FindOneAsync` uses `AsNoTracking` and does NOT support `Include()`:**
+    - For navigation properties: `AsQueryable().Include(...).AsNoTracking().FirstOrDefaultAsync()`
+    - For update + navigation: `AsQueryable().Include(...).FirstOrDefaultAsync()` (no AsNoTracking)
+    - For paginated lists: `GetPagedAsync(..., includes: q => q.Include(...))`
+
 11. **Pagination**: ALWAYS use `PaginationRequest` for list endpoints
 
     ```csharp
@@ -2308,8 +2434,10 @@ When working with this codebase:
 12. **Entity Guidelines**:
     - Inherit from `BaseEntity` (Id, CreatedAt, UpdatedAt, DeletedAt, etc.)
     - Use `Guid.CreateVersion7()` for IDs
-    - Configure relationships in `OnModelCreating`
+    - Configure relationships explicitly in `OnModelCreating` with `.HasMany()/.WithOne()/.HasForeignKey()/.OnDelete()`
+    - Do NOT rely solely on `[ForeignKey]` attributes
     - JSONB columns: `[Column(TypeName = "jsonb")]`
+    - Do NOT shadow `BaseEntity` properties (e.g., don't re-declare `CreatedBy`)
 
 ### 🧹 Code Quality
 

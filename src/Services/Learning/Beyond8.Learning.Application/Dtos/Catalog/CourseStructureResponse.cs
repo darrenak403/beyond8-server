@@ -6,6 +6,7 @@ public class CourseStructureResponse
 {
     public Guid Id { get; set; }
     public string Title { get; set; } = string.Empty;
+    public string Slug { get; set; } = string.Empty;
     public decimal FinalPrice { get; set; }
     public string? ThumbnailUrl { get; set; }
     public Guid InstructorId { get; set; }

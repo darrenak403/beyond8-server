@@ -1,13 +1,21 @@
+using Beyond8.Sale.Domain.Enums;
+
 namespace Beyond8.Sale.Application.Dtos.Payments;
 
 public class PaymentResponse
 {
     public Guid Id { get; set; }
     public Guid OrderId { get; set; }
-    public string TransactionId { get; set; } = string.Empty;
-    public string Status { get; set; } = string.Empty;
+    public string PaymentNumber { get; set; } = string.Empty;
+    public PaymentStatus Status { get; set; }
     public decimal Amount { get; set; }
-    public string PaymentMethod { get; set; } = string.Empty;
+    public string Currency { get; set; } = "VND";
+    public string Provider { get; set; } = string.Empty;
+    public string? PaymentMethod { get; set; }
+    public string? ExternalTransactionId { get; set; }
+    public DateTime? PaidAt { get; set; }
+    public DateTime? ExpiredAt { get; set; }
+    public string? FailureReason { get; set; }
     public DateTime CreatedAt { get; set; }
-    public DateTime? ProcessedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 }

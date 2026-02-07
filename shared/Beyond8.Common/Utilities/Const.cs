@@ -6,6 +6,8 @@ namespace Beyond8.Common.Utilities
         public const string RabbitMQ = "rabbitmq";
         public const string Qdrant = "qdrant";
 
+
+        public const string HangfireDatabase = "hangfire-db";
         public const string IdentityServiceDatabase = "identity-db";
         public const string IntegrationServiceDatabase = "integration-db";
         public const string CatalogServiceDatabase = "catalog-db";

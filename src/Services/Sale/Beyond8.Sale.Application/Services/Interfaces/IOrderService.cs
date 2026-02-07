@@ -7,12 +7,12 @@ namespace Beyond8.Sale.Application.Services.Interfaces;
 
 public interface IOrderService
 {
-    Task<ApiResponse<OrderResponse>> CreateOrderAsync(CreateOrderRequest request);
+    Task<ApiResponse<OrderResponse>> CreateOrderAsync(CreateOrderRequest request, Guid userId);
     Task<ApiResponse<OrderResponse>> GetOrderByIdAsync(Guid orderId);
     Task<ApiResponse<OrderResponse>> UpdateOrderStatusAsync(Guid orderId, UpdateOrderStatusRequest request);
     Task<ApiResponse<bool>> CancelOrderAsync(Guid orderId);
     Task<ApiResponse<List<OrderResponse>>> GetOrdersByUserAsync(PaginationRequest pagination, Guid userId);
-    Task<ApiResponse<List<OrderResponse>>> GetOrdersByInstructorAsync(Guid instructorId);
+    Task<ApiResponse<List<OrderResponse>>> GetOrdersByInstructorAsync(Guid instructorId, PaginationRequest pagination);
     Task<ApiResponse<List<OrderResponse>>> GetOrdersByStatusAsync(OrderStatus status, PaginationRequest pagination);
     Task<ApiResponse<OrderStatisticsResponse>> GetOrderStatisticsAsync(Guid? instructorId = null);
 }

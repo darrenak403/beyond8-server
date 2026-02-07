@@ -52,13 +52,13 @@ namespace Beyond8.Integration.Api.Apis
                 .Produces(StatusCodes.Status401Unauthorized);
 
 
-            // group.MapPost("/quiz/explain", ExplainQuiz)
-            //     .WithName("ExplainQuiz")
-            //     .WithDescription("Giải thích quiz từ câu hỏi và đáp án cho sinh viên.")
-            //     .RequireAuthorization()
-            //     .Produces<ApiResponse<ExplainQuizResponse>>(StatusCodes.Status200OK)
-            //     .Produces<ApiResponse<ExplainQuizResponse>>(StatusCodes.Status400BadRequest)
-            //     .Produces(StatusCodes.Status401Unauthorized);
+            group.MapPost("/quiz/question/explain", ExplainQuizQuestion)
+                .WithName("ExplainQuizQuestion")
+                .WithDescription("Giải thích câu hỏi quiz từ nội dung câu hỏi.")
+                .RequireAuthorization()
+                .Produces<ApiResponse<ExplainQuizQuestionResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<ExplainQuizQuestionResponse>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
 
             group.MapGet("/health", HealthCheck)
                 .WithName("HealthCheck")
@@ -84,6 +84,24 @@ namespace Beyond8.Integration.Api.Apis
                 .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest);
 
             return group;
+        }
+
+        private static async Task<IResult> ExplainQuizQuestion(
+            [FromBody] ExplainQuizQuestionRequest request,
+            [FromServices] IAiService aiService,
+            [FromServices] ICurrentUserService currentUserService,
+            [FromServices] IIdentityClient identityClient,
+            [FromServices] IValidator<ExplainQuizQuestionRequest> validator)
+        {
+            var check = await SubscriptionHelper.CheckSubscriptionStatusAsync(identityClient, currentUserService.UserId);
+            if (!check.IsAllowed)
+                return Results.BadRequest(ApiResponse<ExplainQuizQuestionResponse>.FailureResponse(check.Message, check.Metadata));
+
+            if (!request.ValidateRequest(validator, out var validationResult))
+                return validationResult!;
+
+            var result = await aiService.ExplainQuizQuestionAsync(request, currentUserService.UserId);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
 
         private static async Task<IResult> FormatQuizQuestionsFromPdf(

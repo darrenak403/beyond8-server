@@ -25,7 +25,10 @@ public static class AiServiceGradingHelper
         return string.IsNullOrWhiteSpace(systemPrompt) ? text : $"{systemPrompt}\n\n{text}";
     }
 
-    public static string BuildSubmissionContent(string? textContent, List<string>? fileUrls)
+    public static string BuildSubmissionContent(
+        string? textContent,
+        List<string>? fileUrls,
+        List<(string FileName, string Content)>? downloadedFileContents = null)
     {
         var sb = new StringBuilder();
 
@@ -36,9 +39,20 @@ public static class AiServiceGradingHelper
             sb.AppendLine();
         }
 
-        if (fileUrls != null && fileUrls.Count > 0)
+        if (downloadedFileContents != null && downloadedFileContents.Count > 0)
         {
-            sb.AppendLine("## Các file đính kèm:");
+            sb.AppendLine("## Các file đính kèm (nội dung đã trích xuất):");
+            for (int i = 0; i < downloadedFileContents.Count; i++)
+            {
+                var (fileName, content) = downloadedFileContents[i];
+                sb.AppendLine($"### File {i + 1}: {fileName}");
+                sb.AppendLine(content);
+                sb.AppendLine();
+            }
+        }
+        else if (fileUrls != null && fileUrls.Count > 0)
+        {
+            sb.AppendLine("## Các file đính kèm (URL):");
             for (int i = 0; i < fileUrls.Count; i++)
             {
                 sb.AppendLine($"{i + 1}. {fileUrls[i]}");

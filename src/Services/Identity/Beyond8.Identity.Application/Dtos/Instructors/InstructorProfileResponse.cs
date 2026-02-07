@@ -7,7 +7,7 @@ namespace Beyond8.Identity.Application.Dtos.Instructors
     public class InstructorProfileResponse
     {
         public Guid Id { get; set; }
-        public UserSimpleResponse User { get; set; } = null!;
+        public UserSimpleResponse? User { get; set; }
         public string? Bio { get; set; }
         public string? Headline { get; set; }
         public List<string>? ExpertiseAreas { get; set; }
@@ -24,5 +24,6 @@ namespace Beyond8.Identity.Application.Dtos.Instructors
         public DateTime? VerifiedAt { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
+        public SubscriptionPlanResponse? InstructorSubscriptionPlan { get; set; }
     }
 }

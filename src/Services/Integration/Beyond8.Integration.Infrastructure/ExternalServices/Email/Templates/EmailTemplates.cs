@@ -507,5 +507,61 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices.Email.Templates
 </body>
 </html>";
         }
+
+        public static string GetCourseCompletedEmailTemplate(string userName, string courseName)
+        {
+            return $@"
+<!DOCTYPE html>
+<html lang='vi'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Chúc mừng hoàn thành khóa học!</title>
+</head>
+<body style='margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;'>
+    <table width='100%' cellpadding='0' cellspacing='0' style='background-color: #f4f4f4; padding: 20px;'>
+        <tr>
+            <td align='center'>
+                <table width='600' cellpadding='0' cellspacing='0' style='background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
+                    <tr>
+                        <td style='background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); padding: 40px 30px; text-align: center;'>
+                            <h1 style='color: #ffffff; margin: 0; font-size: 28px; font-weight: 600;'>🎓 Chúc mừng hoàn thành!</h1>
+                            <p style='color: #e0fdf4; margin: 10px 0 0 0; font-size: 16px;'>Bạn đã hoàn thành khóa học và nhận được chứng chỉ</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style='padding: 40px 30px;'>
+                            <h2 style='color: #333333; margin: 0 0 20px 0; font-size: 24px;'>Xin chào {userName},</h2>
+                            <p style='color: #666666; font-size: 16px; line-height: 1.8; margin: 0 0 20px 0;'>
+                                Chúc mừng bạn đã hoàn thành khóa học
+                                <strong style='color: #11998e;'>""{courseName}""</strong>
+                                và đã được cấp chứng chỉ! 🏆
+                            </p>
+                            <div style='background-color: #f0fdf4; border-left: 4px solid #11998e; padding: 20px; margin: 30px 0; border-radius: 4px;'>
+                                <p style='color: #166534; font-size: 15px; margin: 0; line-height: 1.6;'>
+                                    ✅ Bạn có thể xem và tải chứng chỉ trong hồ sơ của mình<br>
+                                    ✅ Chứng chỉ có thể dùng để chứng minh năng lực học tập
+                                </p>
+                            </div>
+                            <p style='color: #666666; font-size: 15px; margin: 20px 0 0 0;'>
+                                Trân trọng,<br>
+                                <strong>Đội ngũ Beyond8</strong>
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style='background-color: #f8f9fa; padding: 30px; text-align: center;'>
+                            <p style='color: #999999; font-size: 12px; margin: 0;'>
+                                © 2026 Beyond8. Nền tảng học tập trực tuyến hàng đầu Việt Nam
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>";
+        }
     }
 }

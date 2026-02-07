@@ -30,6 +30,7 @@ namespace Beyond8.Integration.Application.Services.Implements
         private const string QuizGenerationPromptName = "Quiz Generation";
         private const string FormatQuizQuestionsPromptName = "Format Quiz Questions";
         private const string AssignmentGradingPromptName = "Assignment Grading";
+        private const string ExplainQuizQuestionPromptName = "Explain Quiz Question";
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
             PropertyNameCaseInsensitive = true,
@@ -320,10 +321,23 @@ namespace Beyond8.Integration.Application.Services.Implements
 
                 var prompt = promptRes.Data;
 
+                List<(string FileName, string Content)>? downloadedFileContents = null;
+                if (request.FileUrls != null && request.FileUrls.Count > 0)
+                {
+                    downloadedFileContents = new List<(string, string)>();
+                    foreach (var fileUrl in request.FileUrls)
+                    {
+                        var item = await DownloadAndExtractFileContentAsync(fileUrl);
+                        if (item.HasValue)
+                            downloadedFileContents.Add(item.Value);
+                    }
+                }
+
                 // Build submission content
                 var submissionContent = AiServiceGradingHelper.BuildSubmissionContent(
                     request.TextContent,
-                    request.FileUrls);
+                    request.FileUrls,
+                    downloadedFileContents);
 
                 if (string.IsNullOrWhiteSpace(submissionContent))
                     return ApiResponse<AiGradingResponse>.FailureResponse(
@@ -405,6 +419,151 @@ namespace Beyond8.Integration.Application.Services.Implements
                 return ApiResponse<AiGradingResponse>.FailureResponse(
                     "Đã xảy ra lỗi khi chấm điểm bằng AI.");
             }
+        }
+
+        public async Task<ApiResponse<ExplainQuizQuestionResponse>> ExplainQuizQuestionAsync(ExplainQuizQuestionRequest request, Guid userId)
+        {
+            try
+            {
+                var promptRes = await aiPromptService.GetPromptByNameAsync(ExplainQuizQuestionPromptName);
+                if (!promptRes.IsSuccess || promptRes.Data == null)
+                    return ApiResponse<ExplainQuizQuestionResponse>.FailureResponse(promptRes.Message ?? "Không tìm thấy prompt giải thích câu hỏi quiz.");
+
+                var prompt = promptRes.Data;
+                var contentForPrompt = AiServiceQuizHelper.BuildExplainQuizQuestionPromptContent(request.Content, request.Options);
+                var userPrompt = prompt.Template.Replace("{Content}", contentForPrompt);
+                var fullPrompt = string.IsNullOrEmpty(prompt.SystemPrompt) ? userPrompt : $"{prompt.SystemPrompt}\n\n{userPrompt}";
+
+                var aiResult = await generativeAiService.GenerateContentAsync(
+                    fullPrompt,
+                    AiOperation.ExplainQuizQuestion,
+                    userId,
+                    promptId: prompt.Id,
+                    maxTokens: prompt.MaxTokens,
+                    temperature: prompt.Temperature,
+                    topP: prompt.TopP);
+
+                await SubscriptionHelper.UpdateUsageQuotaAsync(identityClient, userId);
+
+                if (!aiResult.IsSuccess || aiResult.Data == null)
+                    return ApiResponse<ExplainQuizQuestionResponse>.FailureResponse(aiResult.Message ?? "Đã xảy ra lỗi khi giải thích câu hỏi quiz.");
+
+                var parsed = AiServiceQuizHelper.ParseExplainQuizQuestionResponse(aiResult.Data.Content, JsonOptions);
+                if (parsed == null)
+                {
+                    var preview = aiResult.Data.Content?.Length > 500 ? aiResult.Data.Content[..500] + "..." : aiResult.Data.Content ?? "";
+                    logger.LogWarning("ParseExplainQuizQuestionResponse failed for user {UserId}. AI content preview: {Preview}", userId, preview);
+                    return ApiResponse<ExplainQuizQuestionResponse>.FailureResponse("Không thể phân tích kết quả giải thích câu hỏi quiz từ AI. Vui lòng thử lại.");
+                }
+
+                return ApiResponse<ExplainQuizQuestionResponse>.SuccessResponse(parsed, "Giải thích câu hỏi quiz từ AI thành công.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error in ExplainQuizQuestion for user {UserId}", userId);
+                return ApiResponse<ExplainQuizQuestionResponse>.FailureResponse("Đã xảy ra lỗi khi giải thích câu hỏi quiz.");
+            }
+        }
+
+        private async Task<(string FileName, string Content)?> DownloadAndExtractFileContentAsync(string fileUrl)
+        {
+            if (string.IsNullOrWhiteSpace(fileUrl)) return null;
+
+            try
+            {
+                byte[]? data = null;
+                string? contentType = null;
+
+                var isHttpUrl = fileUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                    || fileUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+
+                if (isHttpUrl)
+                {
+                    var key = storageService.ExtractKeyFromUrl(fileUrl);
+                    if (!string.IsNullOrEmpty(key))
+                    {
+                        var (s3Data, s3ContentType) = await storageService.GetObjectAsync(key);
+                        data = s3Data;
+                        contentType = s3ContentType;
+                    }
+                    if (data == null || data.Length == 0)
+                    {
+                        var (httpData, mime) = await urlContentDownloader.DownloadAsync(fileUrl);
+                        data = httpData;
+                        contentType = mime;
+                    }
+                }
+                else
+                {
+                    var (s3Data, s3ContentType) = await storageService.GetObjectAsync(fileUrl);
+                    data = s3Data;
+                    contentType = s3ContentType;
+                }
+
+                if (data == null || data.Length == 0)
+                {
+                    logger.LogDebug("No data downloaded for file {Url}", fileUrl);
+                    return null;
+                }
+
+                var fileName = GetFileNameFromUrlOrKey(fileUrl);
+                var content = ExtractTextFromBytes(data, contentType);
+                return (fileName, content);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to download or extract content from {FileUrl}", fileUrl);
+                return null;
+            }
+        }
+
+        private static string GetFileNameFromUrlOrKey(string urlOrKey)
+        {
+            var path = urlOrKey.AsSpan();
+            var q = path.IndexOf('?');
+            if (q >= 0) path = path[..q];
+            var last = path.LastIndexOf('/');
+            if (last >= 0) path = path[(last + 1)..];
+            return path.Length > 0 ? path.ToString() : "file";
+        }
+
+        private string ExtractTextFromBytes(byte[] data, string? contentType)
+        {
+            var isPdf = (contentType?.Contains("pdf", StringComparison.OrdinalIgnoreCase) ?? false)
+                || data.Length >= 5 && data[0] == 0x25 && data[1] == 0x50 && data[2] == 0x44 && data[3] == 0x46; // %PDF
+
+            if (isPdf)
+            {
+                try
+                {
+                    using var stream = new MemoryStream(data);
+                    return pdfChunkService.ExtractTextFromPdf(stream) ?? "[Không trích xuất được nội dung PDF.]";
+                }
+                catch (Exception ex)
+                {
+                    logger.LogDebug(ex, "PDF text extraction failed");
+                    return "[Không trích xuất được nội dung PDF.]";
+                }
+            }
+
+            var isText = contentType != null && (
+                contentType.Contains("text/", StringComparison.OrdinalIgnoreCase) ||
+                contentType.Contains("json", StringComparison.OrdinalIgnoreCase) ||
+                contentType.Contains("xml", StringComparison.OrdinalIgnoreCase));
+
+            if (isText)
+            {
+                try
+                {
+                    return System.Text.Encoding.UTF8.GetString(data);
+                }
+                catch
+                {
+                    return "[Lỗi giải mã văn bản.]";
+                }
+            }
+
+            return "[File nhị phân, không trích xuất được nội dung văn bản để chấm điểm.]";
         }
 
         private async Task<string?> DownloadRubricContentAsync(string rubricUrl)

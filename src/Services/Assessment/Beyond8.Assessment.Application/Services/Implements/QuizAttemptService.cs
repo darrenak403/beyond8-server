@@ -6,14 +6,17 @@ using Beyond8.Assessment.Application.Services.Interfaces;
 using Beyond8.Assessment.Domain.Entities;
 using Beyond8.Assessment.Domain.Enums;
 using Beyond8.Assessment.Domain.Repositories.Interfaces;
+using Beyond8.Common.Events.Assessment;
 using Beyond8.Common.Utilities;
+using MassTransit;
 using Microsoft.Extensions.Logging;
 
 namespace Beyond8.Assessment.Application.Services.Implements;
 
 public class QuizAttemptService(
     ILogger<QuizAttemptService> logger,
-    IUnitOfWork unitOfWork) : IQuizAttemptService
+    IUnitOfWork unitOfWork,
+    IPublishEndpoint publishEndpoint) : IQuizAttemptService
 {
     public async Task<ApiResponse<StartQuizResponse>> CreateQuizAttemptAsync(Guid quizId, Guid studentId)
     {
@@ -155,6 +158,21 @@ public class QuizAttemptService(
             await UpdateQuizStatisticsAsync(quiz, isPassed);
 
             await unitOfWork.SaveChangesAsync();
+
+            if (quiz.LessonId.HasValue)
+            {
+                await publishEndpoint.Publish(new QuizAttemptCompletedEvent(
+                    LessonId: quiz.LessonId.Value,
+                    StudentId: studentId,
+                    ScorePercent: scorePercent,
+                    TotalScore: totalScore,
+                    MaxScore: maxScore,
+                    IsPassed: isPassed,
+                    AttemptId: attemptId,
+                    QuizId: quiz.Id,
+                    CompletedAt: DateTime.UtcNow
+                ));
+            }
 
             var response = attempt.ToSubmitResultResponse(
                 quiz, questionOrder.Count, totalScore, scorePercent, isPassed, correctCount, wrongCount, questionResults);

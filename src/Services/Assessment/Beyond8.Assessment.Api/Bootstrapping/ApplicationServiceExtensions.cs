@@ -35,7 +35,7 @@ namespace Beyond8.Assessment.Api.Bootstrapping
 
                 // Integration events (AI Grading)
                 config.AddConsumer<AiGradingCompletedConsumer>();
-            });
+            }, queueNamePrefix: "assessment");
             builder.AddClientServices();
 
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -110,6 +110,7 @@ namespace Beyond8.Assessment.Api.Bootstrapping
             app.MapQuizApi();
             app.MapQuizAttemptApi();
             app.MapAssignmentApi();
+            app.MapAssignmentSubmissionApi();
 
             return app;
         }

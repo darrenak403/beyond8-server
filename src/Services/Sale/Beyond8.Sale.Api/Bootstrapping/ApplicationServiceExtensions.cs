@@ -1,11 +1,16 @@
 using Beyond8.Common.Extensions;
 using Beyond8.Common.Utilities;
+using Beyond8.Sale.Api.Apis;
+using Beyond8.Sale.Application.Clients.Catalog;
 using Beyond8.Sale.Application.Dtos.Orders;
+using Beyond8.Sale.Application.Services.Implements;
 using Beyond8.Sale.Application.Services.Interfaces;
 using Beyond8.Sale.Domain.Repositories.Interfaces;
 using Beyond8.Sale.Infrastructure.Data;
 using Beyond8.Sale.Infrastructure.Repositories.Implements;
 using FluentValidation;
+using Polly;
+using Polly.Extensions.Http;
 using Scalar.AspNetCore;
 
 namespace Beyond8.Sale.Api.Bootstrapping;
@@ -30,16 +35,30 @@ public static class ApplicationServiceExtensions
         });
 
         // Register services
+        builder.Services.AddScoped<IOrderService, OrderService>();
+        builder.Services.AddScoped<ICouponService, CouponService>();
+        builder.Services.AddScoped<ICartService, CartService>();
+        builder.Services.AddValidatorsFromAssemblyContaining<CreateOrderRequest>();
+
+        // Register HTTP clients with Polly retry policy
+        var httpPolicy = HttpPolicyExtensions
+            .HandleTransientHttpError()
+            .OrResult(r => r.StatusCode == System.Net.HttpStatusCode.NotFound)
+            .WaitAndRetryAsync(
+                retryCount: 3,
+                sleepDurationProvider: retryAttempt =>
+                    TimeSpan.FromMilliseconds(Math.Pow(2, retryAttempt) * 100));
+
+        builder.Services
+            .AddHttpClient<ICatalogClient, CatalogClient>()
+            .AddPolicyHandler(httpPolicy);
+
         // TODO: Uncomment when service implementations are created
-        // builder.Services.AddScoped<IOrderService, OrderService>();
         // builder.Services.AddScoped<IPaymentService, PaymentService>();
         // builder.Services.AddScoped<ICouponService, CouponService>();
         // builder.Services.AddScoped<IInstructorWalletService, InstructorWalletService>();
         // builder.Services.AddScoped<IPayoutService, PayoutService>();
         // builder.Services.AddScoped<ITransactionService, TransactionService>();
-
-        // Add FluentValidation validators
-        builder.Services.AddValidatorsFromAssemblyContaining<CreateOrderRequest>();
 
         return builder;
     }
@@ -54,8 +73,9 @@ public static class ApplicationServiceExtensions
         }
         app.UseHttpsRedirection();
 
-        // TODO: Map API endpoints when implemented
-        // app.MapOrderApi();
+        // Map API endpoints
+        app.MapOrderApi();
+        app.MapCartApi();
         // app.MapPaymentApi();
         // app.MapCouponApi();
         // app.MapWalletApi();

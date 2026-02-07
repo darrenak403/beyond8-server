@@ -141,6 +141,51 @@ OUTPUT (RAW JSON ARRAY):
     ""points"": 1.0
   }}
 ]"
+        },
+
+        // PROMPT 3: EXPLAIN QUIZ QUESTION
+        new AiPrompt
+        {
+            Name = "Explain Quiz Question",
+            Description = "Giải thích đầy đủ và chi tiết từng đáp án (tối thiểu 100 ký tự/explanation): tại sao đúng/sai, ý nghĩa nội dung, liên hệ kiến thức. Trả về JSON với mảng answers.",
+            Category = PromptCategory.Assessment,
+            Tags = "Education, Quiz, Explanation, Feedback",
+            SystemPrompt = "Bạn là trợ lý giáo dục. Nhiệm vụ: Với câu hỏi trắc nghiệm và các lựa chọn được cung cấp, giải thích từng đáp án (answer) một cách đầy đủ và chi tiết: tại sao đúng hoặc sai, ý nghĩa nội dung, liên hệ với kiến thức liên quan. Mỗi trường \"explanation\" phải có tối thiểu 100 ký tự. Trả về đúng format JSON theo OUTPUT SCHEMA. Ngôn ngữ: Tiếng Việt. KHÔNG trả về markdown hay text ngoài JSON.",
+            Version = "1.1.0",
+            IsActive = true,
+            MaxTokens = 2048,
+            Temperature = 0.3m,
+            TopP = 0.9m,
+            Template = @"
+CÂU HỎI VÀ CÁC LỰA CHỌN:
+---
+{Content}
+---
+
+YÊU CẦU:
+1. Với mỗi lựa chọn (option) trong câu hỏi trên, tạo một phần tử trong mảng ""answers"".
+2. Mỗi phần tử gồm:
+   - ""answer"": nội dung đáp án (text của lựa chọn đó).
+   - ""isCorrect"": true nếu đáp án đúng, false nếu sai.
+   - ""explanation"": giải thích ĐẦY ĐỦ VÀ CHI TIẾT (tối thiểu 100 ký tự) tại sao đáp án đúng hoặc sai: nêu rõ lý do, ý nghĩa nội dung, có thể liên hệ kiến thức liên quan để người học hiểu sâu (Tiếng Việt).
+3. Thứ tự các phần tử trong ""answers"" phải trùng với thứ tự các lựa chọn trong đề bài.
+4. QUAN TRỌNG: Mỗi ""explanation"" phải có ít nhất 100 ký tự; viết rõ ràng, có chiều sâu, tránh câu quá ngắn.
+
+OUTPUT SCHEMA (chỉ trả về JSON, không markdown):
+{
+  ""answers"": [
+    {
+      ""answer"": ""Nội dung đáp án 1"",
+      ""isCorrect"": true,
+      ""explanation"": ""Giải thích đầy đủ và chi tiết (tối thiểu 100 ký tự) tại sao đáp án này đúng: nêu lý do, ý nghĩa, có thể bổ sung kiến thức liên quan.""
+    },
+    {
+      ""answer"": ""Nội dung đáp án 2"",
+      ""isCorrect"": false,
+      ""explanation"": ""Giải thích đầy đủ và chi tiết (tối thiểu 100 ký tự) tại sao đáp án này sai: chỉ rõ chỗ sai, đưa ra cách hiểu đúng hoặc gợi ý cải thiện.""
+    }
+  ]
+}"
         }
       ];
     }
