@@ -257,7 +257,6 @@ public class CourseService(
             if (!isValid)
                 return ApiResponse<CourseResponse>.FailureResponse(errorMessage!);
 
-            // Status validation: Prevent updates on suspended or archived courses
             if (course!.Status == CourseStatus.Suspended || course.Status == CourseStatus.Archived)
             {
                 logger.LogWarning("Cannot update course in status {Status}: {CourseId}", course.Status, id);
