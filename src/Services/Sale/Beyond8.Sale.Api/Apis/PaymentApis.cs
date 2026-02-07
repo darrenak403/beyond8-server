@@ -74,7 +74,7 @@ public static class PaymentApis
         var ipAddress = httpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
         var callbackUrl = $"{vnPayOptions.Value.BackendCallbackUrl.TrimEnd('/')}/api/v1/payments/vnpay/callback";
 
-        var result = await paymentService.ProcessPaymentAsync(request.OrderId, request, callbackUrl, ipAddress);
+        var result = await paymentService.ProcessPaymentAsync(request.OrderId, callbackUrl, ipAddress);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 

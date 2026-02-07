@@ -6,7 +6,7 @@ namespace Beyond8.Sale.Application.Services.Interfaces;
 
 public interface IPaymentService
 {
-    Task<ApiResponse<PaymentUrlResponse>> ProcessPaymentAsync(Guid orderId, ProcessPaymentRequest request, string returnUrl, string ipAddress);
+    Task<ApiResponse<PaymentUrlResponse>> ProcessPaymentAsync(Guid orderId, string returnUrl, string ipAddress);
     Task<ApiResponse<bool>> HandleVNPayCallbackAsync(VNPayCallbackRequest request, string rawQueryString);
     Task<ApiResponse<bool>> ConfirmPaymentAsync(string transactionId);
     Task<ApiResponse<PaymentResponse>> CheckPaymentStatusAsync(Guid paymentId);

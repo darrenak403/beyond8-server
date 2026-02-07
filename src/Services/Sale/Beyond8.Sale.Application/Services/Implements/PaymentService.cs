@@ -22,7 +22,7 @@ public class PaymentService(
     IPublishEndpoint publishEndpoint) : IPaymentService
 {
     public async Task<ApiResponse<PaymentUrlResponse>> ProcessPaymentAsync(
-        Guid orderId, ProcessPaymentRequest request, string returnUrl, string ipAddress)
+        Guid orderId, string returnUrl, string ipAddress)
     {
         var order = await unitOfWork.OrderRepository.AsQueryable()
             .Include(o => o.OrderItems)
