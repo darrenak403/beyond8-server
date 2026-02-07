@@ -3,6 +3,7 @@ using System;
 using Beyond8.Analytic.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Beyond8.Analytic.Infrastructure.Migrations
 {
     [DbContext(typeof(AnalyticDbContext))]
-    partial class AnalyticDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260207083838_InitialUpdate")]
+    partial class InitialUpdate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
