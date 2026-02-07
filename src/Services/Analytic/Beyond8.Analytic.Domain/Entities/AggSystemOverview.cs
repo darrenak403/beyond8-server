@@ -5,6 +5,14 @@ namespace Beyond8.Analytic.Domain.Entities;
 
 public class AggSystemOverview : BaseEntity
 {
+    // Users
+    public int TotalUsers { get; set; } = 0;
+    public int TotalActiveUsers { get; set; } = 0;
+    public int NewUsersToday { get; set; } = 0;
+    public int TotalInstructors { get; set; } = 0;
+    public int TotalStudents { get; set; } = 0;
+
+    // Courses
     public int TotalCourses { get; set; } = 0;
     public int TotalPublishedCourses { get; set; } = 0;
 

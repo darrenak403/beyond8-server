@@ -1,6 +1,7 @@
 using Beyond8.Analytic.Api.Apis;
 using Beyond8.Analytic.Application.Consumers.Assessment;
 using Beyond8.Analytic.Application.Consumers.Catalog;
+using Beyond8.Analytic.Application.Consumers.Identity;
 using Beyond8.Analytic.Application.Consumers.Learning;
 using Beyond8.Analytic.Application.Consumers.Sale;
 using Beyond8.Analytic.Application.Services.Implements;
@@ -26,6 +27,10 @@ public static class ApplicationServiceExtensions
 
         builder.AddMassTransitWithRabbitMq(config =>
         {
+            // Identity events
+            config.AddConsumer<UserRegisteredEventConsumer>();
+            config.AddConsumer<InstructorApprovalEventConsumer>();
+            config.AddConsumer<InstructorHiddenEventConsumer>();
             // Learning events
             config.AddConsumer<CourseEnrollmentCountChangedEventConsumer>();
             config.AddConsumer<CourseCompletedEventConsumer>();
@@ -33,6 +38,7 @@ public static class ApplicationServiceExtensions
             // Catalog events
             config.AddConsumer<CoursePublishedEventConsumer>();
             config.AddConsumer<CourseUpdatedMetadataEventConsumer>();
+            config.AddConsumer<CourseUnpublishedEventConsumer>();
             // Sale events
             config.AddConsumer<OrderItemCompletedEventConsumer>();
             // Assessment events

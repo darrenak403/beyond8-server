@@ -1,9 +1,7 @@
 using Beyond8.Analytic.Application.Dtos.LessonPerformance;
 using Beyond8.Analytic.Application.Services.Interfaces;
-using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
 using Microsoft.AspNetCore.Mvc;
-using static Beyond8.Common.Utilities.Const;
 
 namespace Beyond8.Analytic.Api.Apis;
 

@@ -2,6 +2,11 @@ namespace Beyond8.Analytic.Application.Dtos.SystemOverview;
 
 public class SystemOverviewResponse
 {
+    public int TotalUsers { get; set; }
+    public int TotalActiveUsers { get; set; }
+    public int NewUsersToday { get; set; }
+    public int TotalInstructors { get; set; }
+    public int TotalStudents { get; set; }
     public int TotalCourses { get; set; }
     public int TotalPublishedCourses { get; set; }
     public int TotalEnrollments { get; set; }

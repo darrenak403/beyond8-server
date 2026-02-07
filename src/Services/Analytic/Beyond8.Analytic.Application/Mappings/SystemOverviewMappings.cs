@@ -7,6 +7,11 @@ public static class SystemOverviewMappings
 {
     public static SystemOverviewResponse ToResponse(this AggSystemOverview entity) => new()
     {
+        TotalUsers = entity.TotalUsers,
+        TotalActiveUsers = entity.TotalActiveUsers,
+        NewUsersToday = entity.NewUsersToday,
+        TotalInstructors = entity.TotalInstructors,
+        TotalStudents = entity.TotalStudents,
         TotalCourses = entity.TotalCourses,
         TotalPublishedCourses = entity.TotalPublishedCourses,
         TotalEnrollments = entity.TotalEnrollments,
