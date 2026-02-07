@@ -163,6 +163,7 @@ public class QuizAttemptService(
             {
                 await publishEndpoint.Publish(new QuizAttemptCompletedEvent(
                     LessonId: quiz.LessonId.Value,
+                    LessonTitle: quiz.Title,
                     StudentId: studentId,
                     ScorePercent: scorePercent,
                     TotalScore: totalScore,
@@ -170,7 +171,9 @@ public class QuizAttemptService(
                     IsPassed: isPassed,
                     AttemptId: attemptId,
                     QuizId: quiz.Id,
-                    CompletedAt: DateTime.UtcNow
+                    CompletedAt: DateTime.UtcNow,
+                    CourseId: quiz.CourseId,
+                    InstructorId: quiz.InstructorId
                 ));
             }
 
