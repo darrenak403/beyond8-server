@@ -1,0 +1,6 @@
+@Beyond8.Analytic.Api_HostAddress = http://localhost:5224
+
+GET {{Beyond8.Analytic.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
