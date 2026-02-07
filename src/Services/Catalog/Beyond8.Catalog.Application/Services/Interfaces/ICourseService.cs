@@ -25,4 +25,5 @@ public interface ICourseService
     Task<ApiResponse<CourseDetailResponse>> GetCourseDetailsAsync(Guid courseId, Guid userId);
     Task<ApiResponse<CourseDetailResponse>> GetCourseDetailsForAdminAsync(Guid courseId);
     Task<ApiResponse<List<CourseResponse>>> GetCoursesByInstructorIdAsync(Guid instructorId, PaginationRequest pagination);
+    Task<ApiResponse<List<CourseResponse>>> GetMostPopularCoursesAsync(PaginationCourseSearchRequest pagination);
 }

@@ -173,12 +173,26 @@ public static class CourseApis
         group.MapGet("/instructors/{instructorId:guid}", GetCoursesByInstructorIdAsync)
             .WithName("GetCoursesByInstructorId")
             .WithDescription("Lấy danh sách khóa học của giảng viên theo ID")
-            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .Produces<ApiResponse<List<CourseResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<List<CourseResponse>>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
+        group.MapGet("/most-popular/top-10", GetTop10MostPopularCoursesAsync)
+            .WithName("GetTop10MostPopularCourses")
+            .WithDescription("Lấy danh sách 10 khóa học phổ biến nhất theo số lượng học viên và đánh giá trung bình")
             .Produces<ApiResponse<List<CourseResponse>>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<List<CourseResponse>>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
         return group;
+    }
+
+    private static async Task<IResult> GetTop10MostPopularCoursesAsync(
+        [FromServices] ICourseService courseService)
+    {
+        var request = new PaginationCourseSearchRequest { PageNumber = 1, PageSize = 10 };
+        var result = await courseService.GetMostPopularCoursesAsync(request);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
     private static async Task<IResult> GetCoursesByInstructorIdAsync(

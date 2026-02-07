@@ -22,6 +22,7 @@ namespace Beyond8.Catalog.Domain.Repositories.Interfaces
             bool? isActive = null,
             bool? isDescending = null,
             bool? isDescendingPrice = null,
+            bool? isDescendingRating = null,
             bool? isRandom = null,
             List<Guid>? excludedCourseIds = null);
 
@@ -41,6 +42,7 @@ namespace Beyond8.Catalog.Domain.Repositories.Interfaces
             bool? isActive = null,
             bool? isDescending = null,
             bool? isDescendingPrice = null,
+            bool? isDescendingRating = null,
             bool? isRandom = null,
             Guid? instructorId = null);
 
@@ -60,12 +62,15 @@ namespace Beyond8.Catalog.Domain.Repositories.Interfaces
             bool? isActive = null,
             bool? isDescending = null,
             bool? isDescendingPrice = null,
-            bool? isRandom = null);
+            bool? isDescendingRating = null,
+            bool? isRandom = null); 
 
         Task<(List<Course> Items, int TotalCount)> FullTextSearchCoursesAsync(
             int pageNumber,
             int pageSize,
             string keyword,
             List<Guid>? excludedCourseIds = null);
+
+        Task<(List<Course> Items, int TotalCount)> GetMostPopularCoursesAsync(int pageNumber, int pageSize);
     }
 }

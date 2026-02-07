@@ -92,6 +92,7 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
             int pageSize,
             bool? isDescending,
             bool? isDescendingPrice,
+            bool? isDescendingRating,
             bool? isRandom)
         {
             var totalCount = await query.CountAsync();
@@ -115,6 +116,10 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
                 items = items.OrderByDescending(c => c.Price).ToList();
             else if (isDescendingPrice == false)
                 items = items.OrderBy(c => c.Price).ToList();
+            if (isDescendingRating == true)
+                items = items.OrderByDescending(c => c.AvgRating ?? 0).ToList();
+            else if (isDescendingRating == false)
+                items = items.OrderBy(c => c.AvgRating ?? 0).ToList();
             return (items, totalCount);
         }
 
@@ -134,6 +139,7 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
             bool? isActive,
             bool? isDescending,
             bool? isDescendingPrice,
+            bool? isDescendingRating,
             bool? isRandom,
             List<Guid>? excludedCourseIds = null)
         {
@@ -145,7 +151,7 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
             query = ApplySearchFilters(query, keyword, categoryName, instructorName, status, level, language, minPrice, maxPrice, minRating, isActive);
             query = ApplyExcludedCourseIds(query, excludedCourseIds);
 
-            return await ExecutePagedQueryAsync(query, pageNumber, pageSize, isDescending, isDescendingPrice, isRandom);
+            return await ExecutePagedQueryAsync(query, pageNumber, pageSize, isDescending, isDescendingPrice, isDescendingRating, isRandom);
         }
 
         public async Task<(List<Course> Items, int TotalCount)> SearchCoursesInstructorAsync(int pageNumber,
@@ -163,6 +169,7 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
             bool? isActive,
             bool? isDescending,
             bool? isDescendingPrice,
+            bool? isDescendingRating,
             bool? isRandom,
             Guid? instructorId = null)
         {
@@ -180,7 +187,7 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
             }
 
             query = ApplySearchFilters(query, keyword, categoryName, instructorName, status, level, language, minPrice, maxPrice, minRating, isActive);
-            return await ExecutePagedQueryAsync(query, pageNumber, pageSize, isDescending, isDescendingPrice, isRandom);
+            return await ExecutePagedQueryAsync(query, pageNumber, pageSize, isDescending, isDescendingPrice, isDescendingRating, isRandom);
         }
 
         public async Task<(List<Course> Items, int TotalCount)> SearchCoursesAdminAsync(int pageNumber,
@@ -198,6 +205,7 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
             bool? isActive,
             bool? isDescending,
             bool? isDescendingPrice,
+            bool? isDescendingRating,
             bool? isRandom)
         {
             var query = context.Courses
@@ -206,7 +214,27 @@ namespace Beyond8.Catalog.Infrastructure.Repositories.Implements
                 .AsQueryable();
 
             query = ApplySearchFilters(query, keyword, categoryName, instructorName, status, level, language, minPrice, maxPrice, minRating, isActive);
-            return await ExecutePagedQueryAsync(query, pageNumber, pageSize, isDescending, isDescendingPrice, isRandom);
+            return await ExecutePagedQueryAsync(query, pageNumber, pageSize, isDescending, isDescendingPrice, isDescendingRating, isRandom);
+        }
+
+        public async Task<(List<Course> Items, int TotalCount)> GetMostPopularCoursesAsync(int pageNumber, int pageSize)
+        {
+            var query = context.Courses
+                .Include(c => c.Category).ThenInclude(cat => cat.Parent)
+                .Include(c => c.Documents)
+                .Include(c => c.Sections).ThenInclude(s => s.Lessons).ThenInclude(l => l.Video)
+                .Where(c => c.IsActive && c.Status == CourseStatus.Published)
+                .OrderByDescending(c => c.TotalStudents)
+                .ThenByDescending(c => c.AvgRating ?? 0)
+                .AsQueryable();
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (items, totalCount);
         }
 
         public async Task<(List<Course> Items, int TotalCount)> FullTextSearchCoursesAsync(

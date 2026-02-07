@@ -123,7 +123,6 @@ public class CourseService(
             var (pageNumber, pageSize) = NormalizePagination(request);
             var excludedCourseIds = await GetEnrolledCourseIdsForExclusionAsync();
 
-            // Public endpoint: always filter by Published status and active courses
             var (courses, totalCount) = await unitOfWork.CourseRepository.SearchCoursesAsync(
                 pageNumber,
                 pageSize,
@@ -140,6 +139,7 @@ public class CourseService(
                 isActive: true,
                 isDescending: request.IsDescending,
                 isDescendingPrice: request.IsDescendingPrice,
+                isDescendingRating: request.IsDescendingRating,
                 isRandom: request.IsRandom,
                 excludedCourseIds: excludedCourseIds
             );
@@ -160,6 +160,28 @@ public class CourseService(
             return ApiResponse<List<CourseSimpleResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách khóa học.");
         }
     }
+
+    public async Task<ApiResponse<List<CourseResponse>>> GetMostPopularCoursesAsync(PaginationCourseSearchRequest pagination)
+    {
+        try
+        {
+            var (pageNumber, pageSize) = NormalizePagination(pagination);
+            var (courses, totalCount) = await unitOfWork.CourseRepository.GetMostPopularCoursesAsync(pageNumber, pageSize);
+            var courseResponses = courses.Select(c => c.ToResponse()).ToList();
+            return ApiResponse<List<CourseResponse>>.SuccessPagedResponse(
+                courseResponses,
+                totalCount,
+                pageNumber,
+                pageSize,
+                "Lấy danh sách khóa học phổ biến thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting most popular courses");
+            return ApiResponse<List<CourseResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách khóa học phổ biến.");
+        }
+    }
+
     public async Task<ApiResponse<List<CourseResponse>>> FullTextSearchCoursesAsync(FullTextSearchRequest request)
     {
         try
@@ -332,8 +354,9 @@ public class CourseService(
                 minRating: request.MinRating,
                 minStudents: request.MinStudents,
                 isActive: true,
-                isDescendingPrice: request.IsDescendingPrice,
                 isDescending: request.IsDescending,
+                isDescendingPrice: request.IsDescendingPrice,
+                isDescendingRating: request.IsDescendingRating,
                 isRandom: request.IsRandom,
                 instructorId: instructorId
             );
@@ -547,8 +570,9 @@ public class CourseService(
                 minRating: request.MinRating,
                 minStudents: request.MinStudents,
                 isActive: request.IsActive,
-                isDescendingPrice: request.IsDescendingPrice,
                 isDescending: request.IsDescending,
+                isDescendingPrice: request.IsDescendingPrice,
+                isDescendingRating: request.IsDescendingRating,
                 isRandom: request.IsRandom
             );
 
@@ -834,6 +858,7 @@ public class CourseService(
             var (courses, totalCount) = await unitOfWork.CourseRepository.SearchCoursesInstructorAsync(
                 pageNumber,
                 pageSize,
+                isDescendingRating: true,
                 instructorId: instructorId);
 
             var courseResponses = courses.Select(c => c.ToResponse()).ToList();

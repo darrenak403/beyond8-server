@@ -16,6 +16,7 @@ public class PaginationCourseSearchRequest : PaginationRequest
     public decimal? MinRating { get; set; }
     public int? MinStudents { get; set; }
     public bool? IsDescendingPrice { get; set; }
+    public bool? IsDescendingRating { get; set; }
     public bool? IsRandom { get; set; }
 }
 
