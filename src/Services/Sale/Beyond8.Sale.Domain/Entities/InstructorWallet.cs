@@ -8,14 +8,11 @@ public class InstructorWallet : BaseEntity
 {
     public Guid InstructorId { get; set; }
 
+    /// <summary>
+    /// Current available balance (credited immediately after payment success)
+    /// </summary>
     [Column(TypeName = "decimal(18, 2)")]
     public decimal AvailableBalance { get; set; } = 0;
-
-    [Column(TypeName = "decimal(18, 2)")]
-    public decimal PendingBalance { get; set; } = 0;
-
-    [Column(TypeName = "decimal(18, 2)")]
-    public decimal HoldBalance { get; set; } = 0;
 
     [MaxLength(10)]
     public string Currency { get; set; } = "VND";
@@ -25,10 +22,6 @@ public class InstructorWallet : BaseEntity
 
     [Column(TypeName = "decimal(18, 2)")]
     public decimal TotalWithdrawn { get; set; } = 0;
-
-    // Refund Statistics (TODO: Implement refund logic later)
-    // [Column(TypeName = "decimal(18, 2)")]
-    // public decimal TotalRefunded { get; set; } = 0;
 
     // Timestamps
     public DateTime? LastPayoutAt { get; set; }

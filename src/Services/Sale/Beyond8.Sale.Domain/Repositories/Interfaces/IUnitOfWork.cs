@@ -12,4 +12,6 @@ public interface IUnitOfWork : IBaseUnitOfWork
     IInstructorWalletRepository InstructorWalletRepository { get; }
     IPayoutRequestRepository PayoutRequestRepository { get; }
     ITransactionLedgerRepository TransactionLedgerRepository { get; }
+    ICartRepository CartRepository { get; }
+    ICartItemRepository CartItemRepository { get; }
 }

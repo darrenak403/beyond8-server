@@ -4,6 +4,7 @@ using Beyond8.Sale.Domain.Enums;
 using Beyond8.Common.Data.Base;
 
 namespace Beyond8.Sale.Domain.Entities;
+
 public class TransactionLedger : BaseEntity
 {
     // Wallet Reference
@@ -20,15 +21,13 @@ public class TransactionLedger : BaseEntity
     // Transaction Details
     public TransactionType Type { get; set; }
 
-    public TransactionStatus Status { get; set; } = TransactionStatus.Pending;
+    public TransactionStatus Status { get; set; } = TransactionStatus.Completed;
 
     [Column(TypeName = "decimal(18, 2)")]
     public decimal Amount { get; set; }
 
     [MaxLength(10)]
     public string Currency { get; set; } = "VND";
-
-    public DateTime? AvailableAt { get; set; }
 
     // Balance Tracking (Audit Trail)
     [Column(TypeName = "decimal(18, 2)")]

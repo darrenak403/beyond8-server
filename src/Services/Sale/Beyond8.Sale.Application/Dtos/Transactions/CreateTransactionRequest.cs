@@ -1,12 +1,13 @@
+using Beyond8.Sale.Domain.Enums;
+
 namespace Beyond8.Sale.Application.Dtos.Transactions;
 
 public class CreateTransactionRequest
 {
-    public Guid UserId { get; set; }
-    public string Type { get; set; } = string.Empty; // Payment, Refund, Payout, etc.
+    public Guid WalletId { get; set; }
+    public TransactionType Type { get; set; }
     public decimal Amount { get; set; }
-    public string Description { get; set; } = string.Empty;
-    public Guid? OrderId { get; set; }
-    public Guid? PayoutId { get; set; }
-    public string? TransactionId { get; set; }
+    public string? Description { get; set; }
+    public Guid? ReferenceId { get; set; }
+    public string? ReferenceType { get; set; } // "Order", "Payout"
 }

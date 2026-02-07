@@ -42,7 +42,7 @@ namespace Beyond8.Sale.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("CreatedBy")
+                    b.Property<Guid>("CreatedBy")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("DeletedAt")
@@ -189,9 +189,6 @@ namespace Beyond8.Sale.Infrastructure.Migrations
                     b.Property<Guid?>("DeletedBy")
                         .HasColumnType("uuid");
 
-                    b.Property<decimal>("HoldBalance")
-                        .HasColumnType("decimal(18, 2)");
-
                     b.Property<Guid>("InstructorId")
                         .HasColumnType("uuid");
 
@@ -200,9 +197,6 @@ namespace Beyond8.Sale.Infrastructure.Migrations
 
                     b.Property<DateTime?>("LastPayoutAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal>("PendingBalance")
-                        .HasColumnType("decimal(18, 2)");
 
                     b.Property<decimal>("TotalEarnings")
                         .HasColumnType("decimal(18, 2)");
@@ -259,9 +253,6 @@ namespace Beyond8.Sale.Infrastructure.Migrations
                         .HasMaxLength(45)
                         .HasColumnType("character varying(45)");
 
-                    b.Property<bool>("IsSettled")
-                        .HasColumnType("boolean");
-
                     b.Property<string>("Notes")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
@@ -276,12 +267,6 @@ namespace Beyond8.Sale.Infrastructure.Migrations
 
                     b.Property<string>("PaymentDetails")
                         .HasColumnType("jsonb");
-
-                    b.Property<DateTime?>("SettledAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("SettlementEligibleAt")
-                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -316,9 +301,6 @@ namespace Beyond8.Sale.Infrastructure.Migrations
                         .IsUnique();
 
                     b.HasIndex("PaidAt");
-
-                    b.HasIndex("SettlementEligibleAt")
-                        .HasFilter("\"IsSettled\" = false AND \"SettlementEligibleAt\" IS NOT NULL");
 
                     b.HasIndex("Status");
 
@@ -616,9 +598,6 @@ namespace Beyond8.Sale.Infrastructure.Migrations
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18, 2)");
 
-                    b.Property<DateTime?>("AvailableAt")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<decimal>("BalanceAfter")
                         .HasColumnType("decimal(18, 2)");
 
@@ -677,9 +656,6 @@ namespace Beyond8.Sale.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AvailableAt")
-                        .HasFilter("\"Status\" = 0 AND \"AvailableAt\" IS NOT NULL");
-
                     b.HasIndex("Status");
 
                     b.HasIndex("Type");
@@ -702,7 +678,7 @@ namespace Beyond8.Sale.Infrastructure.Migrations
                     b.HasOne("Beyond8.Sale.Domain.Entities.Order", "Order")
                         .WithMany()
                         .HasForeignKey("OrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Coupon");
@@ -714,7 +690,8 @@ namespace Beyond8.Sale.Infrastructure.Migrations
                 {
                     b.HasOne("Beyond8.Sale.Domain.Entities.Coupon", "Coupon")
                         .WithMany()
-                        .HasForeignKey("CouponId");
+                        .HasForeignKey("CouponId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Coupon");
                 });

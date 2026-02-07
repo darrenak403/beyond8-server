@@ -18,6 +18,8 @@ public class SaleDbContext : BaseDbContext
     public DbSet<InstructorWallet> InstructorWallets { get; set; } = null!;
     public DbSet<PayoutRequest> PayoutRequests { get; set; } = null!;
     public DbSet<TransactionLedger> TransactionLedgers { get; set; } = null!;
+    public DbSet<Cart> Carts { get; set; } = null!;
+    public DbSet<CartItem> CartItems { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -36,12 +38,26 @@ public class SaleDbContext : BaseDbContext
             entity.HasIndex(e => e.Status);
             entity.HasIndex(e => e.PaidAt);
             entity.HasIndex(e => new { e.Status, e.PaidAt });
-            entity.HasIndex(e => e.SettlementEligibleAt)
-                .HasFilter("\"IsSettled\" = false AND \"SettlementEligibleAt\" IS NOT NULL");
 
             // JSONB Column
             entity.Property(e => e.PaymentDetails)
                 .HasColumnType("jsonb");
+
+            // Relationships
+            entity.HasMany(o => o.OrderItems)
+                .WithOne(oi => oi.Order)
+                .HasForeignKey(oi => oi.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(o => o.Payments)
+                .WithOne(p => p.Order)
+                .HasForeignKey(p => p.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(o => o.Coupon)
+                .WithMany()
+                .HasForeignKey(o => o.CouponId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         // OrderItem Configuration
@@ -88,6 +104,12 @@ public class SaleDbContext : BaseDbContext
                 .HasFilter("\"ApplicableInstructorId\" IS NOT NULL");
             entity.HasIndex(e => e.ApplicableCourseId)
                 .HasFilter("\"ApplicableCourseId\" IS NOT NULL");
+
+            // Relationships
+            entity.HasMany(c => c.CouponUsages)
+                .WithOne(cu => cu.Coupon)
+                .HasForeignKey(cu => cu.CouponId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // CouponUsage Configuration
@@ -99,6 +121,12 @@ public class SaleDbContext : BaseDbContext
             entity.HasIndex(e => e.OrderId);
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => new { e.CouponId, e.UserId });
+
+            // Relationships
+            entity.HasOne(cu => cu.Order)
+                .WithMany()
+                .HasForeignKey(cu => cu.OrderId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // InstructorWallet Configuration
@@ -115,6 +143,17 @@ public class SaleDbContext : BaseDbContext
             // JSONB Column
             entity.Property(e => e.BankAccountInfo)
                 .HasColumnType("jsonb");
+
+            // Relationships
+            entity.HasMany(w => w.Transactions)
+                .WithOne(t => t.InstructorWallet)
+                .HasForeignKey(t => t.WalletId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(w => w.PayoutRequests)
+                .WithOne(p => p.InstructorWallet)
+                .HasForeignKey(p => p.WalletId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // PayoutRequest Configuration
@@ -143,12 +182,37 @@ public class SaleDbContext : BaseDbContext
             entity.HasIndex(e => new { e.ReferenceId, e.ReferenceType });
             entity.HasIndex(e => e.Type);
             entity.HasIndex(e => e.Status);
-            entity.HasIndex(e => e.AvailableAt)
-                .HasFilter("\"Status\" = 0 AND \"AvailableAt\" IS NOT NULL");
 
             // JSONB Column
             entity.Property(e => e.Metadata)
                 .HasColumnType("jsonb");
+        });
+
+        // Cart Configuration
+        modelBuilder.Entity<Cart>(entity =>
+        {
+            entity.HasQueryFilter(e => e.DeletedAt == null);
+
+            // One cart per user
+            entity.HasIndex(e => e.UserId).IsUnique();
+
+            // Relationships
+            entity.HasMany(c => c.CartItems)
+                .WithOne(ci => ci.Cart)
+                .HasForeignKey(ci => ci.CartId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // CartItem Configuration
+        modelBuilder.Entity<CartItem>(entity =>
+        {
+            entity.HasQueryFilter(e => e.DeletedAt == null);
+
+            entity.HasIndex(e => e.CartId);
+            entity.HasIndex(e => e.CourseId);
+
+            // Prevent duplicate courses in one cart
+            entity.HasIndex(e => new { e.CartId, e.CourseId }).IsUnique();
         });
     }
 }
