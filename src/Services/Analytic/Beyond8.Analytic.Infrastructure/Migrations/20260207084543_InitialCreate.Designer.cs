@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Beyond8.Analytic.Infrastructure.Migrations
 {
     [DbContext(typeof(AnalyticDbContext))]
-    [Migration("20260207083838_InitialUpdate")]
-    partial class InitialUpdate
+    [Migration("20260207084543_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

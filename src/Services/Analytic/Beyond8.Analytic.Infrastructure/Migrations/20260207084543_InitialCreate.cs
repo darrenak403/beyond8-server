@@ -111,6 +111,11 @@ namespace Beyond8.Analytic.Infrastructure.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    TotalUsers = table.Column<int>(type: "integer", nullable: false),
+                    TotalActiveUsers = table.Column<int>(type: "integer", nullable: false),
+                    NewUsersToday = table.Column<int>(type: "integer", nullable: false),
+                    TotalInstructors = table.Column<int>(type: "integer", nullable: false),
+                    TotalStudents = table.Column<int>(type: "integer", nullable: false),
                     TotalCourses = table.Column<int>(type: "integer", nullable: false),
                     TotalPublishedCourses = table.Column<int>(type: "integer", nullable: false),
                     TotalEnrollments = table.Column<int>(type: "integer", nullable: false),
