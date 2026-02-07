@@ -170,7 +170,24 @@ public static class CourseApis
             .Produces<ApiResponse<CourseResponse>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
+        group.MapGet("/instructors/{instructorId:guid}", GetCoursesByInstructorIdAsync)
+            .WithName("GetCoursesByInstructorId")
+            .WithDescription("Lấy danh sách khóa học của giảng viên theo ID")
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .Produces<ApiResponse<List<CourseResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<List<CourseResponse>>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
         return group;
+    }
+
+    private static async Task<IResult> GetCoursesByInstructorIdAsync(
+        [FromRoute] Guid instructorId,
+        [AsParameters] PaginationRequest pagination,
+        [FromServices] ICourseService courseService)
+    {
+        var result = await courseService.GetCoursesByInstructorIdAsync(instructorId, pagination);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
     private static async Task<IResult> UpdateCourseThumbnailAsync(
