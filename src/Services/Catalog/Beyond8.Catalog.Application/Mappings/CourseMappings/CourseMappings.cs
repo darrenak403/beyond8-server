@@ -60,7 +60,7 @@ public static class CourseMappings
         entity.Slug = request.Title.ToSlug();
         entity.Description = request.Description ?? string.Empty;
         entity.ShortDescription = request.ShortDescription;
-        entity.CategoryId = request.CategoryId ?? entity.CategoryId; // Keep existing if null
+        entity.CategoryId = request.CategoryId ?? entity.CategoryId;
         entity.Level = request.Level ?? entity.Level;
         entity.Language = request.Language ?? entity.Language;
         entity.Price = request.Price ?? entity.Price;

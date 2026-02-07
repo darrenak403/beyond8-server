@@ -191,5 +191,58 @@ namespace Beyond8.Integration.Application.Helpers.AiService
             if (delta == 0) return;
             all[0].Points = Math.Max(0.5m, all[0].Points + delta);
         }
+
+        public static ExplainQuizQuestionResponse? ParseExplainQuizQuestionResponse(
+            string? aiContent,
+            JsonSerializerOptions jsonOptions)
+        {
+            var json = AiServiceJsonHelper.ExtractJson(aiContent);
+            if (string.IsNullOrWhiteSpace(json)) return null;
+
+            try
+            {
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                var answersProp = root.TryGetProperty("answers", out var answersEl) ? answersEl : default;
+                if (answersProp.ValueKind != JsonValueKind.Array) return null;
+
+                var answers = new List<ExplainQuizQuestionAnswer>();
+                foreach (var item in answersProp.EnumerateArray())
+                {
+                    var answer = item.TryGetProperty("answer", out var aEl) ? aEl.GetString() ?? "" : "";
+                    var isCorrect = item.TryGetProperty("isCorrect", out var cEl) && cEl.ValueKind == JsonValueKind.True;
+                    var explanation = item.TryGetProperty("explanation", out var eEl) ? eEl.GetString() ?? "" : "";
+                    answers.Add(new ExplainQuizQuestionAnswer
+                    {
+                        Answer = answer,
+                        IsCorrect = isCorrect,
+                        Explanation = explanation
+                    });
+                }
+
+                return new ExplainQuizQuestionResponse { Answers = answers };
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
+        }
+
+        public static string BuildExplainQuizQuestionPromptContent(string content, IReadOnlyList<ExplainQuizQuestionOptionItem> options)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine(content.Trim());
+            if (options != null && options.Count > 0)
+            {
+                sb.AppendLine("\nCác lựa chọn:");
+                foreach (var o in options)
+                {
+                    var correctMark = o.IsCorrect ? " (đáp án đúng)" : "";
+                    sb.AppendLine($"- [{o.Id}] {o.Text}{correctMark}");
+                }
+            }
+            return sb.ToString();
+        }
     }
 }

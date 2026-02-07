@@ -123,25 +123,16 @@ namespace Beyond8.Integration.Api.Bootstrapping
             // Configure MassTransit with RabbitMQ and register consumers
             builder.AddMassTransitWithRabbitMq(config =>
             {
-                // Register consumers from Identity events
                 config.AddConsumer<OtpEmailConsumer>();
                 config.AddConsumer<InstructorProfileSubmittedConsumer>();
                 config.AddConsumer<InstructorApprovalConsumer>();
                 config.AddConsumer<InstructorUpdateRequestEmailConsumer>();
-
-                // Register consumers from Catalog events
                 config.AddConsumer<CourseRejectedEventConsumer>();
                 config.AddConsumer<CourseApprovedEventConsumer>();
-
-                // Register consumers from Transcoding events
                 config.AddConsumer<TranscodingVideoSuccessEventConsumer>();
-
-                // Register consumers from Assessment events
                 config.AddConsumer<AssignmentSubmittedConsumer>();
                 config.AddConsumer<AssignmentGradedEventConsumer>();
                 config.AddConsumer<AiAssignmentGradedEventConsumer>();
-
-                // Register consumers from Learning events
                 config.AddConsumer<CourseCompletedEventConsumer>();
             }, queueNamePrefix: "integration");
 

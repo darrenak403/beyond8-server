@@ -20,6 +20,29 @@ namespace Beyond8.Identity.Application.Services.Implements
         IConfiguration configuration
     ) : IInstructorService
     {
+        private async Task<User?> GetUserAsync(Guid userId) =>
+            await unitOfWork.UserRepository.FindOneAsync(u => u.Id == userId);
+
+        private async Task<User?> GetUserWithRolesAsync(Guid userId) =>
+            await unitOfWork.UserRepository.AsQueryable()
+                .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+        private async Task<(User? User, UserSubscription? ActiveSubscription)> GetUserWithSubscriptionsAsync(Guid userId)
+        {
+            var user = await unitOfWork.UserRepository.AsQueryable()
+                .Include(u => u.UserSubscriptions).ThenInclude(s => s.Plan)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+            var subscription = user?.UserSubscriptions?.FirstOrDefault(s => s.Status == SubscriptionStatus.Active);
+            return (user, subscription);
+        }
+
+        private async Task<InstructorProfileResponse> BuildInstructorProfileResponseAsync(InstructorProfile profile)
+        {
+            var (user, activeSubscription) = await GetUserWithSubscriptionsAsync(profile.UserId);
+            return profile.ToInstructorProfileResponse(user, activeSubscription);
+        }
+
         private async Task<(bool IsValid, string? ErrorMessage, InstructorProfile? Profile, User? User)> ValidateProfileForReviewAsync(Guid profileId)
         {
             var profile = await unitOfWork.InstructorProfileRepository.FindOneAsync(
@@ -33,10 +56,7 @@ namespace Beyond8.Identity.Application.Services.Implements
                 profile.VerificationStatus != VerificationStatus.Recovering)
                 return (false, "Chỉ có thể xử lý đơn đăng ký đang chờ duyệt, yêu cầu cập nhật hoặc đang khôi phục.", null, null);
 
-            var user = await unitOfWork.UserRepository.AsQueryable()
-                .Include(u => u.UserRoles)
-                .ThenInclude(ur => ur.Role)
-                .FirstOrDefaultAsync(u => u.Id == profile.UserId);
+            var user = await GetUserWithRolesAsync(profile.UserId);
             if (user == null)
                 return (false, "Người dùng không tồn tại.", null, null);
 
@@ -56,10 +76,7 @@ namespace Beyond8.Identity.Application.Services.Implements
         {
             try
             {
-                var user = await unitOfWork.UserRepository.AsQueryable()
-                    .Include(u => u.UserRoles)
-                    .ThenInclude(ur => ur.Role)
-                    .FirstOrDefaultAsync(u => u.Id == userId);
+                var user = await GetUserAsync(userId);
                 if (user == null)
                 {
                     logger.LogWarning("User with ID {UserId} not found when submitting instructor application", userId);
@@ -275,18 +292,7 @@ namespace Beyond8.Identity.Application.Services.Implements
                         "Hồ sơ giảng viên của bạn không tồn tại.");
                 }
 
-                var user = await unitOfWork.UserRepository.AsQueryable()
-                    .Include(u => u.UserRoles)
-                    .ThenInclude(ur => ur.Role)
-                    .FirstOrDefaultAsync(u => u.Id == profile.UserId);
-                if (user == null)
-                {
-                    logger.LogError("User {UserId} not found for instructor profile {ProfileId}", userId, profile.Id);
-                    return ApiResponse<InstructorProfileResponse>.FailureResponse(
-                        "Người dùng không tồn tại.");
-                }
-
-                var response = profile.ToInstructorProfileResponse(user!);
+                var response = await BuildInstructorProfileResponseAsync(profile);
                 return ApiResponse<InstructorProfileResponse>.SuccessResponse(
                     response,
                     "Lấy hồ sơ giảng viên của bạn thành công.");
@@ -320,22 +326,14 @@ namespace Beyond8.Identity.Application.Services.Implements
                         "Bạn chỉ có thể cập nhật hồ sơ giảng viên khi đã được duyệt hoặc đang được yêu cầu cập nhật.");
                 }
 
-                profile.ToUpdateInstructorProfileRequest(request);
+                profile.ApplyUpdate(request);
 
                 await unitOfWork.InstructorProfileRepository.UpdateAsync(profile.Id, profile);
                 await unitOfWork.SaveChangesAsync();
 
                 logger.LogInformation("Updated instructor profile for user {UserId}", userId);
 
-                var user = await unitOfWork.UserRepository.GetByIdAsync(profile.UserId);
-                if (user == null)
-                {
-                    logger.LogError("User {UserId} not found for instructor profile {ProfileId}", userId, profile.Id);
-                    return ApiResponse<InstructorProfileResponse>.FailureResponse(
-                        "Người dùng không tồn tại.");
-                }
-
-                var response = profile.ToInstructorProfileResponse(user!);
+                var response = await BuildInstructorProfileResponseAsync(profile);
                 return ApiResponse<InstructorProfileResponse>.SuccessResponse(
                     response,
                     "Cập nhật hồ sơ giảng viên thành công. Vui lòng chờ duyệt lại hồ sơ của bạn.");
@@ -364,18 +362,7 @@ namespace Beyond8.Identity.Application.Services.Implements
                         "Hồ sơ giảng viên không tồn tại hoặc chưa được duyệt.");
                 }
 
-                var user = await unitOfWork.UserRepository.AsQueryable()
-                    .Include(u => u.UserRoles)
-                    .ThenInclude(ur => ur.Role)
-                    .FirstOrDefaultAsync(u => u.Id == profile.UserId);
-                if (user == null)
-                {
-                    logger.LogError("User {UserId} not found for instructor profile {ProfileId}", profile.UserId, profileId);
-                    return ApiResponse<InstructorProfileResponse>.FailureResponse(
-                        "Hồ sơ giảng viên không hợp lệ.");
-                }
-
-                var response = profile.ToInstructorProfileResponse(user);
+                var response = await BuildInstructorProfileResponseAsync(profile);
                 return ApiResponse<InstructorProfileResponse>.SuccessResponse(
                     response,
                     "Lấy hồ sơ giảng viên thành công.");
@@ -403,10 +390,7 @@ namespace Beyond8.Identity.Application.Services.Implements
                         "Hồ sơ giảng viên không tồn tại.");
                 }
 
-                var user = await unitOfWork.UserRepository.AsQueryable()
-                    .Include(u => u.UserRoles)
-                    .ThenInclude(ur => ur.Role)
-                    .FirstOrDefaultAsync(u => u.Id == profile.UserId);
+                var user = await GetUserAsync(profile.UserId);
                 if (user == null)
                 {
                     logger.LogError("User {UserId} not found for instructor profile {ProfileId}", profile.UserId, profileId);
@@ -473,11 +457,7 @@ namespace Beyond8.Identity.Application.Services.Implements
                         "Hồ sơ giảng viên đã bị ẩn trước đó.");
                 }
 
-                var user = await unitOfWork.UserRepository.AsQueryable()
-                    .Include(u => u.UserRoles)
-                    .ThenInclude(ur => ur.Role)
-                    .FirstOrDefaultAsync(u => u.Id == profile.UserId);
-
+                var user = await GetUserWithRolesAsync(profile.UserId);
                 if (user == null)
                 {
                     logger.LogError("User {UserId} not found for instructor profile {ProfileId}",
@@ -541,10 +521,7 @@ namespace Beyond8.Identity.Application.Services.Implements
                         "Hồ sơ giảng viên không ở trạng thái đã ẩn.");
                 }
 
-                var user = await unitOfWork.UserRepository.AsQueryable()
-                    .Include(u => u.UserRoles)
-                    .ThenInclude(ur => ur.Role)
-                    .FirstOrDefaultAsync(u => u.Id == profile.UserId);
+                var user = await GetUserAsync(profile.UserId);
                 if (user == null)
                 {
                     logger.LogError("User {UserId} not found for instructor profile {ProfileId}",
@@ -600,15 +577,14 @@ namespace Beyond8.Identity.Application.Services.Implements
                 {
                     return ApiResponse<InstructorProfileResponse>.FailureResponse("Hồ sơ giảng viên không tồn tại hoặc chưa được duyệt.");
                 }
-                var user = await unitOfWork.UserRepository.AsQueryable()
-                .Include(u => u.UserRoles)
-                .ThenInclude(ur => ur.Role)
-                .FirstOrDefaultAsync(u => u.Id == profile.UserId);
+
+                var (user, _) = await GetUserWithSubscriptionsAsync(profile.UserId);
                 if (user == null)
                 {
                     return ApiResponse<InstructorProfileResponse>.FailureResponse("Người dùng không tồn tại.");
                 }
-                var response = profile.ToInstructorProfileResponse(user);
+
+                var response = await BuildInstructorProfileResponseAsync(profile);
                 return ApiResponse<InstructorProfileResponse>.SuccessResponse(response, "Lấy hồ sơ giảng viên thành công.");
             }
             catch (Exception ex)

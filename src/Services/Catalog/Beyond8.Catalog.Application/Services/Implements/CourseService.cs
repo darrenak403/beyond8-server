@@ -91,38 +91,38 @@ public class CourseService(
         return withRating.Count > 0 ? withRating.Average(c => c.AvgRating!.Value) : 0;
     }
 
+    private async Task<List<Guid>?> GetEnrolledCourseIdsForExclusionAsync()
+    {
+        if (!currentUserService.IsAuthenticated)
+            return null;
+
+        var cacheKey = $"enrolled_courses:{currentUserService.UserId}";
+        var cached = await cacheService.GetAsync<List<Guid>>(cacheKey);
+        if (cached != null)
+        {
+            logger.LogInformation("Retrieved enrolled course IDs from cache for user {UserId}", currentUserService.UserId);
+            return cached;
+        }
+
+        var enrolledResult = await learningClient.GetEnrolledCourseIdsAsync();
+        if (!enrolledResult.IsSuccess)
+        {
+            logger.LogWarning("Failed to get enrolled courses for exclusion: {Error}", enrolledResult.Message);
+            return null;
+        }
+
+        await cacheService.SetAsync(cacheKey, enrolledResult.Data, TimeSpan.FromMinutes(10));
+        logger.LogInformation("Cached enrolled course IDs for user {UserId}", currentUserService.UserId);
+        return enrolledResult.Data;
+    }
+
     public async Task<ApiResponse<List<CourseSimpleResponse>>> GetAllCoursesAsync(PaginationCourseSearchRequest request)
     {
         try
         {
             var (pageNumber, pageSize) = NormalizePagination(request);
+            var excludedCourseIds = await GetEnrolledCourseIdsForExclusionAsync();
 
-            List<Guid>? excludedCourseIds = null;
-            if (currentUserService.IsAuthenticated)
-            {
-                var cacheKey = $"enrolled_courses:{currentUserService.UserId}";
-                excludedCourseIds = await cacheService.GetAsync<List<Guid>>(cacheKey);
-
-                if (excludedCourseIds == null)
-                {
-                    var enrolledResult = await learningClient.GetEnrolledCourseIdsAsync();
-                    if (enrolledResult.IsSuccess)
-                    {
-                        excludedCourseIds = enrolledResult.Data;
-                        await cacheService.SetAsync(cacheKey, excludedCourseIds, TimeSpan.FromMinutes(10));
-                        logger.LogInformation("Cached enrolled course IDs for user {UserId}", currentUserService.UserId);
-                    }
-                    else
-                    {
-                        logger.LogWarning("Failed to get enrolled courses for exclusion: {Error}", enrolledResult.Message);
-                    }
-                }
-                else
-                {
-                    logger.LogInformation("Retrieved enrolled course IDs from cache for user {UserId}", currentUserService.UserId);
-                }
-            }
-            // Public endpoint: always filter by Published status and active courses
             var (courses, totalCount) = await unitOfWork.CourseRepository.SearchCoursesAsync(
                 pageNumber,
                 pageSize,
@@ -139,6 +139,7 @@ public class CourseService(
                 isActive: true,
                 isDescending: request.IsDescending,
                 isDescendingPrice: request.IsDescendingPrice,
+                isDescendingRating: request.IsDescendingRating,
                 isRandom: request.IsRandom,
                 excludedCourseIds: excludedCourseIds
             );
@@ -159,44 +160,35 @@ public class CourseService(
             return ApiResponse<List<CourseSimpleResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách khóa học.");
         }
     }
+
+    public async Task<ApiResponse<List<CourseResponse>>> GetMostPopularCoursesAsync(PaginationCourseSearchRequest pagination)
+    {
+        try
+        {
+            var (pageNumber, pageSize) = NormalizePagination(pagination);
+            var (courses, totalCount) = await unitOfWork.CourseRepository.GetMostPopularCoursesAsync(pageNumber, pageSize);
+            var courseResponses = courses.Select(c => c.ToResponse()).ToList();
+            return ApiResponse<List<CourseResponse>>.SuccessPagedResponse(
+                courseResponses,
+                totalCount,
+                pageNumber,
+                pageSize,
+                "Lấy danh sách khóa học phổ biến thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting most popular courses");
+            return ApiResponse<List<CourseResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách khóa học phổ biến.");
+        }
+    }
+
     public async Task<ApiResponse<List<CourseResponse>>> FullTextSearchCoursesAsync(FullTextSearchRequest request)
     {
         try
         {
             var pageNumber = request.PageNumber < 1 ? 1 : request.PageNumber;
-            var pageSize = request.PageSize switch
-            {
-                < 1 => 10,
-                > 100 => 100,
-                _ => request.PageSize
-            };
-
-            List<Guid>? excludedCourseIds = null;
-            if (currentUserService.IsAuthenticated)
-            {
-                var cacheKey = $"enrolled_courses:{currentUserService.UserId}";
-                excludedCourseIds = await cacheService.GetAsync<List<Guid>>(cacheKey);
-
-                if (excludedCourseIds == null)
-                {
-                    var enrolledResult = await learningClient.GetEnrolledCourseIdsAsync();
-                    if (enrolledResult.IsSuccess)
-                    {
-                        excludedCourseIds = enrolledResult.Data;
-                        // Cache trong 10 phút
-                        await cacheService.SetAsync(cacheKey, excludedCourseIds, TimeSpan.FromMinutes(10));
-                        logger.LogInformation("Cached enrolled course IDs for user {UserId}", currentUserService.UserId);
-                    }
-                    else
-                    {
-                        logger.LogWarning("Failed to get enrolled courses for exclusion: {Error}", enrolledResult.Message);
-                    }
-                }
-                else
-                {
-                    logger.LogInformation("Retrieved enrolled course IDs from cache for user {UserId}", currentUserService.UserId);
-                }
-            }
+            var pageSize = request.PageSize switch { < 1 => 10, > 100 => 100, _ => request.PageSize };
+            var excludedCourseIds = await GetEnrolledCourseIdsForExclusionAsync();
 
             logger.LogInformation("Full text search courses with keyword: {Keyword}", request.Keyword);
 
@@ -265,7 +257,6 @@ public class CourseService(
             if (!isValid)
                 return ApiResponse<CourseResponse>.FailureResponse(errorMessage!);
 
-            // Status validation: Prevent updates on suspended or archived courses
             if (course!.Status == CourseStatus.Suspended || course.Status == CourseStatus.Archived)
             {
                 logger.LogWarning("Cannot update course in status {Status}: {CourseId}", course.Status, id);
@@ -362,8 +353,9 @@ public class CourseService(
                 minRating: request.MinRating,
                 minStudents: request.MinStudents,
                 isActive: true,
-                isDescendingPrice: request.IsDescendingPrice,
                 isDescending: request.IsDescending,
+                isDescendingPrice: request.IsDescendingPrice,
+                isDescendingRating: request.IsDescendingRating,
                 isRandom: request.IsRandom,
                 instructorId: instructorId
             );
@@ -577,8 +569,9 @@ public class CourseService(
                 minRating: request.MinRating,
                 minStudents: request.MinStudents,
                 isActive: request.IsActive,
-                isDescendingPrice: request.IsDescendingPrice,
                 isDescending: request.IsDescending,
+                isDescendingPrice: request.IsDescendingPrice,
+                isDescendingRating: request.IsDescendingRating,
                 isRandom: request.IsRandom
             );
 
@@ -634,6 +627,31 @@ public class CourseService(
         {
             logger.LogError(ex, "Error publishing course: {CourseId}", courseId);
             return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi công bố khóa học.");
+        }
+    }
+
+    public async Task<ApiResponse<List<bool>>> PublishBulkCoursesAsync(List<Guid> courseIds, Guid currentUserId)
+    {
+        try
+        {
+            var courses = await unitOfWork.CourseRepository.GetAllAsync(c => courseIds.Contains(c.Id) && c.Status == CourseStatus.Approved && c.IsActive);
+            if (courses == null || courses.Count == 0)
+            {
+                return ApiResponse<List<bool>>.FailureResponse("Không tìm thấy khóa học đã được phê duyệt.");
+            }
+
+            foreach (var course in courses)
+            {
+                course.Status = CourseStatus.Published;
+                await unitOfWork.CourseRepository.UpdateAsync(course.Id, course);
+            }
+            await unitOfWork.SaveChangesAsync();
+            return ApiResponse<List<bool>>.SuccessResponse([true], "Công bố khóa học thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error publishing bulk courses");
+            return ApiResponse<List<bool>>.FailureResponse("Đã xảy ra lỗi khi công bố khóa học.");
         }
     }
 
@@ -851,6 +869,34 @@ public class CourseService(
         {
             logger.LogError(ex, "Error getting course details for admin: {CourseId}", courseId);
             return ApiResponse<CourseDetailResponse>.FailureResponse("Đã xảy ra lỗi khi lấy chi tiết khóa học.");
+        }
+    }
+
+    public async Task<ApiResponse<List<CourseResponse>>> GetCoursesByInstructorIdAsync(Guid instructorId, PaginationRequest pagination)
+    {
+        try
+        {
+            var pageNumber = pagination.PageNumber < 1 ? 1 : pagination.PageNumber;
+            var pageSize = pagination.PageSize switch { < 1 => 10, > 100 => 100, _ => pagination.PageSize };
+
+            var (courses, totalCount) = await unitOfWork.CourseRepository.SearchCoursesInstructorAsync(
+                pageNumber,
+                pageSize,
+                isDescendingRating: true,
+                instructorId: instructorId);
+
+            var courseResponses = courses.Select(c => c.ToResponse()).ToList();
+            return ApiResponse<List<CourseResponse>>.SuccessPagedResponse(
+                courseResponses,
+                totalCount,
+                pageNumber,
+                pageSize,
+                "Lấy danh sách khóa học thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting courses by instructor: {InstructorId}", instructorId);
+            return ApiResponse<List<CourseResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách khóa học.");
         }
     }
 }

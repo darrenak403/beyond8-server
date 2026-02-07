@@ -14,6 +14,8 @@ using Beyond8.Learning.Infrastructure.Repositories.Implements;
 using FluentValidation;
 using Polly;
 using Polly.Extensions.Http;
+using Beyond8.Learning.Application.Consumers.Identity;
+using Beyond8.Learning.Application.Consumers.Catalog;
 
 namespace Beyond8.Learning.Api.Bootstrapping;
 
@@ -33,6 +35,8 @@ public static class ApplicationServiceExtensions
             config.AddConsumer<AssignmentSubmittedEventConsumer>();
             config.AddConsumer<AiGradingCompletedEventConsumer>();
             config.AddConsumer<AssignmentGradedEventConsumer>();
+            config.AddConsumer<CourseUpdatedMetadataEventConsumer>();
+            config.AddConsumer<UserUpdatedEventConsumer>();
         }, queueNamePrefix: "learning");
 
         builder.Services.AddValidatorsFromAssemblyContaining<EnrollFreeRequest>();

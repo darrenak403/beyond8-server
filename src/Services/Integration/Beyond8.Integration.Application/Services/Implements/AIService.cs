@@ -30,6 +30,7 @@ namespace Beyond8.Integration.Application.Services.Implements
         private const string QuizGenerationPromptName = "Quiz Generation";
         private const string FormatQuizQuestionsPromptName = "Format Quiz Questions";
         private const string AssignmentGradingPromptName = "Assignment Grading";
+        private const string ExplainQuizQuestionPromptName = "Explain Quiz Question";
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
             PropertyNameCaseInsensitive = true,
@@ -332,7 +333,7 @@ namespace Beyond8.Integration.Application.Services.Implements
                     }
                 }
 
-                // Build submission content (with extracted file text when available)
+                // Build submission content
                 var submissionContent = AiServiceGradingHelper.BuildSubmissionContent(
                     request.TextContent,
                     request.FileUrls,
@@ -417,6 +418,50 @@ namespace Beyond8.Integration.Application.Services.Implements
                     request.SubmissionId);
                 return ApiResponse<AiGradingResponse>.FailureResponse(
                     "Đã xảy ra lỗi khi chấm điểm bằng AI.");
+            }
+        }
+
+        public async Task<ApiResponse<ExplainQuizQuestionResponse>> ExplainQuizQuestionAsync(ExplainQuizQuestionRequest request, Guid userId)
+        {
+            try
+            {
+                var promptRes = await aiPromptService.GetPromptByNameAsync(ExplainQuizQuestionPromptName);
+                if (!promptRes.IsSuccess || promptRes.Data == null)
+                    return ApiResponse<ExplainQuizQuestionResponse>.FailureResponse(promptRes.Message ?? "Không tìm thấy prompt giải thích câu hỏi quiz.");
+
+                var prompt = promptRes.Data;
+                var contentForPrompt = AiServiceQuizHelper.BuildExplainQuizQuestionPromptContent(request.Content, request.Options);
+                var userPrompt = prompt.Template.Replace("{Content}", contentForPrompt);
+                var fullPrompt = string.IsNullOrEmpty(prompt.SystemPrompt) ? userPrompt : $"{prompt.SystemPrompt}\n\n{userPrompt}";
+
+                var aiResult = await generativeAiService.GenerateContentAsync(
+                    fullPrompt,
+                    AiOperation.ExplainQuizQuestion,
+                    userId,
+                    promptId: prompt.Id,
+                    maxTokens: prompt.MaxTokens,
+                    temperature: prompt.Temperature,
+                    topP: prompt.TopP);
+
+                await SubscriptionHelper.UpdateUsageQuotaAsync(identityClient, userId);
+
+                if (!aiResult.IsSuccess || aiResult.Data == null)
+                    return ApiResponse<ExplainQuizQuestionResponse>.FailureResponse(aiResult.Message ?? "Đã xảy ra lỗi khi giải thích câu hỏi quiz.");
+
+                var parsed = AiServiceQuizHelper.ParseExplainQuizQuestionResponse(aiResult.Data.Content, JsonOptions);
+                if (parsed == null)
+                {
+                    var preview = aiResult.Data.Content?.Length > 500 ? aiResult.Data.Content[..500] + "..." : aiResult.Data.Content ?? "";
+                    logger.LogWarning("ParseExplainQuizQuestionResponse failed for user {UserId}. AI content preview: {Preview}", userId, preview);
+                    return ApiResponse<ExplainQuizQuestionResponse>.FailureResponse("Không thể phân tích kết quả giải thích câu hỏi quiz từ AI. Vui lòng thử lại.");
+                }
+
+                return ApiResponse<ExplainQuizQuestionResponse>.SuccessResponse(parsed, "Giải thích câu hỏi quiz từ AI thành công.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error in ExplainQuizQuestion for user {UserId}", userId);
+                return ApiResponse<ExplainQuizQuestionResponse>.FailureResponse("Đã xảy ra lỗi khi giải thích câu hỏi quiz.");
             }
         }
 
