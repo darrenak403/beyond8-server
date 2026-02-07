@@ -11,5 +11,7 @@ namespace Beyond8.Integration.Application.Services.Interfaces
         Task<ApiResponse<GenQuizResponse>> GenerateQuizAsync(GenQuizRequest request, Guid userId, CancellationToken cancellationToken = default);
         Task<ApiResponse<List<GenQuizResponse>>> FormatQuizQuestionsFromPdfAsync(Stream stream, Guid userId);
         Task<ApiResponse<AiGradingResponse>> AiGradingAssignmentAsync(AiGradingRequest request);
+        Task<ApiResponse<ExplainQuizQuestionResponse>> ExplainQuizQuestionAsync(ExplainQuizQuestionRequest request, Guid userId);
+
     }
 }
