@@ -301,7 +301,7 @@ public static class AssessmentSeedData
                     ("Tài liệu .NET SDK", "https://learn.microsoft.com/dotnet/core/install"),
                     ("ASP.NET Core docs", "https://learn.microsoft.com/aspnet/core")
                 ]),
-                RubricUrl = "https://learn.microsoft.com/dotnet/core/project-sdk/overview",
+                RubricUrl = "https://d30z0qh7rhzgt8.cloudfront.net/courses/rubrics/Rubric-Percent-Assignment-1-Aspnet-Core.pdf",
                 SubmissionType = AssignmentSubmissionType.File,
                 GradingMode = GradingMode.AiAssisted,
                 TotalPoints = 100,
@@ -322,7 +322,7 @@ public static class AssessmentSeedData
                     ("Dependency Injection", "https://learn.microsoft.com/aspnet/core/fundamentals/dependency-injection"),
                     ("Middleware", "https://learn.microsoft.com/aspnet/core/fundamentals/middleware")
                 ]),
-                RubricUrl = "https://learn.microsoft.com/aspnet/core/fundamentals/middleware/write",
+                RubricUrl = "https://d30z0qh7rhzgt8.cloudfront.net/courses/rubrics/Rubric-Percent-Assignment-2-Di-Middleware.pdf",
                 SubmissionType = AssignmentSubmissionType.Both,
                 GradingMode = GradingMode.AiAssisted,
                 TotalPoints = 100,
@@ -344,7 +344,7 @@ public static class AssessmentSeedData
                     ("Migrations", "https://learn.microsoft.com/ef/core/managing-schemas/migrations"),
                     ("LINQ queries", "https://learn.microsoft.com/ef/core/querying/")
                 ]),
-                RubricUrl = "https://learn.microsoft.com/ef/core/miscellaneous/connection-strings",
+                RubricUrl = "https://d30z0qh7rhzgt8.cloudfront.net/courses/rubrics/Rubric-Percent-Assignment-3-Ef-Core.pdf",
                 SubmissionType = AssignmentSubmissionType.File,
                 GradingMode = GradingMode.AiAssisted,
                 TotalPoints = 100,
@@ -366,7 +366,7 @@ public static class AssessmentSeedData
                     ("Docker docs", "https://docs.docker.com/get-started/"),
                     ("Dockerfile reference", "https://docs.docker.com/engine/reference/builder/")
                 ]),
-                RubricUrl = "https://learn.microsoft.com/dotnet/architecture/microservices/architect-microservice-container-applications",
+                RubricUrl = "https://d30z0qh7rhzgt8.cloudfront.net/courses/rubrics/Rubric-Percent-Assignment-4-Microservices-Docker.pdf",
                 SubmissionType = AssignmentSubmissionType.Both,
                 GradingMode = GradingMode.AiAssisted,
                 TotalPoints = 100,
