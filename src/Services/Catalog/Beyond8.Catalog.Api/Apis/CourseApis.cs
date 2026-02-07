@@ -146,6 +146,15 @@ public static class CourseApis
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
+        group.MapPost("/publish/bulk", PublishBulkCoursesAsync)
+            .WithName("PublishBulkCourses")
+            .WithDescription("Công bố tất cả khóa học chờ phê duyệt theo danh sách ID")
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .Produces<ApiResponse<List<bool>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<List<bool>>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
+
         group.MapPost("/{id}/unpublish", UnpublishCourseAsync)
             .WithName("UnpublishCourse")
             .WithDescription("Ẩn khóa học")
@@ -185,6 +194,27 @@ public static class CourseApis
             .Produces(StatusCodes.Status401Unauthorized);
 
         return group;
+    }
+
+    private static async Task<IResult> PublishBulkCoursesAsync(
+        [FromBody] List<Guid> courseIds,
+        [FromServices] ICourseService courseService,
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IIdentityClient identityClient)
+    {
+        var currentUserId = currentUserService.UserId;
+
+        // Check instructor verification before proceeding
+        var (isVerified, message) = await CheckInstructorVerificationAsync(currentUserService, identityClient);
+        if (!isVerified)
+        {
+            return Results.BadRequest(ApiResponse<List<bool>>.FailureResponse(message));
+        }
+
+        var result = await courseService.PublishBulkCoursesAsync(courseIds, currentUserId);
+        return result.IsSuccess
+            ? Results.Ok(result)
+            : Results.BadRequest(result);
     }
 
     private static async Task<IResult> GetTop10MostPopularCoursesAsync(

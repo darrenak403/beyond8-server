@@ -630,6 +630,31 @@ public class CourseService(
         }
     }
 
+    public async Task<ApiResponse<List<bool>>> PublishBulkCoursesAsync(List<Guid> courseIds, Guid currentUserId)
+    {
+        try
+        {
+            var courses = await unitOfWork.CourseRepository.GetAllAsync(c => courseIds.Contains(c.Id) && c.Status == CourseStatus.Approved && c.IsActive);
+            if (courses == null || courses.Count == 0)
+            {
+                return ApiResponse<List<bool>>.FailureResponse("Không tìm thấy khóa học đã được phê duyệt.");
+            }
+
+            foreach (var course in courses)
+            {
+                course.Status = CourseStatus.Published;
+                await unitOfWork.CourseRepository.UpdateAsync(course.Id, course);
+            }
+            await unitOfWork.SaveChangesAsync();
+            return ApiResponse<List<bool>>.SuccessResponse([true], "Công bố khóa học thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error publishing bulk courses");
+            return ApiResponse<List<bool>>.FailureResponse("Đã xảy ra lỗi khi công bố khóa học.");
+        }
+    }
+
     public async Task<ApiResponse<bool>> UnpublishCourseAsync(Guid courseId, Guid currentUserId)
     {
         try
