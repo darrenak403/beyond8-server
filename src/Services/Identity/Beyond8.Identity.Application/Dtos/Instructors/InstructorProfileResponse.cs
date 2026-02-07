@@ -24,5 +24,6 @@ namespace Beyond8.Identity.Application.Dtos.Instructors
         public DateTime? VerifiedAt { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
+        public SubscriptionPlanResponse? InstructorSubscriptionPlan { get; set; }
     }
 }
