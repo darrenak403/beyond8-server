@@ -91,6 +91,7 @@ namespace Beyond8.AppHost.Extensions
                 .WithReference(saleDb)
                 .WithReference(redis)
                 .WithReference(rabbitMq)
+                .WithReference(catalogService)
                 .WaitFor(postgres)
                 .WaitFor(redis)
                 .WaitFor(rabbitMq);

@@ -16,7 +16,8 @@ public class CatalogClient(
     {
         try
         {
-            var data = await GetAsync<CourseDto>($"/api/v1/courses/{courseId}");
+            // Use /summary endpoint (public) instead of /{id} (Instructor-only)
+            var data = await GetAsync<CourseDto>($"/api/v1/courses/{courseId}/summary");
             return ApiResponse<CourseDto>.SuccessResponse(data, "OK");
         }
         catch (Exception ex)

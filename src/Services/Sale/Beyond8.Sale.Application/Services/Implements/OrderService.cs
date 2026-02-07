@@ -154,67 +154,6 @@ public class OrderService(
             responses, orders.TotalCount, pagination.PageNumber, pagination.PageSize, "Lấy danh sách đơn hàng theo trạng thái thành công");
     }
 
-    public async Task<ApiResponse<OrderStatisticsResponse>> GetOrderStatisticsAsync(Guid? instructorId = null)
-    {
-        // Use database-level aggregation instead of loading all orders into memory
-        var query = unitOfWork.OrderRepository.AsQueryable()
-            .Include(o => o.OrderItems)
-            .AsNoTracking();
-
-        if (instructorId.HasValue)
-            query = query.Where(o => o.OrderItems.Any(oi => oi.InstructorId == instructorId));
-
-        var totalOrders = await query.CountAsync();
-        var completedOrders = await query.CountAsync(o => o.Status == OrderStatus.Paid);
-        var pendingOrders = await query.CountAsync(o => o.Status == OrderStatus.Pending);
-        var cancelledOrders = await query.CountAsync(o => o.Status == OrderStatus.Cancelled);
-
-        var paidOrders = query.Where(o => o.Status == OrderStatus.Paid);
-
-        var totalRevenue = await paidOrders.SumAsync(o => o.TotalAmount);
-
-        decimal totalPlatformFees = 0;
-        decimal totalInstructorEarnings = 0;
-
-        if (instructorId.HasValue)
-        {
-            totalPlatformFees = await paidOrders
-                .SelectMany(o => o.OrderItems)
-                .Where(oi => oi.InstructorId == instructorId)
-                .SumAsync(oi => oi.PlatformFeeAmount);
-
-            totalInstructorEarnings = await paidOrders
-                .SelectMany(o => o.OrderItems)
-                .Where(oi => oi.InstructorId == instructorId)
-                .SumAsync(oi => oi.InstructorEarnings);
-        }
-        else
-        {
-            totalPlatformFees = await paidOrders
-                .SelectMany(o => o.OrderItems)
-                .SumAsync(oi => oi.PlatformFeeAmount);
-
-            totalInstructorEarnings = await paidOrders
-                .SelectMany(o => o.OrderItems)
-                .SumAsync(oi => oi.InstructorEarnings);
-        }
-
-        var stats = new OrderStatisticsResponse
-        {
-            TotalOrders = totalOrders,
-            CompletedOrders = completedOrders,
-            PendingOrders = pendingOrders,
-            CancelledOrders = cancelledOrders,
-            TotalRevenue = totalRevenue,
-            TotalPlatformFees = totalPlatformFees,
-            TotalInstructorEarnings = totalInstructorEarnings,
-            AverageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0,
-            InstructorId = instructorId
-        };
-
-        return ApiResponse<OrderStatisticsResponse>.SuccessResponse(stats, "Lấy thống kê đơn hàng thành công");
-    }
-
     // Helper methods
     private async Task<(bool IsValid, string? ErrorMessage, decimal SubTotal, decimal DiscountAmount, decimal TotalAmount, Guid? CouponId, List<OrderMappings.OrderItemSnapshot> Items)> CalculateOrderTotalsAsync(List<OrderItemRequest> items, string? couponCode)
     {
@@ -231,9 +170,7 @@ public class OrderService(
                 return (false, "Dữ liệu khóa học không hợp lệ", 0, 0, 0, null, orderItems);
 
             var course = courseResult.Data;
-            var unitPrice = course.OriginalPrice;
-            if (unitPrice != course.OriginalPrice)
-                return (false, $"Giá khóa học không hợp lệ (giá yêu cầu: {unitPrice}, giá thực tế: {course.OriginalPrice})", 0, 0, 0, null, orderItems);
+            var unitPrice = course.Price;
 
             // Per BR-19: No instructor discount for now
             var discountPercent = 0m;

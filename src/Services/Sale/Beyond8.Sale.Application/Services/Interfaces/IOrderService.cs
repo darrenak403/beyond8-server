@@ -14,5 +14,4 @@ public interface IOrderService
     Task<ApiResponse<List<OrderResponse>>> GetOrdersByUserAsync(PaginationRequest pagination, Guid userId);
     Task<ApiResponse<List<OrderResponse>>> GetOrdersByInstructorAsync(Guid instructorId, PaginationRequest pagination);
     Task<ApiResponse<List<OrderResponse>>> GetOrdersByStatusAsync(OrderStatus status, PaginationRequest pagination);
-    Task<ApiResponse<OrderStatisticsResponse>> GetOrderStatisticsAsync(Guid? instructorId = null);
 }

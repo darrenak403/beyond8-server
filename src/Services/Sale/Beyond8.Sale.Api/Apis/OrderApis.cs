@@ -87,14 +87,6 @@ public static class OrderApis
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden);
 
-        group.MapGet("/statistics", GetOrderStatisticsAsync)
-            .WithName("GetOrderStatistics")
-            .WithDescription("Lấy thống kê đơn hàng (Instructor stats or Admin for all)")
-            .RequireAuthorization(x => x.RequireRole(Role.Instructor, Role.Admin))
-            .Produces<ApiResponse<OrderStatisticsResponse>>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status403Forbidden);
-
         return group;
     }
 
@@ -193,26 +185,4 @@ public static class OrderApis
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
-    private static async Task<IResult> GetOrderStatisticsAsync(
-        [FromQuery] Guid? instructorId = null,
-        [FromServices] IOrderService orderService = null!,
-        [FromServices] ICurrentUserService currentUserService = null!)
-    {
-        // Validate authorization
-        if (instructorId.HasValue)
-        {
-            // If requesting specific instructor stats: must be that instructor or admin
-            if (instructorId != currentUserService.UserId && !currentUserService.IsInRole(Role.Admin))
-                return Results.Forbid();
-        }
-        else
-        {
-            // If requesting all stats: admin only
-            if (!currentUserService.IsInRole(Role.Admin))
-                return Results.Forbid();
-        }
-
-        var result = await orderService.GetOrderStatisticsAsync(instructorId);
-        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
-    }
 }

@@ -37,19 +37,9 @@ public interface ICouponUsageService
         PaginationRequest pagination);
 
     /// <summary>
-    /// Get usage statistics for specific coupon (Admin)
-    /// </summary>
-    Task<ApiResponse<CouponUsageStatisticsResponse>> GetCouponUsageStatisticsAsync(Guid couponId);
-
-    /// <summary>
     /// Get all coupon usages for specific order
     /// </summary>
     Task<ApiResponse<CouponUsageResponse>> GetUsageByOrderAsync(Guid orderId);
-
-    /// <summary>
-    /// Get top performing coupons by usage count
-    /// </summary>
-    Task<ApiResponse<List<CouponUsageStatisticsResponse>>> GetTopCouponsAsync(int topN = 10);
 
     /// <summary>
     /// Check if user can use coupon (without full validation)
