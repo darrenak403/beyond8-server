@@ -24,6 +24,7 @@ x-integration-service-environment: &integration-service-environment
   ConnectionStrings__integration-db: Host=postgres;Port=5432;Database=${INTEGRATION_SERVICE_DATABASE};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
   ConnectionStrings__redis-cache: redis:6379,password=${REDIS_PASSWORD}
   ConnectionStrings__rabbitmq: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+  Clients__Identity__BaseUrl: http://beyond8-identity-service:8080
   AWS__S3__AccessKey: ${AWS_ACCESS_KEY}
   AWS__S3__SecretKey: ${AWS_SECRET_KEY}
   AWS__S3__Region: ${AWS_S3_REGION}
@@ -68,6 +69,27 @@ x-integration-service-environment: &integration-service-environment
   VnptEkyc__AccessToken: ${VNPT_EKYC_ACCESS_TOKEN}
   VnptEkyc__TokenKey: ${VNPT_EKYC_TOKEN_KEY}
   VnptEkyc__TokenId: ${VNPT_EKYC_TOKEN_ID}
+
+x-assessment-service-environment: &assessment-service-environment
+  ConnectionStrings__assessment-db: Host=postgres;Port=5432;Database=${ASSESSMENT_SERVICE_DATABASE};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+  ConnectionStrings__redis-cache: redis:6379,password=${REDIS_PASSWORD}
+  ConnectionStrings__rabbitmq: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+  Clients__Catalog__BaseUrl: http://beyond8-catalog-service:8080
+  Clients__Learning__BaseUrl: http://beyond8-learning-service:8080
+
+x-catalog-service-environment: &catalog-service-environment
+  ConnectionStrings__catalog-db: Host=postgres;Port=5432;Database=${CATALOG_SERVICE_DATABASE};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+  ConnectionStrings__redis-cache: redis:6379,password=${REDIS_PASSWORD}
+  ConnectionStrings__rabbitmq: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+  Clients__Identity__BaseUrl: http://beyond8-identity-service:8080
+  Clients__Learning__BaseUrl: http://beyond8-learning-service:8080
+
+x-learning-service-environment: &learning-service-environment
+  ConnectionStrings__learning-db: Host=postgres;Port=5432;Database=${LEARNING_SERVICE_DATABASE};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+  ConnectionStrings__redis-cache: redis:6379,password=${REDIS_PASSWORD}
+  ConnectionStrings__rabbitmq: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+  Clients__Identity__BaseUrl: http://beyond8-identity-service:8080
+  Clients__Catalog__BaseUrl: http://beyond8-catalog-service:8080
 
 services:
   aspire-dashboard:
@@ -164,6 +186,9 @@ services:
       - rabbitmq
       - identity-service
       - integration-service
+      - assessment-service
+      - catalog-service
+      - learning-service
 
   identity-service:
     image: ngothanhdatak/beyond8-identity-service:latest
@@ -193,6 +218,58 @@ services:
       - postgres
       - redis
       - rabbitmq
+    networks:
+      - beyond8-network
+    restart: unless-stopped
+
+  assessment-service:
+    image: ngothanhdatak/beyond8-assessment-service:latest
+    container_name: beyond8-assessment-service
+    ports:
+      - '${ASSESSMENT_SERVICE_PORT:-8084}:8080'
+    environment:
+      <<: [ *common-environment, *assessment-service-environment ]
+    depends_on:
+      - aspire-dashboard
+      - postgres
+      - redis
+      - rabbitmq
+      - catalog-service
+    networks:
+      - beyond8-network
+    restart: unless-stopped
+
+  catalog-service:
+    image: ngothanhdatak/beyond8-catalog-service:latest
+    container_name: beyond8-catalog-service
+    ports:
+      - '${CATALOG_SERVICE_PORT:-8085}:8080'
+    environment:
+      <<: [ *common-environment, *catalog-service-environment ]
+    depends_on:
+      - aspire-dashboard
+      - postgres
+      - redis
+      - rabbitmq
+      - identity-service
+    networks:
+      - beyond8-network
+    restart: unless-stopped
+
+  learning-service:
+    image: ngothanhdatak/beyond8-learning-service:latest
+    container_name: beyond8-learning-service
+    ports:
+      - '${LEARNING_SERVICE_PORT:-8086}:8080'
+    environment:
+      <<: [ *common-environment, *learning-service-environment ]
+    depends_on:
+      - aspire-dashboard
+      - postgres
+      - redis
+      - rabbitmq
+      - identity-service
+      - catalog-service
     networks:
       - beyond8-network
     restart: unless-stopped
