@@ -3,6 +3,7 @@ using System;
 using Beyond8.Learning.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Beyond8.Learning.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(LearningDbContext))]
-    partial class LearningDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260206031007_AddSlugInEnrol")]
+    partial class AddSlugInEnrol
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -270,6 +273,9 @@ namespace Beyond8.Learning.Infrastructure.Data.Migrations
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5, 2)");
 
+                    b.Property<string>("Slug")
+                        .HasColumnType("text");
+
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
@@ -299,67 +305,6 @@ namespace Beyond8.Learning.Infrastructure.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("Enrollments");
-                });
-
-            modelBuilder.Entity("Beyond8.Learning.Domain.Entities.LessonNote", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<Guid>("CourseId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("CreatedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("DeletedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("DisplayOrder")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("EnrollmentId")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsPrivate")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid>("LessonId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("UpdatedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int?>("VideoTimestampSeconds")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EnrollmentId");
-
-                    b.HasIndex("UserId");
-
-                    b.HasIndex("LessonId", "UserId");
-
-                    b.ToTable("LessonNotes");
                 });
 
             modelBuilder.Entity("Beyond8.Learning.Domain.Entities.LessonProgress", b =>
@@ -523,17 +468,6 @@ namespace Beyond8.Learning.Infrastructure.Data.Migrations
                     b.Navigation("Enrollment");
                 });
 
-            modelBuilder.Entity("Beyond8.Learning.Domain.Entities.LessonNote", b =>
-                {
-                    b.HasOne("Beyond8.Learning.Domain.Entities.Enrollment", "Enrollment")
-                        .WithMany("Notes")
-                        .HasForeignKey("EnrollmentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Enrollment");
-                });
-
             modelBuilder.Entity("Beyond8.Learning.Domain.Entities.LessonProgress", b =>
                 {
                     b.HasOne("Beyond8.Learning.Domain.Entities.Enrollment", "Enrollment")
@@ -561,8 +495,6 @@ namespace Beyond8.Learning.Infrastructure.Data.Migrations
                     b.Navigation("Certificate");
 
                     b.Navigation("LessonProgresses");
-
-                    b.Navigation("Notes");
 
                     b.Navigation("Review");
 

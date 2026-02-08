@@ -10,10 +10,25 @@ public static class SubscriptionMappings
         return new SubscriptionResponse
         {
             RemainingRequests = subscription.RemainingRequestsPerWeek,
-            IsRequestLimitedReached = subscription.RemainingRequestsPerWeek <= 0,
+            IsRequestLimitedReached = IsRequestLimitedReached(subscription),
             RequestLimitedEndsAt = subscription.RequestLimitedEndsAt,
+            TotalRemainingRequests = subscription.TotalRemainingRequests,
+            ExpiresAt = subscription.ExpiresAt,
+            Status = subscription.Status,
             SubscriptionPlan = subscription.Plan != null ? subscription.Plan.ToSubscriptionPlanResponse() : null
         };
+    }
+
+    public static bool IsRequestLimitedReached(this UserSubscription subscription)
+    {
+        var now = DateTime.UtcNow;
+
+        if (subscription.RemainingRequestsPerWeek <= 0) return true;
+
+        if (subscription.RequestLimitedEndsAt.HasValue && subscription.RequestLimitedEndsAt > now)
+            return true;
+
+        return false;
     }
 
     public static SubscriptionPlanResponse ToSubscriptionPlanResponse(this SubscriptionPlan plan)
@@ -34,19 +49,28 @@ public static class SubscriptionMappings
 
     public static void UpdateUsageQuotaRequest(this UserSubscription subscription, UpdateUsageQuotaRequest request)
     {
-        if (request.NumberOfRequests > 0)
+        if (request.NumberOfRequests <= 0) return;
+
+        subscription.TotalRemainingRequests -= request.NumberOfRequests;
+        subscription.RemainingRequestsPerWeek -= request.NumberOfRequests;
+
+        if (subscription.RemainingRequestsPerWeek <= 0)
         {
-            subscription.TotalRemainingRequests -= request.NumberOfRequests;
-            subscription.RemainingRequestsPerWeek -= request.NumberOfRequests;
-            if (subscription.RemainingRequestsPerWeek < 0)
+            subscription.RemainingRequestsPerWeek = 0;
+
+            if (subscription.RequestLimitedEndsAt == null)
             {
-                subscription.RemainingRequestsPerWeek = 0;
-                subscription.RequestLimitedEndsAt = DateTime.UtcNow.AddDays(7);
-            }
-            else
-            {
-                subscription.RequestLimitedEndsAt = null;
+                subscription.RequestLimitedEndsAt = GetNextMondayUtc();
             }
         }
+    }
+
+    private static DateTime GetNextMondayUtc()
+    {
+        var today = DateTime.UtcNow;
+        int daysUntilMonday = ((int)DayOfWeek.Monday - (int)today.DayOfWeek + 7) % 7;
+        if (daysUntilMonday == 0) daysUntilMonday = 7;
+
+        return today.AddDays(daysUntilMonday).Date;
     }
 }

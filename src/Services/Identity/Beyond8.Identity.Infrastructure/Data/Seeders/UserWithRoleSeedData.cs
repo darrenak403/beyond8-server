@@ -67,6 +67,8 @@ namespace Beyond8.Identity.Infrastructure.Data.Seeders
                 new("00000000-0000-0000-0000-000000000002"), // Staff
                 new("00000000-0000-0000-0000-000000000005"), // Student
                 new("00000000-0000-0000-0000-000000000006"), // Instructor
+                new("00000000-0000-0000-0000-000000000008"), // Student2
+                new("00000000-0000-0000-0000-000000000009"), // Student3
             };
             var defaultPassword = "12345@Abc";
             var hashedPassword = new PasswordHasher<User>().HashPassword(new User(), defaultPassword);
@@ -160,6 +162,42 @@ namespace Beyond8.Identity.Infrastructure.Data.Seeders
                             AssignedAt = DateTime.UtcNow
                         }
                     ],
+                },
+                // Student2
+                new() {
+                    Id = userIds[4],
+                    Email = "student2@gmail.com",
+                    PasswordHash = hashedPassword,
+                    FullName = "Student2",
+                    IsEmailVerified = true,
+                    Status = UserStatus.Active,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = Guid.Empty,
+                    UserRoles = [
+                        new() {
+                            UserId = userIds[4],
+                            RoleId = roleIds[3],
+                            AssignedAt = DateTime.UtcNow
+                        }
+                    ],
+                },
+                // Student3
+                new() {
+                    Id = userIds[5],
+                    Email = "student3@gmail.com",
+                    PasswordHash = hashedPassword,
+                    FullName = "Student3",
+                    IsEmailVerified = true,
+                    Status = UserStatus.Active,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = Guid.Empty,
+                    UserRoles = [
+                        new() {
+                            UserId = userIds[5],
+                            RoleId = roleIds[3],
+                            AssignedAt = DateTime.UtcNow
+                        }
+                    ],
                 }
             };
 
@@ -243,9 +281,9 @@ namespace Beyond8.Identity.Infrastructure.Data.Seeders
                 VerificationStatus = VerificationStatus.Verified,
                 VerifiedBy = adminId,
                 VerifiedAt = DateTime.UtcNow,
-                TotalStudents = 150,
-                TotalCourses = 5,
-                AvgRating = 4.8m,
+                TotalStudents = 1,
+                TotalCourses = 3,
+                AvgRating = 0m,
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = Guid.Empty
             };

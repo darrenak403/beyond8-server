@@ -28,6 +28,15 @@ public static class SubscriptionApis
             .Produces<ApiResponse<SubscriptionResponse>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
+        group.MapGet("/all", GetAllSubscriptionsAsync)
+            .WithName("GetAllSubscriptions")
+            .WithDescription("Lấy danh sách tất cả gói đăng ký")
+            .RequireAuthorization(x => x.RequireRole(Role.Admin))
+            .Produces<ApiResponse<List<SubscriptionResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<List<SubscriptionResponse>>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
+
         group.MapGet("/plans", GetSubscriptionPlansAsync)
             .WithName("GetSubscriptionPlans")
             .WithDescription("Lấy danh sách gói đăng ký")
@@ -46,6 +55,13 @@ public static class SubscriptionApis
             .Produces(StatusCodes.Status403Forbidden);
 
         return group;
+    }
+
+    private static async Task<IResult> GetAllSubscriptionsAsync(
+        [FromServices] ISubscriptionService subscriptionService)
+    {
+        var response = await subscriptionService.GetAllSubscriptionsAsync();
+        return response.IsSuccess ? Results.Ok(response) : Results.BadRequest(response);
     }
 
     private static async Task<IResult> GetMySubscriptionStatsAsync(

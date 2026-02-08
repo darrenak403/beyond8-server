@@ -20,6 +20,7 @@ public static class EnrollmentMappings
             CourseId = courseId,
             CourseTitle = structure.Title,
             CourseThumbnailUrl = structure.ThumbnailUrl,
+            Slug = structure.Slug,
             InstructorId = structure.InstructorId,
             InstructorName = structure.InstructorName,
             PricePaid = pricePaid,
@@ -72,6 +73,7 @@ public static class EnrollmentMappings
             CourseId = entity.CourseId,
             CourseTitle = entity.CourseTitle,
             CourseThumbnailUrl = entity.CourseThumbnailUrl,
+            Slug = entity.Slug,
             InstructorId = entity.InstructorId,
             InstructorName = entity.InstructorName,
             PricePaid = entity.PricePaid,
@@ -83,6 +85,21 @@ public static class EnrollmentMappings
             CompletedAt = entity.CompletedAt,
             LastAccessedAt = entity.LastAccessedAt,
             LastAccessedLessonId = entity.LastAccessedLessonId
+        };
+    }
+
+    public static EnrollmentSimpleResponse ToSimpleResponse(this Enrollment entity)
+    {
+        return new EnrollmentSimpleResponse
+        {
+            Id = entity.Id,
+            CourseId = entity.CourseId,
+            CourseTitle = entity.CourseTitle,
+            CourseThumbnailUrl = entity.CourseThumbnailUrl,
+            Slug = entity.Slug,
+            InstructorId = entity.InstructorId,
+            InstructorName = entity.InstructorName,
+            ProgressPercent = entity.ProgressPercent
         };
     }
 }

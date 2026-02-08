@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Beyond8.Identity.Application.Dtos.Instructors;
 using Beyond8.Identity.Application.Mappings.AuthMappings;
+using Beyond8.Identity.Application.Mappings.SubscriptionMappings;
 using Beyond8.Identity.Domain.Entities;
 using Beyond8.Identity.Domain.Enums;
 using Beyond8.Identity.Domain.JSONFields;
@@ -9,12 +10,15 @@ namespace Beyond8.Identity.Application.Mappings
 {
     public static class InstructorProfileMappings
     {
-        public static InstructorProfileResponse ToInstructorProfileResponse(this InstructorProfile instructorProfile, User user)
+        public static InstructorProfileResponse ToInstructorProfileResponse(this InstructorProfile instructorProfile, User? user) =>
+            instructorProfile.ToInstructorProfileResponse(user, null);
+
+        public static InstructorProfileResponse ToInstructorProfileResponse(this InstructorProfile instructorProfile, User? user, UserSubscription? userSubscription)
         {
             return new InstructorProfileResponse
             {
                 Id = instructorProfile.Id,
-                User = user.ToUserSimpleResponse(),
+                User = user?.ToUserSimpleResponse(),
                 Bio = instructorProfile.Bio,
                 Headline = instructorProfile.Headline,
                 ExpertiseAreas = string.IsNullOrEmpty(instructorProfile.ExpertiseAreas)
@@ -40,16 +44,17 @@ namespace Beyond8.Identity.Application.Mappings
                 VerificationStatus = instructorProfile.VerificationStatus,
                 VerifiedAt = instructorProfile.VerifiedAt,
                 CreatedAt = instructorProfile.CreatedAt,
-                UpdatedAt = instructorProfile.UpdatedAt
+                UpdatedAt = instructorProfile.UpdatedAt,
+                InstructorSubscriptionPlan = userSubscription?.Plan?.ToSubscriptionPlanResponse()
             };
         }
 
-        public static InstructorProfileAdminResponse ToInstructorProfileAdminResponse(this InstructorProfile instructorProfile, User user)
+        public static InstructorProfileAdminResponse ToInstructorProfileAdminResponse(this InstructorProfile instructorProfile, User? user)
         {
             return new InstructorProfileAdminResponse
             {
                 Id = instructorProfile.Id,
-                User = user.ToUserSimpleResponse(),
+                User = user?.ToUserSimpleResponse(),
                 Bio = instructorProfile.Bio,
                 Headline = instructorProfile.Headline,
                 ExpertiseAreas = string.IsNullOrEmpty(instructorProfile.ExpertiseAreas)
@@ -122,7 +127,7 @@ namespace Beyond8.Identity.Application.Mappings
             };
         }
 
-        public static void ToUpdateInstructorProfileRequest(this InstructorProfile instructorProfile, UpdateInstructorProfileRequest request)
+        public static void ApplyUpdate(this InstructorProfile instructorProfile, UpdateInstructorProfileRequest request)
         {
             if (request.Bio != null)
                 instructorProfile.Bio = request.Bio;

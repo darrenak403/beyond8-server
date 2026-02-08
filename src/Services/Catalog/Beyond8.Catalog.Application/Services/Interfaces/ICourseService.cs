@@ -23,16 +23,8 @@ public interface ICourseService
     Task<ApiResponse<List<CourseResponse>>> FullTextSearchCoursesAsync(FullTextSearchRequest request);
     Task<ApiResponse<CourseSummaryResponse>> GetCourseSummaryAsync(Guid courseId);
     Task<ApiResponse<CourseDetailResponse>> GetCourseDetailsAsync(Guid courseId, Guid userId);
-
-    // Đăng Ký Học // luồng 3
-    // Task<ApiResponse<bool>> CheckCourseAccessAsync(Guid courseId, Guid userId);
-    // Task<ApiResponse<List<CourseResponse>>> GetEnrolledCoursesAsync(Guid userId, PaginationRequest pagination);
-
-    // Analytics & Reporting (Luồng 5) 
-    // Task<ApiResponse<CourseAnalyticsDto>> GetCourseAnalyticsAsync(Guid courseId);
-    // Task<ApiResponse<List<CourseResponse>>> GetTopRatedCoursesAsync(int topCount = 10);
-    // Task<ApiResponse<List<CourseResponse>>> GetMostPopularCoursesAsync(int topCount = 10);
-
-    // Utility Operations // luồng 2
-    // Task<ApiResponse<List<CourseResponse>>> SearchCoursesAsync(string searchTerm, PaginationRequest pagination);
+    Task<ApiResponse<CourseDetailResponse>> GetCourseDetailsForAdminAsync(Guid courseId);
+    Task<ApiResponse<List<CourseResponse>>> GetCoursesByInstructorIdAsync(Guid instructorId, PaginationRequest pagination);
+    Task<ApiResponse<List<CourseResponse>>> GetMostPopularCoursesAsync(PaginationCourseSearchRequest pagination);
+    Task<ApiResponse<List<bool>>> PublishBulkCoursesAsync(List<Guid> courseIds, Guid currentUserId);
 }

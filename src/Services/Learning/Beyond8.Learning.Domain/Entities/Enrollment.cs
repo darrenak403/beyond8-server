@@ -15,6 +15,8 @@ namespace Beyond8.Learning.Domain.Entities
 
         public string? CourseThumbnailUrl { get; set; }
 
+        public string? Slug { get; set; } = string.Empty;
+
         public Guid InstructorId { get; set; }
 
         [MaxLength(200)]
@@ -42,7 +44,6 @@ namespace Beyond8.Learning.Domain.Entities
 
         public virtual ICollection<LessonProgress> LessonProgresses { get; set; } = [];
         public virtual ICollection<SectionProgress> SectionProgresses { get; set; } = [];
-        public virtual ICollection<LessonNote> Notes { get; set; } = [];
         public virtual CourseReview? Review { get; set; }
         public virtual Certificate? Certificate { get; set; }
     }

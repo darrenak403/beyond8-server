@@ -8,14 +8,33 @@ namespace Beyond8.Assessment.Infrastructure.Data.Seeders;
 
 public static class AssessmentSeedData
 {
+    // Course 1: Free (ASP.NET Core)
     private static readonly Guid SeedCourseId = Guid.Parse("33333333-3333-3333-3333-333333333333");
-    private static readonly Guid SeedInstructorId = Guid.Parse("00000000-0000-0000-0000-000000000006"); // Trần Thị Giảng Viên (Identity)
     private static readonly Guid Lesson2_4Id = Guid.Parse("55555555-5555-5555-5555-555555550204"); // Section 2 - Quiz lesson
     private static readonly Guid Lesson3_3Id = Guid.Parse("55555555-5555-5555-5555-555555550303"); // Section 3 - Quiz lesson
+
+    // Course 2: Paid (Microservices)
+    private static readonly Guid PaidCourseId = Guid.Parse("33333333-3333-3333-3333-333333333334");
+    private static readonly Guid PaidLesson3Id = Guid.Parse("55555555-5555-5555-5555-555555550403"); // Paid section - Quiz lesson
+
+    private static readonly Guid SeedInstructorId = Guid.Parse("00000000-0000-0000-0000-000000000006"); // Trần Thị Giảng Viên (Identity)
+
+    // Section IDs (Catalog sections - cùng GUID với CatalogSeedData)
+    private static readonly Guid Section1Id = Guid.Parse("44444444-4444-4444-4444-444444444401");
+    private static readonly Guid Section2Id = Guid.Parse("44444444-4444-4444-4444-444444444402");
+    private static readonly Guid Section3Id = Guid.Parse("44444444-4444-4444-4444-444444444403");
+    private static readonly Guid PaidSectionId = Guid.Parse("44444444-4444-4444-4444-444444444404");
 
     // Quiz IDs (Catalog LessonQuiz tham chiếu tới)
     private static readonly Guid Quiz1Id = Guid.Parse("66666666-6666-6666-6666-666666666601");
     private static readonly Guid Quiz2Id = Guid.Parse("66666666-6666-6666-6666-666666666602");
+    private static readonly Guid Quiz3Id = Guid.Parse("66666666-6666-6666-6666-666666666603");
+
+    // Assignment IDs (Catalog Section.AssignmentId tham chiếu tới)
+    private static readonly Guid Assignment1Id = Guid.Parse("66666666-6666-6666-6666-666666666701");
+    private static readonly Guid Assignment2Id = Guid.Parse("66666666-6666-6666-6666-666666666702");
+    private static readonly Guid Assignment3Id = Guid.Parse("66666666-6666-6666-6666-666666666703");
+    private static readonly Guid Assignment4Id = Guid.Parse("66666666-6666-6666-6666-666666666704");
 
     // Question IDs - Quiz 1 (Section 2: DI, Middleware, Configuration)
     private static readonly Guid Q1_1Id = Guid.Parse("77777777-7777-7777-7777-777777777701");
@@ -31,6 +50,12 @@ public static class AssessmentSeedData
     private static readonly Guid Q2_4Id = Guid.Parse("77777777-7777-7777-7777-777777777709");
     private static readonly Guid Q2_5Id = Guid.Parse("77777777-7777-7777-7777-777777777710");
 
+    // Question IDs - Quiz 3 (Paid course: Microservices & Docker)
+    private static readonly Guid Q3_1Id = Guid.Parse("77777777-7777-7777-7777-777777777711");
+    private static readonly Guid Q3_2Id = Guid.Parse("77777777-7777-7777-7777-777777777712");
+    private static readonly Guid Q3_3Id = Guid.Parse("77777777-7777-7777-7777-777777777713");
+    private static readonly Guid Q3_4Id = Guid.Parse("77777777-7777-7777-7777-777777777714");
+
     // QuizQuestion IDs
     private static readonly Guid Qq1_1Id = Guid.Parse("88888888-8888-8888-8888-888888888801");
     private static readonly Guid Qq1_2Id = Guid.Parse("88888888-8888-8888-8888-888888888802");
@@ -42,15 +67,24 @@ public static class AssessmentSeedData
     private static readonly Guid Qq2_3Id = Guid.Parse("88888888-8888-8888-8888-888888888808");
     private static readonly Guid Qq2_4Id = Guid.Parse("88888888-8888-8888-8888-888888888809");
     private static readonly Guid Qq2_5Id = Guid.Parse("88888888-8888-8888-8888-888888888810");
+    private static readonly Guid Qq3_1Id = Guid.Parse("88888888-8888-8888-8888-888888888811");
+    private static readonly Guid Qq3_2Id = Guid.Parse("88888888-8888-8888-8888-888888888812");
+    private static readonly Guid Qq3_3Id = Guid.Parse("88888888-8888-8888-8888-888888888813");
+    private static readonly Guid Qq3_4Id = Guid.Parse("88888888-8888-8888-8888-888888888814");
 
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
+    private static string SerializeAttachmentUrls(List<(string Name, string Url)> items) =>
+        JsonSerializer.Serialize(items.Select(x => new AssignmentAttachmentItem { Name = x.Name, Url = x.Url }).ToList(), JsonOptions);
+
     public static async Task SeedQuizzesAndQuestionsAsync(AssessmentDbContext context)
     {
-        if (await context.Quizzes.AnyAsync(q => q.Id == Quiz1Id || q.Id == Quiz2Id))
-            return;
+        var hasQuiz3 = await context.Quizzes.AnyAsync(q => q.Id == Quiz3Id);
+        if (hasQuiz3)
+            return; // Đã seed đủ cả 2 course
 
         var now = DateTime.UtcNow;
+        var hasQuiz1 = await context.Quizzes.AnyAsync(q => q.Id == Quiz1Id);
 
         // ============ Quiz 1: Kiểm tra kiến thức Section 2 (DI, Middleware, Configuration) ============
         var quiz1 = new Quiz
@@ -73,7 +107,7 @@ public static class AssessmentSeedData
             CreatedBy = SeedInstructorId
         };
 
-        // ============ Quiz 2: Entity Framework Core ============
+        // ============ Quiz 2: Entity Framework Core (Course 1) ============
         var quiz2 = new Quiz
         {
             Id = Quiz2Id,
@@ -94,7 +128,35 @@ public static class AssessmentSeedData
             CreatedBy = SeedInstructorId
         };
 
-        await context.Quizzes.AddRangeAsync(quiz1, quiz2);
+        // ============ Quiz 3: Microservices & Docker (Course 2 - Paid) ============
+        var quiz3 = new Quiz
+        {
+            Id = Quiz3Id,
+            InstructorId = SeedInstructorId,
+            CourseId = PaidCourseId,
+            LessonId = PaidLesson3Id,
+            Title = "Quiz: Kiểm tra Microservices & Docker",
+            Description = "Kiểm tra kiến thức về Microservices và Docker cơ bản",
+            TimeLimitMinutes = 10,
+            PassScorePercent = 60,
+            TotalPoints = 100,
+            MaxAttempts = 2,
+            ShuffleQuestions = true,
+            AllowReview = true,
+            ShowExplanation = true,
+            IsActive = true,
+            CreatedAt = now,
+            CreatedBy = SeedInstructorId
+        };
+
+        if (!hasQuiz1)
+        {
+            await context.Quizzes.AddRangeAsync(quiz1, quiz2, quiz3);
+        }
+        else
+        {
+            await context.Quizzes.AddAsync(quiz3);
+        }
 
         // ============ Questions cho Quiz 1 (Section 2) ============
         var questionsQuiz1 = new List<Question>
@@ -156,26 +218,165 @@ public static class AssessmentSeedData
                 DifficultyLevel.Easy, ["migrations"]),
         };
 
-        await context.Questions.AddRangeAsync(questionsQuiz1);
-        await context.Questions.AddRangeAsync(questionsQuiz2);
+        // ============ Questions cho Quiz 3 (Paid course: Microservices & Docker) ============
+        var questionsQuiz3 = new List<Question>
+        {
+            CreateQuestion(Q3_1Id, SeedInstructorId, now,
+                "Kiến trúc Microservices khác Monolith chủ yếu ở điểm nào?",
+                [("a", "Chạy trên một server duy nhất", false), ("b", "Ứng dụng được tách thành nhiều service độc lập, deploy và scale riêng", true), ("c", "Dùng một database chung", false), ("d", "Chỉ dùng .NET", false)],
+                "Microservices tách ứng dụng thành các service nhỏ, độc lập.",
+                DifficultyLevel.Easy, ["microservices"]),
+            CreateQuestion(Q3_2Id, SeedInstructorId, now,
+                "Docker Container khác VM (máy ảo) như thế nào?",
+                [("a", "Container có OS riêng, VM dùng chung kernel", false), ("b", "Container dùng chung kernel host, nhẹ và khởi động nhanh hơn VM", true), ("c", "VM nhẹ hơn Container", false), ("d", "Không có khác biệt", false)],
+                "Container chia sẻ kernel của host, không cần OS đầy đủ cho mỗi instance.",
+                DifficultyLevel.Medium, ["docker", "container"]),
+            CreateQuestion(Q3_3Id, SeedInstructorId, now,
+                "Dockerfile dùng để làm gì?",
+                [("a", "Chạy container", false), ("b", "Định nghĩa cách build Docker image", true), ("c", "Quản lý nhiều container", false), ("d", "Cấu hình network", false)],
+                "Dockerfile chứa các lệnh để build image (FROM, COPY, RUN, CMD...).",
+                DifficultyLevel.Easy, ["docker", "dockerfile"]),
+            CreateQuestion(Q3_4Id, SeedInstructorId, now,
+                "Giao tiếp giữa các Microservice thường dùng cơ chế nào?",
+                [("a", "Chỉ gọi trực tiếp hàm trong process", false), ("b", "HTTP/REST, gRPC, hoặc message queue (RabbitMQ, Kafka)", true), ("c", "Chỉ shared database", false), ("d", "Chỉ file system chung", false)],
+                "Các service giao tiếp qua network: REST API, gRPC, hoặc messaging.",
+                DifficultyLevel.Medium, ["microservices", "messaging"]),
+        };
+
+        if (!hasQuiz1)
+        {
+            await context.Questions.AddRangeAsync(questionsQuiz1);
+            await context.Questions.AddRangeAsync(questionsQuiz2);
+        }
+        await context.Questions.AddRangeAsync(questionsQuiz3);
 
         // ============ QuizQuestion: gắn câu hỏi vào quiz ============
         var quizQuestions = new List<QuizQuestion>
         {
-            CreateQuizQuestion(Qq1_1Id, Quiz1Id, Q1_1Id, 1, now, SeedInstructorId),
-            CreateQuizQuestion(Qq1_2Id, Quiz1Id, Q1_2Id, 2, now, SeedInstructorId),
-            CreateQuizQuestion(Qq1_3Id, Quiz1Id, Q1_3Id, 3, now, SeedInstructorId),
-            CreateQuizQuestion(Qq1_4Id, Quiz1Id, Q1_4Id, 4, now, SeedInstructorId),
-            CreateQuizQuestion(Qq1_5Id, Quiz1Id, Q1_5Id, 5, now, SeedInstructorId),
-            CreateQuizQuestion(Qq2_1Id, Quiz2Id, Q2_1Id, 1, now, SeedInstructorId),
-            CreateQuizQuestion(Qq2_2Id, Quiz2Id, Q2_2Id, 2, now, SeedInstructorId),
-            CreateQuizQuestion(Qq2_3Id, Quiz2Id, Q2_3Id, 3, now, SeedInstructorId),
-            CreateQuizQuestion(Qq2_4Id, Quiz2Id, Q2_4Id, 4, now, SeedInstructorId),
-            CreateQuizQuestion(Qq2_5Id, Quiz2Id, Q2_5Id, 5, now, SeedInstructorId),
+            CreateQuizQuestion(Qq3_1Id, Quiz3Id, Q3_1Id, 1, now, SeedInstructorId),
+            CreateQuizQuestion(Qq3_2Id, Quiz3Id, Q3_2Id, 2, now, SeedInstructorId),
+            CreateQuizQuestion(Qq3_3Id, Quiz3Id, Q3_3Id, 3, now, SeedInstructorId),
+            CreateQuizQuestion(Qq3_4Id, Quiz3Id, Q3_4Id, 4, now, SeedInstructorId),
         };
+        if (!hasQuiz1)
+        {
+            quizQuestions.InsertRange(0, new[]
+            {
+                CreateQuizQuestion(Qq1_1Id, Quiz1Id, Q1_1Id, 1, now, SeedInstructorId),
+                CreateQuizQuestion(Qq1_2Id, Quiz1Id, Q1_2Id, 2, now, SeedInstructorId),
+                CreateQuizQuestion(Qq1_3Id, Quiz1Id, Q1_3Id, 3, now, SeedInstructorId),
+                CreateQuizQuestion(Qq1_4Id, Quiz1Id, Q1_4Id, 4, now, SeedInstructorId),
+                CreateQuizQuestion(Qq1_5Id, Quiz1Id, Q1_5Id, 5, now, SeedInstructorId),
+                CreateQuizQuestion(Qq2_1Id, Quiz2Id, Q2_1Id, 1, now, SeedInstructorId),
+                CreateQuizQuestion(Qq2_2Id, Quiz2Id, Q2_2Id, 2, now, SeedInstructorId),
+                CreateQuizQuestion(Qq2_3Id, Quiz2Id, Q2_3Id, 3, now, SeedInstructorId),
+                CreateQuizQuestion(Qq2_4Id, Quiz2Id, Q2_4Id, 4, now, SeedInstructorId),
+                CreateQuizQuestion(Qq2_5Id, Quiz2Id, Q2_5Id, 5, now, SeedInstructorId),
+            });
+        }
 
         await context.QuizQuestions.AddRangeAsync(quizQuestions);
 
+        await context.SaveChangesAsync();
+    }
+
+    public static async Task SeedAssignmentsAsync(AssessmentDbContext context)
+    {
+        if (await context.Assignments.AnyAsync(a => a.Id == Assignment1Id))
+            return;
+
+        var now = DateTime.UtcNow;
+        var assignments = new List<Assignment>
+        {
+            new()
+            {
+                Id = Assignment1Id,
+                InstructorId = SeedInstructorId,
+                CourseId = SeedCourseId,
+                SectionId = Section1Id,
+                Title = "Bài tập: Giới thiệu ASP.NET Core",
+                Description = "Demo - Làm lần lượt:\n1. Cài đặt .NET SDK và kiểm tra phiên bản.\n2. Tạo project ASP.NET Core Web API mới.\n3. Chạy ứng dụng và gọi endpoint mặc định.\n4. Nộp file zip project hoặc link repository.",
+                AttachmentUrls = SerializeAttachmentUrls(
+                [
+                    ("Tài liệu .NET SDK", "https://learn.microsoft.com/dotnet/core/install"),
+                    ("ASP.NET Core docs", "https://learn.microsoft.com/aspnet/core")
+                ]),
+                RubricUrl = "https://d30z0qh7rhzgt8.cloudfront.net/courses/rubrics/Rubric-Percent-Assignment-1-Aspnet-Core.pdf",
+                SubmissionType = AssignmentSubmissionType.File,
+                GradingMode = GradingMode.AiAssisted,
+                TotalPoints = 100,
+                TimeLimitMinutes = 60,
+                CreatedAt = now,
+                CreatedBy = SeedInstructorId
+            },
+            new()
+            {
+                Id = Assignment2Id,
+                InstructorId = SeedInstructorId,
+                CourseId = SeedCourseId,
+                SectionId = Section2Id,
+                Title = "Bài tập: Dependency Injection và Middleware",
+                Description = "Demo - Làm lần lượt:\n1. Đăng ký một service với các lifetime Singleton, Scoped, Transient.\n2. Inject và sử dụng service trong controller.\n3. Viết middleware in ra thời gian xử lý request.\n4. Đăng ký middleware vào pipeline và kiểm tra.\n5. Nộp mã nguồn hoặc file mô tả.",
+                AttachmentUrls = SerializeAttachmentUrls(
+                [
+                    ("Dependency Injection", "https://learn.microsoft.com/aspnet/core/fundamentals/dependency-injection"),
+                    ("Middleware", "https://learn.microsoft.com/aspnet/core/fundamentals/middleware")
+                ]),
+                RubricUrl = "https://d30z0qh7rhzgt8.cloudfront.net/courses/rubrics/Rubric-Percent-Assignment-2-Di-Middleware.pdf",
+                SubmissionType = AssignmentSubmissionType.Both,
+                GradingMode = GradingMode.AiAssisted,
+                TotalPoints = 100,
+                TimeLimitMinutes = 90,
+                CreatedAt = now,
+                CreatedBy = SeedInstructorId
+            },
+            new()
+            {
+                Id = Assignment3Id,
+                InstructorId = SeedInstructorId,
+                CourseId = SeedCourseId,
+                SectionId = Section3Id,
+                Title = "Bài tập: Entity Framework Core",
+                Description = "Demo - Làm lần lượt:\n1. Tạo entity class và DbContext.\n2. Cấu hình connection string và đăng ký DbContext.\n3. Tạo migration đầu tiên và cập nhật database.\n4. Thêm seed data (nếu cần) và migration thứ hai.\n5. Viết truy vấn LINQ: Where, OrderBy, Include.\n6. Nộp file zip project hoặc link repository.",
+                AttachmentUrls = SerializeAttachmentUrls(
+                [
+                    ("EF Core Getting Started", "https://learn.microsoft.com/ef/core/get-started/overview/first-app"),
+                    ("Migrations", "https://learn.microsoft.com/ef/core/managing-schemas/migrations"),
+                    ("LINQ queries", "https://learn.microsoft.com/ef/core/querying/")
+                ]),
+                RubricUrl = "https://d30z0qh7rhzgt8.cloudfront.net/courses/rubrics/Rubric-Percent-Assignment-3-Ef-Core.pdf",
+                SubmissionType = AssignmentSubmissionType.File,
+                GradingMode = GradingMode.AiAssisted,
+                TotalPoints = 100,
+                TimeLimitMinutes = 120,
+                CreatedAt = now,
+                CreatedBy = SeedInstructorId
+            },
+            new()
+            {
+                Id = Assignment4Id,
+                InstructorId = SeedInstructorId,
+                CourseId = PaidCourseId,
+                SectionId = PaidSectionId,
+                Title = "Bài tập: Microservices và Docker",
+                Description = "Demo - Làm lần lượt:\n1. Vẽ sơ đồ kiến trúc microservices (3–5 service) và mô tả chức năng từng service.\n2. Mô tả cách giao tiếp giữa các service (REST/gRPC/message queue).\n3. Viết Dockerfile cho một API .NET mẫu.\n4. Build image và chạy container, chụp màn hình hoặc ghi lại lệnh.\n5. Nộp file mô tả (PDF/Word) kèm Dockerfile và ảnh.",
+                AttachmentUrls = SerializeAttachmentUrls(
+                [
+                    ("Microservices với .NET", "https://learn.microsoft.com/dotnet/architecture/microservices"),
+                    ("Docker docs", "https://docs.docker.com/get-started/"),
+                    ("Dockerfile reference", "https://docs.docker.com/engine/reference/builder/")
+                ]),
+                RubricUrl = "https://d30z0qh7rhzgt8.cloudfront.net/courses/rubrics/Rubric-Percent-Assignment-4-Microservices-Docker.pdf",
+                SubmissionType = AssignmentSubmissionType.Both,
+                GradingMode = GradingMode.AiAssisted,
+                TotalPoints = 100,
+                TimeLimitMinutes = 90,
+                CreatedAt = now,
+                CreatedBy = SeedInstructorId
+            }
+        };
+
+        await context.Assignments.AddRangeAsync(assignments);
         await context.SaveChangesAsync();
     }
 

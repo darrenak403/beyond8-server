@@ -1,4 +1,5 @@
 using Beyond8.Assessment.Domain.Entities;
+using Beyond8.Assessment.Domain.Enums;
 using Beyond8.Common.Data.Interfaces;
 
 namespace Beyond8.Assessment.Domain.Repositories.Interfaces;
@@ -12,6 +13,8 @@ public interface IQuestionRepository : IGenericRepository<Question>
         int pageNumber,
         int pageSize,
         string? tag = null,
+        string? keyword = null,
+        DifficultyLevel? difficulty = null,
         bool orderByDescending = true);
 
     Task<IReadOnlyList<(string Tag, int Count)>> GetTagCountsByInstructorAsync(Guid instructorId);

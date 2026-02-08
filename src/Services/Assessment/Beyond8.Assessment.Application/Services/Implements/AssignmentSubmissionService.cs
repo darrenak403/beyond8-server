@@ -51,6 +51,7 @@ public class AssignmentSubmissionService(
                 await publishEndpoint.Publish(new AssignmentSubmittedEvent(
                     SubmissionId: submission.Id,
                     AssignmentId: assignment.Id,
+                    SectionId: assignment.SectionId,
                     StudentId: userId,
                     AssignmentTitle: assignment.Title,
                     AssignmentDescription: assignment.Description,
@@ -99,6 +100,22 @@ public class AssignmentSubmissionService(
             submission.UpdateFromRequest(request, userId);
             await unitOfWork.AssignmentSubmissionRepository.UpdateAsync(submission.Id, submission);
             await unitOfWork.SaveChangesAsync();
+
+            var score = submission.FinalScore ?? request.FinalScore;
+            var gradedAt = submission.GradedAt ?? DateTime.UtcNow;
+            if (assignment.SectionId.HasValue)
+            {
+                await publishEndpoint.Publish(new AssignmentGradedEvent(
+                    SubmissionId: submission.Id,
+                    AssignmentId: assignment.Id,
+                    AssignmentTitle: assignment.Title,
+                    SectionId: assignment.SectionId,
+                    StudentId: submission.StudentId,
+                    Score: score,
+                    GradedAt: gradedAt,
+                    GradedBy: userId
+                ));
+            }
 
             logger.LogInformation("Submission graded successfully: {SubmissionId}", submission.Id);
             return ApiResponse<SubmissionResponse>.SuccessResponse(

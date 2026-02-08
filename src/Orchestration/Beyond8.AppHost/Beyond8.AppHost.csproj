@@ -23,6 +23,7 @@
     <ProjectReference Include="..\..\Services\Integration\Beyond8.Integration.Api\Beyond8.Integration.Api.csproj" />
     <ProjectReference Include="..\..\Services\Assessment\Beyond8.Assessment.Api\Beyond8.Assessment.Api.csproj" />
     <ProjectReference Include="..\..\Services\Learning\Beyond8.Learning.Api\Beyond8.Learning.Api.csproj" />
+    <ProjectReference Include="..\..\Services\Sale\Beyond8.Sale.Api\Beyond8.Sale.Api.csproj" />
   </ItemGroup>
 
 </Project>

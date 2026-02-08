@@ -9,6 +9,7 @@ public class EnrollmentResponse
     public Guid CourseId { get; set; }
     public string CourseTitle { get; set; } = string.Empty;
     public string? CourseThumbnailUrl { get; set; }
+    public string? Slug { get; set; } = string.Empty;
     public Guid InstructorId { get; set; }
     public string InstructorName { get; set; } = string.Empty;
     public decimal PricePaid { get; set; }

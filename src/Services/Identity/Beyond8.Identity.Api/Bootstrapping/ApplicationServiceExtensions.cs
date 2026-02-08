@@ -1,11 +1,12 @@
 using Beyond8.Common.Extensions;
 using Beyond8.Common.Utilities;
 using Beyond8.Identity.Api.Apis;
+using Beyond8.Identity.Application.Services.Interfaces;
+using Hangfire;
 using Beyond8.Identity.Application.Consumers.Catalog;
 using Beyond8.Identity.Application.Consumers.Learning;
 using Beyond8.Identity.Application.Dtos.Auth;
 using Beyond8.Identity.Application.Services.Implements;
-using Beyond8.Identity.Application.Services.Interfaces;
 using Beyond8.Identity.Domain.Entities;
 using Beyond8.Identity.Domain.Repositories.Interfaces;
 using Beyond8.Identity.Infrastructure.Data;
@@ -28,6 +29,8 @@ namespace Beyond8.Identity.Api.Bootstrapping
 
             builder.AddServiceRedis(nameof(Identity), connectionName: Const.Redis);
 
+            builder.AddHangfire(Const.HangfireDatabase);
+
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             // Configure MassTransit with RabbitMQ
@@ -37,7 +40,8 @@ namespace Beyond8.Identity.Api.Bootstrapping
                 config.AddConsumer<CoursePublishedEventConsumer>();
                 config.AddConsumer<CourseUnpublishedEventConsumer>();
                 config.AddConsumer<CourseEnrollmentCountChangedEventConsumer>();
-            });
+                config.AddConsumer<CourseRatingUpdatedEventConsumer>();
+            }, queueNamePrefix: "identity");
 
             // Register services
             builder.Services.AddScoped<PasswordHasher<User>>();
@@ -57,6 +61,10 @@ namespace Beyond8.Identity.Api.Bootstrapping
         {
             app.UseCommonService();
 
+            app.UseHangfireDashboard("/hangfire", allowAnonymousInDevelopment: false);
+
+            RegisterHangfireRecurringJobs(app);
+
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
@@ -71,6 +79,18 @@ namespace Beyond8.Identity.Api.Bootstrapping
             app.MapSubscriptionApi();
 
             return app;
+        }
+
+        private static void RegisterHangfireRecurringJobs(WebApplication app)
+        {
+            RecurringJob.AddOrUpdate<ISubscriptionService>(
+                "reset-weekly-requests",
+                x => x.ResetWeeklyRequestsAsync(),
+                Cron.Weekly(DayOfWeek.Monday, 0));
+            RecurringJob.AddOrUpdate<ISubscriptionService>(
+                "expire-subscriptions",
+                x => x.ExpireSubscriptionsAsync(),
+                Cron.Daily(0, 0));
         }
     }
 }

@@ -1,8 +1,10 @@
 using Beyond8.Catalog.Api.Apis;
 using Beyond8.Catalog.Application.Clients.Identity;
 using Beyond8.Catalog.Application.Clients.Learning;
+using Beyond8.Catalog.Application.Consumers.Assessment;
 using Beyond8.Catalog.Application.Consumers.Identity;
 using Beyond8.Catalog.Application.Consumers.Learning;
+using Beyond8.Catalog.Application.Consumers.Cache;
 using Beyond8.Catalog.Application.Dtos.Categories;
 using Beyond8.Catalog.Application.Services.Implements;
 using Beyond8.Catalog.Application.Services.Interfaces;
@@ -33,7 +35,11 @@ namespace Beyond8.Catalog.Api.Bootstrapping
                 config.AddConsumer<InstructorHiddenEventConsumer>();
                 config.AddConsumer<InstructorApprovalEventConsumer>();
                 config.AddConsumer<CourseEnrollmentCountChangedEventConsumer>();
-            });
+                config.AddConsumer<CourseRatingUpdatedEventConsumer>();
+                config.AddConsumer<CacheInvalidateEventConsumer>();
+                config.AddConsumer<AssignmentDeletedEventConsumer>();
+                config.AddConsumer<UserUpdatedEventConsumer>();
+            }, queueNamePrefix: "catalog");
 
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
