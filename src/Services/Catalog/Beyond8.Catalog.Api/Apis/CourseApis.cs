@@ -1,5 +1,6 @@
 using Beyond8.Catalog.Application.Clients.Identity;
 using Beyond8.Catalog.Application.Dtos.Courses;
+using Beyond8.Catalog.Application.Dtos.Lessons;
 using Beyond8.Catalog.Application.Services.Interfaces;
 using Beyond8.Common.Extensions;
 using Beyond8.Common.Security;
@@ -193,7 +194,22 @@ public static class CourseApis
             .Produces<ApiResponse<List<CourseResponse>>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
+        group.MapGet("/{courseId:guid}/videos/preview", GetCourseVideosPreviewAsync)
+            .WithName("GetCourseVideosPreview")
+            .WithDescription("Lấy danh sách video preview của khóa học")
+            .Produces<ApiResponse<List<LessonVideoResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<List<LessonVideoResponse>>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
         return group;
+    }
+
+    private static async Task<IResult> GetCourseVideosPreviewAsync(
+        [FromRoute] Guid courseId,
+        [FromServices] ICourseService courseService)
+    {
+        var result = await courseService.GetCourseVideosPreviewAsync(courseId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
     private static async Task<IResult> PublishBulkCoursesAsync(
