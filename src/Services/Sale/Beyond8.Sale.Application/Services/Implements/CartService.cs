@@ -289,14 +289,6 @@ public class CartService(
         }
     }
 
-    /// <summary>
-    /// Check which courses are in cart.
-    /// Performance optimized: Uses WHERE IN query, only checks specified courseIds.
-    /// Workflow:
-    /// 1. Query cart items where courseId IN (provided list)
-    /// 2. Build dictionary: courseId → true (in cart)
-    /// 3. For courseIds not in cart → courseId → false
-    /// </summary>
     public async Task<ApiResponse<Dictionary<Guid, bool>>> CheckCoursesInCartAsync(Guid userId, List<Guid> courseIds)
     {
         try
@@ -306,8 +298,6 @@ public class CartService(
                     new Dictionary<Guid, bool>(),
                     "Danh sách khóa học rỗng");
 
-            // Efficient query: Only fetch cart items matching provided courseIds
-            // Uses WHERE CourseId IN (...) - O(n) database query instead of loading entire cart
             var cartCourseIds = await unitOfWork.CartItemRepository.AsQueryable()
                 .Where(ci => ci.Cart.UserId == userId && courseIds.Contains(ci.CourseId))
                 .Select(ci => ci.CourseId)
