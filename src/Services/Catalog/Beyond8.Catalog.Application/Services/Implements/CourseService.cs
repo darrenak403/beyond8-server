@@ -1,7 +1,9 @@
 using Beyond8.Catalog.Application.Clients.Identity;
 using Beyond8.Catalog.Application.Dtos.Courses;
+using Beyond8.Catalog.Application.Dtos.Lessons;
 using Beyond8.Catalog.Application.Dtos.Users;
 using Beyond8.Catalog.Application.Mappings.CourseMappings;
+using Beyond8.Catalog.Application.Mappings.LessonMappings;
 using Beyond8.Catalog.Application.Services.Interfaces;
 using Beyond8.Catalog.Domain.Entities;
 using Beyond8.Catalog.Domain.Enums;
@@ -780,6 +782,40 @@ public class CourseService(
         {
             logger.LogError(ex, "Error getting course summary: {CourseId}", courseId);
             return ApiResponse<CourseSummaryResponse>.FailureResponse("Đã xảy ra lỗi khi lấy tóm tắt khóa học.");
+        }
+    }
+
+    public async Task<ApiResponse<List<LessonVideoResponse>>> GetCourseVideosPreviewAsync(Guid courseId)
+    {
+        try
+        {
+            var course = await unitOfWork.CourseRepository
+                .AsQueryable()
+                .Include(c => c.Sections.Where(s => s.IsPublished).OrderBy(s => s.OrderIndex))
+                    .ThenInclude(s => s.Lessons.Where(l => l.IsPublished && l.Type == LessonType.Video && l.IsPreview).OrderBy(l => l.OrderIndex))
+                        .ThenInclude(l => l.Video)
+                .FirstOrDefaultAsync(c => c.Id == courseId && c.IsActive && c.Status == CourseStatus.Published);
+
+            if (course == null)
+            {
+                logger.LogWarning("Course not found or not published: {CourseId}", courseId);
+                return ApiResponse<List<LessonVideoResponse>>.FailureResponse("Khóa học không tồn tại hoặc chưa được xuất bản.");
+            }
+
+            var videos = course.Sections
+                .SelectMany(s => s.Lessons)
+                .Where(l => l.Video != null)
+                .Select(l => l.Video!.ToVideoResponse())
+                .ToList();
+
+            return ApiResponse<List<LessonVideoResponse>>.SuccessResponse(
+                videos,
+                "Lấy danh sách video preview thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting course videos preview: {CourseId}", courseId);
+            return ApiResponse<List<LessonVideoResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách video preview.");
         }
     }
 

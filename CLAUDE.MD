@@ -35,11 +35,31 @@ beyond8-server/
 │   │   │   ├── Beyond8.Integration.Application/
 │   │   │   ├── Beyond8.Integration.Domain/
 │   │   │   └── Beyond8.Integration.Infrastructure/
-│   │   └── Catalog/                      # Course catalog management
-│   │       ├── Beyond8.Catalog.Api/
-│   │       ├── Beyond8.Catalog.Application/
-│   │       ├── Beyond8.Catalog.Domain/
-│   │       └── Beyond8.Catalog.Infrastructure/
+│   │   ├── Catalog/                      # Course catalog management
+│   │   │   ├── Beyond8.Catalog.Api/
+│   │   │   ├── Beyond8.Catalog.Application/
+│   │   │   ├── Beyond8.Catalog.Domain/
+│   │   │   └── Beyond8.Catalog.Infrastructure/
+│   │   ├── Assessment/                   # Quiz & assignment management
+│   │   │   ├── Beyond8.Assessment.Api/
+│   │   │   ├── Beyond8.Assessment.Application/
+│   │   │   ├── Beyond8.Assessment.Domain/
+│   │   │   └── Beyond8.Assessment.Infrastructure/
+│   │   ├── Learning/                     # Enrollment, progress & certificates
+│   │   │   ├── Beyond8.Learning.Api/
+│   │   │   ├── Beyond8.Learning.Application/
+│   │   │   ├── Beyond8.Learning.Domain/
+│   │   │   └── Beyond8.Learning.Infrastructure/
+│   │   ├── Sale/                         # Orders, payments, coupons & wallets
+│   │   │   ├── Beyond8.Sale.Api/
+│   │   │   ├── Beyond8.Sale.Application/
+│   │   │   ├── Beyond8.Sale.Domain/
+│   │   │   └── Beyond8.Sale.Infrastructure/
+│   │   └── Analytic/                     # Analytics & reporting (stub)
+│   │       ├── Beyond8.Analytic.Api/
+│   │       ├── Beyond8.Analytic.Application/
+│   │       ├── Beyond8.Analytic.Domain/
+│   │       └── Beyond8.Analytic.Infrastructure/
 ├── shared/
 │   ├── Beyond8.Common/                   # Common utilities and shared code
 │   └── Beyond8.DatabaseMigrationHelpers/ # Database migration helpers
@@ -332,329 +352,6 @@ All API endpoints use rate limiting:
 - Configure relationships in `OnModelCreating`
 - Use migrations for schema changes
 
-## Services
-
-### Identity Service
-
-Handles authentication, user management, instructor profiles, and subscriptions:
-
-#### Authentication Features
-
-- User registration with OTP verification
-- Login with JWT token generation
-- Password management (reset, change, forgot password)
-- Refresh token implementation
-
-#### User Management Features
-
-- User profile management (CRUD operations)
-- User status management (Active, Inactive, Banned)
-- Avatar and cover image management
-- Admin user management
-
-#### Instructor Management Features
-
-- Instructor profile creation and verification workflow
-- Profile submission for approval
-- Admin approval/rejection of instructor applications
-- Instructor verification status tracking (Pending, Approved, Rejected, Hidden)
-
-#### Subscription Features
-
-- Subscription plan management
-- User subscription tracking
-- AI usage quota management
-
-#### API Endpoints
-
-**Auth Endpoints** (`/api/v1/auth`):
-
-- `POST /register` - Register new user
-- `POST /verify-otp` - Verify OTP for registration
-- `POST /resend-otp` - Resend OTP
-- `POST /login` - User login
-- `POST /refresh-token` - Refresh JWT token
-- `POST /forgot-password` - Request password reset
-- `POST /verify-forgot-password-otp` - Verify forgot password OTP
-- `POST /reset-password` - Reset password
-- `POST /change-password` - Change password (authenticated)
-
-**User Endpoints** (`/api/v1/users`):
-
-- `GET /me` - Get current user profile
-- `PATCH /me` - Update current user profile
-- `GET /` - Get all users (Admin only, paginated)
-- `GET /{id}` - Get user by ID
-- `POST /` - Create user (Admin only)
-- `PATCH /{id}` - Update user (Admin only)
-
-**Instructor Endpoints** (`/api/v1/instructors`):
-
-- `GET /check` - Check instructor application status
-- `POST /apply` - Apply to become instructor
-- `GET /profile` - Get own instructor profile
-- `PATCH /profile` - Update instructor profile
-- `POST /profile/submit` - Submit profile for approval
-- `GET /admin/pending` - Get pending applications (Admin/Staff)
-- `GET /admin/all` - Get all instructor profiles (Admin/Staff)
-- `POST /admin/{id}/approve` - Approve instructor (Admin/Staff)
-- `POST /admin/{id}/reject` - Reject instructor (Admin/Staff)
-- `POST /admin/{id}/hide` - Hide instructor (Admin/Staff)
-
-**Subscription Endpoints** (`/api/v1/subscriptions`):
-
-- `GET /my-subscription` - Get current user's subscription
-- `GET /plans` - Get all subscription plans
-
-### Integration Service
-
-Handles media file uploads, storage management using AWS S3, AI integration, notifications, email, and eKYC:
-
-#### Media File Management Features
-
-- **Presigned URL Generation**: Generate secure upload URLs for client-side file uploads
-- **File Upload Workflow**:
-  1. Client requests presigned URL with file metadata
-  2. Client uploads file directly to S3 using presigned URL
-  3. Client confirms upload completion
-  4. System verifies file exists in S3 and updates database
-- **File Management**: Get, list, and delete user files
-- **Folder Organization**: Organize files by type (avatars, certificates, identity cards)
-- **File Status Tracking**: Track upload status (Pending, Uploaded, Failed, Deleted)
-
-#### AI Integration Features
-
-- **AI Usage Tracking**: Track AI API calls (tokens, costs, providers)
-- **AI Prompt Management**: Store and manage reusable AI prompts
-- **Gemini Integration**: Integration with Google's Gemini AI service
-- **Quiz Generation**: AI-powered quiz generation from course content
-- **Document Embedding**: Vector embeddings for course documents (RAG support)
-- **Profile Review**: AI-assisted instructor profile review
-- **Usage Analytics**: Statistics and reports on AI usage per user or system-wide
-
-#### Notification Features
-
-- **Push Notifications**: Firebase Cloud Messaging (FCM) integration
-- **Notification History**: Track and retrieve user notifications
-- **Read/Unread Status**: Mark notifications as read
-
-#### Email Features
-
-- **Transactional Emails**: Send OTP, approval, and notification emails
-- **Email Templates**: Pre-defined templates for different email types
-- **Event-Driven**: Triggered via MassTransit consumers
-
-#### VNPT eKYC Features
-
-- **ID Card OCR**: Extract information from Vietnamese ID cards
-- **ID Classification**: Classify ID card types
-- **Liveness Detection**: Verify user is a real person
-
-#### API Endpoints
-
-**Media File Endpoints** (`/api/v1/media`):
-All endpoints require authentication.
-
-**Upload Endpoints** (POST with presigned URL generation):
-
-- `/avatar/presigned-url` - Upload user avatar (max 5MB, images only)
-- `/certificate/presigned-url` - Upload instructor certificates (max 10MB, PDF/images)
-- `/identity-card/front/presigned-url` - Upload front side of ID card (max 10MB, PDF/images)
-- `/identity-card/back/presigned-url` - Upload back side of ID card (max 10MB, PDF/images)
-
-**File Management**:
-
-- `POST /confirm` - Confirm file upload completion
-- `GET /{fileId}` - Get file information by ID
-- `GET /folder/{folder}` - Get all user files in a specific folder
-- `DELETE /{fileId}` - Delete a file (soft delete)
-
-**AI Usage Endpoints** (`/api/v1/ai-usage`):
-All endpoints require authentication. Admin-only endpoints require "Admin" role.
-
-- `GET /my-usage` - Get current user's AI usage history (paginated)
-- `GET /all` - Get all AI usage records (Admin only, paginated)
-- `GET /user/{userId}` - Get specific user's AI usage history (Admin only, paginated)
-- `GET /statistics` - Get overall AI usage statistics (Admin only)
-- `GET /by-date-range?startDate={date}&endDate={date}&pageNumber={n}&pageSize={n}` - Get AI usage within date range (Admin only, paginated)
-
-**AI Endpoints** (`/api/v1/ai`):
-
-- `POST /generate-quiz` - Generate quiz from content
-- `POST /embed-documents` - Create vector embeddings for documents
-- `POST /review-profile` - AI-assisted profile review
-
-**AI Prompt Endpoints** (`/api/v1/ai-prompts`):
-
-- `GET /` - Get all prompts
-- `GET /{id}` - Get prompt by ID
-- `POST /` - Create new prompt (Admin)
-- `PATCH /{id}` - Update prompt (Admin)
-- `DELETE /{id}` - Delete prompt (Admin)
-
-**Notification Endpoints** (`/api/v1/notifications`):
-
-- `GET /` - Get user notifications (paginated)
-- `GET /status` - Get notification status (unread count)
-- `POST /{id}/read` - Mark notification as read
-- `POST /read-all` - Mark all notifications as read
-
-**VNPT eKYC Endpoints** (`/api/v1/ekyc`):
-
-- `POST /classify` - Classify ID card type
-- `POST /ocr/front` - OCR front side of ID card
-- `POST /ocr/back` - OCR back side of ID card
-- `POST /liveness` - Liveness detection
-
-#### Storage Configuration
-
-- **Provider**: AWS S3
-- **File Key Format**: `{folder}/{userId}/{filename}` or `{folder}/{userId}/{subFolder}/{filename}`
-- **Presigned URL Expiration**: 15 minutes
-- **File Validation**: Type-specific validators for avatars and documents
-
-#### Validation Rules
-
-**Avatar Upload**:
-
-- Allowed formats: JPEG, JPG, PNG, WebP
-- Max size: 5MB
-
-**Document Upload** (Certificates, ID Cards):
-
-- Allowed formats: PDF, JPEG, JPG, PNG
-- Max size: 10MB
-
-#### Usage Flow
-
-```csharp
-// 1. Request presigned URL
-POST /api/v1/media/avatar/presigned-url
-{
-    "fileName": "avatar.jpg",
-    "contentType": "image/jpeg",
-    "size": 1024000
-}
-
-// Response includes presigned URL and fileId
-{
-    "isSuccess": true,
-    "data": {
-        "fileId": "guid",
-        "presignedUrl": "https://s3.amazonaws.com/...",
-        "expiresAt": "2026-01-19T10:15:00Z"
-    }
-}
-
-// 2. Upload file to S3 using presigned URL (client-side)
-PUT {presignedUrl}
-Body: [file binary data]
-
-// 3. Confirm upload
-POST /api/v1/media/confirm
-{
-    "fileId": "guid"
-}
-```
-
-### Catalog Service
-
-Handles course management, categories, sections, and lessons for the e-learning platform:
-
-#### Category Features
-
-- **Hierarchical Categories**: Support for parent-child category relationships
-- **Category Tree**: Get full category tree structure
-- **Status Management**: Enable/disable categories
-
-#### Course Features
-
-- **Course Creation**: Instructors can create courses with metadata
-- **Course Status Workflow**: Draft → PendingApproval → Approved → Published
-- **Course Approval**: Admin/Staff can approve or reject courses
-- **Instructor Verification**: Courses require verified instructor status
-- **Course Statistics**: Track students, lessons, ratings, and reviews
-- **JSONB Fields**: Outcomes, requirements, target audience stored as JSON
-
-#### Section Features
-
-- **Section Management**: CRUD operations for course sections
-- **Section Ordering**: Reorder sections within a course
-- **Ownership Validation**: Only course owner can modify sections
-
-#### Lesson Features
-
-- **Lesson Management**: CRUD operations for lessons within sections
-- **Lesson Types**: Support for different lesson types (Video, Text, Quiz)
-- **Lesson Ordering**: Reorder lessons within a section
-- **Video Processing**: HLS callback for video lessons
-- **Lesson Documents**: Attach documents to lessons
-
-#### API Endpoints
-
-**Category Endpoints** (`/api/v1/categories`):
-
-- `GET /tree` - Get category tree (public)
-- `GET /` - Get all categories (public, paginated)
-- `GET /{id}` - Get category by ID (public)
-- `GET /parent/{parentId}` - Get child categories (public)
-- `POST /` - Create category (Admin/Staff)
-- `PUT /{id}` - Update category (Admin/Staff)
-- `DELETE /{id}` - Delete category (Admin/Staff)
-- `PATCH /{id}/toggle-status` - Toggle category status (Admin/Staff)
-
-**Course Endpoints** (`/api/v1/courses`):
-
-- `GET /` - Get all published courses (public, paginated with search)
-- `GET /{id}` - Get course by ID (Instructor)
-- `POST /` - Create course (Instructor, verified only)
-- `DELETE /{id}` - Delete course (Instructor, owner only)
-- `GET /instructor` - Get instructor's courses (Instructor)
-- `GET /instructor/stats` - Get instructor's course statistics
-- `POST /{id}/submit-approval` - Submit for approval (Instructor)
-- `PATCH /{id}/metadata` - Update course metadata (Instructor)
-- `GET /admin` - Get all courses for admin (Admin/Staff)
-- `POST /{id}/approve` - Approve course (Admin/Staff)
-- `POST /{id}/reject` - Reject course (Admin/Staff)
-- `POST /{id}/publish` - Publish approved course (Instructor)
-- `POST /{id}/unpublish` - Unpublish course (Instructor)
-
-**Section Endpoints** (`/api/v1/sections`):
-
-- `GET /course/{courseId}` - Get sections by course (Instructor)
-- `GET /{id}` - Get section by ID (Instructor)
-- `POST /` - Create section (Instructor)
-- `PATCH /{id}` - Update section (Instructor)
-- `DELETE /{id}` - Delete section (Instructor)
-- `POST /reorder` - Reorder sections (Instructor)
-
-**Lesson Endpoints** (`/api/v1/lessons`):
-
-- `GET /section/{sectionId}` - Get lessons by section (Instructor)
-- `GET /{id}` - Get lesson by ID (Instructor)
-- `POST /` - Create lesson (Instructor)
-- `PATCH /{id}` - Update lesson (Instructor)
-- `DELETE /{id}` - Delete lesson (Instructor)
-- `POST /reorder` - Reorder lessons (Instructor)
-- `POST /video/callback` - HLS video callback (internal)
-
-#### Course Status Workflow
-
-```
-Draft → PendingApproval → Approved → Published
-                       ↘ Rejected → Draft (can resubmit)
-Published → Unpublished (Hidden) → Published
-```
-
-#### Domain Entities
-
-- **Category**: Hierarchical course categories
-- **Course**: Main course entity with metadata and statistics
-- **Section**: Course sections (chapters)
-- **Lesson**: Individual lessons within sections
-- **CourseDocument**: Attached documents for courses
-- **LessonDocument**: Attached documents for lessons
-
 ## Event-Driven Architecture
 
 ### MassTransit with RabbitMQ
@@ -673,17 +370,47 @@ builder.AddMassTransitWithRabbitMq(x =>
 
 **Event Types** (defined in `Beyond8.Common.Events`):
 
+_Identity Events:_
+
 - `OtpEmailEvent` - Trigger OTP email sending
 - `InstructorProfileSubmittedEvent` - Instructor submits profile for review
 - `InstructorApprovalEvent` - Instructor profile approved
 - `InstructorHiddenEvent` - Instructor profile hidden
 - `InstructorUpdateRequestEvent` - Instructor requests profile update
 
+_Assessment Events:_
+
+- `AssignmentSubmittedEvent` - Student submits assignment
+- `AssignmentGradedEvent` - Assignment manually graded
+- `AssignmentDeletedEvent` - Assignment deleted
+- `QuizAttemptCompletedEvent` - Student completes quiz attempt
+- `AiAssignmentGradedEvent` - AI grading initiated
+- `AiGradingCompletedEvent` - AI grading completed
+
+_Learning Events:_
+
+- `CourseEnrollmentCountChangedEvent` - Enrollment count updates
+- `CourseCompletedEvent` - Student completes course
+- `CourseRatingUpdatedEvent` - Course rating/review updated
+- `FreeEnrollmentOrderRequestEvent` - Free course enrollment request
+
+_Sale Events:_
+
+- `OrderCompletedEvent` - Order finalized and paid (triggers enrollment)
+
+_Catalog Events:_
+
+- `LessonQuizUnlinkedEvent` - Quiz unlinked from lesson
+- `CacheInvalidateEvent` - Cache invalidation signaling
+
 **Consumers:**
 
-- Identity Service publishes events
-- Integration Service consumes events (emails, notifications)
-- Catalog Service consumes instructor status events
+- Identity Service publishes auth/instructor events
+- Integration Service consumes events (emails, notifications, AI grading)
+- Catalog Service consumes instructor status events, publishes lesson events
+- Assessment Service consumes lesson/AI grading events
+- Learning Service publishes enrollment/progress events
+- Sale Service publishes order events, consumes enrollment requests
 
 **Retry Policy:**
 
@@ -695,8 +422,20 @@ builder.AddMassTransitWithRabbitMq(x =>
 
 Services communicate via:
 
-1. **HTTP Clients**: For synchronous requests (e.g., `IIdentityClient`)
-2. **MassTransit Events**: For asynchronous operations (emails, notifications)
+1. **HTTP Clients**: For synchronous requests (with Polly resilience policies)
+2. **MassTransit Events**: For asynchronous operations (emails, notifications, enrollment triggers)
+
+**HTTP Client Dependencies:**
+
+| Service    | Calls To | Client Interface  | Purpose                       |
+| ---------- | -------- | ----------------- | ----------------------------- |
+| Assessment | Learning | `ILearningClient` | Verify student enrollment     |
+| Assessment | Catalog  | `ICatalogService` | Get course/lesson context     |
+| Learning   | Catalog  | `ICatalogClient`  | Get course information        |
+| Learning   | Identity | `IIdentityClient` | Get user information          |
+| Sale       | Catalog  | `ICatalogClient`  | Get course pricing/details    |
+| Catalog    | Learning | `ILearningClient` | Check enrollment status       |
+| Catalog    | Identity | `IIdentityClient` | Check instructor verification |
 
 **HTTP Client Pattern:**
 
@@ -708,13 +447,26 @@ public interface IIdentityClient : IBaseClient
 }
 ```
 
+All HTTP clients use **Polly resilience policies** with exponential backoff retry and circuit breaker patterns.
+
 ## Database
 
-- **Type**: PostgreSQL
+- **Type**: PostgreSQL (database-per-service pattern)
 - **Connection Strings**: Stored in appsettings.json
 - **Migrations**: Applied on startup in Development environment
 - **Context Factory**: Used for creating contexts in migrations
-- **Each Service**: Has its own database (database-per-service pattern)
+
+**DbContexts:**
+
+| Service     | DbContext              |
+| ----------- | ---------------------- |
+| Identity    | `IdentityDbContext`    |
+| Integration | `IntegrationDbContext` |
+| Catalog     | `CatalogDbContext`     |
+| Assessment  | `AssessmentDbContext`  |
+| Learning    | `LearningDbContext`    |
+| Sale        | `SaleDbContext`        |
+| Analytic    | `AnalyticDbContext`    |
 
 ## Common Shared Projects
 
@@ -738,9 +490,8 @@ Connection string constants defined in `Const` class (e.g., `Const.IdentityServi
 ## Git Workflow
 
 - **Main Branch**: `main`
-- **Current Branch**: `agitated-pike`
-- **Worktree Path**: `C:\Users\hoade\.claude-worktrees\beyond8-server\agitated-pike`
 - **Main Repository**: `D:\Spring-2026\SWD392\Beyond8\beyond8-server`
+- **Worktrees**: Feature branches use git worktrees under `C:\Users\hoade\.claude-worktrees\beyond8-server\`
 
 ## Development Guidelines
 
