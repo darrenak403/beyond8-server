@@ -56,10 +56,10 @@ public class CartService(
                 CartId = cart.Id,
                 CourseId = course.Id,
                 CourseTitle = course.Title,
-                CourseThumbnail = course.Thumbnail,
+                CourseThumbnail = course.ThumbnailUrl,
                 InstructorId = course.InstructorId,
                 InstructorName = course.InstructorName,
-                OriginalPrice = course.OriginalPrice
+                OriginalPrice = course.Price
             };
 
             cart.CartItems.Add(cartItem);

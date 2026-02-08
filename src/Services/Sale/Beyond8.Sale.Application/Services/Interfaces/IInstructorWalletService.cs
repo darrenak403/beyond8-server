@@ -6,7 +6,11 @@ namespace Beyond8.Sale.Application.Services.Interfaces;
 
 public interface IInstructorWalletService
 {
+    // ── Instructor ──
     Task<ApiResponse<InstructorWalletResponse>> GetWalletByInstructorAsync(Guid instructorId);
+    Task<ApiResponse<List<WalletTransactionResponse>>> GetWalletTransactionsAsync(Guid instructorId, PaginationRequest pagination);
+
+    // ── Internal (called by PaymentService / PayoutService / Event consumers) ──
 
     /// <summary>
     /// Credit instructor earnings immediately after payment success (no escrow)
@@ -17,8 +21,6 @@ public interface IInstructorWalletService
     /// Deduct funds for payout processing
     /// </summary>
     Task<ApiResponse<bool>> DeductForPayoutAsync(Guid instructorId, decimal amount, Guid payoutId, string description);
-
-    Task<ApiResponse<List<WalletTransactionResponse>>> GetWalletTransactionsAsync(Guid instructorId, PaginationRequest pagination);
 
     /// <summary>
     /// Create wallet when instructor is approved (consumed from Identity event)

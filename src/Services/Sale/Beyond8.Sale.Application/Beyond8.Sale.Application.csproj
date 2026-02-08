@@ -17,7 +17,7 @@
     <Folder Include="Dtos\" />
     <Folder Include="Dtos\Courses\" />
     <Folder Include="Dtos\OrderItems\" />
-    <Folder Include="Helpers\" />
+    <Folder Include="Dtos\VNPays\" />
     <Folder Include="Mappings\" />
     <Folder Include="Services\" />
     <Folder Include="Services\Implements\" />

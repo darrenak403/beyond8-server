@@ -13,6 +13,7 @@ using Beyond8.Sale.Domain.Repositories.Interfaces;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using static Beyond8.Sale.Application.Mappings.Orders.OrderMappings;
 
 namespace Beyond8.Sale.Application.Services.Implements;
 
@@ -88,27 +89,7 @@ public class OrderService(
 
         return ApiResponse<OrderResponse>.SuccessResponse(order.ToResponse(), "Cập nhật trạng thái thành công");
     }
-
-    public async Task<ApiResponse<bool>> CancelOrderAsync(Guid orderId)
-    {
-        var order = await unitOfWork.OrderRepository.AsQueryable()
-            .FirstOrDefaultAsync(o => o.Id == orderId);
-        if (order == null)
-            return ApiResponse<bool>.FailureResponse("Đơn hàng không tồn tại");
-
-        if (order.Status != OrderStatus.Pending)
-            return ApiResponse<bool>.FailureResponse("Chỉ hủy đơn hàng đang chờ xử lý");
-
-        order.Status = OrderStatus.Cancelled;
-        order.UpdatedAt = DateTime.UtcNow;
-
-        await unitOfWork.SaveChangesAsync();
-
-        logger.LogInformation("Order cancelled: {OrderId}", orderId);
-
-        return ApiResponse<bool>.SuccessResponse(true, "Đơn hàng đã được hủy");
-    }
-
+    
     public async Task<ApiResponse<List<OrderResponse>>> GetOrdersByUserAsync(PaginationRequest pagination, Guid userId)
     {
         var orders = await unitOfWork.OrderRepository.GetPagedAsync(
@@ -154,73 +135,14 @@ public class OrderService(
             responses, orders.TotalCount, pagination.PageNumber, pagination.PageSize, "Lấy danh sách đơn hàng theo trạng thái thành công");
     }
 
-    public async Task<ApiResponse<OrderStatisticsResponse>> GetOrderStatisticsAsync(Guid? instructorId = null)
-    {
-        // Use database-level aggregation instead of loading all orders into memory
-        var query = unitOfWork.OrderRepository.AsQueryable()
-            .Include(o => o.OrderItems)
-            .AsNoTracking();
-
-        if (instructorId.HasValue)
-            query = query.Where(o => o.OrderItems.Any(oi => oi.InstructorId == instructorId));
-
-        var totalOrders = await query.CountAsync();
-        var completedOrders = await query.CountAsync(o => o.Status == OrderStatus.Paid);
-        var pendingOrders = await query.CountAsync(o => o.Status == OrderStatus.Pending);
-        var cancelledOrders = await query.CountAsync(o => o.Status == OrderStatus.Cancelled);
-
-        var paidOrders = query.Where(o => o.Status == OrderStatus.Paid);
-
-        var totalRevenue = await paidOrders.SumAsync(o => o.TotalAmount);
-
-        decimal totalPlatformFees = 0;
-        decimal totalInstructorEarnings = 0;
-
-        if (instructorId.HasValue)
-        {
-            totalPlatformFees = await paidOrders
-                .SelectMany(o => o.OrderItems)
-                .Where(oi => oi.InstructorId == instructorId)
-                .SumAsync(oi => oi.PlatformFeeAmount);
-
-            totalInstructorEarnings = await paidOrders
-                .SelectMany(o => o.OrderItems)
-                .Where(oi => oi.InstructorId == instructorId)
-                .SumAsync(oi => oi.InstructorEarnings);
-        }
-        else
-        {
-            totalPlatformFees = await paidOrders
-                .SelectMany(o => o.OrderItems)
-                .SumAsync(oi => oi.PlatformFeeAmount);
-
-            totalInstructorEarnings = await paidOrders
-                .SelectMany(o => o.OrderItems)
-                .SumAsync(oi => oi.InstructorEarnings);
-        }
-
-        var stats = new OrderStatisticsResponse
-        {
-            TotalOrders = totalOrders,
-            CompletedOrders = completedOrders,
-            PendingOrders = pendingOrders,
-            CancelledOrders = cancelledOrders,
-            TotalRevenue = totalRevenue,
-            TotalPlatformFees = totalPlatformFees,
-            TotalInstructorEarnings = totalInstructorEarnings,
-            AverageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0,
-            InstructorId = instructorId
-        };
-
-        return ApiResponse<OrderStatisticsResponse>.SuccessResponse(stats, "Lấy thống kê đơn hàng thành công");
-    }
-
     // Helper methods
-    private async Task<(bool IsValid, string? ErrorMessage, decimal SubTotal, decimal DiscountAmount, decimal TotalAmount, Guid? CouponId, List<OrderMappings.OrderItemSnapshot> Items)> CalculateOrderTotalsAsync(List<OrderItemRequest> items, string? couponCode)
+    private async Task<(bool IsValid, string? ErrorMessage, decimal SubTotal, decimal DiscountAmount, decimal TotalAmount, Guid? CouponId, List<OrderItemSnapshot> Items)> CalculateOrderTotalsAsync(List<OrderItemRequest> items, string? systemCouponCode)
     {
-        var orderItems = new List<OrderMappings.OrderItemSnapshot>();
+        var orderItems = new List<OrderItemSnapshot>();
         decimal subTotal = 0;
+        decimal totalInstructorDiscount = 0;
 
+        // ── Phase 1: Calculate base prices and apply instructor coupons per item ──
         foreach (var item in items)
         {
             var courseResult = await catalogClient.GetCourseByIdAsync(item.CourseId);
@@ -231,34 +153,63 @@ public class OrderService(
                 return (false, "Dữ liệu khóa học không hợp lệ", 0, 0, 0, null, orderItems);
 
             var course = courseResult.Data;
-            var unitPrice = course.OriginalPrice;
-            if (unitPrice != course.OriginalPrice)
-                return (false, $"Giá khóa học không hợp lệ (giá yêu cầu: {unitPrice}, giá thực tế: {course.OriginalPrice})", 0, 0, 0, null, orderItems);
+            var unitPrice = course.Price;
+            var itemSubTotal = unitPrice; // Base price before any discounts
 
-            // Per BR-19: No instructor discount for now
-            var discountPercent = 0m;
-            var pricing = OrderMappings.CalculateOrderItemPricing(unitPrice);
-            orderItems.Add(course.ToOrderItemSnapshot(unitPrice, discountPercent, pricing));
+            // ── Apply instructor coupon for this specific item ──
+            decimal itemInstructorDiscount = 0;
+            if (!string.IsNullOrEmpty(item.InstructorCouponCode))
+            {
+                var instructorCouponResult = await couponService.ValidateAndApplyCouponAsync(
+                    item.InstructorCouponCode, itemSubTotal, new List<Guid> { item.CourseId });
+
+                if (!instructorCouponResult.IsSuccess)
+                    return (false, instructorCouponResult.Message ?? $"Lỗi xác thực coupon instructor cho khóa học {course.Title}", 0, 0, 0, null, orderItems);
+
+                var (isValidInstructorCoupon, instructorCouponError, instructorDiscount, _) = instructorCouponResult.Data;
+                if (!isValidInstructorCoupon)
+                    return (false, instructorCouponError, 0, 0, 0, null, orderItems);
+
+                itemInstructorDiscount = instructorDiscount;
+                totalInstructorDiscount += itemInstructorDiscount;
+
+                logger.LogInformation("Applied instructor coupon {CouponCode} for course {CourseId}: discount {Discount}",
+                    item.InstructorCouponCode, item.CourseId, itemInstructorDiscount);
+            }
+
+            // Calculate final price after instructor discount
+            var finalPrice = itemSubTotal - itemInstructorDiscount;
+            var pricing = CalculateOrderItemPricing(finalPrice);
+            orderItems.Add(course.ToOrderItemSnapshot(unitPrice, 0, pricing)); // Store original price, discount handled at order level
             subTotal += pricing.LineTotal;
         }
 
-        decimal discountAmount = 0;
-        Guid? couponId = null;
-        if (!string.IsNullOrEmpty(couponCode))
+        // ── Phase 2: Apply system coupon to the entire order ──
+        decimal systemDiscount = 0;
+        Guid? systemCouponId = null;
+        if (!string.IsNullOrEmpty(systemCouponCode))
         {
-            var couponResult = await couponService.ValidateAndApplyCouponAsync(couponCode, subTotal, items.Select(i => i.CourseId).ToList());
-            if (!couponResult.IsSuccess)
-                return (false, couponResult.Message ?? "Lỗi xác thực coupon", 0, 0, 0, null, orderItems);
+            var systemCouponResult = await couponService.ValidateAndApplyCouponAsync(
+                systemCouponCode, subTotal, items.Select(i => i.CourseId).ToList());
 
-            var (isValidCoupon, couponErrorMsg, couponDiscount, couponId_) = couponResult.Data;
-            if (!isValidCoupon)
-                return (false, couponErrorMsg, 0, 0, 0, null, orderItems);
+            if (!systemCouponResult.IsSuccess)
+                return (false, systemCouponResult.Message ?? "Lỗi xác thực coupon hệ thống", 0, 0, 0, null, orderItems);
 
-            discountAmount = couponDiscount;
-            couponId = couponId_;
+            var (isValidSystemCoupon, systemCouponError, systemDiscountAmount, systemCouponId_) = systemCouponResult.Data;
+            if (!isValidSystemCoupon)
+                return (false, systemCouponError, 0, 0, 0, null, orderItems);
+
+            systemDiscount = systemDiscountAmount;
+            systemCouponId = systemCouponId_;
+
+            logger.LogInformation("Applied system coupon {CouponCode}: discount {Discount}", systemCouponCode, systemDiscount);
         }
-        var totalAmount = Math.Max(0, subTotal - discountAmount);
-        return (true, null, subTotal, discountAmount, totalAmount, couponId, orderItems);
+
+        // ── Phase 3: Calculate final totals ──
+        var totalDiscount = totalInstructorDiscount + systemDiscount;
+        var totalAmount = Math.Max(0, subTotal - systemDiscount); // System discount applied to subtotal
+
+        return (true, null, subTotal, totalDiscount, totalAmount, systemCouponId, orderItems);
     }
 
     private string GenerateOrderNumber()

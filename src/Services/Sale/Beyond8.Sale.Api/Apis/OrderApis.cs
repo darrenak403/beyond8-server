@@ -51,15 +51,6 @@ public static class OrderApis
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden);
 
-        group.MapPost("/{orderId}/cancel", CancelOrderAsync)
-            .WithName("CancelOrder")
-            .WithDescription("Hủy đơn hàng (Order owner or Admin)")
-            .RequireAuthorization()
-            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status403Forbidden);
-
         // Instructor Operations
         group.MapGet("/instructor/{instructorId}", GetOrdersByInstructorAsync)
             .WithName("GetOrdersByInstructor")
@@ -84,14 +75,6 @@ public static class OrderApis
             .RequireAuthorization(x => x.RequireRole(Role.Admin))
             .Produces<ApiResponse<OrderResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<OrderResponse>>(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status403Forbidden);
-
-        group.MapGet("/statistics", GetOrderStatisticsAsync)
-            .WithName("GetOrderStatistics")
-            .WithDescription("Lấy thống kê đơn hàng (Instructor stats or Admin for all)")
-            .RequireAuthorization(x => x.RequireRole(Role.Instructor, Role.Admin))
-            .Produces<ApiResponse<OrderStatisticsResponse>>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden);
 
@@ -143,24 +126,6 @@ public static class OrderApis
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
-    private static async Task<IResult> CancelOrderAsync(
-        [FromRoute] Guid orderId,
-        [FromServices] IOrderService orderService,
-        [FromServices] ICurrentUserService currentUserService)
-    {
-        // First get the order to check ownership
-        var orderResult = await orderService.GetOrderByIdAsync(orderId);
-        if (!orderResult.IsSuccess)
-            return Results.NotFound(orderResult);
-
-        // Validate authorization: must be order owner or admin
-        if (orderResult.Data!.UserId != currentUserService.UserId && !currentUserService.IsInRole(Role.Admin))
-            return Results.Forbid();
-
-        var result = await orderService.CancelOrderAsync(orderId);
-        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
-    }
-
     private static async Task<IResult> GetOrdersByInstructorAsync(
         [FromRoute] Guid instructorId,
         [AsParameters] PaginationRequest pagination,
@@ -193,26 +158,4 @@ public static class OrderApis
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
-    private static async Task<IResult> GetOrderStatisticsAsync(
-        [FromQuery] Guid? instructorId = null,
-        [FromServices] IOrderService orderService = null!,
-        [FromServices] ICurrentUserService currentUserService = null!)
-    {
-        // Validate authorization
-        if (instructorId.HasValue)
-        {
-            // If requesting specific instructor stats: must be that instructor or admin
-            if (instructorId != currentUserService.UserId && !currentUserService.IsInRole(Role.Admin))
-                return Results.Forbid();
-        }
-        else
-        {
-            // If requesting all stats: admin only
-            if (!currentUserService.IsInRole(Role.Admin))
-                return Results.Forbid();
-        }
-
-        var result = await orderService.GetOrderStatisticsAsync(instructorId);
-        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
-    }
 }

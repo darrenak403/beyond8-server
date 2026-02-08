@@ -13,8 +13,7 @@ public class Coupon : BaseEntity
 {
     // Coupon Code
     [Required, MaxLength(50)]
-    public string Code { get; set; } = string.Empty; // UNIQUE constraint in migration
-
+    public string Code { get; set; } = string.Empty; 
     [MaxLength(500)]
     public string? Description { get; set; }
 
@@ -30,17 +29,16 @@ public class Coupon : BaseEntity
 
     // Restrictions
     [Column(TypeName = "decimal(18, 2)")]
-    public decimal? MinOrderAmount { get; set; } // Minimum order amount to apply coupon
+    public decimal? MinOrderAmount { get; set; } 
 
     [Column(TypeName = "decimal(18, 2)")]
-    public decimal? MaxDiscountAmount { get; set; } // Maximum discount for percentage coupons
-
+    public decimal? MaxDiscountAmount { get; set; }
     // Usage Limits
-    public int? UsageLimit { get; set; } // Total usage limit (null = unlimited)
+    public int? UsageLimit { get; set; }
 
-    public int? UsagePerUser { get; set; } // Usage limit per user (null = unlimited)
+    public int? UsagePerUser { get; set; } 
 
-    public int UsedCount { get; set; } = 0; // Total times coupon has been used
+    public int UsedCount { get; set; } = 0;
 
     // Applicability (null = applies to all)
     /// <summary>
