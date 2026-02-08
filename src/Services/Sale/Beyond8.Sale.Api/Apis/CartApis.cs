@@ -59,6 +59,14 @@ public static class CartApis
             .WithDescription("Lấy tổng số mục trong giỏ hàng (Student)")
             .Produces<ApiResponse<int>>(StatusCodes.Status200OK);
 
+        group.MapPost("/check", CheckCoursesInCartAsync)
+            .WithName("CheckCoursesInCart")
+            .WithDescription("Kiểm tra các khóa học đã có trong giỏ hàng chưa (Student). " +
+                           "Use case: UI needs to show 'Add to Cart' vs 'Already Added' button. " +
+                           "Performance optimized: Uses WHERE IN query instead of loading entire cart.")
+            .Produces<ApiResponse<Dictionary<Guid, bool>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<Dictionary<Guid, bool>>>(StatusCodes.Status400BadRequest);
+
         return group;
     }
 
@@ -118,6 +126,19 @@ public static class CartApis
         [FromServices] ICurrentUserService currentUserService)
     {
         var result = await cartService.CountCartItemsAsync(currentUserService.UserId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> CheckCoursesInCartAsync(
+        [FromBody] CheckCoursesInCartRequest request,
+        [FromServices] ICartService cartService,
+        [FromServices] IValidator<CheckCoursesInCartRequest> validator,
+        [FromServices] ICurrentUserService currentUserService)
+    {
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
+        var result = await cartService.CheckCoursesInCartAsync(currentUserService.UserId, request.CourseIds);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 }
