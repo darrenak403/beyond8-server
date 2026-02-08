@@ -12,6 +12,10 @@ using Microsoft.Extensions.Logging;
 
 namespace Beyond8.Sale.Application.Services.Implements;
 
+/// <summary>
+/// Service for managing shopping cart operations.
+/// Delegates order creation to OrderService to avoid duplicate logic.
+/// </summary>
 public class CartService(
     ILogger<CartService> logger,
     IUnitOfWork unitOfWork,
@@ -128,6 +132,11 @@ public class CartService(
         }
     }
 
+    /// <summary>
+    /// Checkout cart items and create order.
+    /// This method delegates actual order creation to OrderService to avoid duplicate logic.
+    /// Workflow: Validate cart → Select items → Convert to order request → Delegate to OrderService → Clear cart items.
+    /// </summary>
     public async Task<ApiResponse<OrderResponse>> CheckoutCartAsync(Guid userId, CheckoutCartRequest request)
     {
         try
@@ -136,56 +145,27 @@ public class CartService(
             if (cart == null || !cart.CartItems.Any())
                 return ApiResponse<OrderResponse>.FailureResponse("Giỏ hàng trống, không thể thanh toán");
 
-            // Determine which items to checkout
-            IEnumerable<CartItem> itemsToCheckout;
-            if (request.SelectedCourseIds.Any())
-            {
-                // Checkout only selected items
-                itemsToCheckout = cart.CartItems
-                    .Where(ci => request.SelectedCourseIds.Contains(ci.CourseId))
-                    .ToList();
+            // Determine and validate which items to checkout
+            var itemsValidation = ValidateAndSelectCartItems(cart, request.SelectedItems);
+            if (!itemsValidation.IsValid)
+                return ApiResponse<OrderResponse>.FailureResponse(itemsValidation.ErrorMessage!);
 
-                if (!itemsToCheckout.Any())
-                    return ApiResponse<OrderResponse>.FailureResponse("Không tìm thấy khóa học được chọn trong giỏ hàng");
+            var itemsToCheckout = itemsValidation.SelectedItems;
 
-                // Validate all selected courseIds exist in cart
-                var missingCourseIds = request.SelectedCourseIds
-                    .Except(cart.CartItems.Select(ci => ci.CourseId))
-                    .ToList();
+            // Convert cart items to order request with instructor coupons (separation: cart → order)
+            var orderRequest = ConvertCartItemsToOrderRequest(itemsToCheckout, request);
 
-                if (missingCourseIds.Any())
-                    return ApiResponse<OrderResponse>.FailureResponse(
-                        $"Các khóa học sau không có trong giỏ hàng: {string.Join(", ", missingCourseIds)}");
-            }
-            else
-            {
-                // Checkout all items if no selection
-                itemsToCheckout = cart.CartItems.ToList();
-            }
-
-            // Convert selected cart items to order request
-            var orderRequest = new CreateOrderRequest
-            {
-                Items = itemsToCheckout.Select(ci => new OrderItemRequest { CourseId = ci.CourseId }).ToList(),
-                CouponCode = request.CouponCode,
-                Notes = request.Notes
-            };
-
-            // Create order using existing OrderService
+            // Delegate order creation to OrderService (no duplicate logic)
             var orderResult = await orderService.CreateOrderAsync(orderRequest, userId);
 
             if (orderResult.IsSuccess)
             {
                 // Remove only checked out items from cart
-                foreach (var item in itemsToCheckout)
-                {
-                    await unitOfWork.CartItemRepository.DeleteAsync(item.Id);
-                }
-                await unitOfWork.SaveChangesAsync();
+                await RemoveCheckedOutItemsFromCartAsync(itemsToCheckout.Select(x => x.CartItem));
 
                 logger.LogInformation(
                     "Cart checked out for user {UserId}, order {OrderId}, {ItemCount} items removed from cart",
-                    userId, orderResult.Data!.Id, itemsToCheckout.Count());
+                    userId, orderResult.Data!.Id, itemsToCheckout.Count);
             }
 
             return orderResult;
@@ -197,7 +177,77 @@ public class CartService(
         }
     }
 
-    // Helper methods
+    // ══════════════════════════════════════════════════════════════════
+    // Helper Methods
+    // ══════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Validate and select cart items for checkout with instructor coupons.
+    /// Returns selected items with their corresponding instructor coupons or error message.
+    /// </summary>
+    private (bool IsValid, string? ErrorMessage, List<(CartItem CartItem, string? InstructorCouponCode)> SelectedItems)
+        ValidateAndSelectCartItems(Cart cart, List<CheckoutItemRequest> selectedItems)
+    {
+        // Case 1: No selection → checkout all items without instructor coupons
+        if (!selectedItems.Any())
+        {
+            var allItems = cart.CartItems.Select(ci => (ci, (string?)null)).ToList();
+            return (true, null, allItems);
+        }
+
+        // Case 2: Validate selected items exist in cart
+        var cartCourseIds = cart.CartItems.Select(ci => ci.CourseId).ToHashSet();
+        var requestedCourseIds = selectedItems.Select(si => si.CourseId).ToList();
+        var missingCourseIds = requestedCourseIds.Except(cartCourseIds).ToList();
+
+        if (missingCourseIds.Any())
+            return (false, $"Các khóa học sau không có trong giỏ hàng: {string.Join(", ", missingCourseIds)}", []);
+
+        // Case 3: Select requested items with instructor coupons
+        var couponMapping = selectedItems.ToDictionary(si => si.CourseId, si => si.InstructorCouponCode);
+        var itemsWithCoupons = cart.CartItems
+            .Where(ci => couponMapping.ContainsKey(ci.CourseId))
+            .Select(ci => (ci, couponMapping[ci.CourseId]))
+            .ToList();
+
+        if (!itemsWithCoupons.Any())
+            return (false, "Không tìm thấy khóa học được chọn trong giỏ hàng", []);
+
+        return (true, null, itemsWithCoupons);
+    }
+
+    /// <summary>
+    /// Convert cart items to order request with instructor coupons.
+    /// This is the boundary between Cart domain and Order domain.
+    /// Maps instructor coupon codes from checkout request to order items.
+    /// </summary>
+    private static CreateOrderRequest ConvertCartItemsToOrderRequest(
+        List<(CartItem CartItem, string? InstructorCouponCode)> itemsWithCoupons,
+        CheckoutCartRequest request)
+    {
+        return new CreateOrderRequest
+        {
+            Items = itemsWithCoupons.Select(item => new OrderItemRequest
+            {
+                CourseId = item.CartItem.CourseId,
+                InstructorCouponCode = item.InstructorCouponCode  // Map instructor coupon per item
+            }).ToList(),
+            CouponCode = request.CouponCode,  // System coupon for entire order
+            Notes = request.Notes
+        };
+    }
+
+    /// <summary>
+    /// Remove checked out items from cart after successful order creation.
+    /// </summary>
+    private async Task RemoveCheckedOutItemsFromCartAsync(IEnumerable<CartItem> items)
+    {
+        foreach (var item in items)
+        {
+            await unitOfWork.CartItemRepository.DeleteAsync(item.Id);
+        }
+        await unitOfWork.SaveChangesAsync();
+    }
 
     private async Task<Cart?> GetCartByUserIdAsync(Guid userId)
     {

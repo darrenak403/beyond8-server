@@ -24,6 +24,31 @@ public class OrderService(
     ICouponService couponService,
     IPublishEndpoint publishEndpoint) : IOrderService
 {
+    /// <summary>
+    /// Buy Now - Direct single course purchase.
+    /// Converts to CreateOrderRequest and delegates to CreateOrderAsync.
+    /// </summary>
+    public async Task<ApiResponse<OrderResponse>> BuyNowAsync(BuyNowRequest request, Guid userId)
+    {
+        // Convert Buy Now request to standard order creation request
+        var orderRequest = new CreateOrderRequest
+        {
+            Items = new List<OrderItemRequest>
+            {
+                new()
+                {
+                    CourseId = request.CourseId,
+                    InstructorCouponCode = request.InstructorCouponCode
+                }
+            },
+            CouponCode = request.CouponCode,
+            Notes = request.Notes
+        };
+
+        // Delegate to standard order creation (reuse logic)
+        return await CreateOrderAsync(orderRequest, userId);
+    }
+
     public async Task<ApiResponse<OrderResponse>> CreateOrderAsync(CreateOrderRequest request, Guid userId)
     {
         // Validate and calculate totals
@@ -89,7 +114,7 @@ public class OrderService(
 
         return ApiResponse<OrderResponse>.SuccessResponse(order.ToResponse(), "Cập nhật trạng thái thành công");
     }
-    
+
     public async Task<ApiResponse<List<OrderResponse>>> GetOrdersByUserAsync(PaginationRequest pagination, Guid userId)
     {
         var orders = await unitOfWork.OrderRepository.GetPagedAsync(

@@ -48,7 +48,8 @@ public static class CartApis
 
         group.MapPost("/checkout", CheckoutCartAsync)
             .WithName("CheckoutCart")
-            .WithDescription("Thanh toán giỏ hàng — tạo đơn hàng từ giỏ")
+            .WithDescription("Thanh toán giỏ hàng — tạo đơn hàng từ giỏ. " +
+                           "Hỗ trợ 2-tier coupon: instructor coupons (per item) + system coupon (per order)")
             .Produces<ApiResponse<OrderResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<OrderResponse>>(StatusCodes.Status400BadRequest);
 

@@ -8,6 +8,7 @@ namespace Beyond8.Sale.Application.Services.Interfaces;
 public interface IOrderService
 {
     // ── Student (Authenticated) ──
+    Task<ApiResponse<OrderResponse>> BuyNowAsync(BuyNowRequest request, Guid userId);
     Task<ApiResponse<OrderResponse>> CreateOrderAsync(CreateOrderRequest request, Guid userId);
 
     // ── Owner / Admin ──

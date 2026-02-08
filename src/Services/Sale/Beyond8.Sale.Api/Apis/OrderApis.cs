@@ -25,9 +25,11 @@ public static class OrderApis
     public static RouteGroupBuilder MapOrderRoutes(this RouteGroupBuilder group)
     {
         // Customer Operations
-        group.MapPost("/", CreateOrderAsync)
-            .WithName("CreateOrder")
-            .WithDescription("Tạo đơn hàng mới (Authenticated user only)")
+        group.MapPost("/buy-now", BuyNowAsync)
+            .WithName("BuyNow")
+            .WithDescription("Mua ngay 1 khóa học (Buy Now button). " +
+                           "Dùng endpoint này cho single course purchase. " +
+                           "Dùng /cart/checkout cho multiple courses.")
             .RequireAuthorization()
             .Produces<ApiResponse<OrderResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<OrderResponse>>(StatusCodes.Status400BadRequest)
@@ -81,19 +83,20 @@ public static class OrderApis
         return group;
     }
 
-    private static async Task<IResult> CreateOrderAsync(
-        [FromBody] CreateOrderRequest request,
-        [FromServices] IOrderService orderService,
-        [FromServices] IValidator<CreateOrderRequest> validator,
-        [FromServices] ICurrentUserService currentUserService)
+    private static async Task<IResult> BuyNowAsync(
+    [FromBody] BuyNowRequest request,
+    [FromServices] IOrderService orderService,
+    [FromServices] IValidator<BuyNowRequest> validator,
+    [FromServices] ICurrentUserService currentUserService)
     {
         // Validate request data
         if (!request.ValidateRequest(validator, out var validationResult))
             return validationResult!;
 
-        var result = await orderService.CreateOrderAsync(request, currentUserService.UserId);
+        var result = await orderService.BuyNowAsync(request, currentUserService.UserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
+
 
     private static async Task<IResult> GetOrderByIdAsync(
         [FromRoute] Guid orderId,
