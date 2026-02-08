@@ -42,6 +42,7 @@ public static class ApplicationServiceExtensions
         // Register services
         builder.Services.AddScoped<IOrderService, OrderService>();
         builder.Services.AddScoped<ICouponService, CouponService>();
+        builder.Services.AddScoped<ICouponUsageService, CouponUsageService>();
         builder.Services.AddScoped<ICartService, CartService>();
         builder.Services.AddScoped<IPaymentService, PaymentService>();
         builder.Services.AddValidatorsFromAssemblyContaining<CreateOrderRequest>();
@@ -97,7 +98,8 @@ public static class ApplicationServiceExtensions
         app.MapOrderApi();
         app.MapCartApi();
         app.MapPaymentApi();
-        // app.MapCouponApi();
+        app.MapCouponApi();
+        app.MapCouponUsageApi();
         // app.MapWalletApi();
         // app.MapPayoutApi();
         // app.MapTransactionApi();
