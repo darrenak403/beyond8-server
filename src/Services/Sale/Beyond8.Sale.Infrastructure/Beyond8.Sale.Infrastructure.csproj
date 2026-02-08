@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Data\Seeders\" />
     <Folder Include="ExternalServices\" />
   </ItemGroup>
 
