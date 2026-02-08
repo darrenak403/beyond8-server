@@ -12,5 +12,6 @@ public class SubmissionSimpleResponse
     public decimal? AiScore { get; set; }
     public decimal? FinalScore { get; set; }
     public SubmissionStatus Status { get; set; }
+    public AssignmentSubmissionType SubmissionType { get; set; }
     public DateTime CreatedAt { get; set; }
 }

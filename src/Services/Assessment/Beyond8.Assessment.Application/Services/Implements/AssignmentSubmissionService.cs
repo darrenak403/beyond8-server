@@ -68,8 +68,9 @@ public class AssignmentSubmissionService(
             }
 
             logger.LogInformation("Submission created successfully: {SubmissionId}", submission.Id);
+            var submissionWithAssignment = await unitOfWork.AssignmentSubmissionRepository.FindOneWithAssignmentAsync(s => s.Id == submission.Id);
             return ApiResponse<SubmissionResponse>.SuccessResponse(
-                submission.ToResponse(),
+                submissionWithAssignment!.ToResponse(),
                 "Nộp bài thành công. Bài làm đang được chấm điểm.");
         }
         catch (Exception ex)
@@ -83,7 +84,7 @@ public class AssignmentSubmissionService(
     {
         try
         {
-            var submission = await unitOfWork.AssignmentSubmissionRepository.FindOneAsync(s => s.Id == submissionId && s.StudentId == userId);
+            var submission = await unitOfWork.AssignmentSubmissionRepository.FindOneWithAssignmentAsync(s => s.Id == submissionId && s.StudentId == userId);
             if (submission == null)
             {
                 logger.LogError("Submission not found for id: {SubmissionId}", submissionId);
@@ -118,8 +119,9 @@ public class AssignmentSubmissionService(
             }
 
             logger.LogInformation("Submission graded successfully: {SubmissionId}", submission.Id);
+            var submissionWithAssignment = await unitOfWork.AssignmentSubmissionRepository.FindOneWithAssignmentAsync(s => s.Id == submission.Id);
             return ApiResponse<SubmissionResponse>.SuccessResponse(
-                submission.ToResponse(),
+                submissionWithAssignment!.ToResponse(),
                 "Chấm điểm submission thành công.");
         }
         catch (Exception ex)
@@ -133,7 +135,7 @@ public class AssignmentSubmissionService(
     {
         try
         {
-            var submission = await unitOfWork.AssignmentSubmissionRepository.FindOneAsync(s => s.Id == submissionId && s.StudentId == userId);
+            var submission = await unitOfWork.AssignmentSubmissionRepository.FindOneWithAssignmentAsync(s => s.Id == submissionId && s.StudentId == userId);
             if (submission == null)
             {
                 logger.LogError("Submission not found for id: {SubmissionId}", submissionId);
@@ -153,7 +155,7 @@ public class AssignmentSubmissionService(
     {
         try
         {
-            var submissions = await unitOfWork.AssignmentSubmissionRepository.GetAllAsync(s => s.AssignmentId == assignmentId && s.StudentId == userId);
+            var submissions = await unitOfWork.AssignmentSubmissionRepository.GetAllWithAssignmentAsync(s => s.AssignmentId == assignmentId && s.StudentId == userId);
             if (submissions.Count == 0)
             {
                 logger.LogError("No submissions found for assignment id: {AssignmentId}", assignmentId);
@@ -180,7 +182,7 @@ public class AssignmentSubmissionService(
                 return ApiResponse<List<SubmissionSimpleResponse>>.FailureResponse("Assignment không tồn tại.");
             }
 
-            var submissions = await unitOfWork.AssignmentSubmissionRepository.GetAllAsync(s => s.AssignmentId == assignment.Id);
+            var submissions = await unitOfWork.AssignmentSubmissionRepository.GetAllWithAssignmentAsync(s => s.AssignmentId == assignment.Id);
             if (submissions.Count == 0)
             {
                 logger.LogError("No submissions found for assignment: {AssignmentId}", assignment.Id);
@@ -207,7 +209,7 @@ public class AssignmentSubmissionService(
                 return ApiResponse<SubmissionResponse>.FailureResponse("Assignment không tồn tại.");
             }
 
-            var submission = await unitOfWork.AssignmentSubmissionRepository.FindOneAsync(s => s.Id == submissionId && s.AssignmentId == assignment.Id);
+            var submission = await unitOfWork.AssignmentSubmissionRepository.FindOneWithAssignmentAsync(s => s.Id == submissionId && s.AssignmentId == assignment.Id);
             if (submission == null)
             {
                 logger.LogError("Submission not found for id: {SubmissionId}", submissionId);

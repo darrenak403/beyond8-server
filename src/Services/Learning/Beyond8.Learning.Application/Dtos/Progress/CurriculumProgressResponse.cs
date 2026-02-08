@@ -25,5 +25,8 @@ public class LessonProgressItem
     public Guid LessonId { get; set; }
     public string Title { get; set; } = string.Empty;
     public int Order { get; set; }
+    /// <summary>Đã học (đã hoàn thành bài dù đạt hay chưa).</summary>
     public bool IsCompleted { get; set; }
+    /// <summary>Đã hoàn thành và đạt (pass).</summary>
+    public bool IsPassed { get; set; }
 }
