@@ -93,6 +93,7 @@ namespace Beyond8.AppHost.Extensions
                 .WithReference(redis)
                 .WithReference(rabbitMq)
                 .WithReference(catalogService)
+                .WithReference(learningService)
                 .WaitFor(postgres)
                 .WaitFor(redis)
                 .WaitFor(rabbitMq);
@@ -147,10 +148,13 @@ namespace Beyond8.AppHost.Extensions
 
                     var saleCluster = config.AddProjectCluster(saleService);
                     config.AddRoute("/api/v1/orders/{**catch-all}", saleCluster);
+                    config.AddRoute("/api/v1/cart/{**catch-all}", saleCluster);
                     config.AddRoute("/api/v1/payments/{**catch-all}", saleCluster);
                     config.AddRoute("/api/v1/coupons/{**catch-all}", saleCluster);
+                    config.AddRoute("/api/v1/coupon-usages/{**catch-all}", saleCluster);
                     config.AddRoute("/api/v1/wallets/{**catch-all}", saleCluster);
                     config.AddRoute("/api/v1/payouts/{**catch-all}", saleCluster);
+                    config.AddRoute("/api/v1/transactions/{**catch-all}", saleCluster);
 
                     var analyticCluster = config.AddProjectCluster(analyticService);
                     config.AddRoute("/api/v1/analytics/{**catch-all}", analyticCluster);
