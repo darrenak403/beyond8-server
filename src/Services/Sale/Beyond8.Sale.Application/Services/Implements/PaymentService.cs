@@ -19,6 +19,7 @@ public class PaymentService(
     ILogger<PaymentService> logger,
     IUnitOfWork unitOfWork,
     IVNPayService vnPayService,
+    IInstructorWalletService walletService,
     IPublishEndpoint publishEndpoint) : IPaymentService
 {
     public async Task<ApiResponse<PaymentUrlResponse>> ProcessPaymentAsync(
@@ -39,9 +40,9 @@ public class PaymentService(
             return ApiResponse<PaymentUrlResponse>.FailureResponse("Đơn hàng miễn phí không cần thanh toán");
 
         // Reuse existing pending payment if still valid
-        var existingPayment = order.Payments
-            .FirstOrDefault(p => p.Status is PaymentStatus.Pending or PaymentStatus.Processing
-                                 && p.ExpiredAt > DateTime.UtcNow);
+        var existingPayment = order.Payments.FirstOrDefault(
+            p => p.Status is PaymentStatus.Pending or PaymentStatus.Processing
+            && p.ExpiredAt > DateTime.UtcNow);
         if (existingPayment != null)
         {
             var existingUrl = GenerateVNPayUrl(existingPayment, order, ipAddress, returnUrl);
@@ -77,10 +78,6 @@ public class PaymentService(
             "Tạo giao dịch thanh toán thành công");
     }
 
-    /// <summary>
-    /// Handles VNPay callback: verify signature, check idempotency, update payment/order status.
-    /// Uses raw query string for signature verification to avoid ASP.NET URL-decode mismatch.
-    /// </summary>
     public async Task<ApiResponse<bool>> HandleVNPayCallbackAsync(VNPayCallbackRequest request, string rawQueryString)
     {
         var isValid = vnPayService.ValidateCallback(rawQueryString, out var callbackResult);
@@ -216,6 +213,9 @@ public class PaymentService(
         order.PaidAt = DateTime.UtcNow;
         order.UpdatedAt = DateTime.UtcNow;
 
+        // ── Revenue Split & Wallet Credit (Per BR-19: 70% Instructor / 30% Platform) ──
+        await CreditInstructorEarningsAsync(order);
+
         await unitOfWork.SaveChangesAsync();
 
         // Notify Learning service to create Enrollment
@@ -225,6 +225,100 @@ public class PaymentService(
         logger.LogInformation(
             "Payment SUCCESS — PaymentId: {PaymentId}, OrderId: {OrderId}, Amount: {Amount}, TxnNo: {TxnNo}",
             payment.Id, order.Id, payment.Amount, result.TransactionNo);
+    }
+
+    /// <summary>
+    /// Credit instructor wallets after payment success.
+    /// Per BR-19: 70% Instructor / 30% Platform.
+    /// Coupon discount attribution:
+    ///   - Instructor coupon (ApplicableInstructorId != null) → Instructor absorbs discount
+    ///   - System coupon (ApplicableInstructorId == null) → Platform absorbs discount
+    /// </summary>
+    private async Task CreditInstructorEarningsAsync(Order order)
+    {
+        // Load coupon if exists to determine discount attribution
+        Coupon? coupon = null;
+        if (order.CouponId.HasValue)
+        {
+            coupon = await unitOfWork.CouponRepository
+                .FindOneAsync(c => c.Id == order.CouponId.Value);
+        }
+
+        // Group order items by instructor to aggregate earnings
+        var instructorGroups = order.OrderItems.GroupBy(oi => oi.InstructorId);
+
+        foreach (var group in instructorGroups)
+        {
+            var instructorId = group.Key;
+            decimal totalInstructorEarnings = 0;
+
+            foreach (var item in group)
+            {
+                // Recalculate revenue split with coupon discount attribution
+                var earnings = CalculateItemRevenueSplit(item, order, coupon);
+
+                // Update OrderItem with final revenue split values
+                item.InstructorEarnings = earnings.InstructorEarnings;
+                item.PlatformFeeAmount = earnings.PlatformFee;
+
+                totalInstructorEarnings += earnings.InstructorEarnings;
+            }
+
+            if (totalInstructorEarnings > 0)
+            {
+                // Credit instructor wallet immediately (Phase 2 — no escrow)
+                await walletService.CreditEarningsAsync(
+                    instructorId,
+                    totalInstructorEarnings,
+                    order.Id,
+                    $"Doanh thu đơn hàng #{order.OrderNumber}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Calculate revenue split for a single order item considering coupon discount attribution.
+    /// Formula:
+    ///   - Instructor coupon: InstructorEarnings = (OriginalPrice - InstructorDiscount) * 0.7
+    ///   - System coupon: InstructorEarnings = OriginalPrice * 0.7 (platform absorbs discount)
+    ///   - No coupon: InstructorEarnings = OriginalPrice * 0.7
+    /// </summary>
+    private static (decimal InstructorEarnings, decimal PlatformFee) CalculateItemRevenueSplit(
+        OrderItem item, Order order, Coupon? coupon)
+    {
+        const decimal platformFeeRate = 0.30m; // Per BR-19: 30% platform
+        var originalPrice = item.OriginalPrice;
+
+        // If no coupon or no discount, standard 70-30 split
+        if (coupon == null || order.DiscountAmount <= 0 || order.SubTotal <= 0)
+        {
+            var instructorEarnings = originalPrice * (1 - platformFeeRate);
+            var platformFee = originalPrice - instructorEarnings;
+            return (instructorEarnings, platformFee);
+        }
+
+        // Calculate this item's share of the total discount (proportional)
+        var discountRatio = originalPrice / order.SubTotal;
+        var itemDiscount = order.DiscountAmount * discountRatio;
+
+        if (coupon.ApplicableInstructorId != null)
+        {
+            // Instructor coupon → Instructor absorbs discount
+            // InstructorEarnings = (OriginalPrice - ItemDiscount) * 0.7
+            var priceAfterDiscount = originalPrice - itemDiscount;
+            var instructorEarnings = priceAfterDiscount * (1 - platformFeeRate);
+            var platformFee = priceAfterDiscount - instructorEarnings;
+            return (instructorEarnings, platformFee);
+        }
+        else
+        {
+            // System coupon → Platform absorbs discount
+            // InstructorEarnings = OriginalPrice * 0.7 (instructor gets full 70% of original)
+            var instructorEarnings = originalPrice * (1 - platformFeeRate);
+            var finalAmount = originalPrice - itemDiscount;
+            var platformFee = finalAmount - instructorEarnings;
+            return (instructorEarnings, platformFee);
+        }
     }
 
     private async Task HandlePaymentFailureAsync(Payment payment, VNPayCallbackResult result)

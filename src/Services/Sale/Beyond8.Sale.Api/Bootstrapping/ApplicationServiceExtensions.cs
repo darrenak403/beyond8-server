@@ -58,10 +58,10 @@ public static class ApplicationServiceExtensions
 
         builder.AddClientServices(httpPolicy);
 
-        // TODO: Uncomment when service implementations are created
-        // builder.Services.AddScoped<IInstructorWalletService, InstructorWalletService>();
-        // builder.Services.AddScoped<IPayoutService, PayoutService>();
-        // builder.Services.AddScoped<ITransactionService, TransactionService>();
+        // Wallet, Payout, Transaction services
+        builder.Services.AddScoped<IInstructorWalletService, InstructorWalletService>();
+        builder.Services.AddScoped<IPayoutService, PayoutService>();
+        builder.Services.AddScoped<ITransactionService, TransactionService>();
 
         return builder;
     }
@@ -100,9 +100,9 @@ public static class ApplicationServiceExtensions
         app.MapPaymentApi();
         app.MapCouponApi();
         app.MapCouponUsageApi();
-        // app.MapWalletApi();
-        // app.MapPayoutApi();
-        // app.MapTransactionApi();
+        app.MapWalletApi();
+        app.MapPayoutApi();
+        app.MapTransactionApi();
 
         return app;
     }
