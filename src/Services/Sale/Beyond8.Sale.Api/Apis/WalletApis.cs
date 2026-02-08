@@ -23,14 +23,14 @@ public static class WalletApis
         group.MapGet("/my-wallet", GetMyWalletAsync)
             .RequireAuthorization(x => x.RequireRole(Role.Instructor))
             .WithName("GetMyWallet")
-            .WithDescription("Lấy thông tin ví của giảng viên hiện tại")
+            .WithDescription("Lấy thông tin ví của giảng viên hiện tại (Instructor)")
             .Produces<ApiResponse<object>>(200)
             .Produces(401);
 
         group.MapGet("/my-wallet/transactions", GetMyWalletTransactionsAsync)
             .RequireAuthorization(x => x.RequireRole(Role.Instructor))
             .WithName("GetMyWalletTransactions")
-            .WithDescription("Lấy lịch sử giao dịch ví của giảng viên hiện tại (phân trang)")
+            .WithDescription("Lấy lịch sử giao dịch ví của giảng viên hiện tại (Instructor, phân trang)")
             .Produces<ApiResponse<object>>(200)
             .Produces(401);
 
@@ -53,7 +53,7 @@ public static class WalletApis
         group.MapPost("/create/{instructorId:guid}", CreateWalletAsync)
             .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
             .WithName("CreateWallet")
-            .WithDescription("Tạo ví cho một giảng viên (Admin/Staff)")
+            .WithDescription("Tạo ví cho một giảng viên (Admin/Staff - Internal use)")
             .Produces<ApiResponse<object>>(200)
             .Produces(401);
 

@@ -26,32 +26,38 @@ public static class CartApis
     {
         group.MapGet("/", GetCartAsync)
             .WithName("GetCart")
-            .WithDescription("Lấy giỏ hàng hiện tại")
+            .WithDescription("Lấy giỏ hàng hiện tại (Student)")
             .Produces<ApiResponse<CartResponse>>(StatusCodes.Status200OK);
 
         group.MapPost("/add", AddToCartAsync)
             .WithName("AddToCart")
-            .WithDescription("Thêm khóa học vào giỏ hàng")
+            .WithDescription("Thêm khóa học vào giỏ hàng (Student)")
             .Produces<ApiResponse<CartResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<CartResponse>>(StatusCodes.Status400BadRequest);
 
         group.MapDelete("/remove/{courseId}", RemoveFromCartAsync)
             .WithName("RemoveFromCart")
-            .WithDescription("Xóa khóa học khỏi giỏ hàng")
+            .WithDescription("Xóa khóa học khỏi giỏ hàng (Student)")
             .Produces<ApiResponse<CartResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<CartResponse>>(StatusCodes.Status400BadRequest);
 
         group.MapDelete("/clear", ClearCartAsync)
             .WithName("ClearCart")
-            .WithDescription("Xóa toàn bộ giỏ hàng")
+            .WithDescription("Xóa toàn bộ giỏ hàng (Student)")
             .Produces<ApiResponse<bool>>(StatusCodes.Status200OK);
 
         group.MapPost("/checkout", CheckoutCartAsync)
             .WithName("CheckoutCart")
             .WithDescription("Thanh toán giỏ hàng — tạo đơn hàng từ giỏ. " +
-                           "Hỗ trợ 2-tier coupon: instructor coupons (per item) + system coupon (per order)")
+                           "Hỗ trợ 2-tier coupon: instructor coupons (per item) + system coupon (per order). " +
+                           "(Student)")
             .Produces<ApiResponse<OrderResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<OrderResponse>>(StatusCodes.Status400BadRequest);
+
+        group.MapGet("/count", TotalItemsInCartAsync)
+            .WithName("TotalItemsInCart")
+            .WithDescription("Lấy tổng số mục trong giỏ hàng (Student)")
+            .Produces<ApiResponse<int>>(StatusCodes.Status200OK);
 
         return group;
     }
@@ -104,6 +110,14 @@ public static class CartApis
             return validationResult!;
 
         var result = await cartService.CheckoutCartAsync(currentUserService.UserId, request);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> TotalItemsInCartAsync(
+        [FromServices] ICartService cartService,
+        [FromServices] ICurrentUserService currentUserService)
+    {
+        var result = await cartService.CountCartItemsAsync(currentUserService.UserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 }

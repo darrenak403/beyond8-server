@@ -66,12 +66,16 @@ public class CartService(
                 OriginalPrice = course.Price
             };
 
-            cart.CartItems.Add(cartItem);
+            // Use repository to add - ensures correct EF Core tracking state
+            await unitOfWork.CartItemRepository.AddAsync(cartItem);
             await unitOfWork.SaveChangesAsync();
+
+            // Reload cart with updated items
+            var updatedCart = await GetCartByUserIdAsync(userId);
 
             logger.LogInformation("Course {CourseId} added to cart for user {UserId}", request.CourseId, userId);
 
-            return ApiResponse<CartResponse>.SuccessResponse(cart.ToResponse(), "Thêm vào giỏ hàng thành công");
+            return ApiResponse<CartResponse>.SuccessResponse(updatedCart!.ToResponse(), "Thêm vào giỏ hàng thành công");
         }
         catch (Exception ex)
         {
@@ -268,5 +272,20 @@ public class CartService(
         await unitOfWork.SaveChangesAsync();
 
         return cart;
+    }
+
+    public async Task<ApiResponse<int>> CountCartItemsAsync(Guid userId)
+    {
+        try
+        {
+            var cart = await GetCartByUserIdAsync(userId);
+            int itemCount = cart?.CartItems.Count ?? 0;
+            return ApiResponse<int>.SuccessResponse(itemCount, "Đếm số lượng mục trong giỏ hàng thành công");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to count cart items for user {UserId}", userId);
+            throw;
+        }
     }
 }

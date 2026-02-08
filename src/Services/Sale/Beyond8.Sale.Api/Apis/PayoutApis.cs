@@ -27,21 +27,21 @@ public static class PayoutApis
         group.MapPost("/request", CreatePayoutRequestAsync)
             .RequireAuthorization(x => x.RequireRole(Role.Instructor))
             .WithName("CreatePayoutRequest")
-            .WithDescription("Yêu cầu rút tiền (tối thiểu 500k VND)")
+            .WithDescription("Yêu cầu rút tiền (tối thiểu 500k VND) (Instructor)")
             .Produces<ApiResponse<object>>(200)
             .Produces(400);
 
         group.MapGet("/my-requests", GetMyPayoutRequestsAsync)
             .RequireAuthorization(x => x.RequireRole(Role.Instructor))
             .WithName("GetMyPayoutRequests")
-            .WithDescription("Lấy danh sách yêu cầu rút tiền của giảng viên (phân trang)")
+            .WithDescription("Lấy danh sách yêu cầu rút tiền của giảng viên (Instructor, phân trang)")
             .Produces<ApiResponse<object>>(200)
             .Produces(401);
 
         group.MapGet("/{payoutId:guid}", GetPayoutRequestByIdAsync)
             .RequireAuthorization()
             .WithName("GetPayoutRequestById")
-            .WithDescription("Lấy chi tiết yêu cầu rút tiền")
+            .WithDescription("Lấy chi tiết yêu cầu rút tiền (Payout Owner or Admin)")
             .Produces<ApiResponse<object>>(200)
             .Produces(404);
 

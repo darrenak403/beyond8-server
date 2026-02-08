@@ -27,7 +27,7 @@ public static class CouponApis
         // ── Admin / Instructor ──
         group.MapPost("/", CreateCouponAsync)
             .WithName("CreateCoupon")
-            .WithDescription("Tạo coupon mới (Admin hoặc Instructor)")
+            .WithDescription("Tạo coupon mới (Admin or Instructor)")
             .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Instructor))
             .Produces<ApiResponse<CouponResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<CouponResponse>>(StatusCodes.Status400BadRequest)
@@ -36,7 +36,7 @@ public static class CouponApis
 
         group.MapPut("/{couponId}", UpdateCouponAsync)
             .WithName("UpdateCoupon")
-            .WithDescription("Cập nhật thông tin coupon (Admin hoặc Instructor sở hữu)")
+            .WithDescription("Cập nhật thông tin coupon (Admin or Instructor - owner only)")
             .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Instructor))
             .Produces<ApiResponse<CouponResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<CouponResponse>>(StatusCodes.Status400BadRequest)
@@ -46,7 +46,7 @@ public static class CouponApis
 
         group.MapDelete("/{couponId}", DeleteCouponAsync)
             .WithName("DeleteCoupon")
-            .WithDescription("Xóa coupon (Admin hoặc Instructor sở hữu)")
+            .WithDescription("Xóa coupon (Admin or Instructor - owner only)")
             .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Instructor))
             .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<bool>>(StatusCodes.Status404NotFound)

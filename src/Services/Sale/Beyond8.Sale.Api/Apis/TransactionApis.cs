@@ -31,14 +31,14 @@ public static class TransactionApis
         group.MapGet("/{transactionId:guid}", GetTransactionByIdAsync)
             .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff, Role.Instructor))
             .WithName("GetTransactionById")
-            .WithDescription("Lấy chi tiết giao dịch")
+            .WithDescription("Lấy chi tiết giao dịch (Admin/Staff/Instructor)")
             .Produces<ApiResponse<object>>(200)
             .Produces(404);
 
         group.MapGet("/wallet/{walletId:guid}", GetTransactionsByWalletAsync)
             .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff, Role.Instructor))
             .WithName("GetTransactionsByWallet")
-            .WithDescription("Lấy giao dịch theo ví (phân trang)")
+            .WithDescription("Lấy giao dịch theo ví (Admin/Staff/Instructor, phân trang)")
             .Produces<ApiResponse<object>>(200)
             .Produces(401);
 
