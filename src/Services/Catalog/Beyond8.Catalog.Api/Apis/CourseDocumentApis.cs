@@ -35,7 +35,7 @@ public static class CourseDocumentApis
         group.MapGet("/{id}", GetCourseDocumentByIdAsync)
             .WithName("GetCourseDocumentById")
             .WithDescription("Lấy thông tin tài liệu theo ID")
-            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor, Role.Student))
             .Produces<ApiResponse<CourseDocumentResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<CourseDocumentResponse>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
