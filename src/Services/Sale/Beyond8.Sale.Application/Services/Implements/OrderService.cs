@@ -89,27 +89,7 @@ public class OrderService(
 
         return ApiResponse<OrderResponse>.SuccessResponse(order.ToResponse(), "Cập nhật trạng thái thành công");
     }
-
-    public async Task<ApiResponse<bool>> CancelOrderAsync(Guid orderId)
-    {
-        var order = await unitOfWork.OrderRepository.AsQueryable()
-            .FirstOrDefaultAsync(o => o.Id == orderId);
-        if (order == null)
-            return ApiResponse<bool>.FailureResponse("Đơn hàng không tồn tại");
-
-        if (order.Status != OrderStatus.Pending)
-            return ApiResponse<bool>.FailureResponse("Chỉ hủy đơn hàng đang chờ xử lý");
-
-        order.Status = OrderStatus.Cancelled;
-        order.UpdatedAt = DateTime.UtcNow;
-
-        await unitOfWork.SaveChangesAsync();
-
-        logger.LogInformation("Order cancelled: {OrderId}", orderId);
-
-        return ApiResponse<bool>.SuccessResponse(true, "Đơn hàng đã được hủy");
-    }
-
+    
     public async Task<ApiResponse<List<OrderResponse>>> GetOrdersByUserAsync(PaginationRequest pagination, Guid userId)
     {
         var orders = await unitOfWork.OrderRepository.GetPagedAsync(

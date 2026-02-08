@@ -12,7 +12,6 @@ public interface IOrderService
 
     // ── Owner / Admin ──
     Task<ApiResponse<OrderResponse>> GetOrderByIdAsync(Guid orderId);
-    Task<ApiResponse<bool>> CancelOrderAsync(Guid orderId);
     Task<ApiResponse<List<OrderResponse>>> GetOrdersByUserAsync(PaginationRequest pagination, Guid userId);
 
     // ── Admin Only ──
