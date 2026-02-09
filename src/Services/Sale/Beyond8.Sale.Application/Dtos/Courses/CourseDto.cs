@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Beyond8.Sale.Application.Dtos.Courses;
 
 /// <summary>
@@ -7,7 +9,8 @@ public class CourseDto
 {
     public Guid Id { get; set; }
     public string Title { get; set; } = string.Empty;
-    public decimal Price { get; set; }
+    [JsonPropertyName("price")]
+    public decimal OriginalPrice { get; set; }
     public decimal FinalPrice { get; set; }
     public Guid InstructorId { get; set; }
     public string InstructorName { get; set; } = string.Empty;

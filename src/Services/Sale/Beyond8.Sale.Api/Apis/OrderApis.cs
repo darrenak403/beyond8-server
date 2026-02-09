@@ -54,6 +54,13 @@ public static class OrderApis
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden);
 
+        group.MapGet("/purchased-course-ids", GetPurchasedCourseIdsAsync)
+            .WithName("GetPurchasedCourseIds")
+            .WithDescription("Lấy danh sách ID các khóa học đã mua (đã thanh toán) của user hiện tại")
+            .RequireAuthorization()
+            .Produces<ApiResponse<List<Guid>>>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized);
+
         // Instructor Operations
         group.MapGet("/instructor/{instructorId}", GetOrdersByInstructorAsync)
             .WithName("GetOrdersByInstructor")
@@ -127,6 +134,14 @@ public static class OrderApis
             return Results.Forbid();
 
         var result = await orderService.GetOrdersByUserAsync(pagination, userId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> GetPurchasedCourseIdsAsync(
+        [FromServices] IOrderService orderService,
+        [FromServices] ICurrentUserService currentUserService)
+    {
+        var result = await orderService.GetPurchasedCourseIdsAsync(currentUserService.UserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 

@@ -26,7 +26,7 @@ public static class LessonDocumentApis
         group.MapGet("/lesson/{lessonId}", GetLessonDocumentsAsync)
             .WithName("GetLessonDocuments")
             .WithDescription("Lấy danh sách tài liệu của bài học")
-            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor, Role.Student))
             .Produces<ApiResponse<List<LessonDocumentResponse>>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<List<LessonDocumentResponse>>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);

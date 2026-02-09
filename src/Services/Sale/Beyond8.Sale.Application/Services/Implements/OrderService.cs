@@ -46,7 +46,42 @@ public class OrderService(
         };
 
         // Delegate to standard order creation (reuse logic)
-        return await CreateOrderAsync(orderRequest, userId);
+        var orderResult = await CreateOrderAsync(orderRequest, userId);
+
+        // Clear cart after successful purchase (Buy Now should clear cart)
+        if (orderResult.IsSuccess)
+        {
+            try
+            {
+                // Note: We can't inject ICartService here due to circular dependency
+                // Instead, we'll clear cart items directly
+                var cart = await unitOfWork.CartRepository.AsQueryable()
+                    .Include(c => c.CartItems)
+                    .FirstOrDefaultAsync(c => c.UserId == userId);
+
+                if (cart != null && cart.CartItems.Any())
+                {
+                    // Soft delete the purchased course from cart if it exists
+                    var cartItem = cart.CartItems.FirstOrDefault(ci => ci.CourseId == request.CourseId);
+                    if (cartItem != null)
+                    {
+                        cartItem.DeletedAt = DateTime.UtcNow;
+                        await unitOfWork.SaveChangesAsync();
+
+                        logger.LogInformation("Soft deleted purchased course {CourseId} from cart for user {UserId}",
+                            request.CourseId, userId);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't fail the order
+                logger.LogError(ex, "Failed to clear cart after Buy Now for user {UserId}, course {CourseId}",
+                    userId, request.CourseId);
+            }
+        }
+
+        return orderResult;
     }
 
     public async Task<ApiResponse<OrderResponse>> CreateOrderAsync(CreateOrderRequest request, Guid userId)
@@ -130,6 +165,19 @@ public class OrderService(
             responses, orders.TotalCount, pagination.PageNumber, pagination.PageSize, "Lấy danh sách đơn hàng thành công");
     }
 
+    public async Task<ApiResponse<List<Guid>>> GetPurchasedCourseIdsAsync(Guid userId)
+    {
+        var purchasedCourseIds = await unitOfWork.OrderRepository.AsQueryable()
+            .Where(o => o.UserId == userId && o.Status == OrderStatus.Paid)
+            .SelectMany(o => o.OrderItems.Select(oi => oi.CourseId))
+            .Distinct()
+            .ToListAsync();
+
+        return ApiResponse<List<Guid>>.SuccessResponse(
+            purchasedCourseIds,
+            "Lấy danh sách ID khóa học đã mua thành công");
+    }
+
     public async Task<ApiResponse<List<OrderResponse>>> GetOrdersByInstructorAsync(Guid instructorId, PaginationRequest pagination)
     {
         var orders = await unitOfWork.OrderRepository.GetPagedAsync(
@@ -178,8 +226,8 @@ public class OrderService(
                 return (false, "Dữ liệu khóa học không hợp lệ", 0, 0, 0, null, orderItems);
 
             var course = courseResult.Data;
-            var unitPrice = course.Price;
-            var itemSubTotal = unitPrice; // Base price before any discounts
+            var unitPrice = course.FinalPrice; // Use final price (after instructor discounts)
+            var itemSubTotal = unitPrice; // Base price before any additional discounts
 
             // ── Apply instructor coupon for this specific item ──
             decimal itemInstructorDiscount = 0;

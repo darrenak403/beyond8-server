@@ -11,6 +11,7 @@ using Beyond8.Catalog.Domain.Repositories.Interfaces;
 using Beyond8.Common.Events.Catalog;
 using Beyond8.Common.Utilities;
 using Beyond8.Catalog.Application.Clients.Learning;
+using Beyond8.Catalog.Application.Clients.Sale;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -24,6 +25,7 @@ public class CourseService(
     IUnitOfWork unitOfWork,
     IIdentityClient identityClient,
     ILearningClient learningClient,
+    ISaleClient saleClient,
     ICacheService cacheService,
     ICurrentUserService currentUserService,
     IPublishEndpoint publishEndpoint) : ICourseService
@@ -93,29 +95,51 @@ public class CourseService(
         return withRating.Count > 0 ? withRating.Average(c => c.AvgRating!.Value) : 0;
     }
 
-    private async Task<List<Guid>?> GetEnrolledCourseIdsForExclusionAsync()
+    private async Task<List<Guid>?> GetExcludedCourseIdsForExclusionAsync()
     {
         if (!currentUserService.IsAuthenticated)
             return null;
 
-        var cacheKey = $"enrolled_courses:{currentUserService.UserId}";
+        var cacheKey = $"excluded_courses:{currentUserService.UserId}";
         var cached = await cacheService.GetAsync<List<Guid>>(cacheKey);
         if (cached != null)
         {
-            logger.LogInformation("Retrieved enrolled course IDs from cache for user {UserId}", currentUserService.UserId);
+            logger.LogInformation("Retrieved excluded course IDs from cache for user {UserId}", currentUserService.UserId);
             return cached;
         }
 
+        var excludedCourseIds = new List<Guid>();
+
+        // Get enrolled courses from Learning service
         var enrolledResult = await learningClient.GetEnrolledCourseIdsAsync();
-        if (!enrolledResult.IsSuccess)
+        if (enrolledResult.IsSuccess && enrolledResult.Data != null)
         {
-            logger.LogWarning("Failed to get enrolled courses for exclusion: {Error}", enrolledResult.Message);
-            return null;
+            excludedCourseIds.AddRange(enrolledResult.Data);
+        }
+        else
+        {
+            logger.LogWarning("Failed to get enrolled courses for exclusion: {Error}", enrolledResult?.Message);
         }
 
-        await cacheService.SetAsync(cacheKey, enrolledResult.Data, TimeSpan.FromMinutes(10));
-        logger.LogInformation("Cached enrolled course IDs for user {UserId}", currentUserService.UserId);
-        return enrolledResult.Data;
+        // Get purchased courses from Sale service
+        var purchasedResult = await saleClient.GetPurchasedCourseIdsAsync();
+        if (purchasedResult.IsSuccess && purchasedResult.Data != null)
+        {
+            excludedCourseIds.AddRange(purchasedResult.Data);
+        }
+        else
+        {
+            logger.LogWarning("Failed to get purchased courses for exclusion: {Error}", purchasedResult?.Message);
+        }
+
+        // Remove duplicates and cache
+        var distinctExcludedIds = excludedCourseIds.Distinct().ToList();
+        await cacheService.SetAsync(cacheKey, distinctExcludedIds, TimeSpan.FromMinutes(10));
+
+        logger.LogInformation("Cached excluded course IDs for user {UserId}: {Count} courses",
+            currentUserService.UserId, distinctExcludedIds.Count);
+
+        return distinctExcludedIds;
     }
 
     public async Task<ApiResponse<List<CourseSimpleResponse>>> GetAllCoursesAsync(PaginationCourseSearchRequest request)
@@ -123,7 +147,7 @@ public class CourseService(
         try
         {
             var (pageNumber, pageSize) = NormalizePagination(request);
-            var excludedCourseIds = await GetEnrolledCourseIdsForExclusionAsync();
+            var excludedCourseIds = await GetExcludedCourseIdsForExclusionAsync();
 
             var (courses, totalCount) = await unitOfWork.CourseRepository.SearchCoursesAsync(
                 pageNumber,
@@ -190,7 +214,7 @@ public class CourseService(
         {
             var pageNumber = request.PageNumber < 1 ? 1 : request.PageNumber;
             var pageSize = request.PageSize switch { < 1 => 10, > 100 => 100, _ => request.PageSize };
-            var excludedCourseIds = await GetEnrolledCourseIdsForExclusionAsync();
+            var excludedCourseIds = await GetExcludedCourseIdsForExclusionAsync();
 
             logger.LogInformation("Full text search courses with keyword: {Keyword}", request.Keyword);
 
@@ -272,6 +296,12 @@ public class CourseService(
             course.UpdateMetadataFromRequest(request);
             await unitOfWork.CourseRepository.UpdateAsync(id, course);
             await unitOfWork.SaveChangesAsync();
+
+            await publishEndpoint.Publish(new CourseUpdatedMetadataEvent(
+                course.Id,
+                course.Title,
+                course.Slug,
+                course.ThumbnailUrl));
 
             logger.LogInformation("Course metadata updated successfully: {CourseId}", id);
             return ApiResponse<CourseResponse>.SuccessResponse(course.ToResponse(), "Cập nhật thông tin khóa học thành công.");
@@ -700,6 +730,13 @@ public class CourseService(
             course!.ThumbnailUrl = request.ThumbnailUrl;
             await unitOfWork.CourseRepository.UpdateAsync(courseId, course);
             await unitOfWork.SaveChangesAsync();
+
+            // Publish event for other services (cart, learning, etc.)
+            await publishEndpoint.Publish(new CourseUpdatedMetadataEvent(
+                course.Id,
+                course.Title,
+                course.Slug,
+                course.ThumbnailUrl));
 
             logger.LogInformation("Course thumbnail updated successfully: {CourseId}", courseId);
             return ApiResponse<bool>.SuccessResponse(true, "Cập nhật ảnh đại diện khóa học thành công.");

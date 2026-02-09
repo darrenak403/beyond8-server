@@ -63,7 +63,7 @@ public class CartService(
                 CourseThumbnail = course.ThumbnailUrl,
                 InstructorId = course.InstructorId,
                 InstructorName = course.InstructorName,
-                OriginalPrice = course.Price
+                OriginalPrice = course.OriginalPrice
             };
 
             // Use repository to add - ensures correct EF Core tracking state
@@ -94,8 +94,8 @@ public class CartService(
             if (cartItem == null)
                 return ApiResponse<CartResponse>.FailureResponse("Khóa học không có trong giỏ hàng");
 
-            cart.CartItems.Remove(cartItem);
-            await unitOfWork.CartItemRepository.DeleteAsync(cartItem.Id);
+            // Soft delete the cart item
+            cartItem.DeletedAt = DateTime.UtcNow;
             await unitOfWork.SaveChangesAsync();
 
             logger.LogInformation("Course {CourseId} removed from cart for user {UserId}", courseId, userId);
@@ -117,10 +117,10 @@ public class CartService(
             if (cart == null)
                 return ApiResponse<bool>.SuccessResponse(true, "Giỏ hàng đã trống");
 
-            // Delete all cart items
+            // Soft delete all cart items
             foreach (var item in cart.CartItems.ToList())
             {
-                await unitOfWork.CartItemRepository.DeleteAsync(item.Id);
+                item.DeletedAt = DateTime.UtcNow;
             }
 
             await unitOfWork.SaveChangesAsync();
@@ -242,13 +242,13 @@ public class CartService(
     }
 
     /// <summary>
-    /// Remove checked out items from cart after successful order creation.
+    /// Soft delete checked out items from cart after successful order creation.
     /// </summary>
     private async Task RemoveCheckedOutItemsFromCartAsync(IEnumerable<CartItem> items)
     {
         foreach (var item in items)
         {
-            await unitOfWork.CartItemRepository.DeleteAsync(item.Id);
+            item.DeletedAt = DateTime.UtcNow;
         }
         await unitOfWork.SaveChangesAsync();
     }
@@ -256,7 +256,7 @@ public class CartService(
     private async Task<Cart?> GetCartByUserIdAsync(Guid userId)
     {
         return await unitOfWork.CartRepository.AsQueryable()
-            .Include(c => c.CartItems)
+            .Include(c => c.CartItems.Where(ci => ci.DeletedAt == null)) // Filter out soft deleted items
             .FirstOrDefaultAsync(c => c.UserId == userId);
     }
 
@@ -299,7 +299,7 @@ public class CartService(
                     "Danh sách khóa học rỗng");
 
             var cartCourseIds = await unitOfWork.CartItemRepository.AsQueryable()
-                .Where(ci => ci.Cart.UserId == userId && courseIds.Contains(ci.CourseId))
+                .Where(ci => ci.Cart.UserId == userId && courseIds.Contains(ci.CourseId) && ci.DeletedAt == null)
                 .Select(ci => ci.CourseId)
                 .ToListAsync();
 

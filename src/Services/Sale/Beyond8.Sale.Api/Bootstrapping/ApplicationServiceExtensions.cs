@@ -2,6 +2,7 @@ using Beyond8.Common.Extensions;
 using Beyond8.Common.Utilities;
 using Beyond8.Sale.Api.Apis;
 using Beyond8.Sale.Application.Clients.Catalog;
+using Beyond8.Sale.Application.Consumers.Catalog;
 using Beyond8.Sale.Application.Consumers.Learning;
 using Beyond8.Sale.Application.Dtos.Orders;
 using Beyond8.Sale.Application.Helpers;
@@ -33,6 +34,7 @@ public static class ApplicationServiceExtensions
         builder.AddMassTransitWithRabbitMq(config =>
         {
             config.AddConsumer<FreeEnrollmentOrderRequestEventConsumer>();
+            config.AddConsumer<CourseUpdatedMetadataEventConsumer>();
         }, queueNamePrefix: "sale");
 
         // VNPay configuration

@@ -125,7 +125,7 @@ public static class OrderMappings
             CourseThumbnail = course.ThumbnailUrl,
             InstructorId = course.InstructorId,
             InstructorName = course.InstructorName,
-            OriginalPrice = course.Price,
+            OriginalPrice = course.OriginalPrice,
             UnitPrice = unitPrice,
             DiscountPercent = discountPercent,
             LineTotal = pricing.LineTotal,
