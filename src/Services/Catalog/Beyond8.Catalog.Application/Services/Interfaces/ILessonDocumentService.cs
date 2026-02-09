@@ -13,4 +13,5 @@ public interface ILessonDocumentService
     Task<ApiResponse<bool>> ToggleDownloadableAsync(Guid documentId, Guid currentUserId);
     Task<ApiResponse<bool>> IncrementDownloadCountAsync(Guid documentId);
     Task<ApiResponse<bool>> UpdateVectorIndexStatusAsync(Guid documentId, bool isIndexed, Guid currentUserId);
+    Task<ApiResponse<List<LessonDocumentResponse>>> GetLessonDocumentsPreviewAsync(Guid lessonId);
 }

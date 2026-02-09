@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MassTransit;
 using Beyond8.Common.Events.Catalog;
+using Beyond8.Catalog.Application.Dtos.LessonDocuments;
 
 namespace Beyond8.Catalog.Application.Services.Implements;
 

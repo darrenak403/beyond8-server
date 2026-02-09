@@ -300,4 +300,34 @@ public class LessonDocumentService(
 
         return (true, null);
     }
+
+    public async Task<ApiResponse<List<LessonDocumentResponse>>> GetLessonDocumentsPreviewAsync(Guid lessonId)
+    {
+        try
+        {
+            var lesson = await unitOfWork.LessonRepository.FindOneAsync(l => l.Id == lessonId && l.IsPreview == true);
+            if (lesson == null)
+            {
+                logger.LogWarning("Lesson not found for preview: {LessonId}", lessonId);
+                return ApiResponse<List<LessonDocumentResponse>>.FailureResponse("Bài học không tồn tại.");
+            }
+
+            // Get only downloadable documents for preview (limit to 10 for performance)
+            var documents = await unitOfWork.LessonDocumentRepository
+                .AsQueryable()
+                .Where(d => d.LessonId == lessonId && d.IsDownloadable)
+                .OrderByDescending(d => d.CreatedAt)
+                .Take(10) // Limit preview documents
+                .Select(d => d.ToResponse())
+                .ToListAsync();
+
+            logger.LogInformation("Retrieved {Count} preview documents for lesson {LessonId}", documents.Count, lessonId);
+            return ApiResponse<List<LessonDocumentResponse>>.SuccessResponse(documents, "Lấy danh sách tài liệu preview thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting lesson documents preview for lesson {LessonId}", lessonId);
+            return ApiResponse<List<LessonDocumentResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách tài liệu preview.");
+        }
+    }
 }

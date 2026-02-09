@@ -93,6 +93,14 @@ public static class LessonDocumentApis
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
+        // Get preview documents by lesson (public endpoint for course discovery)
+        group.MapGet("/lesson/{lessonId}/preview", GetLessonDocumentsPreviewAsync)
+            .WithName("GetLessonDocumentsPreview")
+            .WithDescription("Lấy danh sách tài liệu preview của bài học (công khai)")
+            .AllowAnonymous()
+            .Produces<ApiResponse<List<LessonDocumentResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<List<LessonDocumentResponse>>>(StatusCodes.Status400BadRequest);
+
         return group;
     }
 
@@ -181,6 +189,14 @@ public static class LessonDocumentApis
     {
         var currentUserId = currentUserService.UserId;
         var result = await lessonDocumentService.UpdateVectorIndexStatusAsync(id, request.IsIndexed, currentUserId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> GetLessonDocumentsPreviewAsync(
+        [FromRoute] Guid lessonId,
+        [FromServices] ILessonDocumentService lessonDocumentService)
+    {
+        var result = await lessonDocumentService.GetLessonDocumentsPreviewAsync(lessonId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 }
