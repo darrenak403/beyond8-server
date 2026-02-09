@@ -6,6 +6,7 @@ namespace Beyond8.Catalog.Application.Services.Interfaces;
 public interface ILessonDocumentService
 {
     Task<ApiResponse<List<LessonDocumentResponse>>> GetLessonDocumentsAsync(Guid lessonId, Guid currentUserId);
+    Task<ApiResponse<List<LessonDocumentResponse>>> GetLessonDocumentsForStudentAsync(Guid lessonId, Guid currentUserId);
     Task<ApiResponse<LessonDocumentResponse>> GetLessonDocumentByIdAsync(Guid documentId, Guid currentUserId);
     Task<ApiResponse<LessonDocumentResponse>> CreateLessonDocumentAsync(CreateLessonDocumentRequest request, Guid currentUserId);
     Task<ApiResponse<LessonDocumentResponse>> UpdateLessonDocumentAsync(Guid documentId, UpdateLessonDocumentRequest request, Guid currentUserId);

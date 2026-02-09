@@ -26,7 +26,15 @@ public static class LessonDocumentApis
         group.MapGet("/lesson/{lessonId}", GetLessonDocumentsAsync)
             .WithName("GetLessonDocuments")
             .WithDescription("Lấy danh sách tài liệu của bài học")
-            .RequireAuthorization(x => x.RequireRole(Role.Instructor, Role.Student))
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .Produces<ApiResponse<List<LessonDocumentResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<List<LessonDocumentResponse>>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
+        group.MapGet("/lesson/{lessonId}/student", GetLessonDocumentsForStudentAsync)
+            .WithName("GetLessonDocumentsForStudent")
+            .WithDescription("Lấy danh sách tài liệu của bài học cho học viên")
+            .RequireAuthorization(x => x.RequireRole(Role.Student))
             .Produces<ApiResponse<List<LessonDocumentResponse>>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<List<LessonDocumentResponse>>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
@@ -35,7 +43,7 @@ public static class LessonDocumentApis
         group.MapGet("/{id}", GetLessonDocumentByIdAsync)
             .WithName("GetLessonDocumentById")
             .WithDescription("Lấy thông tin tài liệu bài học theo ID")
-            .RequireAuthorization(x => x.RequireRole(Role.Instructor, Role.Student))
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
             .Produces<ApiResponse<LessonDocumentResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<LessonDocumentResponse>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
@@ -111,6 +119,16 @@ public static class LessonDocumentApis
     {
         var currentUserId = currentUserService.UserId;
         var result = await lessonDocumentService.GetLessonDocumentsAsync(lessonId, currentUserId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> GetLessonDocumentsForStudentAsync(
+    [FromRoute] Guid lessonId,
+    [FromServices] ILessonDocumentService lessonDocumentService,
+    [FromServices] ICurrentUserService currentUserService)
+    {
+        var currentUserId = currentUserService.UserId;
+        var result = await lessonDocumentService.GetLessonDocumentsForStudentAsync(lessonId, currentUserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 

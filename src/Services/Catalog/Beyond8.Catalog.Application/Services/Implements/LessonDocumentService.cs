@@ -37,6 +37,26 @@ public class LessonDocumentService(
         }
     }
 
+    public async Task<ApiResponse<List<LessonDocumentResponse>>> GetLessonDocumentsForStudentAsync(Guid lessonId, Guid currentUserId)
+    {
+        try
+        {
+            var documents = await unitOfWork.LessonDocumentRepository
+                .AsQueryable()
+                .Where(d => d.LessonId == lessonId && d.IsDownloadable)
+                .OrderByDescending(d => d.CreatedAt)
+                .Select(d => d.ToResponse())
+                .ToListAsync();
+
+            return ApiResponse<List<LessonDocumentResponse>>.SuccessResponse(documents, "Lấy danh sách tài liệu bài học cho học viên thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting lesson documents for student for lesson: {LessonId}", lessonId);
+            return ApiResponse<List<LessonDocumentResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách tài liệu bài học cho học viên.");
+        }
+    }
+
     public async Task<ApiResponse<LessonDocumentResponse>> GetLessonDocumentByIdAsync(Guid documentId, Guid currentUserId)
     {
         try
