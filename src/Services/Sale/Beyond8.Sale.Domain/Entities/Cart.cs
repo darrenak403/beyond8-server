@@ -43,4 +43,17 @@ public class CartItem : BaseEntity
 
     [Column(TypeName = "decimal(18, 2)")]
     public decimal OriginalPrice { get; set; }
+
+    // Discount Info (snapshot from course at time of adding)
+    [Column(TypeName = "decimal(5, 2)")]
+    public decimal? DiscountPercent { get; set; }
+
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal? DiscountAmount { get; set; }
+
+    public DateTime? DiscountEndsAt { get; set; }
+
+    // Computed Price (calculated at time of adding)
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal FinalPrice { get; set; }
 }

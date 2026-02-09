@@ -1,5 +1,6 @@
 using Beyond8.Common;
 using Beyond8.Common.Events;
+using Beyond8.Common.Events.Cache;
 using Beyond8.Common.Events.Sale;
 using Beyond8.Common.Utilities;
 using Beyond8.Sale.Application.Clients.Catalog;
@@ -48,34 +49,31 @@ public class OrderService(
         // Delegate to standard order creation (reuse logic)
         var orderResult = await CreateOrderAsync(orderRequest, userId);
 
-        // Clear cart after successful purchase (Buy Now should clear cart)
-        if (orderResult.IsSuccess)
+        // Remove from cart only if free course (auto-paid)
+        // Paid courses will have cart items removed after payment success in PaymentService
+        if (orderResult.IsSuccess && orderResult.Data!.Status == OrderStatus.Paid)
         {
             try
             {
-                // Note: We can't inject ICartService here due to circular dependency
-                // Instead, we'll clear cart items directly
                 var cart = await unitOfWork.CartRepository.AsQueryable()
                     .Include(c => c.CartItems)
                     .FirstOrDefaultAsync(c => c.UserId == userId);
 
-                if (cart != null && cart.CartItems.Any())
+                if (cart != null)
                 {
-                    // Soft delete the purchased course from cart if it exists
                     var cartItem = cart.CartItems.FirstOrDefault(ci => ci.CourseId == request.CourseId);
                     if (cartItem != null)
                     {
-                        cartItem.DeletedAt = DateTime.UtcNow;
+                        await unitOfWork.CartItemRepository.DeleteAsync(cartItem.Id);
                         await unitOfWork.SaveChangesAsync();
 
-                        logger.LogInformation("Soft deleted purchased course {CourseId} from cart for user {UserId}",
+                        logger.LogInformation("Removed purchased course {CourseId} from cart for user {UserId}",
                             request.CourseId, userId);
                     }
                 }
             }
             catch (Exception ex)
             {
-                // Log error but don't fail the order
                 logger.LogError(ex, "Failed to clear cart after Buy Now for user {UserId}, course {CourseId}",
                     userId, request.CourseId);
             }
@@ -86,6 +84,43 @@ public class OrderService(
 
     public async Task<ApiResponse<OrderResponse>> CreateOrderAsync(CreateOrderRequest request, Guid userId)
     {
+        // Check if user already has a pending (unpaid) order containing any of the requested courses
+        var requestedCourseIds = request.Items.Select(i => i.CourseId).ToList();
+
+        var existingPendingOrder = await unitOfWork.OrderRepository.AsQueryable()
+            .Include(o => o.OrderItems)
+            .FirstOrDefaultAsync(o => o.UserId == userId
+                && o.Status == OrderStatus.Pending
+                && o.OrderItems.Any(oi => requestedCourseIds.Contains(oi.CourseId)));
+
+        if (existingPendingOrder != null)
+        {
+            // Return the existing pending order instead of creating a new one
+            logger.LogInformation(
+                "Returning existing pending order {OrderId} for user {UserId} (contains requested courses)",
+                existingPendingOrder.Id, userId);
+
+            return ApiResponse<OrderResponse>.SuccessResponse(
+                existingPendingOrder.ToResponse(),
+                "Đơn hàng đã tồn tại, vui lòng tiếp tục thanh toán");
+        }
+
+        // Check if user already purchased any of these courses
+        var alreadyPurchasedCourseIds = await unitOfWork.OrderRepository.AsQueryable()
+            .Where(o => o.UserId == userId && o.Status == OrderStatus.Paid)
+            .SelectMany(o => o.OrderItems.Select(oi => oi.CourseId))
+            .Where(courseId => requestedCourseIds.Contains(courseId))
+            .Distinct()
+            .ToListAsync();
+
+        if (alreadyPurchasedCourseIds.Any())
+        {
+            logger.LogWarning("User {UserId} attempted to purchase already owned courses: {CourseIds}",
+                userId, string.Join(", ", alreadyPurchasedCourseIds));
+            return ApiResponse<OrderResponse>.FailureResponse(
+                "Bạn đã mua một hoặc nhiều khóa học trong đơn hàng này rồi");
+        }
+
         // Validate and calculate totals
         var calculation = await CalculateOrderTotalsAsync(request.Items, request.CouponCode);
         if (!calculation.IsValid)
@@ -113,6 +148,10 @@ public class OrderService(
                 order.Id,
                 userId,
                 request.Items.Select(i => i.CourseId).ToList()));
+
+            // Invalidate excluded courses cache so GetAllCourses hides purchased courses immediately
+            await publishEndpoint.Publish(new CacheInvalidateEvent($"excluded_courses:{userId}"));
+
             logger.LogInformation("Free enrollment event published for order {OrderId}", order.Id);
         }
 

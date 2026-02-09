@@ -1,4 +1,5 @@
 using Beyond8.Common;
+using Beyond8.Common.Events.Cache;
 using Beyond8.Common.Events.Sale;
 using Beyond8.Common.Utilities;
 using Beyond8.Sale.Application.Dtos.Payments;
@@ -218,9 +219,15 @@ public class PaymentService(
 
         await unitOfWork.SaveChangesAsync();
 
+        // ── Remove purchased items from cart (hard delete) ──
+        await RemovePurchasedItemsFromCartAsync(order.UserId, order.OrderItems.Select(oi => oi.CourseId).ToList());
+
         // Notify Learning service to create Enrollment
         var courseIds = order.OrderItems.Select(oi => oi.CourseId).ToList();
         await publishEndpoint.Publish(new OrderCompletedEvent(order.Id, order.UserId, courseIds));
+
+        // Invalidate excluded courses cache so GetAllCourses hides purchased courses immediately
+        await publishEndpoint.Publish(new CacheInvalidateEvent($"excluded_courses:{order.UserId}"));
 
         logger.LogInformation(
             "Payment SUCCESS — PaymentId: {PaymentId}, OrderId: {OrderId}, Amount: {Amount}, TxnNo: {TxnNo}",
@@ -330,6 +337,10 @@ public class PaymentService(
 
         await unitOfWork.SaveChangesAsync();
 
+        // ── Remove failed purchase items from cart (allow re-add for retry) ──
+        var order = payment.Order;
+        await RemovePurchasedItemsFromCartAsync(order.UserId, order.OrderItems.Select(oi => oi.CourseId).ToList());
+
         logger.LogWarning(
             "Payment FAILED — PaymentId: {PaymentId}, OrderId: {OrderId}, Code: {Code}, Reason: {Reason}",
             payment.Id, payment.OrderId, result.ResponseCode, result.ResponseDescription);
@@ -360,4 +371,41 @@ public class PaymentService(
 
     private static string GeneratePaymentNumber()
         => $"PAY-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+
+    /// <summary>
+    /// Remove purchased items from user's cart after successful payment.
+    /// </summary>
+    private async Task RemovePurchasedItemsFromCartAsync(Guid userId, List<Guid> purchasedCourseIds)
+    {
+        try
+        {
+            // Find cart items for purchased courses
+            var cartItems = await unitOfWork.CartItemRepository.AsQueryable()
+                .Where(ci => ci.Cart.UserId == userId && purchasedCourseIds.Contains(ci.CourseId))
+                .ToListAsync();
+
+            if (!cartItems.Any())
+            {
+                logger.LogInformation("No cart items to remove for user {UserId}", userId);
+                return;
+            }
+
+            // Hard delete cart items
+            foreach (var item in cartItems)
+            {
+                await unitOfWork.CartItemRepository.DeleteAsync(item.Id);
+            }
+
+            await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation(
+                "Removed {Count} purchased items from cart for user {UserId}",
+                cartItems.Count, userId);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to remove purchased items from cart for user {UserId}", userId);
+            // Don't throw - payment already succeeded, cart cleanup is non-critical
+        }
+    }
 }

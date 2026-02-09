@@ -11,5 +11,10 @@ public class CartItemResponse
     public Guid InstructorId { get; set; }
     public string InstructorName { get; set; } = string.Empty;
     public decimal OriginalPrice { get; set; }
+    public decimal? DiscountPercent { get; set; }
+    public decimal? DiscountAmount { get; set; }
+    public DateTime? DiscountEndsAt { get; set; }
+    public decimal FinalPrice { get; set; }
+    public bool HasDiscount => DiscountPercent > 0 || DiscountAmount > 0;
 }
 

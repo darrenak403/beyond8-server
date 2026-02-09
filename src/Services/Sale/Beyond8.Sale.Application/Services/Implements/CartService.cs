@@ -54,7 +54,23 @@ public class CartService(
 
             var course = courseResult.Data;
 
-            // Create cart item with course snapshot
+            // Validate discount if exists (check expiry)
+            var hasValidDiscount = course.DiscountEndsAt == null || course.DiscountEndsAt > DateTime.UtcNow;
+            var discountPercent = hasValidDiscount ? course.DiscountPercent : null;
+            var discountAmount = hasValidDiscount ? course.DiscountAmount : null;
+            var discountEndsAt = hasValidDiscount ? course.DiscountEndsAt : null;
+
+            // Calculate final price
+            var finalPrice = course.OriginalPrice;
+            if (hasValidDiscount)
+            {
+                if (discountAmount.HasValue)
+                    finalPrice = Math.Max(0, course.OriginalPrice - discountAmount.Value);
+                else if (discountPercent.HasValue)
+                    finalPrice = Math.Max(0, course.OriginalPrice * (1 - discountPercent.Value / 100));
+            }
+
+            // Create new cart item with course snapshot (including discount info)
             var cartItem = new CartItem
             {
                 CartId = cart.Id,
@@ -63,11 +79,16 @@ public class CartService(
                 CourseThumbnail = course.ThumbnailUrl,
                 InstructorId = course.InstructorId,
                 InstructorName = course.InstructorName,
-                OriginalPrice = course.OriginalPrice
+                OriginalPrice = course.OriginalPrice,
+                DiscountPercent = discountPercent,
+                DiscountAmount = discountAmount,
+                DiscountEndsAt = discountEndsAt,
+                FinalPrice = finalPrice
             };
 
             // Use repository to add - ensures correct EF Core tracking state
             await unitOfWork.CartItemRepository.AddAsync(cartItem);
+
             await unitOfWork.SaveChangesAsync();
 
             // Reload cart with updated items
@@ -94,8 +115,8 @@ public class CartService(
             if (cartItem == null)
                 return ApiResponse<CartResponse>.FailureResponse("Khóa học không có trong giỏ hàng");
 
-            // Soft delete the cart item
-            cartItem.DeletedAt = DateTime.UtcNow;
+            // Hard delete the cart item
+            await unitOfWork.CartItemRepository.DeleteAsync(cartItem.Id);
             await unitOfWork.SaveChangesAsync();
 
             logger.LogInformation("Course {CourseId} removed from cart for user {UserId}", courseId, userId);
@@ -114,13 +135,13 @@ public class CartService(
         try
         {
             var cart = await GetCartByUserIdAsync(userId);
-            if (cart == null)
+            if (cart == null || !cart.CartItems.Any())
                 return ApiResponse<bool>.SuccessResponse(true, "Giỏ hàng đã trống");
 
-            // Soft delete all cart items
+            // Hard delete all cart items
             foreach (var item in cart.CartItems.ToList())
             {
-                item.DeletedAt = DateTime.UtcNow;
+                await unitOfWork.CartItemRepository.DeleteAsync(item.Id);
             }
 
             await unitOfWork.SaveChangesAsync();
@@ -162,14 +183,14 @@ public class CartService(
             // Delegate order creation to OrderService (no duplicate logic)
             var orderResult = await orderService.CreateOrderAsync(orderRequest, userId);
 
+            // ⚠️ NOTE: Cart items are NOT removed here
+            // They will be removed automatically when payment succeeds
+            // This allows users to retry checkout if payment fails
             if (orderResult.IsSuccess)
             {
-                // Remove only checked out items from cart
-                await RemoveCheckedOutItemsFromCartAsync(itemsToCheckout.Select(x => x.CartItem));
-
                 logger.LogInformation(
-                    "Cart checked out for user {UserId}, order {OrderId}, {ItemCount} items removed from cart",
-                    userId, orderResult.Data!.Id, itemsToCheckout.Count);
+                    "Cart checked out for user {UserId}, order {OrderId} created. Cart items will be removed after payment success.",
+                    userId, orderResult.Data!.Id);
             }
 
             return orderResult;
@@ -241,22 +262,10 @@ public class CartService(
         };
     }
 
-    /// <summary>
-    /// Soft delete checked out items from cart after successful order creation.
-    /// </summary>
-    private async Task RemoveCheckedOutItemsFromCartAsync(IEnumerable<CartItem> items)
-    {
-        foreach (var item in items)
-        {
-            item.DeletedAt = DateTime.UtcNow;
-        }
-        await unitOfWork.SaveChangesAsync();
-    }
-
     private async Task<Cart?> GetCartByUserIdAsync(Guid userId)
     {
         return await unitOfWork.CartRepository.AsQueryable()
-            .Include(c => c.CartItems.Where(ci => ci.DeletedAt == null)) // Filter out soft deleted items
+            .Include(c => c.CartItems)
             .FirstOrDefaultAsync(c => c.UserId == userId);
     }
 
@@ -299,7 +308,7 @@ public class CartService(
                     "Danh sách khóa học rỗng");
 
             var cartCourseIds = await unitOfWork.CartItemRepository.AsQueryable()
-                .Where(ci => ci.Cart.UserId == userId && courseIds.Contains(ci.CourseId) && ci.DeletedAt == null)
+                .Where(ci => ci.Cart.UserId == userId && courseIds.Contains(ci.CourseId))
                 .Select(ci => ci.CourseId)
                 .ToListAsync();
 

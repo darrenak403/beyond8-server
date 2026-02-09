@@ -12,6 +12,9 @@ public class CourseDto
     [JsonPropertyName("price")]
     public decimal OriginalPrice { get; set; }
     public decimal FinalPrice { get; set; }
+    public decimal? DiscountPercent { get; set; }
+    public decimal? DiscountAmount { get; set; }
+    public DateTime? DiscountEndsAt { get; set; }
     public Guid InstructorId { get; set; }
     public string InstructorName { get; set; } = string.Empty;
     public string? ThumbnailUrl { get; set; }

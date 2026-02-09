@@ -8,12 +8,17 @@ public static class CartMappings
     public static CartResponse ToResponse(this Cart cart)
     {
         var items = cart.CartItems.Select(ci => ci.ToResponse()).ToList();
+        var originalTotal = items.Sum(i => i.OriginalPrice);
+        var finalTotal = items.Sum(i => i.FinalPrice);
+
         return new CartResponse
         {
             Id = cart.Id,
             UserId = cart.UserId,
             Items = items,
-            SubTotal = items.Sum(i => i.OriginalPrice),
+            OriginalTotal = originalTotal,
+            TotalDiscount = originalTotal - finalTotal,
+            SubTotal = finalTotal,
             TotalItems = items.Count
         };
     }
@@ -28,7 +33,11 @@ public static class CartMappings
             CourseThumbnail = cartItem.CourseThumbnail,
             InstructorId = cartItem.InstructorId,
             InstructorName = cartItem.InstructorName,
-            OriginalPrice = cartItem.OriginalPrice
+            OriginalPrice = cartItem.OriginalPrice,
+            DiscountPercent = cartItem.DiscountPercent,
+            DiscountAmount = cartItem.DiscountAmount,
+            DiscountEndsAt = cartItem.DiscountEndsAt,
+            FinalPrice = cartItem.FinalPrice
         };
     }
 }
