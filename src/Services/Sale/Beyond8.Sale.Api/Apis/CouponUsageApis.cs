@@ -26,7 +26,7 @@ public static class CouponUsageApis
         // ── Student ──
         group.MapGet("/history", GetUserUsageHistoryAsync)
             .WithName("GetUserCouponUsageHistory")
-            .WithDescription("Lấy lịch sử sử dụng coupon của người dùng (Student, paginated)")
+            .WithDescription("Lấy lịch sử sử dụng coupon của người dùng (Student/Authenticated, paginated)")
             .RequireAuthorization()
             .Produces<ApiResponse<List<CouponUsageResponse>>>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
@@ -35,14 +35,14 @@ public static class CouponUsageApis
         // ── Public (UI quick check) ──
         group.MapGet("/can-use", CanUserUseCouponAsync)
             .WithName("CanUserUseCoupon")
-            .WithDescription("Kiểm tra người dùng có thể sử dụng coupon không (Public quick check)")
+            .WithDescription("Kiểm tra người dùng có thể sử dụng coupon không (Public - quick check for UI)")
             .AllowAnonymous()
             .Produces<ApiResponse<bool>>(StatusCodes.Status200OK);
 
         // ── Public (for frontend validation) ──
         group.MapPost("/validate", ValidateCouponForUserAsync)
             .WithName("ValidateCouponForUser")
-            .WithDescription("Validate coupon cho người dùng với danh sách khóa học (Public)")
+            .WithDescription("Validate coupon cho người dùng với danh sách khóa học (Public - for frontend validation)")
             .AllowAnonymous()
             .Produces<ApiResponse<CouponValidationResult>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<CouponValidationResult>>(StatusCodes.Status400BadRequest);

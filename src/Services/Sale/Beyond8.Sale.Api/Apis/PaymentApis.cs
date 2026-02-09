@@ -27,33 +27,33 @@ public static class PaymentApis
     {
         group.MapPost("/process", ProcessPaymentAsync)
             .WithName("ProcessPayment")
-            .WithDescription("Khởi tạo thanh toán VNPay cho đơn hàng")
+            .WithDescription("Khởi tạo thanh toán VNPay cho đơn hàng (Student/Authenticated)")
             .RequireAuthorization()
             .Produces<ApiResponse<PaymentUrlResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<PaymentUrlResponse>>(StatusCodes.Status400BadRequest);
 
         group.MapGet("/vnpay/callback", HandleVNPayCallbackAsync)
             .WithName("VNPayCallback")
-            .WithDescription("VNPay callback — xử lý kết quả thanh toán")
+            .WithDescription("VNPay callback — xử lý kết quả thanh toán (Public - VNPay webhook)")
             .AllowAnonymous()
             .Produces<string>(StatusCodes.Status200OK);
 
         group.MapGet("/{paymentId}/status", CheckPaymentStatusAsync)
             .WithName("CheckPaymentStatus")
-            .WithDescription("Kiểm tra trạng thái thanh toán")
+            .WithDescription("Kiểm tra trạng thái thanh toán (Student/Authenticated)")
             .RequireAuthorization()
             .Produces<ApiResponse<PaymentResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<PaymentResponse>>(StatusCodes.Status404NotFound);
 
         group.MapGet("/order/{orderId}", GetPaymentsByOrderAsync)
             .WithName("GetPaymentsByOrder")
-            .WithDescription("Lấy danh sách thanh toán theo đơn hàng")
+            .WithDescription("Lấy danh sách thanh toán theo đơn hàng (Order Owner or Admin)")
             .RequireAuthorization()
             .Produces<ApiResponse<List<PaymentResponse>>>(StatusCodes.Status200OK);
 
         group.MapGet("/my-payments", GetMyPaymentsAsync)
             .WithName("GetMyPayments")
-            .WithDescription("Lấy lịch sử thanh toán của user (paginated)")
+            .WithDescription("Lấy lịch sử thanh toán của user (Student/Authenticated, paginated)")
             .RequireAuthorization()
             .Produces<ApiResponse<List<PaymentResponse>>>(StatusCodes.Status200OK);
 

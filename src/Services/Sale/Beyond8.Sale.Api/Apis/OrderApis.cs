@@ -29,7 +29,8 @@ public static class OrderApis
             .WithName("BuyNow")
             .WithDescription("Mua ngay 1 khóa học (Buy Now button). " +
                            "Dùng endpoint này cho single course purchase. " +
-                           "Dùng /cart/checkout cho multiple courses.")
+                           "Dùng /cart/checkout cho multiple courses. " +
+                           "(Student)")
             .RequireAuthorization()
             .Produces<ApiResponse<OrderResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<OrderResponse>>(StatusCodes.Status400BadRequest)
@@ -38,7 +39,7 @@ public static class OrderApis
 
         group.MapGet("/{orderId}", GetOrderByIdAsync)
             .WithName("GetOrderById")
-            .WithDescription("Lấy thông tin đơn hàng theo ID (Order owner or Admin)")
+            .WithDescription("Lấy thông tin đơn hàng theo ID (Order Owner or Admin)")
             .RequireAuthorization()
             .Produces<ApiResponse<OrderResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<OrderResponse>>(StatusCodes.Status404NotFound)
@@ -47,7 +48,7 @@ public static class OrderApis
 
         group.MapGet("/user/{userId}", GetOrdersByUserAsync)
             .WithName("GetOrdersByUser")
-            .WithDescription("Lấy danh sách đơn hàng của người dùng (User or Admin, paginated)")
+            .WithDescription("Lấy danh sách đơn hàng của người dùng (User Owner or Admin, paginated)")
             .RequireAuthorization()
             .Produces<ApiResponse<List<OrderResponse>>>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)

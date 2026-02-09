@@ -66,12 +66,16 @@ public class CartService(
                 OriginalPrice = course.Price
             };
 
-            cart.CartItems.Add(cartItem);
+            // Use repository to add - ensures correct EF Core tracking state
+            await unitOfWork.CartItemRepository.AddAsync(cartItem);
             await unitOfWork.SaveChangesAsync();
+
+            // Reload cart with updated items
+            var updatedCart = await GetCartByUserIdAsync(userId);
 
             logger.LogInformation("Course {CourseId} added to cart for user {UserId}", request.CourseId, userId);
 
-            return ApiResponse<CartResponse>.SuccessResponse(cart.ToResponse(), "Thêm vào giỏ hàng thành công");
+            return ApiResponse<CartResponse>.SuccessResponse(updatedCart!.ToResponse(), "Thêm vào giỏ hàng thành công");
         }
         catch (Exception ex)
         {
@@ -268,5 +272,54 @@ public class CartService(
         await unitOfWork.SaveChangesAsync();
 
         return cart;
+    }
+
+    public async Task<ApiResponse<int>> CountCartItemsAsync(Guid userId)
+    {
+        try
+        {
+            var cart = await GetCartByUserIdAsync(userId);
+            int itemCount = cart?.CartItems.Count ?? 0;
+            return ApiResponse<int>.SuccessResponse(itemCount, "Đếm số lượng mục trong giỏ hàng thành công");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to count cart items for user {UserId}", userId);
+            throw;
+        }
+    }
+
+    public async Task<ApiResponse<Dictionary<Guid, bool>>> CheckCoursesInCartAsync(Guid userId, List<Guid> courseIds)
+    {
+        try
+        {
+            if (!courseIds.Any())
+                return ApiResponse<Dictionary<Guid, bool>>.SuccessResponse(
+                    new Dictionary<Guid, bool>(),
+                    "Danh sách khóa học rỗng");
+
+            var cartCourseIds = await unitOfWork.CartItemRepository.AsQueryable()
+                .Where(ci => ci.Cart.UserId == userId && courseIds.Contains(ci.CourseId))
+                .Select(ci => ci.CourseId)
+                .ToListAsync();
+
+            // Build result dictionary
+            var result = courseIds.ToDictionary(
+                courseId => courseId,
+                courseId => cartCourseIds.Contains(courseId));
+
+            logger.LogInformation(
+                "Checked {TotalCourses} courses for user {UserId}, {InCartCount} in cart",
+                courseIds.Count, userId, cartCourseIds.Count);
+
+            return ApiResponse<Dictionary<Guid, bool>>.SuccessResponse(
+                result,
+                "Kiểm tra khóa học trong giỏ hàng thành công");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to check courses in cart for user {UserId}", userId);
+            throw;
+        }
     }
 }

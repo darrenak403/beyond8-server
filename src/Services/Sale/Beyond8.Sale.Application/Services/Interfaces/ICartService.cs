@@ -11,4 +11,6 @@ public interface ICartService
     Task<ApiResponse<CartResponse>> RemoveFromCartAsync(Guid userId, Guid courseId);
     Task<ApiResponse<bool>> ClearCartAsync(Guid userId);
     Task<ApiResponse<OrderResponse>> CheckoutCartAsync(Guid userId, CheckoutCartRequest request);
+    Task<ApiResponse<int>> CountCartItemsAsync(Guid userId);
+    Task<ApiResponse<Dictionary<Guid, bool>>> CheckCoursesInCartAsync(Guid userId, List<Guid> courseIds);
 }
