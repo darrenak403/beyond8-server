@@ -7,6 +7,7 @@ public class SubmissionSimpleResponse
     public Guid Id { get; set; }
     public Guid StudentId { get; set; }
     public Guid AssignmentId { get; set; }
+    public Guid? SectionId { get; set; }
     public int SubmissionNumber { get; set; }
     public DateTime SubmittedAt { get; set; }
     public decimal? AiScore { get; set; }
