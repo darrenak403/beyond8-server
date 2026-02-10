@@ -15,6 +15,8 @@ await app.MigrateDbContextAsync<AssessmentDbContext>(async (_, _) =>
     var context = scope.ServiceProvider.GetRequiredService<AssessmentDbContext>();
     await AssessmentSeedData.SeedQuizzesAndQuestionsAsync(context);
     await AssessmentSeedData.SeedAssignmentsAsync(context);
+    await AssessmentSeedData.SeedAssignmentSubmissionsAsync(context);
+    await AssessmentSeedData.SeedQuizAttemptsAsync(context);
 });
 
 app.UseApplicationServices();

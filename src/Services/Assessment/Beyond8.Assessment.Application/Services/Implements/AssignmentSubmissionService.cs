@@ -85,7 +85,7 @@ public class AssignmentSubmissionService(
     {
         try
         {
-            var submission = await unitOfWork.AssignmentSubmissionRepository.FindOneWithAssignmentAsync(s => s.Id == submissionId && s.StudentId == userId);
+            var submission = await unitOfWork.AssignmentSubmissionRepository.FindOneAsync(s => s.Id == submissionId);
             if (submission == null)
             {
                 logger.LogError("Submission not found for id: {SubmissionId}", submissionId);
