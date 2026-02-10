@@ -31,6 +31,14 @@ public static class LessonDocumentApis
             .Produces<ApiResponse<List<LessonDocumentResponse>>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
+        group.MapGet("/lesson/{lessonId}/student", GetLessonDocumentsForStudentAsync)
+            .WithName("GetLessonDocumentsForStudent")
+            .WithDescription("Lấy danh sách tài liệu của bài học cho học viên")
+            .RequireAuthorization(x => x.RequireRole(Role.Student))
+            .Produces<ApiResponse<List<LessonDocumentResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<List<LessonDocumentResponse>>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
         // Get document by id
         group.MapGet("/{id}", GetLessonDocumentByIdAsync)
             .WithName("GetLessonDocumentById")
@@ -93,6 +101,14 @@ public static class LessonDocumentApis
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
+        // Get preview documents by lesson (public endpoint for course discovery)
+        group.MapGet("/lesson/{lessonId}/preview", GetLessonDocumentsPreviewAsync)
+            .WithName("GetLessonDocumentsPreview")
+            .WithDescription("Lấy danh sách tài liệu preview của bài học (công khai)")
+            .AllowAnonymous()
+            .Produces<ApiResponse<List<LessonDocumentResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<List<LessonDocumentResponse>>>(StatusCodes.Status400BadRequest);
+
         return group;
     }
 
@@ -103,6 +119,16 @@ public static class LessonDocumentApis
     {
         var currentUserId = currentUserService.UserId;
         var result = await lessonDocumentService.GetLessonDocumentsAsync(lessonId, currentUserId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> GetLessonDocumentsForStudentAsync(
+    [FromRoute] Guid lessonId,
+    [FromServices] ILessonDocumentService lessonDocumentService,
+    [FromServices] ICurrentUserService currentUserService)
+    {
+        var currentUserId = currentUserService.UserId;
+        var result = await lessonDocumentService.GetLessonDocumentsForStudentAsync(lessonId, currentUserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
@@ -181,6 +207,14 @@ public static class LessonDocumentApis
     {
         var currentUserId = currentUserService.UserId;
         var result = await lessonDocumentService.UpdateVectorIndexStatusAsync(id, request.IsIndexed, currentUserId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> GetLessonDocumentsPreviewAsync(
+        [FromRoute] Guid lessonId,
+        [FromServices] ILessonDocumentService lessonDocumentService)
+    {
+        var result = await lessonDocumentService.GetLessonDocumentsPreviewAsync(lessonId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 }

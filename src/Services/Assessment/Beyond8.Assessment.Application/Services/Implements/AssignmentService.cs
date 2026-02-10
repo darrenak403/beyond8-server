@@ -18,7 +18,7 @@ public class AssignmentService(
     ILearningClient learningClient,
     IPublishEndpoint publishEndpoint) : IAssignmentService
 {
-    public async Task<ApiResponse<AssignmentSimpleResponse>> GetAssignmentByIdForStudentAsync(Guid id, Guid userId)
+    public async Task<ApiResponse<AssignmentResponse>> GetAssignmentByIdForStudentAsync(Guid id, Guid userId)
     {
         try
         {
@@ -26,34 +26,34 @@ public class AssignmentService(
             if (assignment == null)
             {
                 logger.LogError("Assignment not found for id: {Id} for student", id);
-                return ApiResponse<AssignmentSimpleResponse>.FailureResponse("Assignment không tồn tại cho học sinh.");
+                return ApiResponse<AssignmentResponse>.FailureResponse("Assignment không tồn tại cho học sinh.");
             }
 
             if (!assignment.CourseId.HasValue)
             {
                 logger.LogWarning("Assignment {AssignmentId} has no CourseId, denying student access", id);
-                return ApiResponse<AssignmentSimpleResponse>.FailureResponse("Assignment không gắn khóa học. Không thể truy cập.");
+                return ApiResponse<AssignmentResponse>.FailureResponse("Assignment không gắn khóa học. Không thể truy cập.");
             }
 
             var enrollmentResult = await learningClient.IsUserEnrolledInCourseAsync(assignment.CourseId.Value);
             if (!enrollmentResult.IsSuccess)
             {
                 logger.LogWarning("Learning client failed for assignment {AssignmentId}, course {CourseId}: {Message}", id, assignment.CourseId, enrollmentResult.Message);
-                return ApiResponse<AssignmentSimpleResponse>.FailureResponse(enrollmentResult.Message ?? "Không thể kiểm tra đăng ký khóa học.");
+                return ApiResponse<AssignmentResponse>.FailureResponse(enrollmentResult.Message ?? "Không thể kiểm tra đăng ký khóa học.");
             }
 
             if (!enrollmentResult.Data)
             {
                 logger.LogWarning("Student not enrolled in course {CourseId} for assignment {AssignmentId}", assignment.CourseId, id);
-                return ApiResponse<AssignmentSimpleResponse>.FailureResponse("Bạn chưa đăng ký khóa học. Vui lòng đăng ký khóa học trước khi xem bài tập.");
+                return ApiResponse<AssignmentResponse>.FailureResponse("Bạn chưa đăng ký khóa học. Vui lòng đăng ký khóa học trước khi xem bài tập.");
             }
 
-            return ApiResponse<AssignmentSimpleResponse>.SuccessResponse(assignment.ToSimpleResponse(), "Lấy assignment thành công.");
+            return ApiResponse<AssignmentResponse>.SuccessResponse(assignment.ToResponse(), "Lấy assignment thành công.");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting assignment by id for student: {Id}", id);
-            return ApiResponse<AssignmentSimpleResponse>.FailureResponse("Đã xảy ra lỗi khi lấy assignment cho học sinh.");
+            return ApiResponse<AssignmentResponse>.FailureResponse("Đã xảy ra lỗi khi lấy assignment cho học sinh.");
         }
     }
 

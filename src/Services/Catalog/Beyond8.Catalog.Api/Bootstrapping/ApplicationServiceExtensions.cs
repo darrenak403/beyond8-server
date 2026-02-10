@@ -1,6 +1,7 @@
 using Beyond8.Catalog.Api.Apis;
 using Beyond8.Catalog.Application.Clients.Identity;
 using Beyond8.Catalog.Application.Clients.Learning;
+using Beyond8.Catalog.Application.Clients.Sale;
 using Beyond8.Catalog.Application.Consumers.Assessment;
 using Beyond8.Catalog.Application.Consumers.Identity;
 using Beyond8.Catalog.Application.Consumers.Learning;
@@ -82,6 +83,16 @@ namespace Beyond8.Catalog.Api.Bootstrapping
             builder.Services.AddHttpClient<ILearningClient, LearningClient>(client =>
             {
                 client.BaseAddress = new Uri(learningBaseUrl);
+                client.Timeout = TimeSpan.FromSeconds(30);
+            })
+            .AddPolicyHandler(GetResiliencePolicy());
+
+            var saleBaseUrl = builder.Configuration["Clients:Sale:BaseUrl"]
+                             ?? throw new ArgumentNullException("Sale URL missing");
+
+            builder.Services.AddHttpClient<ISaleClient, SaleClient>(client =>
+            {
+                client.BaseAddress = new Uri(saleBaseUrl);
                 client.Timeout = TimeSpan.FromSeconds(30);
             })
             .AddPolicyHandler(GetResiliencePolicy());

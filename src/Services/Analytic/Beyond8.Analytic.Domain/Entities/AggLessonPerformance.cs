@@ -29,5 +29,8 @@ namespace Beyond8.Analytic.Domain.Entities
 
         [Column(TypeName = "jsonb")]
         public string? DropOffPoints { get; set; }
+
+        public DateOnly SnapshotDate { get; set; } = DateOnly.FromDateTime(DateTime.UtcNow);
+        public bool IsCurrent { get; set; } = true;
     }
 }

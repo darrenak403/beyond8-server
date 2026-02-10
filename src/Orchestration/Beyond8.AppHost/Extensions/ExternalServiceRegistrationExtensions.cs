@@ -41,6 +41,7 @@ namespace Beyond8.AppHost.Extensions
             var assessmentDb = postgres.AddDatabase("assessment-db", "Assessments");
             var learningDb = postgres.AddDatabase("learning-db", "Learnings");
             var saleDb = postgres.AddDatabase("sale-db", "Sales");
+            var analyticDb = postgres.AddDatabase("analytic-db", "Analytics");
 
             var identityService = builder.AddProject<Projects.Beyond8_Identity_Api>("Identity-Service")
                 .WithReference(identityDb)
@@ -91,6 +92,16 @@ namespace Beyond8.AppHost.Extensions
                 .WithReference(saleDb)
                 .WithReference(redis)
                 .WithReference(rabbitMq)
+                .WithReference(catalogService)
+                .WithReference(learningService)
+                .WaitFor(postgres)
+                .WaitFor(redis)
+                .WaitFor(rabbitMq);
+
+            var analyticService = builder.AddProject<Projects.Beyond8_Analytic_Api>("Analytic-Service")
+                .WithReference(analyticDb)
+                .WithReference(redis)
+                .WithReference(rabbitMq)
                 .WaitFor(postgres)
                 .WaitFor(redis)
                 .WaitFor(rabbitMq);
@@ -137,10 +148,16 @@ namespace Beyond8.AppHost.Extensions
 
                     var saleCluster = config.AddProjectCluster(saleService);
                     config.AddRoute("/api/v1/orders/{**catch-all}", saleCluster);
+                    config.AddRoute("/api/v1/cart/{**catch-all}", saleCluster);
                     config.AddRoute("/api/v1/payments/{**catch-all}", saleCluster);
                     config.AddRoute("/api/v1/coupons/{**catch-all}", saleCluster);
+                    config.AddRoute("/api/v1/coupon-usages/{**catch-all}", saleCluster);
                     config.AddRoute("/api/v1/wallets/{**catch-all}", saleCluster);
                     config.AddRoute("/api/v1/payouts/{**catch-all}", saleCluster);
+                    config.AddRoute("/api/v1/transactions/{**catch-all}", saleCluster);
+
+                    var analyticCluster = config.AddProjectCluster(analyticService);
+                    config.AddRoute("/api/v1/analytics/{**catch-all}", analyticCluster);
 
                     // SignalR hub route
                     config.AddRoute("/hubs/{**catch-all}", integrationCluster);
@@ -157,7 +174,8 @@ namespace Beyond8.AppHost.Extensions
                .WithApiReference(catalogService, options => options.AddPreferredSecuritySchemes("Bearer"))
                .WithApiReference(assessmentService, options => options.AddPreferredSecuritySchemes("Bearer"))
                .WithApiReference(learningService, options => options.AddPreferredSecuritySchemes("Bearer"))
-               .WithApiReference(saleService, options => options.AddPreferredSecuritySchemes("Bearer"));
+               .WithApiReference(saleService, options => options.AddPreferredSecuritySchemes("Bearer"))
+               .WithApiReference(analyticService, options => options.AddPreferredSecuritySchemes("Bearer"));
 
             return builder;
         }

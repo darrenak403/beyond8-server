@@ -18,6 +18,7 @@ public class SubmissionResponse
     public Guid? GradedBy { get; set; }
     public DateTime? GradedAt { get; set; }
     public SubmissionStatus Status { get; set; }
+    public AssignmentSubmissionType SubmissionType { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

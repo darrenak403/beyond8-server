@@ -15,6 +15,5 @@ public class CouponUsageResponse
 
     public DateTime UsedAt { get; set; }
 
-    public string? UserEmail { get; set; }
     public string? OrderNumber { get; set; }
 }

@@ -5,4 +5,5 @@ namespace Beyond8.Sale.Domain.Repositories.Interfaces;
 
 public interface ICartRepository : IGenericRepository<Cart>
 {
+    Task<IReadOnlyCollection<CartItem>> GetCartItemsByCourseIdAsync(Guid courseId);
 }

@@ -54,12 +54,20 @@ namespace Beyond8.Assessment.Api.Apis
                 .Produces<ApiResponse<List<SubmissionResponse>>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
-            group.MapGet("/instructor", GetAllSubmissionsByInstructorAsync)
-                .WithName("GetAllSubmissions")
-                .WithDescription("Lấy danh sách tất cả submission")
+            group.MapGet("/course/{courseId:guid}/summary", GetAllSubmissionsByCourseIdForInstructorAsync)
+                .WithName("GetAllSubmissionsByCourseIdForInstructor")
+                .WithDescription("Lấy tổng quan submissions theo sections cho giảng viên")
                 .RequireAuthorization(x => x.RequireRole(Role.Instructor))
-                .Produces<ApiResponse<List<SubmissionResponse>>>(StatusCodes.Status200OK)
-                .Produces<ApiResponse<List<SubmissionResponse>>>(StatusCodes.Status400BadRequest)
+                .Produces<ApiResponse<CourseSubmissionSummaryResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<CourseSubmissionSummaryResponse>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
+            group.MapGet("/courses/sections/{sectionId:guid}", GetSubmissionsBySectionIdAsync)
+                .WithName("GetSubmissionsBySectionIdForInstructor")
+                .WithDescription("Lấy chi tiết các assignments và submissions theo section ID")
+                .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+                .Produces<ApiResponse<List<AssignmentSubmissionDetail>>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<List<AssignmentSubmissionDetail>>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
             group.MapGet("{submissionId:guid}/instructor", GetSubmissionByIdForInstructorAsync)
@@ -83,13 +91,24 @@ namespace Beyond8.Assessment.Api.Apis
         }
 
 
-        private static async Task<IResult> GetAllSubmissionsByInstructorAsync(
+        private static async Task<IResult> GetAllSubmissionsByCourseIdForInstructorAsync(
+            [FromRoute] Guid courseId,
             [FromServices] IAssignmentSubmissionService assignmentSubmissionService,
             [FromServices] ICurrentUserService currentUserService)
         {
-            var result = await assignmentSubmissionService.GetAllSubmissionsByInstructorAsync(currentUserService.UserId);
+            var result = await assignmentSubmissionService.GetAllSubmissionsByCourseIdForInstructorAsync(courseId, currentUserService.UserId);
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
+
+        private static async Task<IResult> GetSubmissionsBySectionIdAsync(
+            [FromRoute] Guid sectionId,
+            [FromServices] IAssignmentSubmissionService assignmentSubmissionService,
+            [FromServices] ICurrentUserService currentUserService)
+        {
+            var result = await assignmentSubmissionService.GetSubmissionsBySectionIdForInstructorAsync(sectionId, currentUserService.UserId);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
+
 
         private static async Task<IResult> GetSubmissionsByAssignmentIdAsync(
             [FromRoute] Guid assignmentId,

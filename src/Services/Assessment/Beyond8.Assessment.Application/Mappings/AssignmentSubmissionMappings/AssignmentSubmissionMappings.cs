@@ -38,6 +38,7 @@ public static class AssignmentSubmissionMappings
             GradedBy = entity.GradedBy,
             GradedAt = entity.GradedAt,
             Status = entity.Status,
+            SubmissionType = entity.Assignment.SubmissionType,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt ?? entity.CreatedAt,
         };
@@ -61,11 +62,13 @@ public static class AssignmentSubmissionMappings
             Id = entity.Id,
             StudentId = entity.StudentId,
             AssignmentId = entity.AssignmentId,
+            SectionId = entity.Assignment.SectionId,
             SubmissionNumber = entity.SubmissionNumber,
             SubmittedAt = entity.SubmittedAt,
             AiScore = entity.AiScore,
             FinalScore = entity.FinalScore,
             Status = entity.Status,
+            SubmissionType = entity.Assignment.SubmissionType,
             CreatedAt = entity.CreatedAt,
         };
     }
