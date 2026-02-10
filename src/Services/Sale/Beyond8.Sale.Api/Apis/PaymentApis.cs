@@ -27,7 +27,7 @@ public static class PaymentApis
     {
         group.MapPost("/process", ProcessPaymentAsync)
             .WithName("ProcessPayment")
-            .WithDescription("Khởi tạo thanh toán VNPay cho đơn hàng (Student/Authenticated)")
+            .WithDescription("Khởi tạo thanh toán VNPay cho đơn hàng — Purpose: OrderPayment (Student/Authenticated)")
             .RequireAuthorization()
             .Produces<ApiResponse<PaymentUrlResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<PaymentUrlResponse>>(StatusCodes.Status400BadRequest);

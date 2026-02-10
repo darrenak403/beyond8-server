@@ -12,6 +12,9 @@ public interface IPaymentService
     Task<ApiResponse<PaymentResponse>> CheckPaymentStatusAsync(Guid paymentId);
     Task<ApiResponse<List<PaymentResponse>>> GetPaymentsByUserAsync(PaginationRequest pagination, Guid userId);
 
+    // ── Instructor: Wallet Top-Up ──
+    Task<ApiResponse<PaymentUrlResponse>> ProcessTopUpAsync(Guid instructorId, decimal amount, string returnUrl, string ipAddress);
+
     // ── System (VNPay webhook — AllowAnonymous + HMAC verification) ──
     Task<ApiResponse<bool>> HandleVNPayCallbackAsync(VNPayCallbackRequest request, string rawQueryString);
 

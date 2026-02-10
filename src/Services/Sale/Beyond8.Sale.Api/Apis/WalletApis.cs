@@ -1,7 +1,11 @@
 using Beyond8.Common;
+using Beyond8.Common.Extensions;
 using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
+using Beyond8.Sale.Application.Dtos.Payments;
+using Beyond8.Sale.Application.Dtos.Wallets;
 using Beyond8.Sale.Application.Services.Interfaces;
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Beyond8.Sale.Api.Apis;
@@ -24,14 +28,21 @@ public static class WalletApis
             .RequireAuthorization(x => x.RequireRole(Role.Instructor))
             .WithName("GetMyWallet")
             .WithDescription("Lấy thông tin ví của giảng viên hiện tại (Instructor)")
-            .Produces<ApiResponse<object>>(200)
+            .Produces<ApiResponse<InstructorWalletResponse>>(200)
             .Produces(401);
+
+        group.MapPost("/top-up", TopUpWalletAsync)
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .WithName("TopUpWallet")
+            .WithDescription("Nạp tiền vào ví giảng viên qua VNPay — Purpose: WalletTopUp (Instructor)")
+            .Produces<ApiResponse<PaymentUrlResponse>>(200)
+            .Produces(400);
 
         group.MapGet("/my-wallet/transactions", GetMyWalletTransactionsAsync)
             .RequireAuthorization(x => x.RequireRole(Role.Instructor))
             .WithName("GetMyWalletTransactions")
             .WithDescription("Lấy lịch sử giao dịch ví của giảng viên hiện tại (Instructor, phân trang)")
-            .Produces<ApiResponse<object>>(200)
+            .Produces<ApiResponse<List<WalletTransactionResponse>>>(200)
             .Produces(401);
 
         // ── Admin Endpoints ──
@@ -39,14 +50,14 @@ public static class WalletApis
             .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
             .WithName("GetWalletByInstructor")
             .WithDescription("Lấy thông tin ví của một giảng viên cụ thể (Admin/Staff)")
-            .Produces<ApiResponse<object>>(200)
+            .Produces<ApiResponse<InstructorWalletResponse>>(200)
             .Produces(401);
 
         group.MapGet("/instructor/{instructorId:guid}/transactions", GetWalletTransactionsAsync)
             .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
             .WithName("GetWalletTransactions")
             .WithDescription("Lấy lịch sử giao dịch ví của một giảng viên cụ thể (Admin/Staff, phân trang)")
-            .Produces<ApiResponse<object>>(200)
+            .Produces<ApiResponse<List<WalletTransactionResponse>>>(200)
             .Produces(401);
 
         // ── Internal: Create wallet (Admin/Staff) ──
@@ -54,7 +65,7 @@ public static class WalletApis
             .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
             .WithName("CreateWallet")
             .WithDescription("Tạo ví cho một giảng viên (Admin/Staff - Internal use)")
-            .Produces<ApiResponse<object>>(200)
+            .Produces<ApiResponse<InstructorWalletResponse>>(200)
             .Produces(401);
 
         return group;
@@ -101,6 +112,23 @@ public static class WalletApis
         [FromServices] IInstructorWalletService walletService)
     {
         var result = await walletService.CreateWalletAsync(instructorId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> TopUpWalletAsync(
+        [FromServices] IPaymentService paymentService,
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IValidator<TopUpRequest> validator,
+        [FromBody] TopUpRequest request,
+        HttpContext httpContext)
+    {
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
+        var ipAddress = httpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+        var result = await paymentService.ProcessTopUpAsync(
+            currentUserService.UserId, request.Amount, request.ReturnUrl, ipAddress);
+
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 }

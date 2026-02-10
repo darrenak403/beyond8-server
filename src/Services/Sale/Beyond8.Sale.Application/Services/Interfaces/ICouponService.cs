@@ -24,5 +24,5 @@ public interface ICouponService
 
     // ── Internal (called by OrderService) ──
     Task<ApiResponse<decimal>> ApplyCouponAsync(string code, decimal orderTotal);
-    Task<ApiResponse<(bool IsValid, string? ErrorMessage, decimal DiscountAmount, Guid? CouponId)>> ValidateAndApplyCouponAsync(string code, decimal orderTotal, List<Guid> courseIds);
+    Task<ApiResponse<(bool IsValid, string? ErrorMessage, decimal DiscountAmount, Guid? CouponId)>> ValidateAndApplyCouponAsync(string code, decimal orderTotal, List<Guid> courseIds, Guid? userId = null);
 }

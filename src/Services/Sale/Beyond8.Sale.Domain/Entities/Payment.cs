@@ -7,11 +7,24 @@ namespace Beyond8.Sale.Domain.Entities;
 
 public class Payment : BaseEntity
 {
-    // Order Reference
-    public Guid OrderId { get; set; }
+    // Order Reference (nullable for WalletTopUp payments)
+    public Guid? OrderId { get; set; }
 
     [ForeignKey(nameof(OrderId))]
-    public virtual Order Order { get; set; } = null!;
+    public virtual Order? Order { get; set; }
+
+    /// <summary>
+    /// Distinguishes order payment from wallet top-up
+    /// </summary>
+    public PaymentPurpose Purpose { get; set; } = PaymentPurpose.OrderPayment;
+
+    /// <summary>
+    /// Target wallet for WalletTopUp payments (null for OrderPayment)
+    /// </summary>
+    public Guid? WalletId { get; set; }
+
+    [ForeignKey(nameof(WalletId))]
+    public virtual InstructorWallet? InstructorWallet { get; set; }
 
     // Payment Identification
     [Required, MaxLength(50)]

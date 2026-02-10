@@ -90,20 +90,21 @@ public class TransactionService(
     }
 
     /// <summary>
-    /// Get total platform revenue (sum of PlatformFee transactions) within a date range
+    /// Get total platform revenue (sum of PlatformFeeAmount from paid order items) within a date range.
+    /// Uses OrderItem.PlatformFeeAmount which represents the 30% platform commission per BR-19.
     /// </summary>
     public async Task<ApiResponse<decimal>> GetTotalRevenueAsync(DateTime startDate, DateTime endDate)
     {
-        var totalRevenue = await unitOfWork.TransactionLedgerRepository.AsQueryable()
-            .Where(t => t.Type == TransactionType.Sale
-                        && t.Status == TransactionStatus.Completed
-                        && t.CreatedAt >= startDate
-                        && t.CreatedAt <= endDate
-                        && t.DeletedAt == null)
-            .SumAsync(t => t.Amount);
+        // Per BR-19: Platform revenue = sum of PlatformFeeAmount from paid orders
+        var totalRevenue = await unitOfWork.OrderItemRepository.AsQueryable()
+            .Where(oi => oi.Order!.Status == Domain.Enums.OrderStatus.Paid
+                         && oi.Order.PaidAt >= startDate
+                         && oi.Order.PaidAt <= endDate
+                         && oi.DeletedAt == null)
+            .SumAsync(oi => oi.PlatformFeeAmount);
 
         logger.LogInformation(
-            "Total revenue calculated — StartDate: {StartDate}, EndDate: {EndDate}, Revenue: {Revenue}",
+            "Total platform revenue calculated — StartDate: {StartDate}, EndDate: {EndDate}, Revenue: {Revenue}",
             startDate, endDate, totalRevenue);
 
         return ApiResponse<decimal>.SuccessResponse(totalRevenue, "Lấy tổng doanh thu thành công");
