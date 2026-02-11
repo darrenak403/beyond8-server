@@ -4,9 +4,11 @@ using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
 using Beyond8.Sale.Application.Dtos.Payments;
 using Beyond8.Sale.Application.Dtos.Wallets;
+using Beyond8.Sale.Application.Helpers;
 using Beyond8.Sale.Application.Services.Interfaces;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace Beyond8.Sale.Api.Apis;
 
@@ -119,6 +121,7 @@ public static class WalletApis
         [FromServices] IPaymentService paymentService,
         [FromServices] ICurrentUserService currentUserService,
         [FromServices] IValidator<TopUpRequest> validator,
+        [FromServices] IOptions<VNPaySettings> vnPayOptions,
         [FromBody] TopUpRequest request,
         HttpContext httpContext)
     {
@@ -126,8 +129,10 @@ public static class WalletApis
             return validationResult!;
 
         var ipAddress = httpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+        var callbackUrl = $"{vnPayOptions.Value.BackendCallbackUrl.TrimEnd('/')}/api/v1/payments/vnpay/callback";
+
         var result = await paymentService.ProcessTopUpAsync(
-            currentUserService.UserId, request.Amount, request.ReturnUrl, ipAddress);
+            currentUserService.UserId, request.Amount, callbackUrl, ipAddress);
 
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }

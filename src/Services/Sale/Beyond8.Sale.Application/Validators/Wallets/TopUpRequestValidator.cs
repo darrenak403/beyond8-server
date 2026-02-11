@@ -10,10 +10,5 @@ public class TopUpRequestValidator : AbstractValidator<TopUpRequest>
         RuleFor(x => x.Amount)
             .GreaterThanOrEqualTo(10000)
             .WithMessage("Số tiền nạp tối thiểu là 10.000 VND");
-
-        RuleFor(x => x.ReturnUrl)
-            .NotEmpty().WithMessage("URL trả về không được để trống")
-            .Must(url => Uri.TryCreate(url, UriKind.Absolute, out _))
-            .WithMessage("URL trả về không hợp lệ");
     }
 }

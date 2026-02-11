@@ -78,10 +78,6 @@ public static class PaymentApis
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
-    /// <summary>
-    /// VNPay redirects user here after payment. We validate the signature,
-    /// update payment/order status, then redirect to frontend with result.
-    /// </summary>
     private static async Task<IResult> HandleVNPayCallbackAsync(
         [FromServices] IPaymentService paymentService,
         [FromServices] IOptions<VNPaySettings> vnPayOptions,
