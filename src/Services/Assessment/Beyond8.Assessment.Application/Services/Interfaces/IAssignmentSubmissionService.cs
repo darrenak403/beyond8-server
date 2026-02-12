@@ -11,4 +11,5 @@ public interface IAssignmentSubmissionService
     Task<ApiResponse<SubmissionResponse>> GetSubmissionByIdForInstructorAsync(Guid submissionId, Guid userId);
     Task<ApiResponse<List<SubmissionResponse>>> GetSubmissionsByAssignmentIdAsync(Guid assignmentId, Guid userId);
     Task<ApiResponse<SubmissionResponse>> InstructorGradingSubmissionAsync(Guid submissionId, GradeSubmissionRequest request, Guid userId);
+    Task<ApiResponse<bool>> ResetSubmissionsForStudentAsync(Guid assignmentId, Guid studentId, Guid instructorId);
 }

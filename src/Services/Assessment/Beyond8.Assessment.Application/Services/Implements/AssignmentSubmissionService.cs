@@ -1,3 +1,4 @@
+using Beyond8.Assessment.Application.Clients.Learning;
 using Beyond8.Assessment.Application.Dtos.AssignmentSubmissions;
 using Beyond8.Assessment.Application.Mappings.AssignmentSubmissionMappings;
 using Beyond8.Assessment.Application.Services.Interfaces;
@@ -13,7 +14,8 @@ namespace Beyond8.Assessment.Application.Services.Implements;
 public class AssignmentSubmissionService(
     ILogger<AssignmentSubmissionService> logger,
     IUnitOfWork unitOfWork,
-    IPublishEndpoint publishEndpoint) : IAssignmentSubmissionService
+    IPublishEndpoint publishEndpoint,
+    ILearningClient learningClient) : IAssignmentSubmissionService
 {
     public async Task<ApiResponse<SubmissionResponse>> CreateSubmissionAsync(Guid assignmentId, CreateSubmissionRequest request, Guid userId)
     {
@@ -29,7 +31,7 @@ public class AssignmentSubmissionService(
             var existingSubmissions = await unitOfWork.AssignmentSubmissionRepository
                 .GetAllAsync(s => s.AssignmentId == assignmentId && s.StudentId == userId);
 
-            if (existingSubmissions.Count >= assignment.TotalSubmissions && assignment.TotalSubmissions > 0)
+            if (existingSubmissions.Count >= assignment.MaxSubmissions && assignment.MaxSubmissions > 0)
             {
                 logger.LogError("Student {StudentId} has reached the maximum number of submissions for assignment {AssignmentId}", userId, assignmentId);
                 return ApiResponse<SubmissionResponse>.FailureResponse("Bạn đã đạt số lượng nộp bài tối đa cho assignment này.");
@@ -37,9 +39,6 @@ public class AssignmentSubmissionService(
 
             var submission = request.ToEntity(assignmentId, userId, existingSubmissions.Count + 1);
             await unitOfWork.AssignmentSubmissionRepository.AddAsync(submission);
-
-            assignment.TotalSubmissions = existingSubmissions.Count + 1;
-            await unitOfWork.AssignmentRepository.UpdateAsync(assignmentId, assignment);
             await unitOfWork.SaveChangesAsync();
 
             if (assignment.GradingMode == GradingMode.AiAssisted)
@@ -220,6 +219,62 @@ public class AssignmentSubmissionService(
         {
             logger.LogError(ex, "Error getting submission by id for instructor: {SubmissionId}", submissionId);
             return ApiResponse<SubmissionResponse>.FailureResponse("Đã xảy ra lỗi khi lấy submission.");
+        }
+    }
+
+    public async Task<ApiResponse<bool>> ResetSubmissionsForStudentAsync(Guid assignmentId, Guid studentId, Guid instructorId)
+    {
+        try
+        {
+            var assignment = await unitOfWork.AssignmentRepository.FindOneAsync(
+                a => a.Id == assignmentId && a.InstructorId == instructorId);
+            if (assignment == null)
+                return ApiResponse<bool>.FailureResponse("Assignment không tồn tại hoặc không thuộc về bạn.");
+
+            if (assignment.CourseId.HasValue)
+            {
+                var certResult = await learningClient.HasCertificateForCourseAsync(assignment.CourseId.Value, studentId);
+                if (certResult.IsSuccess && certResult.Data)
+                    return ApiResponse<bool>.FailureResponse("Không thể reset lượt nộp bài. Học sinh đã được cấp certificate cho khóa học này.");
+            }
+
+            var submissions = await unitOfWork.AssignmentSubmissionRepository.GetAllAsync(
+                s => s.AssignmentId == assignmentId && s.StudentId == studentId);
+
+            if (submissions.Count == 0)
+                return ApiResponse<bool>.FailureResponse("Học sinh chưa có lượt nộp nào cho assignment này.");
+
+            foreach (var submission in submissions)
+            {
+                submission.DeletedAt = DateTime.UtcNow;
+                submission.DeletedBy = instructorId;
+                await unitOfWork.AssignmentSubmissionRepository.UpdateAsync(submission.Id, submission);
+            }
+
+            await unitOfWork.SaveChangesAsync();
+
+            if (assignment.SectionId.HasValue)
+            {
+                await publishEndpoint.Publish(new AssignmentSubmissionsResetEvent(
+                    AssignmentId: assignmentId,
+                    SectionId: assignment.SectionId.Value,
+                    StudentId: studentId,
+                    ResetByInstructorId: instructorId,
+                    ResetAt: DateTime.UtcNow
+                ));
+            }
+
+            logger.LogInformation(
+                "Assignment submissions reset: AssignmentId={AssignmentId}, StudentId={StudentId}, DeletedCount={Count}, ByInstructor={InstructorId}",
+                assignmentId, studentId, submissions.Count, instructorId);
+
+            return ApiResponse<bool>.SuccessResponse(true,
+                $"Đã reset {submissions.Count} lượt nộp bài cho học sinh. Học sinh có thể nộp lại.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error resetting submissions: AssignmentId={AssignmentId}, StudentId={StudentId}", assignmentId, studentId);
+            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi reset lượt nộp bài.");
         }
     }
 }

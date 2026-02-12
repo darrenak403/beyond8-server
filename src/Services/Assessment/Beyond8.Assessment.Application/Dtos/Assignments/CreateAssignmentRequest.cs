@@ -17,4 +17,5 @@ public class CreateAssignmentRequest
     public int TotalPoints { get; set; } = 100;
     public string? RubricUrl { get; set; }
     public int? TimeLimitMinutes { get; set; } = 60;
+    public int MaxSubmissions { get; set; } = 1;
 }

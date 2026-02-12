@@ -38,6 +38,13 @@ public class QuizAttemptCompletedEventConsumer(
             if (lp.StartedAt == null)
                 lp.StartedAt = msg.CompletedAt;
         }
+        else if (msg.MaxAttempts > 0 && msg.AttemptNumber >= msg.MaxAttempts)
+        {
+            lp.Status = LessonProgressStatus.Failed;
+            logger.LogWarning(
+                "Student {StudentId} has used all {MaxAttempts} attempts for quiz on LessonId {LessonId} and failed all",
+                msg.StudentId, msg.MaxAttempts, msg.LessonId);
+        }
 
         await unitOfWork.LessonProgressRepository.UpdateAsync(lp.Id, lp);
 

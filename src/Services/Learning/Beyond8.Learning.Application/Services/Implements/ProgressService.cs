@@ -155,7 +155,11 @@ public class ProgressService(
                 lp.EnrollmentId == enrollmentId)).ToList();
             var lessonProgressDict = lessonProgressList.ToDictionary(lp => lp.LessonId);
 
-            var response = enrollment.ToCurriculumProgressResponse(structure, lessonProgressDict);
+            var sectionProgressList = (await unitOfWork.SectionProgressRepository.GetAllAsync(sp =>
+                sp.EnrollmentId == enrollmentId)).ToList();
+            var sectionProgressDict = sectionProgressList.ToDictionary(sp => sp.SectionId);
+
+            var response = enrollment.ToCurriculumProgressResponse(structure, lessonProgressDict, sectionProgressDict);
 
             return ApiResponse<CurriculumProgressResponse>.SuccessResponse(response, "Lấy tiến độ khung chương trình thành công.");
         }

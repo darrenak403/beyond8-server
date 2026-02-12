@@ -116,6 +116,17 @@ public class EnrollmentService(
         return ApiResponse<bool>.SuccessResponse(result, result ? "Đã đăng ký khóa học." : "Chưa đăng ký khóa học.", metadata: new { EnrollmentId = enrollment?.Id });
     }
 
+    public async Task<ApiResponse<bool>> HasCertificateForCourseAsync(Guid studentId, Guid courseId)
+    {
+        var enrollment = await unitOfWork.EnrollmentRepository.FindOneAsync(e =>
+            e.UserId == studentId && e.CourseId == courseId && e.DeletedAt == null);
+
+        var hasCertificate = enrollment?.CertificateId != null;
+
+        return ApiResponse<bool>.SuccessResponse(hasCertificate,
+            hasCertificate ? "Học sinh đã được cấp certificate cho khóa học này." : "Chưa có certificate.");
+    }
+
     public async Task<ApiResponse<List<EnrollmentSimpleResponse>>> GetEnrolledCoursesAsync(Guid userId)
     {
         try

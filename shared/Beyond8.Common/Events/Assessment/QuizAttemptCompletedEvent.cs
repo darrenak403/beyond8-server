@@ -9,5 +9,7 @@ public record QuizAttemptCompletedEvent(
     bool IsPassed,
     Guid AttemptId,
     Guid QuizId,
+    int AttemptNumber,
+    int MaxAttempts,
     DateTime CompletedAt
 );

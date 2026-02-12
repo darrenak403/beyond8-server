@@ -55,6 +55,14 @@ public static class EnrollmentApis
             .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
+        group.MapGet("/check-certificate", CheckCertificateAsync)
+            .WithName("CheckCertificate")
+            .WithDescription("Kiểm tra student đã được cấp certificate cho khóa học chưa (dùng bởi Assessment)")
+            .RequireAuthorization()
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
         group.MapGet("/my-course-ids", GetMyEnrolledCourseIdsAsync)
             .WithName("GetMyEnrolledCourseIds")
             .WithDescription("Lấy danh sách ID khóa học đã đăng ký của user hiện tại")
@@ -160,6 +168,15 @@ public static class EnrollmentApis
         [FromServices] ICurrentUserService currentUserService)
     {
         var result = await enrollmentService.IsUserEnrolledInCourseAsync(currentUserService.UserId, courseId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> CheckCertificateAsync(
+        [FromQuery] Guid courseId,
+        [FromQuery] Guid studentId,
+        [FromServices] IEnrollmentService enrollmentService)
+    {
+        var result = await enrollmentService.HasCertificateForCourseAsync(studentId, courseId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 

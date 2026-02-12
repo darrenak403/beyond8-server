@@ -70,6 +70,14 @@ namespace Beyond8.Assessment.Api.Apis
                 .Produces<ApiResponse<SubmissionResponse>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
+            group.MapPost("/assignment/{assignmentId:guid}/reset-submissions/{studentId:guid}", ResetSubmissionsAsync)
+                .WithName("ResetSubmissions")
+                .WithDescription("Instructor reset lượt nộp bài cho student cụ thể")
+                .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+                .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
             return group;
         }
 
@@ -134,6 +142,16 @@ namespace Beyond8.Assessment.Api.Apis
                 return validationResult!;
 
             var result = await assignmentSubmissionService.InstructorGradingSubmissionAsync(submissionId, request, currentUserService.UserId);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
+
+        private static async Task<IResult> ResetSubmissionsAsync(
+            [FromRoute] Guid assignmentId,
+            [FromRoute] Guid studentId,
+            [FromServices] IAssignmentSubmissionService assignmentSubmissionService,
+            [FromServices] ICurrentUserService currentUserService)
+        {
+            var result = await assignmentSubmissionService.ResetSubmissionsForStudentAsync(assignmentId, studentId, currentUserService.UserId);
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
     }

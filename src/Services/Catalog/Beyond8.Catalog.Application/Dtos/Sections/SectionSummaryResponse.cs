@@ -10,5 +10,6 @@ public class SectionSummaryResponse
     public int Order { get; set; }
     public int TotalLessons { get; set; }
     public int TotalDurationMinutes { get; set; }
+    public Guid? AssignmentId { get; set; }
     public List<LessonSummaryResponse> Lessons { get; set; } = [];
 }

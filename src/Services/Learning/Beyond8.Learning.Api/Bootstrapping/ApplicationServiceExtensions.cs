@@ -35,6 +35,8 @@ public static class ApplicationServiceExtensions
             config.AddConsumer<AssignmentSubmittedEventConsumer>();
             config.AddConsumer<AiGradingCompletedEventConsumer>();
             config.AddConsumer<AssignmentGradedEventConsumer>();
+            config.AddConsumer<QuizAttemptsResetEventConsumer>();
+            config.AddConsumer<AssignmentSubmissionsResetEventConsumer>();
             config.AddConsumer<CourseUpdatedMetadataEventConsumer>();
             config.AddConsumer<UserUpdatedEventConsumer>();
         }, queueNamePrefix: "learning");
