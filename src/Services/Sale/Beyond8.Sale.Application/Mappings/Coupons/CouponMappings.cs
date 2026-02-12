@@ -21,6 +21,8 @@ public static class CouponMappings
             UsedCount = coupon.UsedCount,
             ApplicableInstructorId = coupon.ApplicableInstructorId,
             ApplicableCourseId = coupon.ApplicableCourseId,
+            HoldAmount = coupon.HoldAmount,
+            RemainingHoldAmount = coupon.RemainingHoldAmount,
             ValidFrom = coupon.ValidFrom,
             ValidTo = coupon.ValidTo,
             IsActive = coupon.IsActive,

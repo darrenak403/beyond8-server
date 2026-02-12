@@ -1,5 +1,6 @@
 using Beyond8.Common.Data.Base;
 using Beyond8.Sale.Domain.Entities;
+using Beyond8.Sale.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace Beyond8.Sale.Infrastructure.Data;
@@ -20,6 +21,7 @@ public class SaleDbContext : BaseDbContext
     public DbSet<TransactionLedger> TransactionLedgers { get; set; } = null!;
     public DbSet<Cart> Carts { get; set; } = null!;
     public DbSet<CartItem> CartItems { get; set; } = null!;
+    public DbSet<PlatformWallet> PlatformWallets { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -49,10 +51,7 @@ public class SaleDbContext : BaseDbContext
                 .HasForeignKey(oi => oi.OrderId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasMany(o => o.Payments)
-                .WithOne(p => p.Order)
-                .HasForeignKey(p => p.OrderId)
-                .OnDelete(DeleteBehavior.Cascade);
+            // Payment relationship configured in Payment entity config (supports nullable OrderId)
 
             entity.HasOne(o => o.Coupon)
                 .WithMany()
@@ -79,15 +78,37 @@ public class SaleDbContext : BaseDbContext
             entity.HasIndex(e => e.PaymentNumber).IsUnique();
 
             // Performance Indexes
-            entity.HasIndex(e => e.OrderId);
+            entity.HasIndex(e => e.OrderId)
+                .HasFilter("\"OrderId\" IS NOT NULL");
             entity.HasIndex(e => e.Status);
             entity.HasIndex(e => new { e.Provider, e.Status });
             entity.HasIndex(e => e.ExternalTransactionId);
             entity.HasIndex(e => e.PaidAt);
+            entity.HasIndex(e => e.Purpose);
+            entity.HasIndex(e => e.WalletId)
+                .HasFilter("\"WalletId\" IS NOT NULL");
+
+            // Default values
+            entity.Property(e => e.Purpose)
+                .HasDefaultValue(PaymentPurpose.OrderPayment);
 
             // JSONB Column
             entity.Property(e => e.Metadata)
                 .HasColumnType("jsonb");
+
+            // Relationships - Order is optional (null for WalletTopUp)
+            entity.HasOne(p => p.Order)
+                .WithMany(o => o.Payments)
+                .HasForeignKey(p => p.OrderId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .IsRequired(false);
+
+            // Relationship - InstructorWallet for TopUp payments
+            entity.HasOne(p => p.InstructorWallet)
+                .WithMany()
+                .HasForeignKey(p => p.WalletId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .IsRequired(false);
         });
 
         // Coupon Configuration
@@ -104,6 +125,12 @@ public class SaleDbContext : BaseDbContext
                 .HasFilter("\"ApplicableInstructorId\" IS NOT NULL");
             entity.HasIndex(e => e.ApplicableCourseId)
                 .HasFilter("\"ApplicableCourseId\" IS NOT NULL");
+
+            // Default values for hold amounts
+            entity.Property(e => e.HoldAmount)
+                .HasDefaultValue(0m);
+            entity.Property(e => e.RemainingHoldAmount)
+                .HasDefaultValue(0m);
 
             // Relationships
             entity.HasMany(c => c.CouponUsages)
@@ -139,6 +166,10 @@ public class SaleDbContext : BaseDbContext
 
             // Performance Indexes
             entity.HasIndex(e => new { e.IsActive, e.AvailableBalance });
+
+            // Default values for HoldBalance
+            entity.Property(e => e.HoldBalance)
+                .HasDefaultValue(0m);
 
             // JSONB Column
             entity.Property(e => e.BankAccountInfo)
@@ -213,6 +244,18 @@ public class SaleDbContext : BaseDbContext
 
             // Prevent duplicate courses in one cart
             entity.HasIndex(e => new { e.CartId, e.CourseId }).IsUnique();
+        });
+
+        // PlatformWallet Configuration
+        modelBuilder.Entity<PlatformWallet>(entity =>
+        {
+            entity.HasQueryFilter(e => e.DeletedAt == null);
+
+            // Default values
+            entity.Property(e => e.AvailableBalance).HasDefaultValue(0m);
+            entity.Property(e => e.TotalRevenue).HasDefaultValue(0m);
+            entity.Property(e => e.TotalCouponCost).HasDefaultValue(0m);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
         });
     }
 }

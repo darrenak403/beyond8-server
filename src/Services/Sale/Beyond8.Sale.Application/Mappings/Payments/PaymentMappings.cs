@@ -11,7 +11,9 @@ public static class PaymentMappings
         {
             Id = payment.Id,
             OrderId = payment.OrderId,
+            WalletId = payment.WalletId,
             PaymentNumber = payment.PaymentNumber,
+            Purpose = payment.Purpose.ToString(),
             Status = payment.Status,
             Amount = payment.Amount,
             Currency = payment.Currency,
@@ -32,6 +34,7 @@ public static class PaymentMappings
         {
             PaymentId = payment.Id,
             PaymentNumber = payment.PaymentNumber,
+            Purpose = payment.Purpose.ToString(),
             PaymentUrl = paymentUrl,
             ExpiredAt = payment.ExpiredAt ?? DateTime.UtcNow.AddMinutes(15)
         };

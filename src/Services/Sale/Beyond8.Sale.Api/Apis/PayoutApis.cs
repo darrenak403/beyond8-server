@@ -28,21 +28,21 @@ public static class PayoutApis
             .RequireAuthorization(x => x.RequireRole(Role.Instructor))
             .WithName("CreatePayoutRequest")
             .WithDescription("Yêu cầu rút tiền (tối thiểu 500k VND) (Instructor)")
-            .Produces<ApiResponse<object>>(200)
+            .Produces<ApiResponse<PayoutRequestResponse>>(200)
             .Produces(400);
 
         group.MapGet("/my-requests", GetMyPayoutRequestsAsync)
             .RequireAuthorization(x => x.RequireRole(Role.Instructor))
             .WithName("GetMyPayoutRequests")
             .WithDescription("Lấy danh sách yêu cầu rút tiền của giảng viên (Instructor, phân trang)")
-            .Produces<ApiResponse<object>>(200)
+            .Produces<ApiResponse<List<PayoutRequestResponse>>>(200)
             .Produces(401);
 
         group.MapGet("/{payoutId:guid}", GetPayoutRequestByIdAsync)
             .RequireAuthorization()
             .WithName("GetPayoutRequestById")
             .WithDescription("Lấy chi tiết yêu cầu rút tiền (Payout Owner or Admin)")
-            .Produces<ApiResponse<object>>(200)
+            .Produces<ApiResponse<PayoutRequestResponse>>(200)
             .Produces(404);
 
         // ── Admin Endpoints ──
@@ -50,21 +50,21 @@ public static class PayoutApis
             .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
             .WithName("GetAllPayoutRequests")
             .WithDescription("Lấy tất cả yêu cầu rút tiền (Admin/Staff, phân trang)")
-            .Produces<ApiResponse<object>>(200)
+            .Produces<ApiResponse<List<PayoutRequestResponse>>>(200)
             .Produces(401);
 
         group.MapPost("/{payoutId:guid}/approve", ApprovePayoutRequestAsync)
             .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
             .WithName("ApprovePayoutRequest")
             .WithDescription("Phê duyệt yêu cầu rút tiền (Admin/Staff)")
-            .Produces<ApiResponse<object>>(200)
+            .Produces<ApiResponse<bool>>(200)
             .Produces(400);
 
         group.MapPost("/{payoutId:guid}/reject", RejectPayoutRequestAsync)
             .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
             .WithName("RejectPayoutRequest")
             .WithDescription("Từ chối yêu cầu rút tiền với lý do (Admin/Staff)")
-            .Produces<ApiResponse<object>>(200)
+            .Produces<ApiResponse<bool>>(200)
             .Produces(400);
 
         return group;
@@ -116,21 +116,23 @@ public static class PayoutApis
 
     private static async Task<IResult> ApprovePayoutRequestAsync(
         Guid payoutId,
-        [FromServices] IPayoutService payoutService)
+        [FromServices] IPayoutService payoutService,
+        [FromServices] ICurrentUserService currentUserService)
     {
-        var result = await payoutService.ApprovePayoutRequestAsync(payoutId);
+        var result = await payoutService.ApprovePayoutRequestAsync(payoutId, currentUserService.UserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
     private static async Task<IResult> RejectPayoutRequestAsync(
         Guid payoutId,
         [FromServices] IPayoutService payoutService,
+        [FromServices] ICurrentUserService currentUserService,
         [FromBody] RejectPayoutDto request)
     {
         if (string.IsNullOrWhiteSpace(request.Reason))
             return Results.BadRequest(ApiResponse<bool>.FailureResponse("Lý do từ chối không được để trống"));
 
-        var result = await payoutService.RejectPayoutRequestAsync(payoutId, request.Reason);
+        var result = await payoutService.RejectPayoutRequestAsync(payoutId, request.Reason, currentUserService.UserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 }

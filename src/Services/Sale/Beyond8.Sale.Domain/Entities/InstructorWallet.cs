@@ -14,6 +14,14 @@ public class InstructorWallet : BaseEntity
     [Column(TypeName = "decimal(18, 2)")]
     public decimal AvailableBalance { get; set; } = 0;
 
+    /// <summary>
+    /// Funds reserved/held for active instructor coupon commitments.
+    /// When instructor creates a coupon, the max potential cost is moved from
+    /// AvailableBalance to HoldBalance. Released when coupons are used or deactivated.
+    /// </summary>
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal HoldBalance { get; set; } = 0;
+
     [MaxLength(10)]
     public string Currency { get; set; } = "VND";
 

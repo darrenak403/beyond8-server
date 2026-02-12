@@ -13,7 +13,8 @@ namespace Beyond8.Sale.Application.Services.Implements;
 
 public class CouponService(
     ILogger<CouponService> logger,
-    IUnitOfWork unitOfWork) : ICouponService
+    IUnitOfWork unitOfWork,
+    IInstructorWalletService walletService) : ICouponService
 {
     public async Task<ApiResponse<CouponResponse>> CreateCouponAsync(CreateCouponRequest request)
     {
@@ -27,10 +28,31 @@ public class CouponService(
 
             var coupon = request.ToEntity();
 
+            // ── Instructor coupon: Hold funds from wallet ──
+            if (request.ApplicableInstructorId.HasValue)
+            {
+                var holdAmount = CalculateCouponHoldAmount(request);
+                if (holdAmount <= 0)
+                    return ApiResponse<CouponResponse>.FailureResponse(
+                        "Không thể tính toán số tiền cần giữ. Vui lòng kiểm tra UsageLimit và MaxDiscountAmount/Value");
+
+                var holdResult = await walletService.HoldFundsForCouponAsync(
+                    request.ApplicableInstructorId.Value,
+                    holdAmount,
+                    coupon.Id,
+                    $"Giữ tiền cho coupon {coupon.Code} ({request.UsageLimit} lần sử dụng)");
+
+                if (!holdResult.IsSuccess)
+                    return ApiResponse<CouponResponse>.FailureResponse(holdResult.Message ?? "Không thể giữ tiền từ ví");
+
+                coupon.HoldAmount = holdAmount;
+                coupon.RemainingHoldAmount = holdAmount;
+            }
+
             await unitOfWork.CouponRepository.AddAsync(coupon);
             await unitOfWork.SaveChangesAsync();
 
-            logger.LogInformation("Coupon created: {Code}", coupon.Code);
+            logger.LogInformation("Coupon created: {Code}, HoldAmount: {HoldAmount}", coupon.Code, coupon.HoldAmount);
 
             return ApiResponse<CouponResponse>.SuccessResponse(
                 coupon.ToResponse(), "Tạo coupon thành công");
@@ -105,6 +127,18 @@ public class CouponService(
 
             if (coupon.UsedCount > 0)
                 return ApiResponse<bool>.FailureResponse("Không thể xóa coupon đã được sử dụng");
+
+            // ── Release held funds back to instructor wallet ──
+            if (coupon.ApplicableInstructorId.HasValue && coupon.RemainingHoldAmount > 0)
+            {
+                await walletService.ReleaseCouponHoldAsync(
+                    coupon.ApplicableInstructorId.Value,
+                    coupon.RemainingHoldAmount,
+                    coupon.Id,
+                    $"Hoàn trả tiền giữ do xóa coupon {coupon.Code}");
+
+                coupon.RemainingHoldAmount = 0;
+            }
 
             coupon.IsActive = false;
             coupon.UpdatedAt = DateTime.UtcNow;
@@ -203,7 +237,22 @@ public class CouponService(
             if (coupon == null)
                 return ApiResponse<bool>.FailureResponse("Coupon không tồn tại");
 
+            // Toggle the status
+            coupon.IsActive = !coupon.IsActive;
             coupon.UpdatedAt = DateTime.UtcNow;
+
+            // ── Release held funds when deactivating instructor coupon ──
+            if (!coupon.IsActive && coupon.ApplicableInstructorId.HasValue && coupon.RemainingHoldAmount > 0)
+            {
+                await walletService.ReleaseCouponHoldAsync(
+                    coupon.ApplicableInstructorId.Value,
+                    coupon.RemainingHoldAmount,
+                    coupon.Id,
+                    $"Hoàn trả tiền giữ do vô hiệu hóa coupon {coupon.Code}");
+
+                coupon.RemainingHoldAmount = 0;
+            }
+
             await unitOfWork.SaveChangesAsync();
 
             var statusText = coupon.IsActive ? "kích hoạt" : "vô hiệu hóa";
@@ -248,7 +297,7 @@ public class CouponService(
     }
 
     public async Task<ApiResponse<(bool IsValid, string? ErrorMessage, decimal DiscountAmount, Guid? CouponId)>> ValidateAndApplyCouponAsync(
-        string code, decimal orderTotal, List<Guid> courseIds)
+        string code, decimal orderTotal, List<Guid> courseIds, Guid? userId = null)
     {
         try
         {
@@ -273,7 +322,16 @@ public class CouponService(
                 return ApiResponse<(bool, string?, decimal, Guid?)>.SuccessResponse(
                     (false, "Coupon không áp dụng cho các khóa học trong đơn hàng", 0, null), "Validation failed");
 
-            // TODO: Check instructor applicability when Catalog service integration is ready
+            // ── Per-user usage limit check (Bug fix #3) ──
+            if (userId.HasValue && coupon.UsagePerUser.HasValue)
+            {
+                var userUsageCount = await unitOfWork.CouponUsageRepository.AsQueryable()
+                    .CountAsync(u => u.UserId == userId.Value && u.CouponId == coupon.Id);
+
+                if (userUsageCount >= coupon.UsagePerUser.Value)
+                    return ApiResponse<(bool, string?, decimal, Guid?)>.SuccessResponse(
+                        (false, "Bạn đã sử dụng coupon này quá số lần cho phép", 0, null), "Validation failed");
+            }
 
             var discount = CalculateDiscount(coupon, orderTotal);
 
@@ -314,6 +372,29 @@ public class CouponService(
 
         if (coupon.Type == CouponType.FixedAmount)
             return Math.Min(coupon.Value, orderTotal);
+
+        return 0;
+    }
+
+    /// <summary>
+    /// Calculate total hold amount for instructor coupon.
+    /// FixedAmount: Value × UsageLimit
+    /// Percentage: MaxDiscountAmount × UsageLimit (MaxDiscountAmount REQUIRED for instructor percentage coupons)
+    /// </summary>
+    private static decimal CalculateCouponHoldAmount(CreateCouponRequest request)
+    {
+        if (!request.UsageLimit.HasValue || request.UsageLimit.Value <= 0)
+            return 0;
+
+        if (request.Type == CouponType.FixedAmount)
+            return request.Value * request.UsageLimit.Value;
+
+        if (request.Type == CouponType.Percentage)
+        {
+            if (!request.MaxDiscountAmount.HasValue || request.MaxDiscountAmount.Value <= 0)
+                return 0; // Should be caught by validator
+            return request.MaxDiscountAmount.Value * request.UsageLimit.Value;
+        }
 
         return 0;
     }

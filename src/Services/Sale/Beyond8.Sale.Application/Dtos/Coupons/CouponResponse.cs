@@ -16,6 +16,8 @@ public class CouponResponse
     public int UsedCount { get; set; }
     public Guid? ApplicableInstructorId { get; set; }
     public Guid? ApplicableCourseId { get; set; }
+    public decimal HoldAmount { get; set; }
+    public decimal RemainingHoldAmount { get; set; }
     public DateTime ValidFrom { get; set; }
     public DateTime ValidTo { get; set; }
     public bool IsActive { get; set; }

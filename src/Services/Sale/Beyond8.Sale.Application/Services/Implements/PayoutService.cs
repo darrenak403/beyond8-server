@@ -72,7 +72,7 @@ public class PayoutService(
     /// Admin approves payout → Deduct from wallet → Status: Approved → Processing → Completed
     /// Per REQ-07.09: Admin approval required
     /// </summary>
-    public async Task<ApiResponse<bool>> ApprovePayoutRequestAsync(Guid payoutId)
+    public async Task<ApiResponse<bool>> ApprovePayoutRequestAsync(Guid payoutId, Guid adminUserId)
     {
         var payout = await unitOfWork.PayoutRequestRepository.AsQueryable()
             .FirstOrDefaultAsync(p => p.Id == payoutId && p.DeletedAt == null);
@@ -94,6 +94,7 @@ public class PayoutService(
 
         // Update payout status — Phase 2: skip Processing, go directly to Completed (mock bank transfer)
         payout.Status = PayoutStatus.Completed;
+        payout.ApprovedBy = adminUserId;
         payout.ApprovedAt = DateTime.UtcNow;
         payout.ProcessedAt = DateTime.UtcNow;
         payout.UpdatedAt = DateTime.UtcNow;
@@ -110,7 +111,7 @@ public class PayoutService(
     /// <summary>
     /// Admin rejects payout → No balance change (funds not deducted yet per Phase 2 flow)
     /// </summary>
-    public async Task<ApiResponse<bool>> RejectPayoutRequestAsync(Guid payoutId, string reason)
+    public async Task<ApiResponse<bool>> RejectPayoutRequestAsync(Guid payoutId, string reason, Guid adminUserId)
     {
         var payout = await unitOfWork.PayoutRequestRepository.AsQueryable()
             .FirstOrDefaultAsync(p => p.Id == payoutId && p.DeletedAt == null);
@@ -123,6 +124,7 @@ public class PayoutService(
                 $"Chỉ có thể từ chối yêu cầu đang chờ xử lý. Trạng thái hiện tại: {payout.Status}");
 
         payout.Status = PayoutStatus.Rejected;
+        payout.RejectedBy = adminUserId;
         payout.RejectedAt = DateTime.UtcNow;
         payout.RejectionReason = reason;
         payout.UpdatedAt = DateTime.UtcNow;

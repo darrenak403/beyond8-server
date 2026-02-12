@@ -23,6 +23,7 @@ public class OrderService(
     IUnitOfWork unitOfWork,
     ICatalogClient catalogClient,
     ICouponService couponService,
+    ICouponUsageService couponUsageService,
     IPublishEndpoint publishEndpoint) : IOrderService
 {
     /// <summary>
@@ -122,7 +123,7 @@ public class OrderService(
         }
 
         // Validate and calculate totals
-        var calculation = await CalculateOrderTotalsAsync(request.Items, request.CouponCode);
+        var calculation = await CalculateOrderTotalsAsync(request.Items, request.CouponCode, userId);
         if (!calculation.IsValid)
             return ApiResponse<OrderResponse>.FailureResponse(calculation.ErrorMessage ?? "Lỗi tạo đơn hàng");
 
@@ -140,6 +141,18 @@ public class OrderService(
         await unitOfWork.SaveChangesAsync();
 
         logger.LogInformation("Order created: {OrderId} for user {UserId}", order.Id, userId);
+
+        // ── Record coupon usage for free orders (Bug fix #1) ──
+        if (order.CouponId.HasValue)
+        {
+            await couponUsageService.RecordUsageAsync(new Dtos.CouponUsages.CreateCouponUsageRequest
+            {
+                CouponId = order.CouponId.Value,
+                UserId = userId,
+                OrderId = order.Id,
+                DiscountApplied = order.DiscountAmount
+            });
+        }
 
         // Publish event for free courses (BR-04)
         if (order.Status == OrderStatus.Paid)
@@ -248,7 +261,7 @@ public class OrderService(
     }
 
     // Helper methods
-    private async Task<(bool IsValid, string? ErrorMessage, decimal SubTotal, decimal DiscountAmount, decimal TotalAmount, Guid? CouponId, List<OrderItemSnapshot> Items)> CalculateOrderTotalsAsync(List<OrderItemRequest> items, string? systemCouponCode)
+    private async Task<(bool IsValid, string? ErrorMessage, decimal SubTotal, decimal DiscountAmount, decimal TotalAmount, Guid? CouponId, List<OrderItemSnapshot> Items)> CalculateOrderTotalsAsync(List<OrderItemRequest> items, string? systemCouponCode, Guid userId)
     {
         var orderItems = new List<OrderItemSnapshot>();
         decimal subTotal = 0;
@@ -273,7 +286,7 @@ public class OrderService(
             if (!string.IsNullOrEmpty(item.InstructorCouponCode))
             {
                 var instructorCouponResult = await couponService.ValidateAndApplyCouponAsync(
-                    item.InstructorCouponCode, itemSubTotal, new List<Guid> { item.CourseId });
+                    item.InstructorCouponCode, itemSubTotal, new List<Guid> { item.CourseId }, userId);
 
                 if (!instructorCouponResult.IsSuccess)
                     return (false, instructorCouponResult.Message ?? $"Lỗi xác thực coupon instructor cho khóa học {course.Title}", 0, 0, 0, null, orderItems);
@@ -302,7 +315,7 @@ public class OrderService(
         if (!string.IsNullOrEmpty(systemCouponCode))
         {
             var systemCouponResult = await couponService.ValidateAndApplyCouponAsync(
-                systemCouponCode, subTotal, items.Select(i => i.CourseId).ToList());
+                systemCouponCode, subTotal, items.Select(i => i.CourseId).ToList(), userId);
 
             if (!systemCouponResult.IsSuccess)
                 return (false, systemCouponResult.Message ?? "Lỗi xác thực coupon hệ thống", 0, 0, 0, null, orderItems);

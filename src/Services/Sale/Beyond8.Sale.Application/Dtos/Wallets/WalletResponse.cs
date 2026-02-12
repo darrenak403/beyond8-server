@@ -5,6 +5,7 @@ public class InstructorWalletResponse
     public Guid Id { get; set; }
     public Guid InstructorId { get; set; }
     public decimal AvailableBalance { get; set; }
+    public decimal HoldBalance { get; set; }
     public string Currency { get; set; } = "VND";
     public decimal TotalEarnings { get; set; }
     public decimal TotalWithdrawn { get; set; }
