@@ -37,6 +37,13 @@ public class AssignmentSubmissionService(
                 return ApiResponse<SubmissionResponse>.FailureResponse("Bạn đã đạt số lượng nộp bài tối đa cho assignment này.");
             }
 
+            var pendingSubmission = existingSubmissions.FirstOrDefault(s =>
+                s.Status != SubmissionStatus.Graded && s.Status != SubmissionStatus.ReturnedForRevision);
+            if (pendingSubmission != null)
+            {
+                return ApiResponse<SubmissionResponse>.FailureResponse("Bài nộp trước chưa được chấm điểm. Vui lòng đợi giảng viên chấm xong trước khi nộp lại.");
+            }
+
             var submission = request.ToEntity(assignmentId, userId, existingSubmissions.Count + 1);
             await unitOfWork.AssignmentSubmissionRepository.AddAsync(submission);
             await unitOfWork.SaveChangesAsync();
@@ -243,6 +250,9 @@ public class AssignmentSubmissionService(
 
             if (submissions.Count == 0)
                 return ApiResponse<bool>.FailureResponse("Học sinh chưa có lượt nộp nào cho assignment này.");
+
+            if (assignment.MaxSubmissions > 0 && submissions.Count < assignment.MaxSubmissions)
+                return ApiResponse<bool>.FailureResponse($"Học sinh vẫn còn lượt nộp bài ({submissions.Count}/{assignment.MaxSubmissions}). Chỉ reset khi đã hết lượt.");
 
             foreach (var submission in submissions)
             {
