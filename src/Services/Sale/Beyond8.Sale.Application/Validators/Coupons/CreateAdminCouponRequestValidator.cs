@@ -29,15 +29,7 @@ public class CreateAdminCouponRequestValidator : AbstractValidator<CreateAdminCo
             .WithMessage("Giá trị coupon phần trăm phải từ 1 đến 100")
             .When(x => x.Type == CouponType.Percentage);
 
-        RuleFor(x => x.MinOrderAmount)
-            .GreaterThan(0)
-            .WithMessage("Giá trị đơn hàng tối thiểu phải lớn hơn 0")
-            .When(x => x.MinOrderAmount.HasValue);
-
-        RuleFor(x => x.MaxDiscountAmount)
-            .GreaterThan(0)
-            .WithMessage("Giá trị giảm giá tối đa phải lớn hơn 0")
-            .When(x => x.MaxDiscountAmount.HasValue);
+        // MinOrderAmount and MaxDiscountAmount are optional - no validation needed
 
         RuleFor(x => x.UsageLimit)
             .GreaterThan(0)

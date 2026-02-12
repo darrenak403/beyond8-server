@@ -4,6 +4,7 @@ using Beyond8.Sale.Application.Dtos.Orders;
 using Beyond8.Sale.Application.Dtos.OrderItems;
 using Beyond8.Sale.Domain.Entities;
 using Beyond8.Sale.Domain.Enums;
+using Beyond8.Sale.Application.Dtos.Payments;
 
 namespace Beyond8.Sale.Application.Mappings.Orders;
 
@@ -131,6 +132,22 @@ public static class OrderMappings
             LineTotal = pricing.LineTotal,
             PlatformFeeAmount = pricing.PlatformFeeAmount,
             InstructorEarnings = pricing.InstructorEarnings
+        };
+    }
+    public static PendingPaymentResponse ToPendingPaymentResponse(this Order order, Payment activePayment)
+    {
+        return new PendingPaymentResponse
+        {
+            OrderId = order.Id,
+            OrderNumber = order.OrderNumber,
+            PaymentInfo = new PaymentUrlResponse
+            {
+                PaymentId = activePayment.Id,
+                PaymentNumber = activePayment.PaymentNumber,
+                Purpose = activePayment.Purpose.ToString(),
+                PaymentUrl = activePayment.PaymentUrl ?? string.Empty,
+                ExpiredAt = activePayment.ExpiredAt ?? DateTime.UtcNow.AddMinutes(15)
+            }
         };
     }
 

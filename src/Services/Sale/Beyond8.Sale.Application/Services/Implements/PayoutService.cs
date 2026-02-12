@@ -166,7 +166,7 @@ public class PayoutService(
         var payouts = await unitOfWork.PayoutRequestRepository.GetPagedAsync(
             pageNumber: pagination.PageNumber,
             pageSize: pagination.PageSize,
-            filter: p => p.InstructorId == instructorId && p.DeletedAt == null,
+            filter: p => p.InstructorId == instructorId,
             orderBy: q => q.OrderByDescending(p => p.RequestedAt));
 
         return ApiResponse<List<PayoutRequestResponse>>.SuccessPagedResponse(

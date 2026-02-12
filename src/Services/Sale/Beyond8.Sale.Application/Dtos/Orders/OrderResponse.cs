@@ -30,6 +30,9 @@ public class OrderResponse
     // Items
     public List<OrderItemResponse> OrderItems { get; set; } = new();
 
+    // Pending Payment (when order creation is blocked due to existing pending payment)
+    public PendingPaymentResponse? PendingPaymentInfo { get; set; }
+
     // Audit
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }

@@ -19,7 +19,7 @@ public class InstructorWalletService(
     {
         var wallet = await unitOfWork.InstructorWalletRepository.AsQueryable()
             .AsNoTracking()
-            .FirstOrDefaultAsync(w => w.InstructorId == instructorId && w.DeletedAt == null);
+            .FirstOrDefaultAsync(w => w.InstructorId == instructorId);
 
         if (wallet == null)
             return ApiResponse<InstructorWalletResponse>.FailureResponse("Không tìm thấy ví giảng viên");
@@ -32,7 +32,7 @@ public class InstructorWalletService(
         Guid instructorId, PaginationRequest pagination)
     {
         var wallet = await unitOfWork.InstructorWalletRepository
-            .FindOneAsync(w => w.InstructorId == instructorId && w.DeletedAt == null);
+            .FindOneAsync(w => w.InstructorId == instructorId);
 
         if (wallet == null)
             return ApiResponse<List<WalletTransactionResponse>>.FailureResponse("Không tìm thấy ví giảng viên");
@@ -135,7 +135,7 @@ public class InstructorWalletService(
         Guid instructorId, decimal amount, Guid payoutId, string description)
     {
         var wallet = await unitOfWork.InstructorWalletRepository.AsQueryable()
-            .FirstOrDefaultAsync(w => w.InstructorId == instructorId && w.DeletedAt == null);
+            .FirstOrDefaultAsync(w => w.InstructorId == instructorId);
 
         if (wallet == null)
             return ApiResponse<bool>.FailureResponse("Không tìm thấy ví giảng viên");
@@ -181,7 +181,7 @@ public class InstructorWalletService(
     public async Task<ApiResponse<InstructorWalletResponse>> CreateWalletAsync(Guid instructorId)
     {
         var existingWallet = await unitOfWork.InstructorWalletRepository
-            .FindOneAsync(w => w.InstructorId == instructorId && w.DeletedAt == null);
+            .FindOneAsync(w => w.InstructorId == instructorId);
 
         if (existingWallet != null)
             return ApiResponse<InstructorWalletResponse>.SuccessResponse(
@@ -217,7 +217,7 @@ public class InstructorWalletService(
         Guid instructorId, decimal holdAmount, Guid couponId, string description)
     {
         var wallet = await unitOfWork.InstructorWalletRepository.AsQueryable()
-            .FirstOrDefaultAsync(w => w.InstructorId == instructorId && w.DeletedAt == null);
+            .FirstOrDefaultAsync(w => w.InstructorId == instructorId);
 
         if (wallet == null)
             return ApiResponse<bool>.FailureResponse("Không tìm thấy ví giảng viên");
@@ -309,7 +309,7 @@ public class InstructorWalletService(
             return ApiResponse<bool>.SuccessResponse(true, "Không có số dư giữ cần hoàn trả");
 
         var wallet = await unitOfWork.InstructorWalletRepository.AsQueryable()
-            .FirstOrDefaultAsync(w => w.InstructorId == instructorId && w.DeletedAt == null);
+            .FirstOrDefaultAsync(w => w.InstructorId == instructorId);
 
         if (wallet == null)
             return ApiResponse<bool>.FailureResponse("Không tìm thấy ví giảng viên");
@@ -353,7 +353,7 @@ public class InstructorWalletService(
     private async Task<InstructorWallet> GetOrCreateWalletAsync(Guid instructorId)
     {
         var wallet = await unitOfWork.InstructorWalletRepository.AsQueryable()
-            .FirstOrDefaultAsync(w => w.InstructorId == instructorId && w.DeletedAt == null);
+            .FirstOrDefaultAsync(w => w.InstructorId == instructorId);
 
         if (wallet != null)
             return wallet;

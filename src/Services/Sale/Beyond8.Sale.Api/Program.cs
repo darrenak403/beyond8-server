@@ -14,6 +14,7 @@ await app.MigrateDbContextAsync<SaleDbContext>(async (database, cancellationToke
     using var scope = app.Services.CreateScope();
     var context = scope.ServiceProvider.GetRequiredService<SaleDbContext>();
     await SaleSeedData.SeedCouponsAsync(context);
+    await SaleSeedData.SeedWalletsAsync(context);
 });
 
 app.UseApplicationServices();

@@ -6,6 +6,7 @@ using Beyond8.Common.Utilities;
 using Beyond8.Sale.Application.Clients.Catalog;
 using Beyond8.Sale.Application.Dtos.Orders;
 using Beyond8.Sale.Application.Dtos.OrderItems;
+using Beyond8.Sale.Application.Dtos.Payments;
 using Beyond8.Sale.Application.Mappings.Orders;
 using Beyond8.Sale.Application.Services.Interfaces;
 using Beyond8.Sale.Domain.Entities;
@@ -85,9 +86,24 @@ public class OrderService(
 
     public async Task<ApiResponse<OrderResponse>> CreateOrderAsync(CreateOrderRequest request, Guid userId)
     {
+        // ── Check for pending payment before creating new order ──
+        var pendingPaymentCheck = await CheckPendingPaymentAsync(userId);
+        if (pendingPaymentCheck.HasPendingPayment)
+        {
+            // Return response with pending payment info instead of creating new order
+            var response = new OrderResponse
+            {
+                PendingPaymentInfo = pendingPaymentCheck.PendingPaymentInfo
+            };
+
+            return ApiResponse<OrderResponse>.SuccessResponse(
+                response,
+                "Bạn có đơn hàng đang chờ thanh toán. Vui lòng hoàn tất thanh toán trước khi tạo đơn hàng mới.");
+        }
+
         // Check if user already purchased any of these courses
         var requestedCourseIds = request.Items.Select(i => i.CourseId).ToList();
-        
+
         var alreadyPurchasedCourseIds = await unitOfWork.OrderRepository.AsQueryable()
             .Where(o => o.UserId == userId && o.Status == OrderStatus.Paid)
             .SelectMany(o => o.OrderItems.Select(oi => oi.CourseId))
@@ -242,6 +258,35 @@ public class OrderService(
     }
 
     // Helper methods
+    private async Task<(bool HasPendingPayment, PendingPaymentResponse? PendingPaymentInfo)> CheckPendingPaymentAsync(Guid userId)
+    {
+        // Find the most recent pending order
+        var pendingOrder = await unitOfWork.OrderRepository.AsQueryable()
+            .Include(o => o.Payments)
+            .Where(o => o.UserId == userId && o.Status == OrderStatus.Pending)
+            .OrderByDescending(o => o.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        if (pendingOrder == null)
+            return (false, null);
+
+        // Check if there's an active payment (pending or processing, not expired)
+        var activePayment = pendingOrder.Payments.FirstOrDefault(
+            p => (p.Status == PaymentStatus.Pending || p.Status == PaymentStatus.Processing)
+            && p.ExpiredAt > DateTime.UtcNow);
+
+        // If there's an active payment, return its info
+        if (activePayment != null)
+        {
+            var pendingPaymentInfo = pendingOrder.ToPendingPaymentResponse(activePayment);
+            return (true, pendingPaymentInfo);
+        }
+
+        // If no active payment (expired, failed, or completed), allow new order creation
+        // Don't create new payment here - let the new order creation handle it
+        return (false, null);
+    }
+
     private async Task<(bool IsValid, string? ErrorMessage, decimal SubTotal, decimal DiscountAmount, decimal TotalAmount, Guid? CouponId, List<OrderItemSnapshot> Items)> CalculateOrderTotalsAsync(List<OrderItemRequest> items, string? systemCouponCode, Guid userId)
     {
         var orderItems = new List<OrderItemSnapshot>();
@@ -321,5 +366,10 @@ public class OrderService(
     private string GenerateOrderNumber()
     {
         return $"ORD-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper()}";
+    }
+
+    private string GeneratePaymentNumber()
+    {
+        return $"PAY-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper()}";
     }
 }

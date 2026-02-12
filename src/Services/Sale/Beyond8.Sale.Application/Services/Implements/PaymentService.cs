@@ -48,7 +48,19 @@ public class PaymentService(
             && p.ExpiredAt > DateTime.UtcNow);
         if (existingPayment != null)
         {
+            // If payment URL already exists, return it without regenerating
+            if (!string.IsNullOrEmpty(existingPayment.PaymentUrl))
+            {
+                return ApiResponse<PaymentUrlResponse>.SuccessResponse(
+                    existingPayment.ToUrlResponse(existingPayment.PaymentUrl),
+                    "Đã có giao dịch thanh toán đang chờ xử lý");
+            }
+
+            // Generate URL only if not already stored
             var existingUrl = GenerateVNPayUrl(existingPayment, order, ipAddress, returnUrl);
+            existingPayment.PaymentUrl = existingUrl;
+            await unitOfWork.SaveChangesAsync();
+
             return ApiResponse<PaymentUrlResponse>.SuccessResponse(
                 existingPayment.ToUrlResponse(existingUrl),
                 "Đã có giao dịch thanh toán đang chờ xử lý");
@@ -72,6 +84,10 @@ public class PaymentService(
         await unitOfWork.SaveChangesAsync();
 
         var paymentUrl = GenerateVNPayUrl(payment, order, ipAddress, returnUrl);
+
+        // Save payment URL for later retrieval
+        payment.PaymentUrl = paymentUrl;
+        await unitOfWork.SaveChangesAsync();
 
         logger.LogInformation(
             "Payment initiated — PaymentNumber: {PaymentNumber}, OrderId: {OrderId}, Amount: {Amount}",
@@ -219,7 +235,7 @@ public class PaymentService(
     {
         // Verify wallet exists
         var wallet = await unitOfWork.InstructorWalletRepository.AsQueryable()
-            .FirstOrDefaultAsync(w => w.InstructorId == instructorId && w.DeletedAt == null);
+            .FirstOrDefaultAsync(w => w.InstructorId == instructorId);
 
         if (wallet == null)
             return ApiResponse<PaymentUrlResponse>.FailureResponse("Không tìm thấy ví giảng viên. Vui lòng liên hệ admin.");

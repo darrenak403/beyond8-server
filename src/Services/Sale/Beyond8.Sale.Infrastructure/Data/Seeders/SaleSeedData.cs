@@ -11,7 +11,7 @@ public static class SaleSeedData
         if (await context.Coupons.AnyAsync())
             return;
 
-        var systemId = Guid.Empty;
+        var systemId = new Guid("00000000-0000-0000-0000-000000000001");
         var now = DateTime.UtcNow;
 
         // IDs from Identity service seed data
@@ -86,6 +86,27 @@ public static class SaleSeedData
                 CreatedBy = systemId
             },
 
+            new()
+            {
+                Id = Guid.CreateVersion7(),
+                Code = "UUDAI100K",
+                Description = "Giảm 10% cho đơn hàng từ 100,000 VNĐ trở lên",
+                Type = CouponType.Percentage,
+                Value = 10,
+                MinOrderAmount = 100000,
+                MaxDiscountAmount = null,
+                UsageLimit = 200,
+                UsagePerUser = 1,
+                UsedCount = 0,
+                ApplicableInstructorId = null, // System coupon
+                ApplicableCourseId = null,
+                ValidFrom = new DateTime(now.Year, 2, 11),
+                ValidTo = new DateTime(now.Year, 9, 30),
+                IsActive = true,
+                CreatedAt = now,
+                CreatedBy = systemId
+            },
+
             // ═══════════════════════════════════════════════════════════
             // Instructor Coupons (Instructor-Specific)
             // ═══════════════════════════════════════════════════════════
@@ -155,6 +176,35 @@ public static class SaleSeedData
         };
 
         await context.Coupons.AddRangeAsync(coupons);
+        await context.SaveChangesAsync();
+    }
+
+    public static async Task SeedWalletsAsync(SaleDbContext context)
+    {
+        if (await context.InstructorWallets.AnyAsync())
+            return;
+
+        var now = DateTime.UtcNow;
+
+        // IDs from Identity service seed data
+        var instructorId1 = new Guid("00000000-0000-0000-0000-000000000006"); // Instructor 1
+
+        var wallets = new List<InstructorWallet>
+        {
+            new()
+            {
+                Id = Guid.CreateVersion7(),
+                InstructorId = instructorId1,
+                AvailableBalance = 0,
+                TotalEarnings = 0,
+                TotalWithdrawn = 0,
+                Currency = "VND",
+                IsActive = true,
+                CreatedAt = now
+            }
+        };
+
+        await context.InstructorWallets.AddRangeAsync(wallets);
         await context.SaveChangesAsync();
     }
 }
