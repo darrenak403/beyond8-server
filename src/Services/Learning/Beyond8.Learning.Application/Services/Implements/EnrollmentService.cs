@@ -127,6 +127,8 @@ public class EnrollmentService(
 
         return ApiResponse<bool>.SuccessResponse(hasCertificate,
             hasCertificate ? "Học sinh đã được cấp certificate cho khóa học này." : "Chưa có certificate.");
+    }
+
     public async Task<ApiResponse<bool>> EnrollPaidCoursesAsync(Guid userId, List<Guid> courseIds, Guid orderId)
     {
         if (courseIds == null || courseIds.Count == 0)

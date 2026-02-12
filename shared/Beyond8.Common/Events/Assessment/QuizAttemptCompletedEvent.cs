@@ -12,5 +12,7 @@ public record QuizAttemptCompletedEvent(
     Guid QuizId,
     int AttemptNumber,
     int MaxAttempts,
-    DateTime CompletedAt
+    DateTime CompletedAt,
+    Guid? CourseId = null,
+    Guid? InstructorId = null
 );
