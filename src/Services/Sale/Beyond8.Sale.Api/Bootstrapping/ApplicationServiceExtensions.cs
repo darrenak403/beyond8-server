@@ -16,6 +16,7 @@ using FluentValidation;
 using Polly;
 using Polly.Extensions.Http;
 using Scalar.AspNetCore;
+using Beyond8.Sale.Application.Dtos.Coupons;
 
 namespace Beyond8.Sale.Api.Bootstrapping;
 

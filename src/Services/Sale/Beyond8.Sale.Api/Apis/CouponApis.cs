@@ -24,36 +24,16 @@ public static class CouponApis
 
     public static RouteGroupBuilder MapCouponRoutes(this RouteGroupBuilder group)
     {
-        // ── Admin / Instructor ──
-        group.MapPost("/", CreateCouponAsync)
-            .WithName("CreateCoupon")
-            .WithDescription("Tạo coupon mới (Admin or Instructor)")
-            .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Instructor))
+        // ── Admin ──
+        group.MapPost("/admin", CreateAdminCouponAsync)
+            .WithName("CreateAdminCoupon")
+            .WithDescription("Tạo coupon cho toàn bộ khóa học (Admin only)")
+            .RequireAuthorization(x => x.RequireRole(Role.Admin))
             .Produces<ApiResponse<CouponResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<CouponResponse>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden);
 
-        group.MapPut("/{couponId}", UpdateCouponAsync)
-            .WithName("UpdateCoupon")
-            .WithDescription("Cập nhật thông tin coupon (Admin or Instructor - owner only)")
-            .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Instructor))
-            .Produces<ApiResponse<CouponResponse>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<CouponResponse>>(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status404NotFound)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status403Forbidden);
-
-        group.MapDelete("/{couponId}", DeleteCouponAsync)
-            .WithName("DeleteCoupon")
-            .WithDescription("Xóa coupon (Admin or Instructor - owner only)")
-            .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Instructor))
-            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<bool>>(StatusCodes.Status404NotFound)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status403Forbidden);
-
-        // ── Admin Only ──
         group.MapGet("/", GetCouponsAsync)
             .WithName("GetCoupons")
             .WithDescription("Lấy danh sách tất cả coupon (Admin only, paginated)")
@@ -72,11 +52,40 @@ public static class CouponApis
             .Produces(StatusCodes.Status403Forbidden);
 
         // ── Instructor ──
+        group.MapPost("/instructor", CreateInstructorCouponAsync)
+            .WithName("CreateInstructorCoupon")
+            .WithDescription("Tạo coupon cho khóa học cụ thể (Instructor only)")
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .Produces<ApiResponse<CouponResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<CouponResponse>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
+
         group.MapGet("/instructor", GetCouponsByInstructorAsync)
             .WithName("GetCouponsByInstructor")
             .WithDescription("Lấy danh sách coupon của instructor (Instructor - own data, paginated)")
             .RequireAuthorization(x => x.RequireRole(Role.Instructor))
             .Produces<ApiResponse<List<CouponResponse>>>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
+
+        // ── Admin / Instructor ──
+        group.MapPut("/{couponId}", UpdateCouponAsync)
+            .WithName("UpdateCoupon")
+            .WithDescription("Cập nhật thông tin coupon (Admin or Instructor - owner only)")
+            .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Instructor))
+            .Produces<ApiResponse<CouponResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<CouponResponse>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
+
+        group.MapDelete("/{couponId}", DeleteCouponAsync)
+            .WithName("DeleteCoupon")
+            .WithDescription("Xóa coupon (Admin or Instructor - owner only)")
+            .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Instructor))
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<bool>>(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden);
 
@@ -97,23 +106,30 @@ public static class CouponApis
         return group;
     }
 
-    private static async Task<IResult> CreateCouponAsync(
-        [FromBody] CreateCouponRequest request,
+    private static async Task<IResult> CreateAdminCouponAsync(
+        [FromBody] CreateAdminCouponRequest request,
         [FromServices] ICouponService couponService,
-        [FromServices] IValidator<CreateCouponRequest> validator,
+        [FromServices] IValidator<CreateAdminCouponRequest> validator)
+    {
+        // Validate request data
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
+        var result = await couponService.CreateAdminCouponAsync(request);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> CreateInstructorCouponAsync(
+        [FromBody] CreateInstructorCouponRequest request,
+        [FromServices] ICouponService couponService,
+        [FromServices] IValidator<CreateInstructorCouponRequest> validator,
         [FromServices] ICurrentUserService currentUserService)
     {
         // Validate request data
         if (!request.ValidateRequest(validator, out var validationResult))
             return validationResult!;
 
-        // Set ownership for instructor-created coupons
-        if (currentUserService.IsInRole(Role.Instructor))
-        {
-            request.ApplicableInstructorId = currentUserService.UserId;
-        }
-
-        var result = await couponService.CreateCouponAsync(request);
+        var result = await couponService.CreateInstructorCouponAsync(request, currentUserService.UserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
@@ -166,7 +182,6 @@ public static class CouponApis
     }
 
     private static async Task<IResult> GetCouponsByInstructorAsync(
-        [AsParameters] PaginationRequest pagination,
         [FromServices] ICouponService couponService,
         [FromServices] ICurrentUserService currentUserService)
     {

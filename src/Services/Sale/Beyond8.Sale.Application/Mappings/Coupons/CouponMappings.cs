@@ -91,4 +91,44 @@ public static class CouponMappings
 
         coupon.UpdatedAt = DateTime.UtcNow;
     }
+
+    public static Coupon ToEntity(this CreateAdminCouponRequest request)
+    {
+        return new Coupon
+        {
+            Code = request.Code.ToUpper(), // Normalize to uppercase
+            Description = request.Description,
+            Type = request.Type,
+            Value = request.Value,
+            MinOrderAmount = request.MinOrderAmount,
+            MaxDiscountAmount = request.MaxDiscountAmount,
+            UsageLimit = request.UsageLimit,
+            UsagePerUser = request.UsagePerUser,
+            ApplicableInstructorId = null, // Admin coupons apply to all instructors
+            ApplicableCourseId = null, // Admin coupons apply to all courses
+            ValidFrom = request.ValidFrom,
+            ValidTo = request.ValidTo,
+            IsActive = request.IsActive
+        };
+    }
+
+    public static Coupon ToEntity(this CreateInstructorCouponRequest request)
+    {
+        return new Coupon
+        {
+            Code = request.Code.ToUpper(), // Normalize to uppercase
+            Description = request.Description,
+            Type = request.Type,
+            Value = request.Value,
+            MinOrderAmount = request.MinOrderAmount,
+            MaxDiscountAmount = request.MaxDiscountAmount,
+            UsageLimit = request.UsageLimit,
+            UsagePerUser = request.UsagePerUser,
+            ApplicableInstructorId = null, // Will be set in service
+            ApplicableCourseId = request.ApplicableCourseId,
+            ValidFrom = request.ValidFrom,
+            ValidTo = request.ValidTo,
+            IsActive = request.IsActive
+        };
+    }
 }

@@ -16,7 +16,7 @@ public class CouponService(
     IUnitOfWork unitOfWork,
     IInstructorWalletService walletService) : ICouponService
 {
-    public async Task<ApiResponse<CouponResponse>> CreateCouponAsync(CreateCouponRequest request)
+    public async Task<ApiResponse<CouponResponse>> CreateAdminCouponAsync(CreateAdminCouponRequest request)
     {
         try
         {
@@ -28,39 +28,65 @@ public class CouponService(
 
             var coupon = request.ToEntity();
 
+            // Admin coupons don't hold funds (no instructor ownership)
+            await unitOfWork.CouponRepository.AddAsync(coupon);
+            await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation("Admin coupon created: {Code}", coupon.Code);
+
+            return ApiResponse<CouponResponse>.SuccessResponse(
+                coupon.ToResponse(), "Tạo coupon admin thành công");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error creating admin coupon");
+            return ApiResponse<CouponResponse>.FailureResponse("Đã xảy ra lỗi khi tạo coupon admin");
+        }
+    }
+
+    public async Task<ApiResponse<CouponResponse>> CreateInstructorCouponAsync(CreateInstructorCouponRequest request, Guid instructorId)
+    {
+        try
+        {
+            var existingCoupon = await unitOfWork.CouponRepository
+                .FindOneAsync(c => c.Code.ToUpper() == request.Code.ToUpper());
+
+            if (existingCoupon != null)
+                return ApiResponse<CouponResponse>.FailureResponse("Mã coupon đã tồn tại");
+
+            var coupon = request.ToEntity();
+            coupon.ApplicableInstructorId = instructorId; // Always set to the creating instructor
+
             // ── Instructor coupon: Hold funds from wallet ──
-            if (request.ApplicableInstructorId.HasValue)
-            {
-                var holdAmount = CalculateCouponHoldAmount(request);
-                if (holdAmount <= 0)
-                    return ApiResponse<CouponResponse>.FailureResponse(
-                        "Không thể tính toán số tiền cần giữ. Vui lòng kiểm tra UsageLimit và MaxDiscountAmount/Value");
+            var holdAmount = CalculateCouponHoldAmount(request);
+            if (holdAmount <= 0)
+                return ApiResponse<CouponResponse>.FailureResponse(
+                    "Không thể tính toán số tiền cần giữ. Vui lòng kiểm tra UsageLimit và MaxDiscountAmount/Value");
 
-                var holdResult = await walletService.HoldFundsForCouponAsync(
-                    request.ApplicableInstructorId.Value,
-                    holdAmount,
-                    coupon.Id,
-                    $"Giữ tiền cho coupon {coupon.Code} ({request.UsageLimit} lần sử dụng)");
+            var holdResult = await walletService.HoldFundsForCouponAsync(
+                instructorId,
+                holdAmount,
+                coupon.Id,
+                $"Giữ tiền cho coupon {coupon.Code} ({request.UsageLimit} lần sử dụng)");
 
-                if (!holdResult.IsSuccess)
-                    return ApiResponse<CouponResponse>.FailureResponse(holdResult.Message ?? "Không thể giữ tiền từ ví");
+            if (!holdResult.IsSuccess)
+                return ApiResponse<CouponResponse>.FailureResponse(holdResult.Message ?? "Không thể giữ tiền từ ví");
 
-                coupon.HoldAmount = holdAmount;
-                coupon.RemainingHoldAmount = holdAmount;
-            }
+            coupon.HoldAmount = holdAmount;
+            coupon.RemainingHoldAmount = holdAmount;
 
             await unitOfWork.CouponRepository.AddAsync(coupon);
             await unitOfWork.SaveChangesAsync();
 
-            logger.LogInformation("Coupon created: {Code}, HoldAmount: {HoldAmount}", coupon.Code, coupon.HoldAmount);
+            logger.LogInformation("Instructor coupon created: {Code}, HoldAmount: {HoldAmount}", coupon.Code, coupon.HoldAmount);
 
             return ApiResponse<CouponResponse>.SuccessResponse(
-                coupon.ToResponse(), "Tạo coupon thành công");
+                coupon.ToResponse(), "Tạo coupon instructor thành công");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error creating coupon");
-            return ApiResponse<CouponResponse>.FailureResponse("Đã xảy ra lỗi khi tạo coupon");
+            logger.LogError(ex, "Error creating instructor coupon");
+            return ApiResponse<CouponResponse>.FailureResponse("Đã xảy ra lỗi khi tạo coupon instructor");
         }
     }
 
@@ -381,7 +407,7 @@ public class CouponService(
     /// FixedAmount: Value × UsageLimit
     /// Percentage: MaxDiscountAmount × UsageLimit (MaxDiscountAmount REQUIRED for instructor percentage coupons)
     /// </summary>
-    private static decimal CalculateCouponHoldAmount(CreateCouponRequest request)
+    private static decimal CalculateCouponHoldAmount(CreateInstructorCouponRequest request)
     {
         if (!request.UsageLimit.HasValue || request.UsageLimit.Value <= 0)
             return 0;

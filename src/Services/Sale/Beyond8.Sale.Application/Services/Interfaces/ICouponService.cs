@@ -6,17 +6,18 @@ namespace Beyond8.Sale.Application.Services.Interfaces;
 
 public interface ICouponService
 {
-    // ── Admin / Instructor ──
-    Task<ApiResponse<CouponResponse>> CreateCouponAsync(CreateCouponRequest request);
-    Task<ApiResponse<CouponResponse>> UpdateCouponAsync(Guid couponId, UpdateCouponRequest request);
-    Task<ApiResponse<bool>> DeleteCouponAsync(Guid couponId);
-
-    // ── Admin Only ──
+    // ── Admin ──
+    Task<ApiResponse<CouponResponse>> CreateAdminCouponAsync(CreateAdminCouponRequest request);
     Task<ApiResponse<List<CouponResponse>>> GetCouponsAsync(PaginationRequest pagination);
     Task<ApiResponse<bool>> ToggleCouponStatusAsync(Guid couponId);
 
     // ── Instructor ──
+    Task<ApiResponse<CouponResponse>> CreateInstructorCouponAsync(CreateInstructorCouponRequest request, Guid instructorId);
     Task<ApiResponse<List<CouponResponse>>> GetCouponsByInstructorAsync(Guid instructorId);
+
+    // ── Admin / Instructor ──
+    Task<ApiResponse<CouponResponse>> UpdateCouponAsync(Guid couponId, UpdateCouponRequest request);
+    Task<ApiResponse<bool>> DeleteCouponAsync(Guid couponId);
 
     // ── Public ──
     Task<ApiResponse<CouponResponse>> GetCouponByCodeAsync(string code);
