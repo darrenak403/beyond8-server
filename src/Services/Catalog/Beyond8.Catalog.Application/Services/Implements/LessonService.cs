@@ -189,11 +189,9 @@ public class LessonService(
         try
         {
             // Validate section ownership through course
-            var validationResult = await CheckSectionOwnershipAsync(request.SectionId, currentUserId);
+            var validationResult = await CheckSectionOwnershipAsync(request.SectionId, currentUserId, isPublished: true);
             if (!validationResult.IsValid)
                 return ApiResponse<LessonResponse>.FailureResponse(validationResult.ErrorMessage!);
-
-
 
             var lesson = request.ToEntity();
             lesson.OrderIndex = await GetNextOrderIndexForSectionAsync(request.SectionId);
@@ -223,7 +221,7 @@ public class LessonService(
         try
         {
             // Validate section ownership through course
-            var validationResult = await CheckSectionOwnershipAsync(request.SectionId, currentUserId);
+            var validationResult = await CheckSectionOwnershipAsync(request.SectionId, currentUserId, isPublished: true);
             if (!validationResult.IsValid)
                 return ApiResponse<LessonResponse>.FailureResponse(validationResult.ErrorMessage!);
 
@@ -255,7 +253,7 @@ public class LessonService(
         try
         {
             // Validate section ownership through course
-            var validationResult = await CheckSectionOwnershipAsync(request.SectionId, currentUserId);
+            var validationResult = await CheckSectionOwnershipAsync(request.SectionId, currentUserId, isPublished: true);
             if (!validationResult.IsValid)
                 return ApiResponse<LessonResponse>.FailureResponse(validationResult.ErrorMessage!);
 
@@ -458,7 +456,7 @@ public class LessonService(
             .FirstOrDefaultAsync(l => l.Id == lessonId);
     }
 
-    private async Task<(bool IsValid, string? ErrorMessage)> CheckSectionOwnershipAsync(Guid sectionId, Guid currentUserId)
+    private async Task<(bool IsValid, string? ErrorMessage)> CheckSectionOwnershipAsync(Guid sectionId, Guid currentUserId, bool isPublished = false)
     {
         var section = await unitOfWork.SectionRepository.AsQueryable()
             .Include(s => s.Course)
@@ -476,7 +474,7 @@ public class LessonService(
             return (false, "Bạn không có quyền truy cập chương này.");
         }
 
-        if (section.Course.Status == CourseStatus.Published)
+        if (section.Course.Status == CourseStatus.Published && isPublished)
         {
             logger.LogWarning("Cannot modify lessons in published course {CourseId} by user {UserId}", section.Course.Id, currentUserId);
             return (false, "Không thể thêm/sửa bài học trong khóa học đã xuất bản.");
