@@ -193,6 +193,8 @@ public class LessonService(
             if (!validationResult.IsValid)
                 return ApiResponse<LessonResponse>.FailureResponse(validationResult.ErrorMessage!);
 
+
+
             var lesson = request.ToEntity();
             lesson.OrderIndex = await GetNextOrderIndexForSectionAsync(request.SectionId);
 
@@ -472,6 +474,12 @@ public class LessonService(
         {
             logger.LogWarning("Access denied for section {SectionId} by user {UserId}", sectionId, currentUserId);
             return (false, "Bạn không có quyền truy cập chương này.");
+        }
+
+        if (section.Course.Status == CourseStatus.Published)
+        {
+            logger.LogWarning("Cannot modify lessons in published course {CourseId} by user {UserId}", section.Course.Id, currentUserId);
+            return (false, "Không thể thêm/sửa bài học trong khóa học đã xuất bản.");
         }
 
         return (true, null);

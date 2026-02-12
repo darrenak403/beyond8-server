@@ -2,6 +2,7 @@ using Beyond8.Catalog.Application.Dtos.Sections;
 using Beyond8.Catalog.Application.Mappings.SectionMappings;
 using Beyond8.Catalog.Application.Services.Interfaces;
 using Beyond8.Catalog.Domain.Entities;
+using Beyond8.Catalog.Domain.Enums;
 using Beyond8.Catalog.Domain.Repositories.Interfaces;
 using Beyond8.Common.Utilities;
 using Microsoft.EntityFrameworkCore;
@@ -93,12 +94,12 @@ public class SectionService(
 
             section!.UpdateFrom(request);
 
-            await unitOfWork.SectionRepository.UpdateAsync(sectionId, section);
+            await unitOfWork.SectionRepository.UpdateAsync(sectionId, section!);
             await unitOfWork.SaveChangesAsync();
 
             logger.LogInformation("Section updated: {SectionId} by user {UserId}", sectionId, currentUserId);
 
-            return ApiResponse<SectionResponse>.SuccessResponse(section.ToResponse(), "Cập nhật chương thành công.");
+            return ApiResponse<SectionResponse>.SuccessResponse(section!.ToResponse(), "Cập nhật chương thành công.");
         }
         catch (Exception ex)
         {
@@ -248,6 +249,13 @@ public class SectionService(
             logger.LogWarning("Course not found or access denied: {CourseId} for user {UserId}", courseId, currentUserId);
             return (false, "Khóa học không tồn tại hoặc bạn không có quyền truy cập.");
         }
+
+        if (course.Status == CourseStatus.Published)
+        {
+            logger.LogWarning("Cannot modify lessons in published course {CourseId} by user {UserId}", course.Id, currentUserId);
+            return (false, "Không thể thêm/sửa bài học trong khóa học đã xuất bản.");
+        }
+
         return (true, null);
     }
 
@@ -268,7 +276,6 @@ public class SectionService(
             logger.LogWarning("Access denied for section {SectionId} by user {UserId}", sectionId, currentUserId);
             return (false, null, "Bạn không có quyền truy cập chương này.");
         }
-
         return (true, section, null);
     }
 }
