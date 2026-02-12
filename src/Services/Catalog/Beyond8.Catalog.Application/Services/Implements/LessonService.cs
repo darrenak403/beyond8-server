@@ -288,6 +288,8 @@ public class LessonService(
             if (!isValid)
                 return ApiResponse<LessonResponse>.FailureResponse(errorMessage!);
 
+            var oldDuration = lesson!.Video?.DurationSeconds;
+
             // Update base lesson properties
             lesson!.UpdateFrom(request);
 
@@ -311,6 +313,17 @@ public class LessonService(
 
             // Update section statistics
             await UpdateSectionStatisticsAsync(lesson.SectionId);
+
+            // Sync duration to Learning service if changed
+            var newDuration = lesson.Video?.DurationSeconds;
+            if (newDuration.HasValue && newDuration != oldDuration)
+            {
+                await publishEndpoint.Publish(new LessonVideoDurationUpdatedEvent(
+                    LessonId: lessonId,
+                    CourseId: lesson.Section.CourseId,
+                    DurationSeconds: newDuration.Value
+                ));
+            }
 
             logger.LogInformation("Video lesson updated: {LessonId} by user {UserId}", lessonId, currentUserId);
 

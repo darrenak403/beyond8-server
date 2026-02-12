@@ -38,6 +38,7 @@ public static class ApplicationServiceExtensions
             config.AddConsumer<QuizAttemptsResetEventConsumer>();
             config.AddConsumer<AssignmentSubmissionsResetEventConsumer>();
             config.AddConsumer<CourseUpdatedMetadataEventConsumer>();
+            config.AddConsumer<LessonVideoDurationUpdatedEventConsumer>();
             config.AddConsumer<UserUpdatedEventConsumer>();
         }, queueNamePrefix: "learning");
 
