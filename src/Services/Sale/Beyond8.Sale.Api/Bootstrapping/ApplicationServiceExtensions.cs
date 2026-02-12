@@ -3,6 +3,7 @@ using Beyond8.Common.Utilities;
 using Beyond8.Sale.Api.Apis;
 using Beyond8.Sale.Application.Clients.Catalog;
 using Beyond8.Sale.Application.Consumers.Catalog;
+using Beyond8.Sale.Application.Consumers.Identity;
 using Beyond8.Sale.Application.Consumers.Learning;
 using Beyond8.Sale.Application.Dtos.Orders;
 using Beyond8.Sale.Application.Helpers;
@@ -36,6 +37,7 @@ public static class ApplicationServiceExtensions
         {
             config.AddConsumer<FreeEnrollmentOrderRequestEventConsumer>();
             config.AddConsumer<CourseUpdatedMetadataEventConsumer>();
+            config.AddConsumer<InstructorApprovalEventConsumer>();
         }, queueNamePrefix: "sale");
 
         // VNPay configuration
