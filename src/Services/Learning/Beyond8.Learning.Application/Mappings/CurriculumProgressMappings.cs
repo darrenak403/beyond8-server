@@ -10,11 +10,14 @@ public static class CurriculumProgressMappings
     public static CurriculumProgressResponse ToCurriculumProgressResponse(
         this Enrollment enrollment,
         CourseStructureResponse structure,
-        IReadOnlyDictionary<Guid, LessonProgress> lessonProgressByLessonId)
+        IReadOnlyDictionary<Guid, LessonProgress> lessonProgressByLessonId,
+        IReadOnlyDictionary<Guid, SectionProgress> sectionProgressBySectionId)
     {
         var sections = structure.Sections
             .OrderBy(s => s.Order)
-            .Select(s => s.ToSectionProgressItem(lessonProgressByLessonId))
+            .Select(s => s.ToSectionProgressItem(
+                lessonProgressByLessonId,
+                sectionProgressBySectionId.GetValueOrDefault(s.Id)))
             .ToList();
 
         return new CurriculumProgressResponse
@@ -31,7 +34,8 @@ public static class CurriculumProgressMappings
 
     public static SectionProgressItem ToSectionProgressItem(
         this SectionStructureItem section,
-        IReadOnlyDictionary<Guid, LessonProgress> lessonProgressByLessonId)
+        IReadOnlyDictionary<Guid, LessonProgress> lessonProgressByLessonId,
+        SectionProgress? sectionProgress)
     {
         var lessons = section.Lessons
             .OrderBy(l => l.Order)
@@ -46,6 +50,10 @@ public static class CurriculumProgressMappings
             Title = section.Title,
             Order = section.Order,
             IsCompleted = allLessonsCompleted,
+            AssignmentSubmitted = sectionProgress?.AssignmentSubmitted ?? false,
+            AssignmentGrade = sectionProgress?.AssignmentGrade,
+            AssignmentSubmittedAt = sectionProgress?.AssignmentSubmittedAt,
+            AssignmentGradedAt = sectionProgress?.AssignmentGradedAt,
             Lessons = lessons
         };
     }
@@ -54,14 +62,17 @@ public static class CurriculumProgressMappings
         this LessonStructureItem lesson,
         LessonProgress? progress)
     {
-        var isCompleted = progress != null && progress.Status == LessonProgressStatus.Completed;
+        var status = progress?.Status;
+        var isCompleted = status is LessonProgressStatus.Completed or LessonProgressStatus.Failed;
+        var isPassed = status == LessonProgressStatus.Completed;
 
         return new LessonProgressItem
         {
             LessonId = lesson.Id,
             Title = lesson.Title,
             Order = lesson.Order,
-            IsCompleted = isCompleted
+            IsCompleted = isCompleted,
+            IsPassed = isPassed
         };
     }
 }

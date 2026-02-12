@@ -6,10 +6,18 @@ namespace Beyond8.Sale.Application.Services.Interfaces;
 
 public interface IPaymentService
 {
-    Task<ApiResponse<PaymentResponse>> ProcessPaymentAsync(Guid orderId, ProcessPaymentRequest request);
+    // ── Student (Authenticated) ──
+    Task<ApiResponse<PaymentUrlResponse>> ProcessPaymentAsync(Guid orderId, string returnUrl, string ipAddress);
     Task<ApiResponse<bool>> ConfirmPaymentAsync(string transactionId);
-    Task<ApiResponse<bool>> HandleVNPayCallbackAsync(VNPayCallbackRequest request);
     Task<ApiResponse<PaymentResponse>> CheckPaymentStatusAsync(Guid paymentId);
-    Task<ApiResponse<List<PaymentResponse>>> GetPaymentsByOrderAsync(Guid orderId);
     Task<ApiResponse<List<PaymentResponse>>> GetPaymentsByUserAsync(PaginationRequest pagination, Guid userId);
+
+    // ── Instructor: Wallet Top-Up ──
+    Task<ApiResponse<PaymentUrlResponse>> ProcessTopUpAsync(Guid instructorId, decimal amount, string returnUrl, string ipAddress);
+
+    // ── System (VNPay webhook — AllowAnonymous + HMAC verification) ──
+    Task<ApiResponse<bool>> HandleVNPayCallbackAsync(VNPayCallbackRequest request, string rawQueryString);
+
+    // ── Owner / Admin ──
+    Task<ApiResponse<List<PaymentResponse>>> GetPaymentsByOrderAsync(Guid orderId);
 }

@@ -62,11 +62,11 @@ namespace Beyond8.Assessment.Infrastructure.Migrations
                     b.Property<Guid>("InstructorId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("MaxTextLength")
+                    b.Property<int>("MaxSubmissions")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Rubric")
-                        .HasColumnType("jsonb");
+                    b.Property<int>("MaxTextLength")
+                        .HasColumnType("integer");
 
                     b.Property<string>("RubricUrl")
                         .HasColumnType("text");
@@ -86,9 +86,6 @@ namespace Beyond8.Assessment.Infrastructure.Migrations
                         .HasColumnType("character varying(200)");
 
                     b.Property<int>("TotalPoints")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TotalSubmissions")
                         .HasColumnType("integer");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -135,7 +132,7 @@ namespace Beyond8.Assessment.Infrastructure.Migrations
                     b.Property<Guid?>("DeletedBy")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("FileUrls")
+                    b.PrimitiveCollection<string>("FileUrls")
                         .HasColumnType("jsonb");
 
                     b.Property<decimal?>("FinalScore")

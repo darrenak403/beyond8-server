@@ -19,4 +19,9 @@
     <ProjectReference Include="..\Beyond8.Sale.Domain\Beyond8.Sale.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Data\Seeders\" />
+    <Folder Include="ExternalServices\" />
+  </ItemGroup>
+
 </Project>

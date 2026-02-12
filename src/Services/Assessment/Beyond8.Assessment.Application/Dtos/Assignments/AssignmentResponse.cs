@@ -19,7 +19,7 @@ public class AssignmentResponse
     public int TotalPoints { get; set; }
     public string? RubricUrl { get; set; }
     public int? TimeLimitMinutes { get; set; }
-    public int TotalSubmissions { get; set; }
+    public int MaxSubmissions { get; set; }
     public decimal? AverageScore { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

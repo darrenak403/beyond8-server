@@ -10,6 +10,8 @@ public class LessonProgressResponse
     public Guid CourseId { get; set; }
 
     public LessonProgressStatus Status { get; set; }
+    /// <summary>Đã hoàn thành và đạt (pass).</summary>
+    public bool IsPassed { get; set; }
     public int LastPositionSeconds { get; set; }
     public int TotalDurationSeconds { get; set; }
     public decimal WatchPercent { get; set; }

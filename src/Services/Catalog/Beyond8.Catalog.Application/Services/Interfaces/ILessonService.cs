@@ -1,3 +1,4 @@
+using Beyond8.Catalog.Application.Dtos.LessonDocuments;
 using Beyond8.Catalog.Application.Dtos.Lessons;
 using Beyond8.Common.Utilities;
 

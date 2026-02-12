@@ -7,7 +7,7 @@ public class AssignmentSimpleResponse
     public Guid? CourseId { get; set; }
     public Guid? SectionId { get; set; }
     public string Title { get; set; } = string.Empty;
-    public int TotalSubmissions { get; set; }
+    public int MaxSubmissions { get; set; }
     public decimal? AverageScore { get; set; }
     public DateTime CreatedAt { get; set; }
 }

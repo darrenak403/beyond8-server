@@ -36,6 +36,14 @@ public static class AssessmentSeedData
     private static readonly Guid Assignment3Id = Guid.Parse("66666666-6666-6666-6666-666666666703");
     private static readonly Guid Assignment4Id = Guid.Parse("66666666-6666-6666-6666-666666666704");
 
+    private static readonly Guid SeedStudentId = Guid.Parse("00000000-0000-0000-0000-000000000005");
+    private static readonly Guid Submission1Id = Guid.Parse("99999999-9999-9999-9999-999999999901");
+    private static readonly Guid Submission2Id = Guid.Parse("99999999-9999-9999-9999-999999999902");
+    private static readonly Guid Submission3Id = Guid.Parse("99999999-9999-9999-9999-999999999903");
+
+    private static readonly Guid QuizAttempt1Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa01");
+    private static readonly Guid QuizAttempt2Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa02");
+
     // Question IDs - Quiz 1 (Section 2: DI, Middleware, Configuration)
     private static readonly Guid Q1_1Id = Guid.Parse("77777777-7777-7777-7777-777777777701");
     private static readonly Guid Q1_2Id = Guid.Parse("77777777-7777-7777-7777-777777777702");
@@ -377,6 +385,172 @@ public static class AssessmentSeedData
         };
 
         await context.Assignments.AddRangeAsync(assignments);
+        await context.SaveChangesAsync();
+    }
+
+    public static async Task SeedAssignmentSubmissionsAsync(AssessmentDbContext context)
+    {
+        if (await context.AssignmentSubmissions.AnyAsync(s => s.Id == Submission1Id))
+            return;
+
+        var now = DateTime.UtcNow;
+        var completedAt = now.AddDays(-7);
+        var submittedAt = completedAt.AddHours(-1);
+        var gradedAt = submittedAt.AddMinutes(30);
+
+        var submissions = new List<AssignmentSubmission>
+        {
+            new()
+            {
+                Id = Submission1Id,
+                StudentId = SeedStudentId,
+                AssignmentId = Assignment1Id,
+                SubmissionNumber = 1,
+                SubmittedAt = submittedAt,
+                TextContent = "Đã hoàn thành: cài .NET SDK, tạo Web API, chạy và gọi endpoint. File đính kèm trong link.",
+                FileUrls = ["https://d30z0qh7rhzgt8.cloudfront.net/assignments/seed/aspnet-section1-submit.zip"],
+                AiScore = 82m,
+                FinalScore = 85m,
+                InstructorFeedback = "Bài làm đạt yêu cầu. Có thể bổ sung comment trong code.",
+                GradedBy = SeedInstructorId,
+                GradedAt = gradedAt,
+                Status = SubmissionStatus.Graded,
+                CreatedAt = submittedAt,
+                CreatedBy = SeedStudentId
+            },
+            new()
+            {
+                Id = Submission2Id,
+                StudentId = SeedStudentId,
+                AssignmentId = Assignment2Id,
+                SubmissionNumber = 1,
+                SubmittedAt = submittedAt,
+                TextContent = "Đã đăng ký service Singleton/Scoped/Transient, inject trong controller. Middleware đo thời gian đã đăng ký.",
+                FileUrls = ["https://d30z0qh7rhzgt8.cloudfront.net/assignments/seed/aspnet-section2-submit.zip"],
+                AiScore = 84m,
+                FinalScore = 85m,
+                InstructorFeedback = "Tốt. Middleware hoạt động đúng.",
+                GradedBy = SeedInstructorId,
+                GradedAt = gradedAt,
+                Status = SubmissionStatus.Graded,
+                CreatedAt = submittedAt,
+                CreatedBy = SeedStudentId
+            },
+            new()
+            {
+                Id = Submission3Id,
+                StudentId = SeedStudentId,
+                AssignmentId = Assignment3Id,
+                SubmissionNumber = 1,
+                SubmittedAt = submittedAt,
+                TextContent = "Đã tạo entity, DbContext, 2 migration, seed data và truy vấn LINQ Where, OrderBy, Include.",
+                FileUrls = ["https://d30z0qh7rhzgt8.cloudfront.net/assignments/seed/aspnet-section3-submit.zip"],
+                AiScore = 86m,
+                FinalScore = 85m,
+                InstructorFeedback = "Đạt. Có thể tối ưu thêm truy vấn.",
+                GradedBy = SeedInstructorId,
+                GradedAt = gradedAt,
+                Status = SubmissionStatus.Graded,
+                CreatedAt = submittedAt,
+                CreatedBy = SeedStudentId
+            }
+        };
+
+        await context.AssignmentSubmissions.AddRangeAsync(submissions);
+        await context.SaveChangesAsync();
+    }
+
+    public static async Task SeedQuizAttemptsAsync(AssessmentDbContext context)
+    {
+        if (await context.QuizAttempts.AnyAsync(a => a.Id == QuizAttempt1Id))
+            return;
+
+        var now = DateTime.UtcNow;
+        var completedAt = now.AddDays(-7);
+        var startedAt = completedAt.AddMinutes(-12);
+        var submittedAt = completedAt;
+
+        var quiz1QuestionOrder = JsonSerializer.Serialize(new List<Guid> { Q1_1Id, Q1_2Id, Q1_3Id, Q1_4Id, Q1_5Id });
+        var quiz1OptionOrders = JsonSerializer.Serialize(new Dictionary<string, List<string>>
+        {
+            [Q1_1Id.ToString()] = ["a", "b", "c", "d"],
+            [Q1_2Id.ToString()] = ["a", "b", "c", "d"],
+            [Q1_3Id.ToString()] = ["a", "b", "c", "d"],
+            [Q1_4Id.ToString()] = ["a", "b", "c", "d"],
+            [Q1_5Id.ToString()] = ["a", "b", "c", "d"]
+        });
+        var quiz1Answers = JsonSerializer.Serialize(new Dictionary<string, List<string>>
+        {
+            [Q1_1Id.ToString()] = ["a"],   // sai (đúng là "b")
+            [Q1_2Id.ToString()] = ["a"],  // đúng
+            [Q1_3Id.ToString()] = ["c"],    // đúng
+            [Q1_4Id.ToString()] = ["b"],   // đúng
+            [Q1_5Id.ToString()] = ["c"]    // đúng
+        });
+
+        var quiz2QuestionOrder = JsonSerializer.Serialize(new List<Guid> { Q2_1Id, Q2_2Id, Q2_3Id, Q2_4Id, Q2_5Id });
+        var quiz2OptionOrders = JsonSerializer.Serialize(new Dictionary<string, List<string>>
+        {
+            [Q2_1Id.ToString()] = ["a", "b", "c", "d"],
+            [Q2_2Id.ToString()] = ["a", "b", "c", "d"],
+            [Q2_3Id.ToString()] = ["a", "b", "c", "d"],
+            [Q2_4Id.ToString()] = ["a", "b", "c", "d"],
+            [Q2_5Id.ToString()] = ["a", "b", "c", "d"]
+        });
+        var quiz2Answers = JsonSerializer.Serialize(new Dictionary<string, List<string>>
+        {
+            [Q2_1Id.ToString()] = ["a"],   // sai (đúng là "b")
+            [Q2_2Id.ToString()] = ["b"],   // đúng
+            [Q2_3Id.ToString()] = ["b"],   // đúng
+            [Q2_4Id.ToString()] = ["b"],   // đúng
+            [Q2_5Id.ToString()] = ["b"]    // đúng
+        });
+
+        var attempts = new List<QuizAttempt>
+        {
+            new()
+            {
+                Id = QuizAttempt1Id,
+                StudentId = SeedStudentId,
+                QuizId = Quiz1Id,
+                AttemptNumber = 1,
+                StartedAt = startedAt,
+                SubmittedAt = submittedAt,
+                ShuffleSeed = 42,
+                QuestionOrder = quiz1QuestionOrder,
+                OptionOrders = quiz1OptionOrders,
+                Answers = quiz1Answers,
+                Score = 85m,
+                ScorePercent = 85m,
+                IsPassed = true,
+                TimeSpentSeconds = 720,
+                Status = QuizAttemptStatus.Graded,
+                CreatedAt = startedAt,
+                CreatedBy = SeedStudentId
+            },
+            new()
+            {
+                Id = QuizAttempt2Id,
+                StudentId = SeedStudentId,
+                QuizId = Quiz2Id,
+                AttemptNumber = 1,
+                StartedAt = startedAt.AddMinutes(-30), // làm quiz 2 trước quiz 1 (theo thứ tự lesson)
+                SubmittedAt = submittedAt.AddMinutes(-30),
+                ShuffleSeed = 43,
+                QuestionOrder = quiz2QuestionOrder,
+                OptionOrders = quiz2OptionOrders,
+                Answers = quiz2Answers,
+                Score = 85m,
+                ScorePercent = 85m,
+                IsPassed = true,
+                TimeSpentSeconds = 600,
+                Status = QuizAttemptStatus.Graded,
+                CreatedAt = startedAt.AddMinutes(-30),
+                CreatedBy = SeedStudentId
+            }
+        };
+
+        await context.QuizAttempts.AddRangeAsync(attempts);
         await context.SaveChangesAsync();
     }
 

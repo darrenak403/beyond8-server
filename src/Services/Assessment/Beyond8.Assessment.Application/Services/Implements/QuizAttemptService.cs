@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Beyond8.Assessment.Application.Clients.Learning;
 using Beyond8.Assessment.Application.Dtos.QuizAttempts;
 using Beyond8.Assessment.Application.Helpers;
 using Beyond8.Assessment.Application.Mappings.QuizAttemptMappings;
@@ -16,7 +17,8 @@ namespace Beyond8.Assessment.Application.Services.Implements;
 public class QuizAttemptService(
     ILogger<QuizAttemptService> logger,
     IUnitOfWork unitOfWork,
-    IPublishEndpoint publishEndpoint) : IQuizAttemptService
+    IPublishEndpoint publishEndpoint,
+    ILearningClient learningClient) : IQuizAttemptService
 {
     public async Task<ApiResponse<StartQuizResponse>> CreateQuizAttemptAsync(Guid quizId, Guid studentId)
     {
@@ -163,6 +165,7 @@ public class QuizAttemptService(
             {
                 await publishEndpoint.Publish(new QuizAttemptCompletedEvent(
                     LessonId: quiz.LessonId.Value,
+                    LessonTitle: quiz.Title,
                     StudentId: studentId,
                     ScorePercent: scorePercent,
                     TotalScore: totalScore,
@@ -170,6 +173,8 @@ public class QuizAttemptService(
                     IsPassed: isPassed,
                     AttemptId: attemptId,
                     QuizId: quiz.Id,
+                    AttemptNumber: attempt.AttemptNumber,
+                    MaxAttempts: quiz.MaxAttempts,
                     CompletedAt: DateTime.UtcNow
                 ));
             }
@@ -395,6 +400,64 @@ public class QuizAttemptService(
         var questions = await unitOfWork.QuestionRepository.GetAllAsync(q => questionOrder.Contains(q.Id));
         var questionDict = questions.ToDictionary(q => q.Id);
         return (questionOrder, questionDict);
+    }
+
+    public async Task<ApiResponse<bool>> ResetQuizAttemptsForStudentAsync(Guid quizId, Guid studentId, Guid instructorId)
+    {
+        try
+        {
+            var quiz = await unitOfWork.QuizRepository.FindOneAsync(q => q.Id == quizId && q.InstructorId == instructorId);
+            if (quiz == null)
+                return ApiResponse<bool>.FailureResponse("Quiz không tồn tại hoặc không thuộc về bạn.");
+
+            if (quiz.CourseId.HasValue)
+            {
+                var certResult = await learningClient.HasCertificateForCourseAsync(quiz.CourseId.Value, studentId);
+                if (certResult.IsSuccess && certResult.Data)
+                    return ApiResponse<bool>.FailureResponse("Không thể reset lượt làm quiz. Học sinh đã được cấp certificate cho khóa học này.");
+            }
+
+            var attempts = await unitOfWork.QuizAttemptRepository.GetAllAsync(
+                a => a.QuizId == quizId && a.StudentId == studentId);
+
+            if (attempts.Count == 0)
+                return ApiResponse<bool>.FailureResponse("Học sinh chưa có lượt làm nào cho quiz này.");
+
+            if (quiz.MaxAttempts > 0 && attempts.Count < quiz.MaxAttempts)
+                return ApiResponse<bool>.FailureResponse($"Học sinh vẫn còn lượt làm quiz ({attempts.Count}/{quiz.MaxAttempts}). Chỉ reset khi đã hết lượt.");
+
+            foreach (var attempt in attempts)
+            {
+                attempt.DeletedAt = DateTime.UtcNow;
+                attempt.DeletedBy = instructorId;
+                await unitOfWork.QuizAttemptRepository.UpdateAsync(attempt.Id, attempt);
+            }
+
+            await unitOfWork.SaveChangesAsync();
+
+            if (quiz.LessonId.HasValue)
+            {
+                await publishEndpoint.Publish(new QuizAttemptsResetEvent(
+                    QuizId: quizId,
+                    LessonId: quiz.LessonId.Value,
+                    StudentId: studentId,
+                    ResetByInstructorId: instructorId,
+                    ResetAt: DateTime.UtcNow
+                ));
+            }
+
+            logger.LogInformation(
+                "Quiz attempts reset: QuizId={QuizId}, StudentId={StudentId}, DeletedCount={Count}, ByInstructor={InstructorId}",
+                quizId, studentId, attempts.Count, instructorId);
+
+            return ApiResponse<bool>.SuccessResponse(true,
+                $"Đã reset {attempts.Count} lượt làm quiz cho học sinh. Học sinh có thể làm lại.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error resetting quiz attempts: QuizId={QuizId}, StudentId={StudentId}", quizId, studentId);
+            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi reset lượt làm quiz.");
+        }
     }
 
     private async Task UpdateQuizStatisticsAsync(Quiz quiz, bool isPassed)

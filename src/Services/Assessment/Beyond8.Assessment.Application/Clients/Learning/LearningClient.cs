@@ -19,4 +19,18 @@ public class LearningClient(HttpClient httpClient, IHttpContextAccessor httpCont
             return ApiResponse<bool>.FailureResponse(ex.Message);
         }
     }
+
+    public async Task<ApiResponse<bool>> HasCertificateForCourseAsync(Guid courseId, Guid studentId)
+    {
+        try
+        {
+            var hasCertificate = await GetAsync<bool>($"/api/v1/enrollments/check-certificate?courseId={courseId}&studentId={studentId}");
+            return ApiResponse<bool>.SuccessResponse(hasCertificate,
+                hasCertificate ? "Đã được cấp certificate." : "Chưa có certificate.");
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<bool>.FailureResponse(ex.Message);
+        }
+    }
 }

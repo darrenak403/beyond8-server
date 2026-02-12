@@ -1,4 +1,5 @@
 using Beyond8.Catalog.Application.Dtos.Courses;
+using Beyond8.Catalog.Application.Dtos.Lessons;
 using Beyond8.Common.Utilities;
 
 namespace Beyond8.Catalog.Application.Services.Interfaces;
@@ -27,4 +28,5 @@ public interface ICourseService
     Task<ApiResponse<List<CourseResponse>>> GetCoursesByInstructorIdAsync(Guid instructorId, PaginationRequest pagination);
     Task<ApiResponse<List<CourseResponse>>> GetMostPopularCoursesAsync(PaginationCourseSearchRequest pagination);
     Task<ApiResponse<List<bool>>> PublishBulkCoursesAsync(List<Guid> courseIds, Guid currentUserId);
+    Task<ApiResponse<List<LessonVideoResponse>>> GetCourseVideosPreviewAsync(Guid courseId);
 }

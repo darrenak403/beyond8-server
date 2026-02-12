@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MassTransit;
 using Beyond8.Common.Events.Catalog;
+using Beyond8.Catalog.Application.Dtos.LessonDocuments;
 
 namespace Beyond8.Catalog.Application.Services.Implements;
 
@@ -192,6 +193,8 @@ public class LessonService(
             if (!validationResult.IsValid)
                 return ApiResponse<LessonResponse>.FailureResponse(validationResult.ErrorMessage!);
 
+
+
             var lesson = request.ToEntity();
             lesson.OrderIndex = await GetNextOrderIndexForSectionAsync(request.SectionId);
 
@@ -288,6 +291,8 @@ public class LessonService(
             if (!isValid)
                 return ApiResponse<LessonResponse>.FailureResponse(errorMessage!);
 
+            var oldDuration = lesson!.Video?.DurationSeconds;
+
             // Update base lesson properties
             lesson!.UpdateFrom(request);
 
@@ -311,6 +316,17 @@ public class LessonService(
 
             // Update section statistics
             await UpdateSectionStatisticsAsync(lesson.SectionId);
+
+            // Sync duration to Learning service if changed
+            var newDuration = lesson.Video?.DurationSeconds;
+            if (newDuration.HasValue && newDuration != oldDuration)
+            {
+                await publishEndpoint.Publish(new LessonVideoDurationUpdatedEvent(
+                    LessonId: lessonId,
+                    CourseId: lesson.Section.CourseId,
+                    DurationSeconds: newDuration.Value
+                ));
+            }
 
             logger.LogInformation("Video lesson updated: {LessonId} by user {UserId}", lessonId, currentUserId);
 
@@ -458,6 +474,12 @@ public class LessonService(
         {
             logger.LogWarning("Access denied for section {SectionId} by user {UserId}", sectionId, currentUserId);
             return (false, "Bạn không có quyền truy cập chương này.");
+        }
+
+        if (section.Course.Status == CourseStatus.Published)
+        {
+            logger.LogWarning("Cannot modify lessons in published course {CourseId} by user {UserId}", section.Course.Id, currentUserId);
+            return (false, "Không thể thêm/sửa bài học trong khóa học đã xuất bản.");
         }
 
         return (true, null);

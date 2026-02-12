@@ -41,5 +41,8 @@ namespace Beyond8.Analytic.Domain.Entities
 
         [Column(TypeName = "decimal(5, 2)")]
         public decimal AvgWatchTime { get; set; } = 0;
+
+        public DateOnly SnapshotDate { get; set; } = DateOnly.FromDateTime(DateTime.UtcNow);
+        public bool IsCurrent { get; set; } = true;
     }
 }

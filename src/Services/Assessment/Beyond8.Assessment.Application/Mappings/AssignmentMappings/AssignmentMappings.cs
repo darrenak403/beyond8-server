@@ -26,7 +26,7 @@ public static class AssignmentMappings
             TotalPoints = entity.TotalPoints,
             RubricUrl = entity.RubricUrl,
             TimeLimitMinutes = entity.TimeLimitMinutes,
-            TotalSubmissions = entity.TotalSubmissions,
+            MaxSubmissions = entity.MaxSubmissions,
             AverageScore = entity.AverageScore,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt ?? entity.CreatedAt
@@ -42,7 +42,7 @@ public static class AssignmentMappings
             CourseId = entity.CourseId,
             SectionId = entity.SectionId,
             Title = entity.Title,
-            TotalSubmissions = entity.TotalSubmissions,
+            MaxSubmissions = entity.MaxSubmissions,
             AverageScore = entity.AverageScore,
             CreatedAt = entity.CreatedAt
         };
@@ -64,7 +64,8 @@ public static class AssignmentMappings
             GradingMode = request.GradingMode,
             TotalPoints = request.TotalPoints,
             RubricUrl = request.RubricUrl,
-            TimeLimitMinutes = request.TimeLimitMinutes
+            TimeLimitMinutes = request.TimeLimitMinutes,
+            MaxSubmissions = request.MaxSubmissions
         };
     }
 
@@ -82,6 +83,7 @@ public static class AssignmentMappings
         assignment.TotalPoints = request.TotalPoints;
         assignment.RubricUrl = request.RubricUrl;
         assignment.TimeLimitMinutes = request.TimeLimitMinutes;
+        assignment.MaxSubmissions = request.MaxSubmissions;
     }
 
     private static string? SerializeAttachmentList(List<AssignmentAttachmentItem>? list)

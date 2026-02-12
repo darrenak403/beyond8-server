@@ -9,6 +9,6 @@ public interface IAssignmentService
     Task<ApiResponse<bool>> DeleteAssignmentAsync(Guid id, Guid userId);
     Task<ApiResponse<List<AssignmentSimpleResponse>>> GetAllAssignmentsAsync(Guid userId, GetAssignmentsRequest request);
     Task<ApiResponse<AssignmentResponse>> GetAssignmentByIdAsync(Guid id, Guid userId);
-    Task<ApiResponse<AssignmentSimpleResponse>> GetAssignmentByIdForStudentAsync(Guid id, Guid userId);
+    Task<ApiResponse<AssignmentResponse>> GetAssignmentByIdForStudentAsync(Guid id, Guid userId);
     Task<ApiResponse<AssignmentSimpleResponse>> UpdateAssignmentAsync(Guid id, UpdateAssignmentRequest request, Guid userId);
 }

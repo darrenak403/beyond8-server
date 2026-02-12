@@ -5,6 +5,8 @@ using Beyond8.Learning.Application.Clients.Catalog;
 using Beyond8.Learning.Application.Dtos.Enrollments;
 using Beyond8.Learning.Application.Mappings;
 using Beyond8.Learning.Application.Services.Interfaces;
+using Beyond8.Learning.Domain.Entities;
+using Beyond8.Learning.Domain.Enums;
 using Beyond8.Learning.Domain.Repositories.Interfaces;
 using MassTransit;
 using Microsoft.Extensions.Logging;
@@ -114,6 +116,121 @@ public class EnrollmentService(
         var result = enrollment != null;
 
         return ApiResponse<bool>.SuccessResponse(result, result ? "Đã đăng ký khóa học." : "Chưa đăng ký khóa học.", metadata: new { EnrollmentId = enrollment?.Id });
+    }
+
+    public async Task<ApiResponse<bool>> HasCertificateForCourseAsync(Guid studentId, Guid courseId)
+    {
+        var enrollment = await unitOfWork.EnrollmentRepository.FindOneAsync(e =>
+            e.UserId == studentId && e.CourseId == courseId && e.DeletedAt == null);
+
+        var hasCertificate = enrollment?.CertificateId != null;
+
+        return ApiResponse<bool>.SuccessResponse(hasCertificate,
+            hasCertificate ? "Học sinh đã được cấp certificate cho khóa học này." : "Chưa có certificate.");
+    }
+
+    public async Task<ApiResponse<bool>> EnrollPaidCoursesAsync(Guid userId, List<Guid> courseIds, Guid orderId)
+    {
+        if (courseIds == null || courseIds.Count == 0)
+        {
+            logger.LogWarning("No courses provided for enrollment from order {OrderId}", orderId);
+            return ApiResponse<bool>.FailureResponse("Không có khóa học nào để đăng ký");
+        }
+
+        var successCount = 0;
+        var errors = new List<string>();
+
+        foreach (var courseId in courseIds)
+        {
+            try
+            {
+                var structureResult = await catalogClient.GetCourseStructureAsync(courseId);
+                if (!structureResult.IsSuccess || structureResult.Data == null)
+                {
+                    var error = $"Không thể lấy thông tin khóa học {courseId}: {structureResult.Message}";
+                    logger.LogWarning(error);
+                    errors.Add(error);
+                    continue;
+                }
+
+                var structure = structureResult.Data;
+
+                // Check if already enrolled
+                var existing = await unitOfWork.EnrollmentRepository.FindOneAsync(e =>
+                    e.UserId == userId && e.CourseId == courseId && e.DeletedAt == null);
+                if (existing != null)
+                {
+                    logger.LogInformation("User {UserId} already enrolled in course {CourseId} from order {OrderId}",
+                        userId, courseId, orderId);
+                    successCount++;
+                    continue;
+                }
+
+                var totalLessons = structure.TotalLessons;
+                if (totalLessons <= 0 && structure.Sections.Count > 0)
+                {
+                    totalLessons = structure.Sections.Sum(s => s.Lessons.Count);
+                }
+
+                var enrollment = new Enrollment
+                {
+                    UserId = userId,
+                    CourseId = courseId,
+                    CourseTitle = structure.Title,
+                    CourseThumbnailUrl = structure.ThumbnailUrl,
+                    Slug = structure.Slug,
+                    InstructorId = structure.InstructorId,
+                    InstructorName = structure.InstructorName,
+                    PricePaid = structure.FinalPrice, // Price paid for this course
+                    Status = EnrollmentStatus.Active,
+                    TotalLessons = totalLessons,
+                    EnrolledAt = DateTime.UtcNow
+                };
+
+                await unitOfWork.EnrollmentRepository.AddAsync(enrollment);
+
+                // Create section progresses
+                foreach (var section in structure.Sections.OrderBy(s => s.Order))
+                {
+                    var sectionProgress = section.ToSectionProgressEntity(userId, courseId, enrollment.Id);
+                    await unitOfWork.SectionProgressRepository.AddAsync(sectionProgress);
+
+                    // Create lesson progresses
+                    foreach (var lesson in section.Lessons.OrderBy(l => l.Order))
+                    {
+                        var lessonProgress = lesson.ToLessonProgressEntity(userId, courseId, enrollment.Id);
+                        await unitOfWork.LessonProgressRepository.AddAsync(lessonProgress);
+                    }
+                }
+
+                await unitOfWork.SaveChangesAsync();
+
+                logger.LogInformation("Successfully enrolled user {UserId} in paid course {CourseId} from order {OrderId}",
+                    userId, courseId, orderId);
+                successCount++;
+            }
+            catch (Exception ex)
+            {
+                var error = $"Lỗi khi đăng ký khóa học {courseId}: {ex.Message}";
+                logger.LogError(ex, error);
+                errors.Add(error);
+            }
+        }
+
+        if (successCount == courseIds.Count)
+        {
+            return ApiResponse<bool>.SuccessResponse(true,
+                $"Đăng ký thành công {successCount} khóa học từ đơn hàng {orderId}");
+        }
+        else if (successCount > 0)
+        {
+            return ApiResponse<bool>.SuccessResponse(true,
+                $"Đăng ký thành công {successCount}/{courseIds.Count} khóa học từ đơn hàng {orderId}. Lỗi: {string.Join("; ", errors)}");
+        }
+        else
+        {
+            return ApiResponse<bool>.FailureResponse($"Không thể đăng ký khóa học nào. Lỗi: {string.Join("; ", errors)}");
+        }
     }
 
     public async Task<ApiResponse<List<EnrollmentSimpleResponse>>> GetEnrolledCoursesAsync(Guid userId)

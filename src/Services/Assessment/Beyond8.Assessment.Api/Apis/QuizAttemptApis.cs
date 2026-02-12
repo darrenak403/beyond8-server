@@ -76,6 +76,14 @@ public static class QuizAttemptApis
             .Produces<ApiResponse<List<Guid>>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<List<Guid>>>(StatusCodes.Status400BadRequest);
 
+        group.MapPost("/quiz/{quizId:guid}/reset-attempts/{studentId:guid}", ResetQuizAttemptsAsync)
+            .WithName("ResetQuizAttempts")
+            .WithDescription("Instructor reset lượt làm quiz cho student cụ thể")
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
         return group;
     }
 
@@ -152,6 +160,16 @@ public static class QuizAttemptApis
         [FromServices] ICurrentUserService currentUserService)
     {
         var result = await quizAttemptService.FlagQuestionAsync(attemptId, request, currentUserService.UserId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> ResetQuizAttemptsAsync(
+        [FromRoute] Guid quizId,
+        [FromRoute] Guid studentId,
+        [FromServices] IQuizAttemptService quizAttemptService,
+        [FromServices] ICurrentUserService currentUserService)
+    {
+        var result = await quizAttemptService.ResetQuizAttemptsForStudentAsync(quizId, studentId, currentUserService.UserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 }

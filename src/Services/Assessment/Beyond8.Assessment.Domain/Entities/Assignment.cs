@@ -36,7 +36,7 @@ public class Assignment : BaseEntity
 
     public int? TimeLimitMinutes { get; set; } = 60;
 
-    public int TotalSubmissions { get; set; } = 0;
+    public int MaxSubmissions { get; set; } = 1;
 
     [Column(TypeName = "decimal(5, 2)")]
 

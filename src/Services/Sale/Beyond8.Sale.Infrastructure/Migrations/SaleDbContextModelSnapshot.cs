@@ -22,6 +22,115 @@ namespace Beyond8.Sale.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Beyond8.Sale.Domain.Entities.Cart", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("Carts");
+                });
+
+            modelBuilder.Entity("Beyond8.Sale.Domain.Entities.CartItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CartId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CourseThumbnail")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("CourseTitle")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("DiscountAmount")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<DateTime?>("DiscountEndsAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("DiscountPercent")
+                        .HasColumnType("decimal(5, 2)");
+
+                    b.Property<decimal>("FinalPrice")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<Guid>("InstructorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("InstructorName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<decimal>("OriginalPrice")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CartId");
+
+                    b.HasIndex("CourseId");
+
+                    b.HasIndex("CartId", "CourseId")
+                        .IsUnique();
+
+                    b.ToTable("CartItems");
+                });
+
             modelBuilder.Entity("Beyond8.Sale.Domain.Entities.Coupon", b =>
                 {
                     b.Property<Guid>("Id")
@@ -55,6 +164,11 @@ namespace Beyond8.Sale.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<decimal>("HoldAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18, 2)")
+                        .HasDefaultValue(0m);
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
@@ -63,6 +177,11 @@ namespace Beyond8.Sale.Infrastructure.Migrations
 
                     b.Property<decimal?>("MinOrderAmount")
                         .HasColumnType("decimal(18, 2)");
+
+                    b.Property<decimal>("RemainingHoldAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18, 2)")
+                        .HasDefaultValue(0m);
 
                     b.Property<int>("Type")
                         .HasColumnType("integer");
@@ -188,6 +307,11 @@ namespace Beyond8.Sale.Infrastructure.Migrations
 
                     b.Property<Guid?>("DeletedBy")
                         .HasColumnType("uuid");
+
+                    b.Property<decimal>("HoldBalance")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18, 2)")
+                        .HasDefaultValue(0m);
 
                     b.Property<Guid>("InstructorId")
                         .HasColumnType("uuid");
@@ -433,7 +557,7 @@ namespace Beyond8.Sale.Infrastructure.Migrations
                     b.Property<string>("Metadata")
                         .HasColumnType("jsonb");
 
-                    b.Property<Guid>("OrderId")
+                    b.Property<Guid?>("OrderId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("PaidAt")
@@ -453,6 +577,11 @@ namespace Beyond8.Sale.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<int>("Purpose")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
@@ -462,18 +591,27 @@ namespace Beyond8.Sale.Infrastructure.Migrations
                     b.Property<Guid?>("UpdatedBy")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("WalletId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ExternalTransactionId");
 
-                    b.HasIndex("OrderId");
+                    b.HasIndex("OrderId")
+                        .HasFilter("\"OrderId\" IS NOT NULL");
 
                     b.HasIndex("PaidAt");
 
                     b.HasIndex("PaymentNumber")
                         .IsUnique();
 
+                    b.HasIndex("Purpose");
+
                     b.HasIndex("Status");
+
+                    b.HasIndex("WalletId")
+                        .HasFilter("\"WalletId\" IS NOT NULL");
 
                     b.HasIndex("Provider", "Status");
 
@@ -589,6 +727,60 @@ namespace Beyond8.Sale.Infrastructure.Migrations
                     b.ToTable("PayoutRequests");
                 });
 
+            modelBuilder.Entity("Beyond8.Sale.Domain.Entities.PlatformWallet", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("AvailableBalance")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18, 2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<decimal>("TotalCouponCost")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18, 2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal>("TotalRevenue")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18, 2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PlatformWallets");
+                });
+
             modelBuilder.Entity("Beyond8.Sale.Domain.Entities.TransactionLedger", b =>
                 {
                     b.Property<Guid>("Id")
@@ -667,6 +859,17 @@ namespace Beyond8.Sale.Infrastructure.Migrations
                     b.ToTable("TransactionLedgers");
                 });
 
+            modelBuilder.Entity("Beyond8.Sale.Domain.Entities.CartItem", b =>
+                {
+                    b.HasOne("Beyond8.Sale.Domain.Entities.Cart", "Cart")
+                        .WithMany("CartItems")
+                        .HasForeignKey("CartId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Cart");
+                });
+
             modelBuilder.Entity("Beyond8.Sale.Domain.Entities.CouponUsage", b =>
                 {
                     b.HasOne("Beyond8.Sale.Domain.Entities.Coupon", "Coupon")
@@ -712,8 +915,14 @@ namespace Beyond8.Sale.Infrastructure.Migrations
                     b.HasOne("Beyond8.Sale.Domain.Entities.Order", "Order")
                         .WithMany("Payments")
                         .HasForeignKey("OrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Beyond8.Sale.Domain.Entities.InstructorWallet", "InstructorWallet")
+                        .WithMany()
+                        .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("InstructorWallet");
 
                     b.Navigation("Order");
                 });
@@ -738,6 +947,11 @@ namespace Beyond8.Sale.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("InstructorWallet");
+                });
+
+            modelBuilder.Entity("Beyond8.Sale.Domain.Entities.Cart", b =>
+                {
+                    b.Navigation("CartItems");
                 });
 
             modelBuilder.Entity("Beyond8.Sale.Domain.Entities.Coupon", b =>

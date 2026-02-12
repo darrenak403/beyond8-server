@@ -20,4 +20,6 @@ public interface IQuizAttemptService
     Task<ApiResponse<UserQuizAttemptsResponse>> GetUserQuizAttemptsAsync(Guid quizId, Guid studentId);
 
     Task<ApiResponse<List<Guid>>> FlagQuestionAsync(Guid attemptId, FlagQuestionRequest request, Guid studentId);
+
+    Task<ApiResponse<bool>> ResetQuizAttemptsForStudentAsync(Guid quizId, Guid studentId, Guid instructorId);
 }
