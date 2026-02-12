@@ -8,13 +8,15 @@ using Beyond8.Sale.Domain.Enums;
 using Beyond8.Sale.Domain.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Beyond8.Common.Security;
 
 namespace Beyond8.Sale.Application.Services.Implements;
 
 public class CouponService(
     ILogger<CouponService> logger,
     IUnitOfWork unitOfWork,
-    IInstructorWalletService walletService) : ICouponService
+    IInstructorWalletService walletService,
+    ICurrentUserService currentUserService) : ICouponService
 {
     public async Task<ApiResponse<CouponResponse>> CreateAdminCouponAsync(CreateAdminCouponRequest request)
     {
@@ -55,7 +57,7 @@ public class CouponService(
                 return ApiResponse<CouponResponse>.FailureResponse("Mã coupon đã tồn tại");
 
             var coupon = request.ToEntity();
-            coupon.ApplicableInstructorId = instructorId; // Always set to the creating instructor
+            coupon.ApplicableInstructorId = request.InstructorId; // Use InstructorId from request instead of parameter
 
             // ── Instructor coupon: Hold funds from wallet ──
             var holdAmount = CalculateCouponHoldAmount(request);
@@ -64,7 +66,7 @@ public class CouponService(
                     "Không thể tính toán số tiền cần giữ. Vui lòng kiểm tra UsageLimit và MaxDiscountAmount/Value");
 
             var holdResult = await walletService.HoldFundsForCouponAsync(
-                instructorId,
+                request.InstructorId, // Use InstructorId from request
                 holdAmount,
                 coupon.Id,
                 $"Giữ tiền cho coupon {coupon.Code} ({request.UsageLimit} lần sử dụng)");
@@ -114,33 +116,51 @@ public class CouponService(
         }
     }
 
-    public async Task<ApiResponse<CouponResponse>> UpdateCouponAsync(Guid couponId, UpdateCouponRequest request)
+    public async Task<ApiResponse<CouponResponse>> UpdateCouponAsync(Guid couponId, UpdateCouponRequest request, Guid userId)
     {
         try
         {
-            // Use AsQueryable for tracked entity (required for SaveChangesAsync)
+            // Get coupon with tracking for updates
             var coupon = await unitOfWork.CouponRepository.AsQueryable()
                 .FirstOrDefaultAsync(c => c.Id == couponId);
 
             if (coupon == null)
                 return ApiResponse<CouponResponse>.FailureResponse("Coupon không tồn tại");
 
+            // Check business rules
+            var businessRuleError = ValidateBusinessRulesForUpdate(coupon);
+            if (businessRuleError != null)
+                return ApiResponse<CouponResponse>.FailureResponse(businessRuleError);
+
+            // Check authorization
+            if (!HasPermissionToUpdateCoupon(coupon, userId))
+                return ApiResponse<CouponResponse>.FailureResponse("Không có quyền cập nhật coupon này");
+
+            // Store old values for logging
+            var oldCode = coupon.Code;
+            var oldIsActive = coupon.IsActive;
+
+            // Apply updates
             coupon.UpdateFrom(request);
+            coupon.UpdatedAt = DateTime.UtcNow;
+
             await unitOfWork.SaveChangesAsync();
 
-            logger.LogInformation("Coupon updated: {CouponId}", couponId);
+            logger.LogInformation(
+                "Coupon updated: {CouponId} (Code: {OldCode} -> {NewCode}, Active: {OldActive} -> {NewActive}) by user: {UserId}",
+                couponId, oldCode, coupon.Code, oldIsActive, coupon.IsActive, userId);
 
             return ApiResponse<CouponResponse>.SuccessResponse(
                 coupon.ToResponse(), "Cập nhật coupon thành công");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error updating coupon: {CouponId}", couponId);
+            logger.LogError(ex, "Error updating coupon: {CouponId} by user: {UserId}", couponId, userId);
             return ApiResponse<CouponResponse>.FailureResponse("Đã xảy ra lỗi khi cập nhật coupon");
         }
     }
 
-    public async Task<ApiResponse<bool>> DeleteCouponAsync(Guid couponId)
+    public async Task<ApiResponse<bool>> DeleteCouponAsync(Guid couponId, Guid userId)
     {
         try
         {
@@ -150,6 +170,22 @@ public class CouponService(
 
             if (coupon == null)
                 return ApiResponse<bool>.FailureResponse("Coupon không tồn tại");
+
+            // Check authorization: Admin can only delete admin coupons, Instructor can only delete their own coupons
+            bool hasPermission = false;
+            if (coupon.ApplicableInstructorId == null)
+            {
+                // Admin coupon - only admin can delete
+                hasPermission = currentUserService.IsInRole(Role.Admin);
+            }
+            else
+            {
+                // Instructor coupon - only the owner instructor can delete
+                hasPermission = coupon.ApplicableInstructorId == userId;
+            }
+
+            if (!hasPermission)
+                return ApiResponse<bool>.FailureResponse("Không có quyền xóa coupon này");
 
             if (coupon.UsedCount > 0)
                 return ApiResponse<bool>.FailureResponse("Không thể xóa coupon đã được sử dụng");
@@ -170,7 +206,7 @@ public class CouponService(
             coupon.UpdatedAt = DateTime.UtcNow;
             await unitOfWork.SaveChangesAsync();
 
-            logger.LogInformation("Coupon deactivated: {CouponId}", couponId);
+            logger.LogInformation("Coupon deactivated: {CouponId} by user: {UserId}", couponId, userId);
 
             return ApiResponse<bool>.SuccessResponse(true, "Xóa coupon thành công");
         }
@@ -371,35 +407,32 @@ public class CouponService(
         }
     }
 
-    // ── Private Helpers ──
+    // ── Private Helper Methods ──
 
-    private static string? ValidateBasicEligibility(Coupon coupon)
+    private static string? ValidateBusinessRulesForUpdate(Coupon coupon)
     {
-        var now = DateTime.UtcNow;
+        // Business rule: Don't allow updating expired coupons
+        if (coupon.ValidTo < DateTime.UtcNow)
+            return "Không thể cập nhật coupon đã hết hạn";
 
-        if (now < coupon.ValidFrom || now > coupon.ValidTo)
-            return "Coupon đã hết hạn sử dụng";
-
-        if (coupon.UsageLimit.HasValue && coupon.UsedCount >= coupon.UsageLimit.Value)
-            return "Coupon đã hết lượt sử dụng";
+        // Business rule: Don't allow updating coupons that have been used if it would break usage limits
+        // This is a business decision - for now, allow updates but log warnings
 
         return null;
     }
 
-    private static decimal CalculateDiscount(Coupon coupon, decimal orderTotal)
+    private bool HasPermissionToUpdateCoupon(Coupon coupon, Guid userId)
     {
-        if (coupon.Type == CouponType.Percentage)
+        if (coupon.ApplicableInstructorId == null)
         {
-            var discount = orderTotal * (coupon.Value / 100);
-            return coupon.MaxDiscountAmount.HasValue
-                ? Math.Min(discount, coupon.MaxDiscountAmount.Value)
-                : discount;
+            // Admin coupon - only admin can update
+            return currentUserService.IsInRole(Role.Admin);
         }
-
-        if (coupon.Type == CouponType.FixedAmount)
-            return Math.Min(coupon.Value, orderTotal);
-
-        return 0;
+        else
+        {
+            // Instructor coupon - only the owner instructor can update
+            return coupon.ApplicableInstructorId == userId;
+        }
     }
 
     /// <summary>
@@ -423,5 +456,62 @@ public class CouponService(
         }
 
         return 0;
+    }
+
+    private static decimal CalculateDiscount(Coupon coupon, decimal orderTotal)
+    {
+        if (coupon.Type == CouponType.Percentage)
+        {
+            var discount = orderTotal * (coupon.Value / 100);
+            return coupon.MaxDiscountAmount.HasValue
+                ? Math.Min(discount, coupon.MaxDiscountAmount.Value)
+                : discount;
+        }
+
+        if (coupon.Type == CouponType.FixedAmount)
+            return Math.Min(coupon.Value, orderTotal);
+
+        return 0;
+    }
+
+    public async Task<ApiResponse<CouponResponse>> GetCouponByIdAsync(Guid couponId)
+    {
+        try
+        {
+            var coupon = await unitOfWork.CouponRepository
+                .FindOneAsync(c => c.Id == couponId);
+
+            if (coupon == null)
+                return ApiResponse<CouponResponse>.FailureResponse("Coupon không tồn tại");
+
+            return ApiResponse<CouponResponse>.SuccessResponse(
+                coupon.ToResponse(), "Lấy thông tin coupon thành công");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error retrieving coupon by ID: {CouponId}", couponId);
+            return ApiResponse<CouponResponse>.FailureResponse("Đã xảy ra lỗi khi lấy coupon");
+        }
+    }
+    /// <summary>
+    /// Validate basic coupon eligibility (active status, validity period, usage limits)
+    /// Returns error message if invalid, null if valid
+    /// </summary>
+    private static string? ValidateBasicEligibility(Coupon coupon)
+    {
+        if (!coupon.IsActive)
+            return "Coupon đã bị vô hiệu hóa";
+
+        var now = DateTime.UtcNow;
+        if (now < coupon.ValidFrom)
+            return "Coupon chưa có hiệu lực";
+
+        if (now > coupon.ValidTo)
+            return "Coupon đã hết hạn";
+
+        if (coupon.UsageLimit.HasValue && coupon.UsedCount >= coupon.UsageLimit.Value)
+            return "Coupon đã đạt giới hạn sử dụng";
+
+        return null; // Valid
     }
 }

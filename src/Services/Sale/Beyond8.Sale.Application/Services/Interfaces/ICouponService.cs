@@ -16,8 +16,9 @@ public interface ICouponService
     Task<ApiResponse<List<CouponResponse>>> GetCouponsByInstructorAsync(Guid instructorId);
 
     // ── Admin / Instructor ──
-    Task<ApiResponse<CouponResponse>> UpdateCouponAsync(Guid couponId, UpdateCouponRequest request);
-    Task<ApiResponse<bool>> DeleteCouponAsync(Guid couponId);
+    Task<ApiResponse<CouponResponse>> UpdateCouponAsync(Guid couponId, UpdateCouponRequest request, Guid userId);
+    Task<ApiResponse<bool>> DeleteCouponAsync(Guid couponId, Guid userId);
+    Task<ApiResponse<CouponResponse>> GetCouponByIdAsync(Guid couponId);
 
     // ── Public ──
     Task<ApiResponse<CouponResponse>> GetCouponByCodeAsync(string code);

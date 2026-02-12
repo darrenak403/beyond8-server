@@ -53,6 +53,10 @@ public class CreateInstructorCouponRequestValidator : AbstractValidator<CreateIn
             .NotEmpty()
             .WithMessage("Phải chọn khóa học áp dụng coupon");
 
+        RuleFor(x => x.InstructorId)
+            .NotEmpty()
+            .WithMessage("ID instructor không được để trống");
+
         RuleFor(x => x.ValidFrom)
             .NotEmpty()
             .WithMessage("Ngày bắt đầu hiệu lực không được để trống");

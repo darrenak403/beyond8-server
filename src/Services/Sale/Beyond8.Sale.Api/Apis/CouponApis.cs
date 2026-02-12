@@ -34,7 +34,7 @@ public static class CouponApis
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden);
 
-        group.MapGet("/", GetCouponsAsync)
+        group.MapGet("/admin", GetCouponsAsync)
             .WithName("GetCoupons")
             .WithDescription("Lấy danh sách tất cả coupon (Admin only, paginated)")
             .RequireAuthorization(x => x.RequireRole(Role.Admin))
@@ -42,7 +42,7 @@ public static class CouponApis
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden);
 
-        group.MapPatch("/{couponId}/toggle-status", ToggleCouponStatusAsync)
+        group.MapPatch("/admin/{couponId}/toggle-status", ToggleCouponStatusAsync)
             .WithName("ToggleCouponStatus")
             .WithDescription("Bật/tắt trạng thái coupon (Admin only)")
             .RequireAuthorization(x => x.RequireRole(Role.Admin))
@@ -129,6 +129,9 @@ public static class CouponApis
         if (!request.ValidateRequest(validator, out var validationResult))
             return validationResult!;
 
+        // Set the instructor ID from current user
+        request.InstructorId = currentUserService.UserId;
+
         var result = await couponService.CreateInstructorCouponAsync(request, currentUserService.UserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
@@ -144,12 +147,11 @@ public static class CouponApis
         if (!request.ValidateRequest(validator, out var validationResult))
             return validationResult!;
 
-        // First get the coupon to check ownership
-        var couponResult = await couponService.GetCouponByCodeAsync("temp"); // We need to get by ID, but service doesn't have GetById
-        // For now, let the service handle authorization - this needs to be improved
-        // TODO: Add GetCouponByIdAsync to service for proper authorization check
+        var result = await couponService.UpdateCouponAsync(
+            couponId,
+            request,
+            currentUserService.UserId);
 
-        var result = await couponService.UpdateCouponAsync(couponId, request);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
@@ -158,10 +160,10 @@ public static class CouponApis
         [FromServices] ICouponService couponService,
         [FromServices] ICurrentUserService currentUserService)
     {
-        // For now, let the service handle authorization
-        // TODO: Add GetCouponByIdAsync to service for proper authorization check
+        var result = await couponService.DeleteCouponAsync(
+            couponId,
+            currentUserService.UserId);
 
-        var result = await couponService.DeleteCouponAsync(couponId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 

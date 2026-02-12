@@ -23,6 +23,9 @@ public class CreateInstructorCouponRequest
     // Target Course (Required for instructor coupons)
     public Guid ApplicableCourseId { get; set; }
 
+    // Instructor who created this coupon
+    public Guid InstructorId { get; set; }
+
     // Validity Period
     public DateTime ValidFrom { get; set; }
     public DateTime ValidTo { get; set; }
