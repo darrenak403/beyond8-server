@@ -79,7 +79,7 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                     Expires = DateTime.UtcNow.AddMinutes(expirationMinutes),
                     ResponseHeaderOverrides = new ResponseHeaderOverrides
                     {
-                        ContentDisposition = $"{disposition}; filename=\"{fileName}\""
+                        ContentDisposition = BuildContentDisposition(disposition, fileName)
                     }
                 };
 
@@ -274,6 +274,30 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
             return $"{folder}/{userId}/{uniqueFileName}";
         }
 
+
+        private static string BuildContentDisposition(string disposition, string fileName)
+        {
+            // Check if filename is pure ASCII (ISO-8859-1 safe)
+            var isAscii = fileName.All(c => c <= 127);
+
+            if (isAscii)
+            {
+                return $"{disposition}; filename=\"{fileName}\"";
+            }
+
+            // For non-ASCII: provide ASCII fallback + RFC 5987 encoded filename*
+            var asciiFileName = RemoveDiacritics(fileName);
+            var sb = new StringBuilder();
+            foreach (var c in asciiFileName)
+            {
+                sb.Append(c <= 127 ? c : '_');
+            }
+            var fallback = sb.ToString();
+
+            var utf8Encoded = Uri.EscapeDataString(fileName);
+
+            return $"{disposition}; filename=\"{fallback}\"; filename*=UTF-8''{utf8Encoded}";
+        }
 
         private static string SanitizeFileName(string fileName)
         {

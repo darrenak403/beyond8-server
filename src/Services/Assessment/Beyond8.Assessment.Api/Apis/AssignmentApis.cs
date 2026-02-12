@@ -42,8 +42,8 @@ namespace Beyond8.Assessment.Api.Apis
                 .WithName("GetAssignmentByIdForStudent")
                 .WithDescription("Lấy assignment theo ID cho học sinh")
                 .RequireAuthorization(x => x.RequireRole(Role.Student))
-                .Produces<ApiResponse<AssignmentSimpleResponse>>(StatusCodes.Status200OK)
-                .Produces<ApiResponse<AssignmentSimpleResponse>>(StatusCodes.Status400BadRequest)
+                .Produces<ApiResponse<AssignmentResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<AssignmentResponse>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
             group.MapGet("/", GetAllAssignmentsAsync)

@@ -24,6 +24,7 @@
     <ProjectReference Include="..\..\Services\Assessment\Beyond8.Assessment.Api\Beyond8.Assessment.Api.csproj" />
     <ProjectReference Include="..\..\Services\Learning\Beyond8.Learning.Api\Beyond8.Learning.Api.csproj" />
     <ProjectReference Include="..\..\Services\Sale\Beyond8.Sale.Api\Beyond8.Sale.Api.csproj" />
+    <ProjectReference Include="..\..\Services\Analytic\Beyond8.Analytic.Api\Beyond8.Analytic.Api.csproj" />
   </ItemGroup>
 
 </Project>

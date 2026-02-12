@@ -13,8 +13,7 @@ public class Coupon : BaseEntity
 {
     // Coupon Code
     [Required, MaxLength(50)]
-    public string Code { get; set; } = string.Empty; // UNIQUE constraint in migration
-
+    public string Code { get; set; } = string.Empty;
     [MaxLength(500)]
     public string? Description { get; set; }
 
@@ -30,17 +29,16 @@ public class Coupon : BaseEntity
 
     // Restrictions
     [Column(TypeName = "decimal(18, 2)")]
-    public decimal? MinOrderAmount { get; set; } // Minimum order amount to apply coupon
+    public decimal? MinOrderAmount { get; set; }
 
     [Column(TypeName = "decimal(18, 2)")]
-    public decimal? MaxDiscountAmount { get; set; } // Maximum discount for percentage coupons
-
+    public decimal? MaxDiscountAmount { get; set; }
     // Usage Limits
-    public int? UsageLimit { get; set; } // Total usage limit (null = unlimited)
+    public int? UsageLimit { get; set; }
 
-    public int? UsagePerUser { get; set; } // Usage limit per user (null = unlimited)
+    public int? UsagePerUser { get; set; }
 
-    public int UsedCount { get; set; } = 0; // Total times coupon has been used
+    public int UsedCount { get; set; } = 0;
 
     // Applicability (null = applies to all)
     /// <summary>
@@ -60,6 +58,23 @@ public class Coupon : BaseEntity
 
     // Status
     public bool IsActive { get; set; } = true;
+
+    // ── Instructor Coupon Hold ──
+
+    /// <summary>
+    /// Total amount held from instructor wallet when coupon was created.
+    /// FixedAmount: Value × UsageLimit. Percentage: MaxDiscountAmount × UsageLimit.
+    /// Only applicable for instructor coupons (ApplicableInstructorId != null).
+    /// </summary>
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal HoldAmount { get; set; } = 0;
+
+    /// <summary>
+    /// Remaining hold amount (decreases as users use the coupon).
+    /// When coupon is deleted/deactivated, this amount is released back to instructor wallet.
+    /// </summary>
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal RemainingHoldAmount { get; set; } = 0;
 
     // Navigation Properties
     public virtual ICollection<CouponUsage> CouponUsages { get; set; } = [];

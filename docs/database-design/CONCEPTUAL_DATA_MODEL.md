@@ -2276,34 +2276,37 @@ CREATE INDEX idx_lesson_perf_watch ON agg_lesson_performance(avg_watch_percent D
 
 ### **Events Consumed by Analytics Service (CQRS)**
 
-Analytics service consumes ALL events from other services to build aggregates:
+Analytics service consumes events from other services to build aggregates:
 
 ```csharp
 // From Identity Service
-- UserRegisteredEvent
-- InstructorVerificationChangedEvent
+- UserRegisteredEvent        → TotalUsers++, NewUsersToday++, TotalInstructors/TotalStudents
+- InstructorApprovalEvent     → TotalInstructors++
+- InstructorHiddenEvent      → TotalInstructors--
 
 // From Course Catalog Service
-- CoursePublishedEvent
-- CourseUpdatedEvent
-- CourseArchivedEvent
+- CoursePublishedEvent       → AggCourseStats, AggInstructorRevenue, TotalCourses++, TotalPublishedCourses++
+- CourseUpdatedMetadataEvent → Lesson titles / course metadata in aggregates
+- CourseUnpublishedEvent    → TotalPublishedCourses--
 
 // From Learning Service
-- EnrollmentCreatedEvent
-- CourseCompletedEvent
-- CourseReviewedEvent
-- LessonCompletedEvent
+- CourseEnrollmentCountChangedEvent → AggCourseStats.TotalStudents, AggInstructorRevenue.TotalStudents, TotalEnrollments
+- CourseCompletedEvent      → TotalCompletedStudents, TotalCompletedEnrollments, AvgCourseCompletionRate
+- CourseRatingUpdatedEvent  → AvgCourseRating, TotalReviews (system overview)
 
 // From Sales Service
-- OrderCompletedEvent
-- OrderRefundedEvent
-- FundsSettledEvent
-- PayoutCompletedEvent
+- OrderItemCompletedEvent   → TotalRevenue, TotalPlatformFee, TotalInstructorEarnings (course, instructor, overview)
 
 // From Assessment Service
-- QuizCompletedEvent
-- AssignmentSubmittedEvent
+- QuizAttemptCompletedEvent → AggLessonPerformance (TotalViews, TotalCompletions, CompletionRate)
 ```
+
+**Có thể mở rộng sau:**
+- Identity: InstructorVerificationChangedEvent
+- Catalog: CourseArchivedEvent / CourseRejectedEvent
+- Learning: LessonCompletedEvent (AvgWatchPercent, DropOffPoints)
+- Sale: OrderCompletedEvent, OrderRefundedEvent, FundsSettledEvent, PayoutCompletedEvent
+- Assessment: AssignmentSubmittedEvent
 
 ---
 

@@ -16,6 +16,7 @@ using Polly;
 using Polly.Extensions.Http;
 using Beyond8.Learning.Application.Consumers.Identity;
 using Beyond8.Learning.Application.Consumers.Catalog;
+using Beyond8.Learning.Application.Consumers.Sale;
 
 namespace Beyond8.Learning.Api.Bootstrapping;
 
@@ -40,6 +41,7 @@ public static class ApplicationServiceExtensions
             config.AddConsumer<CourseUpdatedMetadataEventConsumer>();
             config.AddConsumer<LessonVideoDurationUpdatedEventConsumer>();
             config.AddConsumer<UserUpdatedEventConsumer>();
+            config.AddConsumer<OrderCompletedEventConsumer>();
         }, queueNamePrefix: "learning");
 
         builder.Services.AddValidatorsFromAssemblyContaining<EnrollFreeRequest>();

@@ -62,14 +62,17 @@ public static class CurriculumProgressMappings
         this LessonStructureItem lesson,
         LessonProgress? progress)
     {
-        var isCompleted = progress != null && progress.Status == LessonProgressStatus.Completed;
+        var status = progress?.Status;
+        var isCompleted = status is LessonProgressStatus.Completed or LessonProgressStatus.Failed;
+        var isPassed = status == LessonProgressStatus.Completed;
 
         return new LessonProgressItem
         {
             LessonId = lesson.Id,
             Title = lesson.Title,
             Order = lesson.Order,
-            IsCompleted = isCompleted
+            IsCompleted = isCompleted,
+            IsPassed = isPassed
         };
     }
 }

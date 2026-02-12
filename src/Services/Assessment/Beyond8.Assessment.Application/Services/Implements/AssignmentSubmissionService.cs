@@ -7,6 +7,7 @@ using Beyond8.Assessment.Domain.Repositories.Interfaces;
 using Beyond8.Common.Events.Assessment;
 using Beyond8.Common.Utilities;
 using MassTransit;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Beyond8.Assessment.Application.Services.Implements;
@@ -74,8 +75,9 @@ public class AssignmentSubmissionService(
             }
 
             logger.LogInformation("Submission created successfully: {SubmissionId}", submission.Id);
+            var submissionWithAssignment = await unitOfWork.AssignmentSubmissionRepository.FindOneWithAssignmentAsync(s => s.Id == submission.Id);
             return ApiResponse<SubmissionResponse>.SuccessResponse(
-                submission.ToResponse(),
+                submissionWithAssignment!.ToResponse(),
                 "Nộp bài thành công. Bài làm đang được chấm điểm.");
         }
         catch (Exception ex)
@@ -124,8 +126,9 @@ public class AssignmentSubmissionService(
             }
 
             logger.LogInformation("Submission graded successfully: {SubmissionId}", submission.Id);
+            var submissionWithAssignment = await unitOfWork.AssignmentSubmissionRepository.FindOneWithAssignmentAsync(s => s.Id == submission.Id);
             return ApiResponse<SubmissionResponse>.SuccessResponse(
-                submission.ToResponse(),
+                submissionWithAssignment!.ToResponse(),
                 "Chấm điểm submission thành công.");
         }
         catch (Exception ex)
@@ -139,7 +142,7 @@ public class AssignmentSubmissionService(
     {
         try
         {
-            var submission = await unitOfWork.AssignmentSubmissionRepository.FindOneAsync(s => s.Id == submissionId && s.StudentId == userId);
+            var submission = await unitOfWork.AssignmentSubmissionRepository.FindOneWithAssignmentAsync(s => s.Id == submissionId && s.StudentId == userId);
             if (submission == null)
             {
                 logger.LogError("Submission not found for id: {SubmissionId}", submissionId);
@@ -159,7 +162,7 @@ public class AssignmentSubmissionService(
     {
         try
         {
-            var submissions = await unitOfWork.AssignmentSubmissionRepository.GetAllAsync(s => s.AssignmentId == assignmentId && s.StudentId == userId);
+            var submissions = await unitOfWork.AssignmentSubmissionRepository.GetAllWithAssignmentAsync(s => s.AssignmentId == assignmentId && s.StudentId == userId);
             if (submissions.Count == 0)
             {
                 logger.LogError("No submissions found for assignment id: {AssignmentId}", assignmentId);
@@ -175,30 +178,88 @@ public class AssignmentSubmissionService(
         }
     }
 
-    public async Task<ApiResponse<List<SubmissionSimpleResponse>>> GetAllSubmissionsByInstructorAsync(Guid userId)
+    public async Task<ApiResponse<CourseSubmissionSummaryResponse>> GetAllSubmissionsByCourseIdForInstructorAsync(Guid courseId, Guid userId)
     {
         try
         {
-            var assignment = await unitOfWork.AssignmentRepository.FindOneAsync(a => a.InstructorId == userId);
-            if (assignment == null)
-            {
-                logger.LogError("Assignment not found for instructor: {InstructorId}", userId);
-                return ApiResponse<List<SubmissionSimpleResponse>>.FailureResponse("Assignment không tồn tại.");
-            }
+            var submissions = await unitOfWork.AssignmentSubmissionRepository.AsQueryable()
+                .Include(s => s.Assignment)
+                .Where(s => s.Assignment != null && s.Assignment.CourseId == courseId && s.Assignment.InstructorId == userId)
+                .ToListAsync();
 
-            var submissions = await unitOfWork.AssignmentSubmissionRepository.GetAllAsync(s => s.AssignmentId == assignment.Id);
-            if (submissions.Count == 0)
-            {
-                logger.LogError("No submissions found for assignment: {AssignmentId}", assignment.Id);
-                return ApiResponse<List<SubmissionSimpleResponse>>.FailureResponse("Không có submission nào cho assignment này.");
-            }
+            var totalAssignments = await unitOfWork.AssignmentRepository.AsQueryable()
+                .CountAsync(a => a.CourseId == courseId && a.InstructorId == userId);
 
-            return ApiResponse<List<SubmissionSimpleResponse>>.SuccessResponse(submissions.Select(s => s.ToSimpleResponse()).ToList(), "Lấy danh sách submission thành công.");
+            var sectionGroups = submissions
+                .Where(s => s.Assignment.SectionId.HasValue)
+                .GroupBy(s => s.Assignment.SectionId!.Value)
+                .Select(g => new SectionSubmissionSummary
+                {
+                    SectionId = g.Key,
+                    TotalSubmissions = g.Count(),
+                    UngradedSubmissions = g.Count(s => s.Status != SubmissionStatus.Graded)
+                })
+                .ToList();
+
+            var totalUngradedSections = sectionGroups.Count(s => s.UngradedSubmissions > 0);
+
+            var response = new CourseSubmissionSummaryResponse
+            {
+                Sections = sectionGroups,
+                TotalUngradedSections = totalUngradedSections,
+                TotalAssignments = totalAssignments
+            };
+
+            return ApiResponse<CourseSubmissionSummaryResponse>.SuccessResponse(
+                response,
+                "Lấy tổng quan submissions theo sections thành công.");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error getting all submissions by instructor: {InstructorId}", userId);
-            return ApiResponse<List<SubmissionSimpleResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách submission.");
+            logger.LogError(ex, "Error getting all submissions for course id: {CourseId}", courseId);
+            return ApiResponse<CourseSubmissionSummaryResponse>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách submission.");
+        }
+    }
+
+    public async Task<ApiResponse<List<AssignmentSubmissionDetail>>> GetSubmissionsBySectionIdForInstructorAsync(Guid sectionId, Guid userId)
+    {
+        try
+        {
+            var submissions = await unitOfWork.AssignmentSubmissionRepository.AsQueryable()
+                .Include(s => s.Assignment)
+                .Where(s => s.Assignment != null && s.Assignment.SectionId == sectionId && s.Assignment.InstructorId == userId)
+                .ToListAsync();
+
+            if (submissions.Count == 0)
+            {
+                logger.LogError("No submissions found for section id: {SectionId}", sectionId);
+                return ApiResponse<List<AssignmentSubmissionDetail>>.FailureResponse("Không có submission nào cho section này.");
+            }
+
+            var assignmentGroups = submissions
+                .GroupBy(s => s.AssignmentId)
+                .Select(g =>
+                {
+                    var assignment = g.First().Assignment;
+                    return new AssignmentSubmissionDetail
+                    {
+                        AssignmentId = g.Key,
+                        AssignmentTitle = assignment.Title,
+                        TotalSubmissions = g.Count(),
+                        UngradedSubmissions = g.Count(s => s.Status != SubmissionStatus.Graded),
+                        Submissions = g.Select(s => s.ToResponse()).ToList()
+                    };
+                })
+                .ToList();
+
+            return ApiResponse<List<AssignmentSubmissionDetail>>.SuccessResponse(
+                assignmentGroups,
+                "Lấy chi tiết assignments và submissions theo section thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting submissions for section id: {SectionId}", sectionId);
+            return ApiResponse<List<AssignmentSubmissionDetail>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách submission.");
         }
     }
 
@@ -213,7 +274,7 @@ public class AssignmentSubmissionService(
                 return ApiResponse<SubmissionResponse>.FailureResponse("Assignment không tồn tại.");
             }
 
-            var submission = await unitOfWork.AssignmentSubmissionRepository.FindOneAsync(s => s.Id == submissionId && s.AssignmentId == assignment.Id);
+            var submission = await unitOfWork.AssignmentSubmissionRepository.FindOneWithAssignmentAsync(s => s.Id == submissionId && s.AssignmentId == assignment.Id);
             if (submission == null)
             {
                 logger.LogError("Submission not found for id: {SubmissionId}", submissionId);

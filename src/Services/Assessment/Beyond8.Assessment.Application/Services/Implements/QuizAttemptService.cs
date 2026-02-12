@@ -165,6 +165,7 @@ public class QuizAttemptService(
             {
                 await publishEndpoint.Publish(new QuizAttemptCompletedEvent(
                     LessonId: quiz.LessonId.Value,
+                    LessonTitle: quiz.Title,
                     StudentId: studentId,
                     ScorePercent: scorePercent,
                     TotalScore: totalScore,

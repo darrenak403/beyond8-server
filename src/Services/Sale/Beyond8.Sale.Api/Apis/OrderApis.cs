@@ -25,9 +25,12 @@ public static class OrderApis
     public static RouteGroupBuilder MapOrderRoutes(this RouteGroupBuilder group)
     {
         // Customer Operations
-        group.MapPost("/", CreateOrderAsync)
-            .WithName("CreateOrder")
-            .WithDescription("Tạo đơn hàng mới (Authenticated user only)")
+        group.MapPost("/buy-now", BuyNowAsync)
+            .WithName("BuyNow")
+            .WithDescription("Mua ngay 1 khóa học (Buy Now button). " +
+                           "Dùng endpoint này cho single course purchase. " +
+                           "Dùng /cart/checkout cho multiple courses. " +
+                           "(Student)")
             .RequireAuthorization()
             .Produces<ApiResponse<OrderResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<OrderResponse>>(StatusCodes.Status400BadRequest)
@@ -36,7 +39,7 @@ public static class OrderApis
 
         group.MapGet("/{orderId}", GetOrderByIdAsync)
             .WithName("GetOrderById")
-            .WithDescription("Lấy thông tin đơn hàng theo ID (Order owner or Admin)")
+            .WithDescription("Lấy thông tin đơn hàng theo ID (Order Owner or Admin)")
             .RequireAuthorization()
             .Produces<ApiResponse<OrderResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<OrderResponse>>(StatusCodes.Status404NotFound)
@@ -45,20 +48,18 @@ public static class OrderApis
 
         group.MapGet("/user/{userId}", GetOrdersByUserAsync)
             .WithName("GetOrdersByUser")
-            .WithDescription("Lấy danh sách đơn hàng của người dùng (User or Admin, paginated)")
+            .WithDescription("Lấy danh sách đơn hàng của người dùng (User Owner or Admin, paginated)")
             .RequireAuthorization()
             .Produces<ApiResponse<List<OrderResponse>>>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden);
 
-        group.MapPost("/{orderId}/cancel", CancelOrderAsync)
-            .WithName("CancelOrder")
-            .WithDescription("Hủy đơn hàng (Order owner or Admin)")
+        group.MapGet("/purchased-course-ids", GetPurchasedCourseIdsAsync)
+            .WithName("GetPurchasedCourseIds")
+            .WithDescription("Lấy danh sách ID các khóa học đã mua (đã thanh toán) của user hiện tại")
             .RequireAuthorization()
-            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status403Forbidden);
+            .Produces<ApiResponse<List<Guid>>>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized);
 
         // Instructor Operations
         group.MapGet("/instructor/{instructorId}", GetOrdersByInstructorAsync)
@@ -87,30 +88,23 @@ public static class OrderApis
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden);
 
-        group.MapGet("/statistics", GetOrderStatisticsAsync)
-            .WithName("GetOrderStatistics")
-            .WithDescription("Lấy thống kê đơn hàng (Instructor stats or Admin for all)")
-            .RequireAuthorization(x => x.RequireRole(Role.Instructor, Role.Admin))
-            .Produces<ApiResponse<OrderStatisticsResponse>>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status403Forbidden);
-
         return group;
     }
 
-    private static async Task<IResult> CreateOrderAsync(
-        [FromBody] CreateOrderRequest request,
-        [FromServices] IOrderService orderService,
-        [FromServices] IValidator<CreateOrderRequest> validator,
-        [FromServices] ICurrentUserService currentUserService)
+    private static async Task<IResult> BuyNowAsync(
+    [FromBody] BuyNowRequest request,
+    [FromServices] IOrderService orderService,
+    [FromServices] IValidator<BuyNowRequest> validator,
+    [FromServices] ICurrentUserService currentUserService)
     {
         // Validate request data
         if (!request.ValidateRequest(validator, out var validationResult))
             return validationResult!;
 
-        var result = await orderService.CreateOrderAsync(request, currentUserService.UserId);
+        var result = await orderService.BuyNowAsync(request, currentUserService.UserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
+
 
     private static async Task<IResult> GetOrderByIdAsync(
         [FromRoute] Guid orderId,
@@ -143,21 +137,11 @@ public static class OrderApis
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
-    private static async Task<IResult> CancelOrderAsync(
-        [FromRoute] Guid orderId,
+    private static async Task<IResult> GetPurchasedCourseIdsAsync(
         [FromServices] IOrderService orderService,
         [FromServices] ICurrentUserService currentUserService)
     {
-        // First get the order to check ownership
-        var orderResult = await orderService.GetOrderByIdAsync(orderId);
-        if (!orderResult.IsSuccess)
-            return Results.NotFound(orderResult);
-
-        // Validate authorization: must be order owner or admin
-        if (orderResult.Data!.UserId != currentUserService.UserId && !currentUserService.IsInRole(Role.Admin))
-            return Results.Forbid();
-
-        var result = await orderService.CancelOrderAsync(orderId);
+        var result = await orderService.GetPurchasedCourseIdsAsync(currentUserService.UserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
@@ -193,26 +177,4 @@ public static class OrderApis
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
-    private static async Task<IResult> GetOrderStatisticsAsync(
-        [FromQuery] Guid? instructorId = null,
-        [FromServices] IOrderService orderService = null!,
-        [FromServices] ICurrentUserService currentUserService = null!)
-    {
-        // Validate authorization
-        if (instructorId.HasValue)
-        {
-            // If requesting specific instructor stats: must be that instructor or admin
-            if (instructorId != currentUserService.UserId && !currentUserService.IsInRole(Role.Admin))
-                return Results.Forbid();
-        }
-        else
-        {
-            // If requesting all stats: admin only
-            if (!currentUserService.IsInRole(Role.Admin))
-                return Results.Forbid();
-        }
-
-        var result = await orderService.GetOrderStatisticsAsync(instructorId);
-        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
-    }
 }

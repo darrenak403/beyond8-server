@@ -10,16 +10,5 @@ public class ProcessPaymentRequestValidator : AbstractValidator<ProcessPaymentRe
         RuleFor(x => x.OrderId)
             .NotEmpty()
             .WithMessage("OrderId không được để trống");
-
-        RuleFor(x => x.PaymentMethod)
-            .NotEmpty()
-            .WithMessage("Phương thức thanh toán không được để trống")
-            .Must(method => method == "VNPay")
-            .WithMessage("Phương thức thanh toán không hợp lệ. Hiện tại chỉ hỗ trợ VNPay");
-
-        RuleFor(x => x.ReturnUrl)
-            .Must(url => string.IsNullOrEmpty(url) || Uri.TryCreate(url, UriKind.Absolute, out _))
-            .WithMessage("ReturnUrl phải là URL hợp lệ")
-            .When(x => !string.IsNullOrEmpty(x.ReturnUrl));
     }
 }

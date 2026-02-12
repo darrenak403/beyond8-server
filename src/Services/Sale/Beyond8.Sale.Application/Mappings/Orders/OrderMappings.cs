@@ -122,7 +122,7 @@ public static class OrderMappings
         {
             CourseId = course.Id,
             CourseTitle = course.Title,
-            CourseThumbnail = course.Thumbnail,
+            CourseThumbnail = course.ThumbnailUrl,
             InstructorId = course.InstructorId,
             InstructorName = course.InstructorName,
             OriginalPrice = course.OriginalPrice,

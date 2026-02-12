@@ -23,6 +23,7 @@ public class CourseResponse
     public decimal? DiscountAmount { get; set; }
     /// Thời hạn hết discount (UTC). Null = không giới hạn.
     public DateTime? DiscountEndsAt { get; set; }
+    public decimal OriginalPrice { get; set; }
     /// Giá sau khi áp dụng giảm giá (nếu còn hiệu lực). Bằng Price nếu không có discount.
     public decimal FinalPrice { get; set; }
     public string ThumbnailUrl { get; set; } = string.Empty;

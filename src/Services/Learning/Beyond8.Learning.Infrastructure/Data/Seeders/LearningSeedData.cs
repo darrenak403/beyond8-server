@@ -53,8 +53,8 @@ public static class LearningSeedData
             InstructorName = InstructorName,
             PricePaid = 0,
             Status = EnrollmentStatus.Completed,
-            ProgressPercent = 100,
-            CompletedLessons = 10,
+            ProgressPercent = 80,
+            CompletedLessons = 8,
             TotalLessons = 10,
             EnrolledAt = enrolledAt,
             CompletedAt = completedAt,
@@ -96,12 +96,12 @@ public static class LearningSeedData
         var lessonProgress1 = new[]
         {
             CreateLessonProgress(SeedStudentId, Lesson1_1Id, SeedCourseId, SeedEnrollment1Id, 900, completedAt),
-            CreateLessonProgress(SeedStudentId, Lesson1_2Id, SeedCourseId, SeedEnrollment1Id, 0, completedAt),
+            CreateLessonProgress(SeedStudentId, Lesson1_2Id, SeedCourseId, SeedEnrollment1Id, 0, completedAt, status: LessonProgressStatus.Failed),
             CreateLessonProgress(SeedStudentId, Lesson1_3Id, SeedCourseId, SeedEnrollment1Id, 1800, completedAt),
             CreateLessonProgress(SeedStudentId, Lesson2_1Id, SeedCourseId, SeedEnrollment1Id, 1200, completedAt),
             CreateLessonProgress(SeedStudentId, Lesson2_2Id, SeedCourseId, SeedEnrollment1Id, 0, completedAt),
             CreateLessonProgress(SeedStudentId, Lesson2_3Id, SeedCourseId, SeedEnrollment1Id, 900, completedAt),
-            CreateLessonProgress(SeedStudentId, Lesson2_4Id, SeedCourseId, SeedEnrollment1Id, 0, completedAt, isQuiz: true),
+            CreateLessonProgress(SeedStudentId, Lesson2_4Id, SeedCourseId, SeedEnrollment1Id, 0, completedAt, isQuiz: true, status: LessonProgressStatus.Failed),
             CreateLessonProgress(SeedStudentId, Lesson3_1Id, SeedCourseId, SeedEnrollment1Id, 1500, completedAt),
             CreateLessonProgress(SeedStudentId, Lesson3_2Id, SeedCourseId, SeedEnrollment1Id, 0, completedAt),
             CreateLessonProgress(SeedStudentId, Lesson3_3Id, SeedCourseId, SeedEnrollment1Id, 0, completedAt, isQuiz: true)
@@ -130,7 +130,7 @@ public static class LearningSeedData
         };
     }
 
-    private static LessonProgress CreateLessonProgress(Guid userId, Guid lessonId, Guid courseId, Guid enrollmentId, int totalDurationSeconds, DateTime completedAt, bool isQuiz = false)
+    private static LessonProgress CreateLessonProgress(Guid userId, Guid lessonId, Guid courseId, Guid enrollmentId, int totalDurationSeconds, DateTime completedAt, bool isQuiz = false, LessonProgressStatus status = LessonProgressStatus.Completed)
     {
         return new LessonProgress
         {
@@ -139,7 +139,7 @@ public static class LearningSeedData
             LessonId = lessonId,
             CourseId = courseId,
             EnrollmentId = enrollmentId,
-            Status = LessonProgressStatus.Completed,
+            Status = status,
             LastPositionSeconds = totalDurationSeconds,
             TotalDurationSeconds = totalDurationSeconds,
             WatchPercent = 100,

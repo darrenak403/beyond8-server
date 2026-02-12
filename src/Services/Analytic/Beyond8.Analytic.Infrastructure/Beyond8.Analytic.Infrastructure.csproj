@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\..\shared\Beyond8.Common\Beyond8.Common.csproj" />
     <ProjectReference Include="..\Beyond8.Analytic.Application\Beyond8.Analytic.Application.csproj" />
     <ProjectReference Include="..\Beyond8.Analytic.Domain\Beyond8.Analytic.Domain.csproj" />
   </ItemGroup>
