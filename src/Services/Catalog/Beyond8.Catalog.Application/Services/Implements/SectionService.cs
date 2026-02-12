@@ -59,7 +59,7 @@ public class SectionService(
     {
         try
         {
-            var validation = await CheckCourseOwnershipAsync(request.CourseId, currentUserId);
+            var validation = await CheckCourseOwnershipAsync(request.CourseId, currentUserId, isPublished: true);
             if (!validation.IsValid)
                 return ApiResponse<SectionResponse>.FailureResponse(validation.ErrorMessage!);
 
@@ -241,7 +241,7 @@ public class SectionService(
         }
     }
 
-    private async Task<(bool IsValid, string? ErrorMessage)> CheckCourseOwnershipAsync(Guid courseId, Guid currentUserId)
+    private async Task<(bool IsValid, string? ErrorMessage)> CheckCourseOwnershipAsync(Guid courseId, Guid currentUserId, bool isPublished = false)
     {
         var course = await unitOfWork.CourseRepository.FindOneAsync(c => c.Id == courseId && c.InstructorId == currentUserId);
         if (course == null)
@@ -250,7 +250,7 @@ public class SectionService(
             return (false, "Khóa học không tồn tại hoặc bạn không có quyền truy cập.");
         }
 
-        if (course.Status == CourseStatus.Published)
+        if (course.Status == CourseStatus.Published && isPublished)
         {
             logger.LogWarning("Cannot modify lessons in published course {CourseId} by user {UserId}", course.Id, currentUserId);
             return (false, "Không thể thêm/sửa bài học trong khóa học đã xuất bản.");
