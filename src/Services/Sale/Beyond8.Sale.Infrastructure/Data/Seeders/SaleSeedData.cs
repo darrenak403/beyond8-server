@@ -16,12 +16,11 @@ public static class SaleSeedData
 
         // IDs from Identity service seed data
         var instructorId1 = new Guid("00000000-0000-0000-0000-000000000006"); // Instructor 1
-        var instructorId2 = new Guid("00000000-0000-0000-0000-000000000007"); // Instructor 2 (if exists)
 
         var coupons = new List<Coupon>
         {
             // ═══════════════════════════════════════════════════════════
-            // System-Wide Coupons (Admin Created - Platform Coupons)
+            // Admin Coupons (Platform-Wide)
             // ═══════════════════════════════════════════════════════════
 
             new()
@@ -69,27 +68,6 @@ public static class SaleSeedData
             new()
             {
                 Id = Guid.CreateVersion7(),
-                Code = "NEWYEAR2026",
-                Description = "Giảm 30% dịp Tết Nguyên Đán (tối đa 500,000 VND)",
-                Type = CouponType.Percentage,
-                Value = 30,
-                MinOrderAmount = 1000000,
-                MaxDiscountAmount = 500000,
-                UsageLimit = 200,
-                UsagePerUser = 1,
-                UsedCount = 0,
-                ApplicableInstructorId = null, // System coupon
-                ApplicableCourseId = null,
-                ValidFrom = now,
-                ValidTo = now.AddDays(30),
-                IsActive = true,
-                CreatedAt = now,
-                CreatedBy = systemId
-            },
-
-            new()
-            {
-                Id = Guid.CreateVersion7(),
                 Code = "FREESHIP100K",
                 Description = "Giảm 100,000 VND cho đơn từ 2 triệu",
                 Type = CouponType.FixedAmount,
@@ -109,7 +87,7 @@ public static class SaleSeedData
             },
 
             // ═══════════════════════════════════════════════════════════
-            // Instructor-Specific Coupons
+            // Instructor Coupons (Instructor-Specific)
             // ═══════════════════════════════════════════════════════════
 
             new()
@@ -173,119 +151,6 @@ public static class SaleSeedData
                 IsActive = true,
                 CreatedAt = now,
                 CreatedBy = instructorId1
-            },
-
-            // ═══════════════════════════════════════════════════════════
-            // Test/Demo Coupons (Inactive or Expired)
-            // ═══════════════════════════════════════════════════════════
-
-            new()
-            {
-                Id = Guid.CreateVersion7(),
-                Code = "EXPIRED10",
-                Description = "Coupon đã hết hạn - dùng để test",
-                Type = CouponType.Percentage,
-                Value = 10,
-                MinOrderAmount = 100000,
-                MaxDiscountAmount = 50000,
-                UsageLimit = 100,
-                UsagePerUser = 1,
-                UsedCount = 0,
-                ApplicableInstructorId = null,
-                ApplicableCourseId = null,
-                ValidFrom = now.AddDays(-30),
-                ValidTo = now.AddDays(-1), // Expired
-                IsActive = true,
-                CreatedAt = now.AddDays(-30),
-                CreatedBy = systemId
-            },
-
-            new()
-            {
-                Id = Guid.CreateVersion7(),
-                Code = "INACTIVE50",
-                Description = "Coupon bị vô hiệu hóa - dùng để test",
-                Type = CouponType.Percentage,
-                Value = 50,
-                MinOrderAmount = 200000,
-                MaxDiscountAmount = 100000,
-                UsageLimit = 10,
-                UsagePerUser = 1,
-                UsedCount = 0,
-                ApplicableInstructorId = null,
-                ApplicableCourseId = null,
-                ValidFrom = now,
-                ValidTo = now.AddMonths(1),
-                IsActive = false, // Inactive
-                CreatedAt = now,
-                CreatedBy = systemId
-            },
-
-            new()
-            {
-                Id = Guid.CreateVersion7(),
-                Code = "LIMITREACHED",
-                Description = "Coupon đã hết lượt dùng - dùng để test",
-                Type = CouponType.FixedAmount,
-                Value = 100000,
-                MinOrderAmount = 500000,
-                MaxDiscountAmount = null,
-                UsageLimit = 5,
-                UsagePerUser = 1,
-                UsedCount = 5, // Already reached limit
-                ApplicableInstructorId = null,
-                ApplicableCourseId = null,
-                ValidFrom = now,
-                ValidTo = now.AddMonths(1),
-                IsActive = true,
-                CreatedAt = now,
-                CreatedBy = systemId
-            },
-
-            // ═══════════════════════════════════════════════════════════
-            // Special Event Coupons
-            // ═══════════════════════════════════════════════════════════
-
-            new()
-            {
-                Id = Guid.CreateVersion7(),
-                Code = "BLACKFRIDAY50",
-                Description = "Black Friday - Giảm 50% (tối đa 1 triệu VND)",
-                Type = CouponType.Percentage,
-                Value = 50,
-                MinOrderAmount = 1000000,
-                MaxDiscountAmount = 1000000,
-                UsageLimit = 100,
-                UsagePerUser = 1,
-                UsedCount = 0,
-                ApplicableInstructorId = null,
-                ApplicableCourseId = null,
-                ValidFrom = now,
-                ValidTo = now.AddDays(7),
-                IsActive = true,
-                CreatedAt = now,
-                CreatedBy = systemId
-            },
-
-            new()
-            {
-                Id = Guid.CreateVersion7(),
-                Code = "STUDENT10",
-                Description = "Ưu đãi sinh viên - Giảm 10% không giới hạn",
-                Type = CouponType.Percentage,
-                Value = 10,
-                MinOrderAmount = 200000,
-                MaxDiscountAmount = 100000,
-                UsageLimit = null, // Unlimited
-                UsagePerUser = null, // Unlimited per user
-                UsedCount = 0,
-                ApplicableInstructorId = null,
-                ApplicableCourseId = null,
-                ValidFrom = now,
-                ValidTo = now.AddYears(1),
-                IsActive = true,
-                CreatedAt = now,
-                CreatedBy = systemId
             }
         };
 
