@@ -85,28 +85,9 @@ public class OrderService(
 
     public async Task<ApiResponse<OrderResponse>> CreateOrderAsync(CreateOrderRequest request, Guid userId)
     {
-        // Check if user already has a pending (unpaid) order containing any of the requested courses
-        var requestedCourseIds = request.Items.Select(i => i.CourseId).ToList();
-
-        var existingPendingOrder = await unitOfWork.OrderRepository.AsQueryable()
-            .Include(o => o.OrderItems)
-            .FirstOrDefaultAsync(o => o.UserId == userId
-                && o.Status == OrderStatus.Pending
-                && o.OrderItems.Any(oi => requestedCourseIds.Contains(oi.CourseId)));
-
-        if (existingPendingOrder != null)
-        {
-            // Return the existing pending order instead of creating a new one
-            logger.LogInformation(
-                "Returning existing pending order {OrderId} for user {UserId} (contains requested courses)",
-                existingPendingOrder.Id, userId);
-
-            return ApiResponse<OrderResponse>.SuccessResponse(
-                existingPendingOrder.ToResponse(),
-                "Đơn hàng đã tồn tại, vui lòng tiếp tục thanh toán");
-        }
-
         // Check if user already purchased any of these courses
+        var requestedCourseIds = request.Items.Select(i => i.CourseId).ToList();
+        
         var alreadyPurchasedCourseIds = await unitOfWork.OrderRepository.AsQueryable()
             .Where(o => o.UserId == userId && o.Status == OrderStatus.Paid)
             .SelectMany(o => o.OrderItems.Select(oi => oi.CourseId))
