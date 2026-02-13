@@ -195,7 +195,7 @@ public static class SaleSeedData
             {
                 Id = Guid.CreateVersion7(),
                 InstructorId = instructorId1,
-                AvailableBalance = 0,
+                AvailableBalance = 50000000, // 50 triệu VND để test
                 TotalEarnings = 0,
                 TotalWithdrawn = 0,
                 Currency = "VND",
