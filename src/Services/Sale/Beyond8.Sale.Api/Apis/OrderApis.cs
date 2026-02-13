@@ -37,6 +37,26 @@ public static class OrderApis
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden);
 
+        group.MapPost("/buy-now/preview", PreviewBuyNowAsync)
+            .WithName("PreviewBuyNow")
+            .WithDescription("Preview giá mua ngay 1 khóa học trước khi checkout. " +
+                           "Tính toán tổng tiền và validate coupon mà không tạo order. " +
+                           "(Student)")
+            .RequireAuthorization()
+            .Produces<ApiResponse<PreviewBuyNowResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<PreviewBuyNowResponse>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
+        group.MapPost("/preview", PreviewOrderAsync)
+            .WithName("PreviewOrder")
+            .WithDescription("Preview giá đơn hàng trước khi checkout. " +
+                           "Tính toán tổng tiền và validate coupon mà không tạo order. " +
+                           "(Student)")
+            .RequireAuthorization()
+            .Produces<ApiResponse<PreviewOrderResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<PreviewOrderResponse>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
         group.MapGet("/{orderId}", GetOrderByIdAsync)
             .WithName("GetOrderById")
             .WithDescription("Lấy thông tin đơn hàng theo ID (Order Owner or Admin)")
@@ -105,6 +125,33 @@ public static class OrderApis
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
+    private static async Task<IResult> PreviewBuyNowAsync(
+        [FromBody] PreviewBuyNowRequest request,
+        [FromServices] IOrderService orderService,
+        [FromServices] IValidator<PreviewBuyNowRequest> validator,
+        [FromServices] ICurrentUserService currentUserService)
+    {
+        // Validate request data
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
+        var result = await orderService.PreviewBuyNowAsync(request, currentUserService.UserId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> PreviewOrderAsync(
+        [FromBody] PreviewOrderRequest request,
+        [FromServices] IOrderService orderService,
+        [FromServices] IValidator<PreviewOrderRequest> validator,
+        [FromServices] ICurrentUserService currentUserService)
+    {
+        // Validate request data
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
+        var result = await orderService.PreviewOrderAsync(request, currentUserService.UserId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
 
     private static async Task<IResult> GetOrderByIdAsync(
         [FromRoute] Guid orderId,

@@ -9,6 +9,8 @@ public interface IOrderService
 {
     // ── Student (Authenticated) ──
     Task<ApiResponse<OrderResponse>> BuyNowAsync(BuyNowRequest request, Guid userId);
+    Task<ApiResponse<PreviewBuyNowResponse>> PreviewBuyNowAsync(PreviewBuyNowRequest request, Guid userId);
+    Task<ApiResponse<PreviewOrderResponse>> PreviewOrderAsync(PreviewOrderRequest request, Guid userId);
     Task<ApiResponse<OrderResponse>> CreateOrderAsync(CreateOrderRequest request, Guid userId);
     Task<ApiResponse<List<Guid>>> GetPurchasedCourseIdsAsync(Guid userId);
 

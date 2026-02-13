@@ -84,6 +84,172 @@ public class OrderService(
         return orderResult;
     }
 
+    /// <summary>
+    /// Preview Buy Now pricing without creating an order.
+    /// Validates coupons and calculates totals for single course purchase.
+    /// </summary>
+    public async Task<ApiResponse<PreviewBuyNowResponse>> PreviewBuyNowAsync(PreviewBuyNowRequest request, Guid userId)
+    {
+        // Check if user already purchased this course
+        var alreadyPurchased = await unitOfWork.OrderRepository.AsQueryable()
+            .Where(o => o.UserId == userId && o.Status == OrderStatus.Paid)
+            .SelectMany(o => o.OrderItems.Select(oi => oi.CourseId))
+            .AnyAsync(courseId => courseId == request.CourseId);
+
+        if (alreadyPurchased)
+        {
+            return ApiResponse<PreviewBuyNowResponse>.FailureResponse(
+                "Bạn đã mua khóa học này rồi");
+        }
+
+        // Check if user is instructor of this course (prevent self-purchase)
+        var courseResult = await catalogClient.GetCourseByIdAsync(request.CourseId);
+        if (courseResult.IsSuccess && courseResult.Data != null)
+        {
+            if (courseResult.Data.InstructorId == userId)
+            {
+                return ApiResponse<PreviewBuyNowResponse>.FailureResponse(
+                    "Bạn không thể mua khóa học của chính mình");
+            }
+        }
+        else
+        {
+            return ApiResponse<PreviewBuyNowResponse>.FailureResponse(
+                "Khóa học không tồn tại");
+        }
+
+        // Convert to preview order request for calculation
+        var previewOrderRequest = new PreviewOrderRequest
+        {
+            Items = new List<PreviewOrderItemRequest>
+            {
+                new()
+                {
+                    CourseId = request.CourseId,
+                    InstructorCouponCode = request.InstructorCouponCode
+                }
+            },
+            CouponCode = request.CouponCode
+        };
+
+        // Use existing preview logic
+        var previewResult = await PreviewOrderAsync(previewOrderRequest, userId);
+        if (!previewResult.IsSuccess)
+            return ApiResponse<PreviewBuyNowResponse>.FailureResponse(previewResult.Message ?? "Lỗi tính toán giá");
+
+        var previewData = previewResult.Data!;
+        var item = previewData.Items.First();
+
+        var response = new PreviewBuyNowResponse
+        {
+            Item = item,
+            SubTotal = previewData.SubTotal,
+            InstructorDiscountAmount = previewData.InstructorDiscountAmount,
+            SystemDiscountAmount = previewData.SystemDiscountAmount,
+            TotalDiscountAmount = previewData.TotalDiscountAmount,
+            TotalAmount = previewData.TotalAmount,
+            IsFree = previewData.IsFree
+        };
+
+        return ApiResponse<PreviewBuyNowResponse>.SuccessResponse(response, "Tính toán giá thành công");
+    }
+
+    /// <summary>
+    /// Preview order pricing without creating an order.
+    /// Validates coupons and calculates totals for display purposes.
+    /// </summary>
+    public async Task<ApiResponse<PreviewOrderResponse>> PreviewOrderAsync(PreviewOrderRequest request, Guid userId)
+    {
+        // Check if user already purchased any of these courses
+        var requestedCourseIds = request.Items.Select(i => i.CourseId).ToList();
+
+        var alreadyPurchasedCourseIds = await unitOfWork.OrderRepository.AsQueryable()
+            .Where(o => o.UserId == userId && o.Status == OrderStatus.Paid)
+            .SelectMany(o => o.OrderItems.Select(oi => oi.CourseId))
+            .Where(courseId => requestedCourseIds.Contains(courseId))
+            .Distinct()
+            .ToListAsync();
+
+        if (alreadyPurchasedCourseIds.Any())
+        {
+            return ApiResponse<PreviewOrderResponse>.FailureResponse(
+                "Bạn đã mua một hoặc nhiều khóa học trong đơn hàng này rồi");
+        }
+
+        // Check if user is instructor of any requested courses (prevent self-purchase)
+        var instructorCourses = new List<Guid>();
+        foreach (var item in request.Items)
+        {
+            var courseResult = await catalogClient.GetCourseByIdAsync(item.CourseId);
+            if (courseResult.IsSuccess && courseResult.Data != null)
+            {
+                if (courseResult.Data.InstructorId == userId)
+                {
+                    instructorCourses.Add(item.CourseId);
+                }
+            }
+        }
+
+        if (instructorCourses.Any())
+        {
+            return ApiResponse<PreviewOrderResponse>.FailureResponse(
+                "Bạn không thể mua khóa học của chính mình");
+        }
+
+        // Convert preview items to order items for calculation
+        var orderItems = request.Items.Select(i => new OrderItemRequest
+        {
+            CourseId = i.CourseId,
+            InstructorCouponCode = i.InstructorCouponCode
+        }).ToList();
+
+        // Validate and calculate totals
+        var calculation = await CalculateOrderTotalsAsync(orderItems, request.CouponCode, userId);
+        if (!calculation.IsValid)
+            return ApiResponse<PreviewOrderResponse>.FailureResponse(calculation.ErrorMessage ?? "Lỗi tính toán giá");
+
+        // Build preview response
+        var previewItems = new List<PreviewOrderItemResponse>();
+        for (int i = 0; i < request.Items.Count; i++)
+        {
+            var requestItem = request.Items[i];
+            var calculatedItem = calculation.Items[i];
+
+            var courseResult = await catalogClient.GetCourseByIdAsync(requestItem.CourseId);
+            if (!courseResult.IsSuccess || courseResult.Data == null)
+                continue;
+
+            var course = courseResult.Data;
+
+            previewItems.Add(new PreviewOrderItemResponse
+            {
+                CourseId = requestItem.CourseId,
+                CourseTitle = course.Title,
+                OriginalPrice = calculatedItem.OriginalPrice,
+                InstructorDiscount = calculatedItem.InstructorDiscountAmount,
+                FinalPrice = calculatedItem.LineTotal,
+                PlatformFee = calculatedItem.PlatformFeeAmount,
+                InstructorEarnings = calculatedItem.InstructorEarnings,
+                InstructorCouponCode = requestItem.InstructorCouponCode,
+                InstructorCouponApplied = !string.IsNullOrEmpty(requestItem.InstructorCouponCode) &&
+                                         calculatedItem.InstructorDiscountAmount > 0
+            });
+        }
+
+        var response = new PreviewOrderResponse
+        {
+            Items = previewItems,
+            SubTotal = calculation.SubTotal,
+            InstructorDiscountAmount = calculation.InstructorDiscountAmount,
+            SystemDiscountAmount = calculation.SystemDiscountAmount,
+            TotalDiscountAmount = calculation.TotalDiscountAmount,
+            TotalAmount = calculation.TotalAmount,
+            IsFree = calculation.TotalAmount == 0
+        };
+
+        return ApiResponse<PreviewOrderResponse>.SuccessResponse(response, "Tính toán giá thành công");
+    }
+
     public async Task<ApiResponse<OrderResponse>> CreateOrderAsync(CreateOrderRequest request, Guid userId)
     {
         // ── Check for pending payment before creating new order ──
