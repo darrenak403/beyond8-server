@@ -32,9 +32,14 @@ public class PreviewBuyNowResponse
     public PreviewOrderItemResponse Item { get; set; } = new();
 
     /// <summary>
-    /// Subtotal (same as item final price for single course).
+    /// Subtotal of original course price.
     /// </summary>
     public decimal SubTotal { get; set; }
+
+    /// <summary>
+    /// Subtotal after instructor discount applied.
+    /// </summary>
+    public decimal SubTotalAfterInstructorDiscount { get; set; }
 
     /// <summary>
     /// Total instructor discount amount.
