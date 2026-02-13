@@ -8,5 +8,6 @@ public interface IUnitOfWork : IBaseUnitOfWork
     ILessonProgressRepository LessonProgressRepository { get; }
     ISectionProgressRepository SectionProgressRepository { get; }
     ICertificateRepository CertificateRepository { get; }
+    ICourseCertificateEligibilityConfigRepository CourseCertificateEligibilityConfigRepository { get; }
     ICourseReviewRepository CourseReviewRepository { get; }
 }

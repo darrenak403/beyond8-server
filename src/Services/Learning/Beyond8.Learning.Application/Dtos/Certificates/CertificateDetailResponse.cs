@@ -1,6 +1,5 @@
 namespace Beyond8.Learning.Application.Dtos.Certificates;
 
-/// <summary>Chi tiết chứng chỉ (GET /{id}) - đầy đủ thông tin + mã chia sẻ.</summary>
 public class CertificateDetailResponse
 {
     public Guid Id { get; set; }

@@ -11,6 +11,7 @@ public class LearningDbContext(DbContextOptions<LearningDbContext> options) : Ba
     public DbSet<SectionProgress> SectionProgresses { get; set; } = null!;
     public DbSet<CourseReview> CourseReviews { get; set; } = null!;
     public DbSet<Certificate> Certificates { get; set; } = null!;
+    public DbSet<CourseCertificateEligibilityConfig> CourseCertificateEligibilityConfigs { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -74,6 +75,14 @@ public class LearningDbContext(DbContextOptions<LearningDbContext> options) : Ba
                 .WithOne(en => en.Certificate)
                 .HasForeignKey<Certificate>(e => e.EnrollmentId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CourseCertificateEligibilityConfig>(entity =>
+        {
+            entity.HasQueryFilter(e => e.DeletedAt == null);
+            entity.HasIndex(e => e.CourseId).IsUnique();
+            entity.Property(e => e.QuizAverageMinPercent).HasPrecision(5, 2);
+            entity.Property(e => e.AssignmentAverageMinPercent).HasPrecision(5, 2);
         });
     }
 }

@@ -36,6 +36,7 @@ public class AssignmentSubmissionsResetEventConsumer(
 
         sp.AssignmentSubmitted = false;
         sp.AssignmentGrade = null;
+        sp.AssignmentPassed = false;
         sp.AssignmentSubmittedAt = null;
         sp.AssignmentGradedAt = null;
 

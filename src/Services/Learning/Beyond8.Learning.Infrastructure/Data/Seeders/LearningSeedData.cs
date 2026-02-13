@@ -123,6 +123,7 @@ public static class LearningSeedData
             EnrollmentId = enrollmentId,
             AssignmentSubmitted = true,
             AssignmentGrade = 85m,
+            AssignmentPassed = true,
             AssignmentSubmittedAt = createdAt,
             AssignmentGradedAt = createdAt,
             CreatedAt = createdAt,

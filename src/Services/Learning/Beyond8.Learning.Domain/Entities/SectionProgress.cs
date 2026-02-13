@@ -17,7 +17,7 @@ public class SectionProgress : BaseEntity
 
     [Column(TypeName = "decimal(5, 2)")]
     public decimal? AssignmentGrade { get; set; }
-
+    public bool AssignmentPassed { get; set; }
     public DateTime? AssignmentSubmittedAt { get; set; }
     public DateTime? AssignmentGradedAt { get; set; }
 }

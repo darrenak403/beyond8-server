@@ -32,6 +32,8 @@ public class Assignment : BaseEntity
 
     public int TotalPoints { get; set; } = 100;
 
+    public int PassScorePercent { get; set; } = 50;
+
     public string? RubricUrl { get; set; }
 
     public int? TimeLimitMinutes { get; set; } = 60;

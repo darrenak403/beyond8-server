@@ -19,6 +19,7 @@ public class SectionProgressItem
     public bool IsCompleted { get; set; }
     public bool AssignmentSubmitted { get; set; }
     public decimal? AssignmentGrade { get; set; }
+    public bool AssignmentPassed { get; set; }
     public DateTime? AssignmentSubmittedAt { get; set; }
     public DateTime? AssignmentGradedAt { get; set; }
     public List<LessonProgressItem> Lessons { get; set; } = [];
@@ -29,8 +30,6 @@ public class LessonProgressItem
     public Guid LessonId { get; set; }
     public string Title { get; set; } = string.Empty;
     public int Order { get; set; }
-    /// <summary>Đã học (đã hoàn thành bài dù đạt hay chưa).</summary>
     public bool IsCompleted { get; set; }
-    /// <summary>Đã hoàn thành và đạt (pass).</summary>
     public bool IsPassed { get; set; }
 }

@@ -20,6 +20,9 @@ public class UpdateAssignmentRequestValidator : AbstractValidator<UpdateAssignme
         RuleFor(x => x.TotalPoints)
             .GreaterThanOrEqualTo(0).WithMessage("Tổng điểm phải lớn hơn hoặc bằng 0");
 
+        RuleFor(x => x.PassScorePercent)
+            .InclusiveBetween(0, 100).WithMessage("Điểm đạt phải từ 0 đến 100 %");
+
         RuleFor(x => x.TimeLimitMinutes)
             .GreaterThan(0).WithMessage("Thời gian làm bài (phút) phải lớn hơn 0")
             .When(x => x.TimeLimitMinutes.HasValue);

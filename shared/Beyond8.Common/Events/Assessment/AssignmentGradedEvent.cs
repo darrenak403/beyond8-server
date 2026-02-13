@@ -7,6 +7,8 @@ public record AssignmentGradedEvent(
     Guid? SectionId,
     Guid StudentId,
     decimal Score,
+    decimal ScorePercent,
+    int PassScorePercent,
     DateTime GradedAt,
     Guid GradedBy
 );

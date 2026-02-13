@@ -6,6 +6,8 @@ public record AiGradingCompletedEvent(
     Guid? SectionId,
     Guid StudentId,
     decimal AiScore,
+    decimal ScorePercent,
+    int PassScorePercent,
     string AiFeedback,
     bool IsSuccess,
     string? ErrorMessage,
