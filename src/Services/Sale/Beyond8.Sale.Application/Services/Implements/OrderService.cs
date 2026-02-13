@@ -469,20 +469,19 @@ public class OrderService(
         if (pendingOrder == null)
             return (false, null);
 
-        // Check if there's an active payment (pending or processing, not expired)
-        var activePayment = pendingOrder.Payments.FirstOrDefault(
-            p => (p.Status == PaymentStatus.Pending || p.Status == PaymentStatus.Processing)
-            && p.ExpiredAt > DateTime.UtcNow);
+        // Check if there's any payment with status Pending or Processing (including expired ones)
+        // This ensures consistency with background job that updates expired payments to Expired status
+        var pendingPayment = pendingOrder.Payments.FirstOrDefault(
+            p => p.Status == PaymentStatus.Pending || p.Status == PaymentStatus.Processing);
 
-        // If there's an active payment, return its info
-        if (activePayment != null)
+        // If there's a pending/processing payment, return its info (even if expired)
+        if (pendingPayment != null)
         {
-            var pendingPaymentInfo = pendingOrder.ToPendingPaymentResponse(activePayment);
+            var pendingPaymentInfo = pendingOrder.ToPendingPaymentResponse(pendingPayment);
             return (true, pendingPaymentInfo);
         }
 
-        // If no active payment (expired, failed, or completed), allow new order creation
-        // Don't create new payment here - let the new order creation handle it
+        // If no pending/processing payments (all completed, failed, or expired), allow new order creation
         return (false, null);
     }
 

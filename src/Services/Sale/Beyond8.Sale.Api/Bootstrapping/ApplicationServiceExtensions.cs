@@ -14,6 +14,7 @@ using Beyond8.Sale.Domain.Repositories.Interfaces;
 using Beyond8.Sale.Infrastructure.Data;
 using Beyond8.Sale.Infrastructure.Repositories.Implements;
 using FluentValidation;
+using Microsoft.Extensions.Hosting;
 using Polly;
 using Polly.Extensions.Http;
 using Scalar.AspNetCore;
@@ -68,6 +69,9 @@ public static class ApplicationServiceExtensions
         builder.Services.AddScoped<IPlatformWalletService, PlatformWalletService>();
         builder.Services.AddScoped<IPayoutService, PayoutService>();
         builder.Services.AddScoped<ITransactionService, TransactionService>();
+
+        // Background services
+        builder.Services.AddHostedService<PaymentCleanupService>();
 
         return builder;
     }
