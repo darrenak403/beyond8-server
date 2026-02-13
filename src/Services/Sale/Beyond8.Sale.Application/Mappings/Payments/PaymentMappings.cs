@@ -14,16 +14,10 @@ public static class PaymentMappings
         PendingPaymentResponse? pendingPaymentInfo = null;
         if (payment.Order != null &&
             payment.Order.Status == OrderStatus.Pending &&
-            payment.Order.Payments != null)
+            (payment.Status == PaymentStatus.Pending || payment.Status == PaymentStatus.Processing) &&
+            payment.ExpiredAt > DateTime.UtcNow)
         {
-            var activePayment = payment.Order.Payments.FirstOrDefault(
-                p => (p.Status == PaymentStatus.Pending || p.Status == PaymentStatus.Processing)
-                && p.ExpiredAt > DateTime.UtcNow);
-
-            if (activePayment != null && activePayment.Id == payment.Id)
-            {
-                pendingPaymentInfo = payment.Order.ToPendingPaymentResponse(activePayment);
-            }
+            pendingPaymentInfo = payment.Order.ToPendingPaymentResponse(payment);
         }
 
         return new PaymentResponse

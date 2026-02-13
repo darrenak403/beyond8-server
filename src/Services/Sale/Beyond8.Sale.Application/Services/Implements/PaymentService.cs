@@ -219,8 +219,7 @@ public class PaymentService(
             pageSize: pagination.PageSize,
             filter: p => p.Order!.UserId == userId,
             orderBy: q => q.OrderByDescending(p => p.CreatedAt),
-            includes: q => q.Include(p => p.Order!)
-                .ThenInclude(o => o.Payments));
+            includes: q => q.Include(p => p.Order!));
 
         return ApiResponse<List<PaymentResponse>>.SuccessPagedResponse(
             payments.Items.Select(p => p.ToResponse()).ToList(),
