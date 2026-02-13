@@ -1,7 +1,6 @@
 using Beyond8.Common;
 using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
-using Beyond8.Common.Utilities.Pagination;
 using Beyond8.Sale.Application.Dtos.Wallets;
 using Beyond8.Sale.Application.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
