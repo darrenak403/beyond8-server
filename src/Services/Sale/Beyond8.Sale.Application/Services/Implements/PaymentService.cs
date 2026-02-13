@@ -217,7 +217,7 @@ public class PaymentService(
         var payments = await unitOfWork.PaymentRepository.GetPagedAsync(
             pageNumber: pagination.PageNumber,
             pageSize: pagination.PageSize,
-            filter: p => p.Order.UserId == userId,
+            filter: p => p.Order!.UserId == userId,
             orderBy: q => q.OrderByDescending(p => p.CreatedAt));
 
         return ApiResponse<List<PaymentResponse>>.SuccessPagedResponse(
