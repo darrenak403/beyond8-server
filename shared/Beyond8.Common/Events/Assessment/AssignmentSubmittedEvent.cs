@@ -11,5 +11,6 @@ public record AssignmentSubmittedEvent(
     List<string>? FileUrls,
     string? RubricUrl,
     int TotalPoints,
+    int PassScorePercent,
     DateTime SubmittedAt
 );

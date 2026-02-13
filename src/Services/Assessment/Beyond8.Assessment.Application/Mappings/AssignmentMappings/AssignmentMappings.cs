@@ -24,6 +24,7 @@ public static class AssignmentMappings
             MaxTextLength = entity.MaxTextLength,
             GradingMode = entity.GradingMode,
             TotalPoints = entity.TotalPoints,
+            PassScorePercent = entity.PassScorePercent,
             RubricUrl = entity.RubricUrl,
             TimeLimitMinutes = entity.TimeLimitMinutes,
             MaxSubmissions = entity.MaxSubmissions,
@@ -63,6 +64,7 @@ public static class AssignmentMappings
             MaxTextLength = request.MaxTextLength,
             GradingMode = request.GradingMode,
             TotalPoints = request.TotalPoints,
+            PassScorePercent = request.PassScorePercent,
             RubricUrl = request.RubricUrl,
             TimeLimitMinutes = request.TimeLimitMinutes,
             MaxSubmissions = request.MaxSubmissions
@@ -81,6 +83,7 @@ public static class AssignmentMappings
         assignment.MaxTextLength = request.MaxTextLength;
         assignment.GradingMode = request.GradingMode;
         assignment.TotalPoints = request.TotalPoints;
+        assignment.PassScorePercent = request.PassScorePercent;
         assignment.RubricUrl = request.RubricUrl;
         assignment.TimeLimitMinutes = request.TimeLimitMinutes;
         assignment.MaxSubmissions = request.MaxSubmissions;

@@ -66,6 +66,7 @@ public class AssignmentSubmissionService(
                     FileUrls: submission.FileUrls,
                     RubricUrl: assignment.RubricUrl,
                     TotalPoints: assignment.TotalPoints,
+                    PassScorePercent: assignment.PassScorePercent,
                     SubmittedAt: submission.SubmittedAt
                 ));
 
@@ -111,6 +112,7 @@ public class AssignmentSubmissionService(
 
             var score = submission.FinalScore ?? request.FinalScore;
             var gradedAt = submission.GradedAt ?? DateTime.UtcNow;
+            var scorePercent = assignment.TotalPoints > 0 ? (score / assignment.TotalPoints) * 100 : 0;
             if (assignment.SectionId.HasValue)
             {
                 await publishEndpoint.Publish(new AssignmentGradedEvent(
@@ -120,6 +122,8 @@ public class AssignmentSubmissionService(
                     SectionId: assignment.SectionId,
                     StudentId: submission.StudentId,
                     Score: score,
+                    ScorePercent: scorePercent,
+                    PassScorePercent: assignment.PassScorePercent,
                     GradedAt: gradedAt,
                     GradedBy: userId
                 ));

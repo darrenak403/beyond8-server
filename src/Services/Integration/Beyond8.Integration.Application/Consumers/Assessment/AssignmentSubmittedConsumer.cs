@@ -50,6 +50,9 @@ public class AssignmentSubmittedConsumer(
             {
                 var feedbackJson = AiServiceGradingHelper.ToFeedbackJson(gradingResult.Data, JsonOptions);
                 var gradedAt = DateTime.UtcNow;
+                var scorePercent = message.TotalPoints > 0
+                    ? (gradingResult.Data.Score / message.TotalPoints) * 100
+                    : 0m;
 
                 await publishEndpoint.Publish(new AiGradingCompletedEvent(
                     SubmissionId: message.SubmissionId,
@@ -57,6 +60,8 @@ public class AssignmentSubmittedConsumer(
                     SectionId: message.SectionId,
                     StudentId: message.StudentId,
                     AiScore: gradingResult.Data.Score,
+                    ScorePercent: scorePercent,
+                    PassScorePercent: message.PassScorePercent,
                     AiFeedback: feedbackJson,
                     IsSuccess: true,
                     ErrorMessage: null,
@@ -86,6 +91,8 @@ public class AssignmentSubmittedConsumer(
                     SectionId: message.SectionId,
                     StudentId: message.StudentId,
                     AiScore: 0,
+                    ScorePercent: 0,
+                    PassScorePercent: message.PassScorePercent,
                     AiFeedback: "{}",
                     IsSuccess: false,
                     ErrorMessage: gradingResult.Message ?? "Không thể chấm điểm bằng AI",
@@ -109,6 +116,8 @@ public class AssignmentSubmittedConsumer(
                 SectionId: message.SectionId,
                 StudentId: message.StudentId,
                 AiScore: 0,
+                ScorePercent: 0,
+                PassScorePercent: message.PassScorePercent,
                 AiFeedback: "{}",
                 IsSuccess: false,
                 ErrorMessage: "Đã xảy ra lỗi khi chấm điểm: " + ex.Message,

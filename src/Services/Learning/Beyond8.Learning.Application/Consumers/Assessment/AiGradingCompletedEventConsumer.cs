@@ -33,6 +33,7 @@ public class AiGradingCompletedEventConsumer(
 
         sp.AssignmentGrade = msg.AiScore;
         sp.AssignmentGradedAt = msg.GradedAt;
+        sp.AssignmentPassed = msg.ScorePercent >= msg.PassScorePercent;
         await unitOfWork.SectionProgressRepository.UpdateAsync(sp.Id, sp);
         await unitOfWork.SaveChangesAsync();
 

@@ -17,6 +17,7 @@ public class AssignmentResponse
     public int MaxTextLength { get; set; }
     public GradingMode GradingMode { get; set; }
     public int TotalPoints { get; set; }
+    public int PassScorePercent { get; set; }
     public string? RubricUrl { get; set; }
     public int? TimeLimitMinutes { get; set; }
     public int MaxSubmissions { get; set; }

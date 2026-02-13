@@ -3,6 +3,7 @@ using System;
 using Beyond8.Learning.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Beyond8.Learning.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(LearningDbContext))]
-    partial class LearningDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260213054614_AddSectionProgressAssignmentPassed")]
+    partial class AddSectionProgressAssignmentPassed
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -115,49 +118,6 @@ namespace Beyond8.Learning.Infrastructure.Data.Migrations
                     b.HasIndex("VerificationHash");
 
                     b.ToTable("Certificates");
-                });
-
-            modelBuilder.Entity("Beyond8.Learning.Domain.Entities.CourseCertificateEligibilityConfig", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal?>("AssignmentAverageMinPercent")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("decimal(5, 2)");
-
-                    b.Property<Guid>("CourseId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("CreatedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("DeletedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal?>("QuizAverageMinPercent")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("decimal(5, 2)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("UpdatedBy")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CourseId")
-                        .IsUnique();
-
-                    b.ToTable("CourseCertificateEligibilityConfigs");
                 });
 
             modelBuilder.Entity("Beyond8.Learning.Domain.Entities.CourseReview", b =>
