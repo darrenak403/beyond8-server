@@ -1,5 +1,6 @@
 using Beyond8.Common;
 using Beyond8.Common.Utilities;
+using Beyond8.Sale.Application.Clients.Catalog;
 using Beyond8.Sale.Application.Dtos.Coupons;
 using Beyond8.Sale.Application.Mappings.Coupons;
 using Beyond8.Sale.Application.Services.Interfaces;
@@ -16,6 +17,7 @@ public class CouponService(
     ILogger<CouponService> logger,
     IUnitOfWork unitOfWork,
     IInstructorWalletService walletService,
+    ICatalogClient catalogClient,
     ICurrentUserService currentUserService) : ICouponService
 {
     public async Task<ApiResponse<CouponResponse>> CreateAdminCouponAsync(CreateAdminCouponRequest request)
@@ -59,23 +61,43 @@ public class CouponService(
             var coupon = request.ToEntity();
             coupon.ApplicableInstructorId = request.InstructorId; // Use InstructorId from request instead of parameter
 
+            // ── Get course price for hold amount calculation ──
+            var courseResult = await catalogClient.GetCourseByIdAsync(request.ApplicableCourseId);
+            if (!courseResult.IsSuccess || courseResult.Data == null)
+                return ApiResponse<CouponResponse>.FailureResponse("Khóa học không tồn tại");
+
+            var coursePrice = courseResult.Data.OriginalPrice;
+
             // ── Instructor coupon: Hold funds from wallet ──
-            var holdAmount = CalculateCouponHoldAmount(request);
-            if (holdAmount <= 0)
+            var holdAmount = CalculateCouponHoldAmount(request, coursePrice);
+
+            // For percentage coupons without MaxDiscountAmount, allow creation without holding funds
+            if (holdAmount < 0)
                 return ApiResponse<CouponResponse>.FailureResponse(
                     "Không thể tính toán số tiền cần giữ. Vui lòng kiểm tra UsageLimit và MaxDiscountAmount/Value");
 
-            var holdResult = await walletService.HoldFundsForCouponAsync(
-                request.InstructorId, // Use InstructorId from request
-                holdAmount,
-                coupon.Id,
-                $"Giữ tiền cho coupon {coupon.Code} ({request.UsageLimit} lần sử dụng)");
+            // Only hold funds if there's an amount to hold
+            if (holdAmount > 0)
+            {
+                var holdResult = await walletService.HoldFundsForCouponAsync(
+                    request.InstructorId,
+                    holdAmount,
+                    coupon.Id,
+                    $"Giữ tiền cho coupon {coupon.Code} ({request.UsageLimit} lần sử dụng)");
 
-            if (!holdResult.IsSuccess)
-                return ApiResponse<CouponResponse>.FailureResponse(holdResult.Message ?? "Không thể giữ tiền từ ví");
+                if (!holdResult.IsSuccess)
+                    return ApiResponse<CouponResponse>.FailureResponse(holdResult.Message ?? "Không thể giữ tiền từ ví");
 
-            coupon.HoldAmount = holdAmount;
-            coupon.RemainingHoldAmount = holdAmount;
+
+                coupon.HoldAmount = holdAmount;
+                coupon.RemainingHoldAmount = holdAmount;
+            }
+            else
+            {
+                // No funds to hold (percentage coupon without MaxDiscountAmount)
+                coupon.HoldAmount = 0;
+                coupon.RemainingHoldAmount = 0;
+            }
 
             await unitOfWork.CouponRepository.AddAsync(coupon);
             await unitOfWork.SaveChangesAsync();
@@ -438,9 +460,9 @@ public class CouponService(
     /// <summary>
     /// Calculate total hold amount for instructor coupon.
     /// FixedAmount: Value × UsageLimit
-    /// Percentage: MaxDiscountAmount × UsageLimit (MaxDiscountAmount REQUIRED for instructor percentage coupons)
+    /// Percentage: (CoursePrice × Percentage/100) × UsageLimit
     /// </summary>
-    private static decimal CalculateCouponHoldAmount(CreateInstructorCouponRequest request)
+    private static decimal CalculateCouponHoldAmount(CreateInstructorCouponRequest request, decimal coursePrice)
     {
         if (!request.UsageLimit.HasValue || request.UsageLimit.Value <= 0)
             return 0;
@@ -450,9 +472,14 @@ public class CouponService(
 
         if (request.Type == CouponType.Percentage)
         {
-            if (!request.MaxDiscountAmount.HasValue || request.MaxDiscountAmount.Value <= 0)
-                return 0; // Should be caught by validator
-            return request.MaxDiscountAmount.Value * request.UsageLimit.Value;
+            // Calculate potential discount per usage: CoursePrice × (Percentage/100)
+            var discountPerUsage = coursePrice * (request.Value / 100);
+
+            // If MaxDiscountAmount is set, use the minimum of calculated discount and max discount
+            if (request.MaxDiscountAmount.HasValue && request.MaxDiscountAmount.Value > 0)
+                discountPerUsage = Math.Min(discountPerUsage, request.MaxDiscountAmount.Value);
+
+            return discountPerUsage * request.UsageLimit.Value;
         }
 
         return 0;

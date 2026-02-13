@@ -22,7 +22,13 @@ public class Order : BaseEntity
     public decimal SubTotal { get; set; }
 
     [Column(TypeName = "decimal(18, 2)")]
-    public decimal DiscountAmount { get; set; }
+    public decimal InstructorDiscountAmount { get; set; }
+
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal SystemDiscountAmount { get; set; }
+
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal DiscountAmount { get; set; } // Total discount (Instructor + System)
 
     [Column(TypeName = "decimal(18, 2)")]
     public decimal? TaxAmount { get; set; }
@@ -30,11 +36,12 @@ public class Order : BaseEntity
     [Column(TypeName = "decimal(18, 2)")]
     public decimal TotalAmount { get; set; }
 
-    // Coupon Reference
-    public Guid? CouponId { get; set; }
+    // Coupon References
+    public Guid? InstructorCouponId { get; set; }
+    public Guid? SystemCouponId { get; set; }
 
-    [ForeignKey(nameof(CouponId))]
-    public virtual Coupon? Coupon { get; set; }
+    [ForeignKey(nameof(SystemCouponId))]
+    public virtual Coupon? SystemCoupon { get; set; }
 
     [MaxLength(10)]
     public string Currency { get; set; } = "VND";

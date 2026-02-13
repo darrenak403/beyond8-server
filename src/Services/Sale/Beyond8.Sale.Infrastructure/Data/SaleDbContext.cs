@@ -22,6 +22,7 @@ public class SaleDbContext : BaseDbContext
     public DbSet<Cart> Carts { get; set; } = null!;
     public DbSet<CartItem> CartItems { get; set; } = null!;
     public DbSet<PlatformWallet> PlatformWallets { get; set; } = null!;
+    public DbSet<PlatformWalletTransaction> PlatformWalletTransactions { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -53,9 +54,9 @@ public class SaleDbContext : BaseDbContext
 
             // Payment relationship configured in Payment entity config (supports nullable OrderId)
 
-            entity.HasOne(o => o.Coupon)
+            entity.HasOne(o => o.SystemCoupon)
                 .WithMany()
-                .HasForeignKey(o => o.CouponId)
+                .HasForeignKey(o => o.SystemCouponId)
                 .OnDelete(DeleteBehavior.SetNull);
         });
 
@@ -256,6 +257,27 @@ public class SaleDbContext : BaseDbContext
             entity.Property(e => e.TotalRevenue).HasDefaultValue(0m);
             entity.Property(e => e.TotalCouponCost).HasDefaultValue(0m);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
+        });
+
+        // PlatformWalletTransaction Configuration
+        modelBuilder.Entity<PlatformWalletTransaction>(entity =>
+        {
+            entity.HasQueryFilter(e => e.DeletedAt == null);
+
+            // Indexes for performance
+            entity.HasIndex(e => e.PlatformWalletId);
+            entity.HasIndex(e => e.Type);
+            entity.HasIndex(e => new { e.PlatformWalletId, e.CreatedAt });
+
+            // JSONB Column
+            entity.Property(e => e.Metadata)
+                .HasColumnType("jsonb");
+
+            // Relationships
+            entity.HasOne(pwt => pwt.PlatformWallet)
+                .WithMany()
+                .HasForeignKey(pwt => pwt.PlatformWalletId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

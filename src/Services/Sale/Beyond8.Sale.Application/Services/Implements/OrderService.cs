@@ -119,6 +119,28 @@ public class OrderService(
                 "Bạn đã mua một hoặc nhiều khóa học trong đơn hàng này rồi");
         }
 
+        // Check if user is instructor of any requested courses (prevent self-purchase)
+        var instructorCourses = new List<Guid>();
+        foreach (var item in request.Items)
+        {
+            var courseResult = await catalogClient.GetCourseByIdAsync(item.CourseId);
+            if (courseResult.IsSuccess && courseResult.Data != null)
+            {
+                if (courseResult.Data.InstructorId == userId)
+                {
+                    instructorCourses.Add(item.CourseId);
+                }
+            }
+        }
+
+        if (instructorCourses.Any())
+        {
+            logger.LogWarning("Instructor {UserId} attempted to purchase their own courses: {CourseIds}",
+                userId, string.Join(", ", instructorCourses));
+            return ApiResponse<OrderResponse>.FailureResponse(
+                "Bạn không thể mua khóa học của chính mình");
+        }
+
         // Validate and calculate totals
         var calculation = await CalculateOrderTotalsAsync(request.Items, request.CouponCode, userId);
         if (!calculation.IsValid)
@@ -126,7 +148,16 @@ public class OrderService(
 
         // Create order with mapping
         var orderNumber = GenerateOrderNumber();
-        var order = request.ToEntity(orderNumber, calculation.SubTotal, calculation.TotalAmount, calculation.DiscountAmount, calculation.CouponId, userId);
+        var order = request.ToEntity(
+            orderNumber,
+            calculation.SubTotal,
+            calculation.TotalAmount,
+            calculation.TotalDiscountAmount,
+            calculation.InstructorDiscountAmount,
+            calculation.SystemDiscountAmount,
+            calculation.InstructorCouponId,
+            calculation.SystemCouponId,
+            userId);
 
         // Add order items with snapshot using mapping
         foreach (var item in calculation.Items)
@@ -140,11 +171,11 @@ public class OrderService(
         logger.LogInformation("Order created: {OrderId} for user {UserId}", order.Id, userId);
 
         // ── Record coupon usage for free orders (Bug fix #1) ──
-        if (order.CouponId.HasValue)
+        if (order.SystemCouponId.HasValue)
         {
             await couponUsageService.RecordUsageAsync(new Dtos.CouponUsages.CreateCouponUsageRequest
             {
-                CouponId = order.CouponId.Value,
+                CouponId = order.SystemCouponId.Value,
                 UserId = userId,
                 OrderId = order.Id,
                 DiscountApplied = order.DiscountAmount
@@ -172,6 +203,7 @@ public class OrderService(
     {
         var order = await unitOfWork.OrderRepository.AsQueryable()
             .Include(o => o.OrderItems)
+            .Include(o => o.Payments)
             .AsNoTracking()
             .FirstOrDefaultAsync(o => o.Id == orderId);
 
@@ -287,21 +319,22 @@ public class OrderService(
         return (false, null);
     }
 
-    private async Task<(bool IsValid, string? ErrorMessage, decimal SubTotal, decimal DiscountAmount, decimal TotalAmount, Guid? CouponId, List<OrderItemSnapshot> Items)> CalculateOrderTotalsAsync(List<OrderItemRequest> items, string? systemCouponCode, Guid userId)
+    private async Task<(bool IsValid, string? ErrorMessage, decimal SubTotal, decimal InstructorDiscountAmount, decimal SystemDiscountAmount, decimal TotalDiscountAmount, decimal TotalAmount, Guid? InstructorCouponId, Guid? SystemCouponId, List<OrderItemSnapshot> Items)> CalculateOrderTotalsAsync(List<OrderItemRequest> items, string? systemCouponCode, Guid userId)
     {
         var orderItems = new List<OrderItemSnapshot>();
         decimal subTotal = 0;
         decimal totalInstructorDiscount = 0;
+        Guid? instructorCouponId = null; // Track the first instructor coupon used
 
         // ── Phase 1: Calculate base prices and apply instructor coupons per item ──
         foreach (var item in items)
         {
             var courseResult = await catalogClient.GetCourseByIdAsync(item.CourseId);
             if (!courseResult.IsSuccess)
-                return (false, $"Khóa học không tồn tại", 0, 0, 0, null, orderItems);
+                return (false, $"Khóa học không tồn tại", 0, 0, 0, 0, 0, null, null, orderItems);
 
             if (courseResult.Data == null)
-                return (false, "Dữ liệu khóa học không hợp lệ", 0, 0, 0, null, orderItems);
+                return (false, "Dữ liệu khóa học không hợp lệ", 0, 0, 0, 0, 0, null, null, orderItems);
 
             var course = courseResult.Data;
             var unitPrice = course.FinalPrice; // Use final price (after instructor discounts)
@@ -315,14 +348,18 @@ public class OrderService(
                     item.InstructorCouponCode, itemSubTotal, new List<Guid> { item.CourseId }, userId);
 
                 if (!instructorCouponResult.IsSuccess)
-                    return (false, instructorCouponResult.Message ?? $"Lỗi xác thực coupon instructor cho khóa học {course.Title}", 0, 0, 0, null, orderItems);
+                    return (false, instructorCouponResult.Message ?? $"Lỗi xác thực coupon instructor cho khóa học {course.Title}", 0, 0, 0, 0, 0, null, null, orderItems);
 
-                var (isValidInstructorCoupon, instructorCouponError, instructorDiscount, _) = instructorCouponResult.Data;
+                var (isValidInstructorCoupon, instructorCouponError, instructorDiscount, instructorCouponId_) = instructorCouponResult.Data;
                 if (!isValidInstructorCoupon)
-                    return (false, instructorCouponError, 0, 0, 0, null, orderItems);
+                    return (false, instructorCouponError, 0, 0, 0, 0, 0, null, null, orderItems);
 
                 itemInstructorDiscount = instructorDiscount;
                 totalInstructorDiscount += itemInstructorDiscount;
+
+                // Track the first instructor coupon ID used
+                if (instructorCouponId == null && instructorCouponId_.HasValue)
+                    instructorCouponId = instructorCouponId_.Value;
 
                 logger.LogInformation("Applied instructor coupon {CouponCode} for course {CourseId}: discount {Discount}",
                     item.InstructorCouponCode, item.CourseId, itemInstructorDiscount);
@@ -330,8 +367,12 @@ public class OrderService(
 
             // Calculate final price after instructor discount
             var finalPrice = itemSubTotal - itemInstructorDiscount;
-            var pricing = CalculateOrderItemPricing(finalPrice);
-            orderItems.Add(course.ToOrderItemSnapshot(unitPrice, 0, pricing)); // Store original price, discount handled at order level
+
+            // Calculate discount percent from instructor coupon
+            var discountPercent = itemInstructorDiscount > 0 ? (itemInstructorDiscount / unitPrice) * 100 : 0;
+
+            var pricing = CalculateOrderItemPricing(finalPrice, itemInstructorDiscount);
+            orderItems.Add(course.ToOrderItemSnapshot(unitPrice, discountPercent, pricing));
             subTotal += pricing.LineTotal;
         }
 
@@ -344,11 +385,11 @@ public class OrderService(
                 systemCouponCode, subTotal, items.Select(i => i.CourseId).ToList(), userId);
 
             if (!systemCouponResult.IsSuccess)
-                return (false, systemCouponResult.Message ?? "Lỗi xác thực coupon hệ thống", 0, 0, 0, null, orderItems);
+                return (false, systemCouponResult.Message ?? "Lỗi xác thực coupon hệ thống", 0, 0, 0, 0, 0, null, null, orderItems);
 
             var (isValidSystemCoupon, systemCouponError, systemDiscountAmount, systemCouponId_) = systemCouponResult.Data;
             if (!isValidSystemCoupon)
-                return (false, systemCouponError, 0, 0, 0, null, orderItems);
+                return (false, systemCouponError, 0, 0, 0, 0, 0, null, null, orderItems);
 
             systemDiscount = systemDiscountAmount;
             systemCouponId = systemCouponId_;
@@ -360,7 +401,30 @@ public class OrderService(
         var totalDiscount = totalInstructorDiscount + systemDiscount;
         var totalAmount = Math.Max(0, subTotal - systemDiscount); // System discount applied to subtotal
 
-        return (true, null, subTotal, totalDiscount, totalAmount, systemCouponId, orderItems);
+        // ── Phase 4: Recalculate platform fee and instructor earnings after system discount ──
+        // System discount affects the final amount, so we need to redistribute platform fee and instructor earnings proportionally
+        if (systemDiscount > 0 && subTotal > 0)
+        {
+            var discountRatio = totalAmount / subTotal; // How much of original amount remains after system discount
+
+            foreach (var item in orderItems)
+            {
+                // Recalculate platform fee and instructor earnings based on final amount
+                var adjustedLineTotal = item.LineTotal * discountRatio;
+                var adjustedPlatformFee = adjustedLineTotal * 0.30m; // Per BR-19: 30% platform fee
+                var adjustedInstructorEarnings = adjustedLineTotal - adjustedPlatformFee; // 70% to instructor
+
+                // Update the snapshot with adjusted values
+                item.LineTotal = adjustedLineTotal;
+                item.PlatformFeeAmount = adjustedPlatformFee;
+                item.InstructorEarnings = adjustedInstructorEarnings;
+            }
+
+            logger.LogInformation("Recalculated pricing after system discount: ratio {Ratio}, totalAmount {TotalAmount}",
+                discountRatio, totalAmount);
+        }
+
+        return (true, null, subTotal, totalInstructorDiscount, systemDiscount, totalDiscount, totalAmount, instructorCouponId, systemCouponId, orderItems);
     }
 
     private string GenerateOrderNumber()

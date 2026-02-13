@@ -120,7 +120,6 @@ public static class CouponMappings
             Description = request.Description,
             Type = request.Type,
             Value = request.Value,
-            MinOrderAmount = request.MinOrderAmount,
             MaxDiscountAmount = request.MaxDiscountAmount,
             UsageLimit = request.UsageLimit,
             UsagePerUser = request.UsagePerUser,

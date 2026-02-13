@@ -19,4 +19,25 @@ public static class PlatformWalletMappings
             UpdatedAt = wallet.UpdatedAt
         };
     }
+
+    public static PlatformWalletTransactionResponse ToResponse(this PlatformWalletTransaction transaction)
+    {
+        return new PlatformWalletTransactionResponse
+        {
+            Id = transaction.Id,
+            PlatformWalletId = transaction.PlatformWalletId,
+            ReferenceId = transaction.ReferenceId,
+            ReferenceType = transaction.ReferenceType,
+            Type = transaction.Type,
+            Status = transaction.Status,
+            Amount = transaction.Amount,
+            Currency = transaction.Currency,
+            BalanceBefore = transaction.BalanceBefore,
+            BalanceAfter = transaction.BalanceAfter,
+            Description = transaction.Description,
+            Metadata = transaction.Metadata,
+            CreatedAt = transaction.CreatedAt,
+            UpdatedAt = transaction.UpdatedAt
+        };
+    }
 }

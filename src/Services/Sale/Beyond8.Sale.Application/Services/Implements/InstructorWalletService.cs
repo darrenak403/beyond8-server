@@ -271,7 +271,9 @@ public class InstructorWalletService(
 
         // Deduct from hold (should always have enough due to initial hold)
         var deductAmount = Math.Min(actualDiscount, wallet.HoldBalance);
+        var balanceBefore = wallet.AvailableBalance + wallet.HoldBalance;
         wallet.HoldBalance -= deductAmount;
+        var balanceAfter = wallet.AvailableBalance + wallet.HoldBalance;
         wallet.UpdatedAt = DateTime.UtcNow;
 
         var transaction = new TransactionLedger
@@ -281,8 +283,8 @@ public class InstructorWalletService(
             Status = TransactionStatus.Completed,
             Amount = deductAmount,
             Currency = "VND",
-            BalanceBefore = wallet.AvailableBalance + deductAmount + wallet.HoldBalance, // Pre-deduct total
-            BalanceAfter = wallet.AvailableBalance,
+            BalanceBefore = balanceBefore,
+            BalanceAfter = balanceAfter,
             ReferenceId = orderId,
             ReferenceType = "Order",
             Description = description,

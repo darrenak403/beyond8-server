@@ -12,13 +12,20 @@ public class OrderResponse
 
     // Pricing
     public decimal SubTotal { get; set; }
-    public decimal DiscountAmount { get; set; }
+    public decimal InstructorDiscountAmount { get; set; }
+    public decimal SystemDiscountAmount { get; set; }
+    public decimal DiscountAmount { get; set; } // Total discount (Instructor + System)
     public decimal TaxAmount { get; set; }
     public decimal TotalAmount { get; set; }
     public string Currency { get; set; } = "VND";
 
-    // Coupon
-    public Guid? CouponId { get; set; }
+    // Revenue Split (Per BR-19: 30% platform, 70% instructor)
+    public decimal PlatformFeeAmount { get; set; }
+    public decimal InstructorEarnings { get; set; }
+
+    // Coupons
+    public Guid? InstructorCouponId { get; set; }
+    public Guid? SystemCouponId { get; set; }
 
     // Payment
     public DateTime? PaidAt { get; set; }

@@ -3,6 +3,7 @@ using System;
 using Beyond8.Sale.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Beyond8.Sale.Infrastructure.Migrations
 {
     [DbContext(typeof(SaleDbContext))]
-    partial class SaleDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260213032323_AddInstructorDiscountAmountToOrderItems")]
+    partial class AddInstructorDiscountAmountToOrderItems
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -797,78 +800,6 @@ namespace Beyond8.Sale.Infrastructure.Migrations
                     b.ToTable("PlatformWallets");
                 });
 
-            modelBuilder.Entity("Beyond8.Sale.Domain.Entities.PlatformWalletTransaction", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18, 2)");
-
-                    b.Property<decimal>("BalanceAfter")
-                        .HasColumnType("decimal(18, 2)");
-
-                    b.Property<decimal>("BalanceBefore")
-                        .HasColumnType("decimal(18, 2)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("CreatedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("DeletedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("Metadata")
-                        .HasColumnType("jsonb");
-
-                    b.Property<Guid>("PlatformWalletId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("ReferenceId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ReferenceType")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("UpdatedBy")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PlatformWalletId");
-
-                    b.HasIndex("Type");
-
-                    b.HasIndex("PlatformWalletId", "CreatedAt");
-
-                    b.ToTable("PlatformWalletTransactions");
-                });
-
             modelBuilder.Entity("Beyond8.Sale.Domain.Entities.TransactionLedger", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1024,17 +955,6 @@ namespace Beyond8.Sale.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("InstructorWallet");
-                });
-
-            modelBuilder.Entity("Beyond8.Sale.Domain.Entities.PlatformWalletTransaction", b =>
-                {
-                    b.HasOne("Beyond8.Sale.Domain.Entities.PlatformWallet", "PlatformWallet")
-                        .WithMany()
-                        .HasForeignKey("PlatformWalletId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("PlatformWallet");
                 });
 
             modelBuilder.Entity("Beyond8.Sale.Domain.Entities.TransactionLedger", b =>

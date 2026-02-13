@@ -15,4 +15,5 @@ public interface IUnitOfWork : IBaseUnitOfWork
     ICartRepository CartRepository { get; }
     ICartItemRepository CartItemRepository { get; }
     IPlatformWalletRepository PlatformWalletRepository { get; }
+    IPlatformWalletTransactionRepository PlatformWalletTransactionRepository { get; }
 }

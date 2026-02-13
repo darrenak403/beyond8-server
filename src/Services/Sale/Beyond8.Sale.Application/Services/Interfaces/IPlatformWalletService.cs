@@ -12,6 +12,11 @@ public interface IPlatformWalletService
     Task<ApiResponse<PlatformWalletResponse>> GetPlatformWalletAsync();
 
     /// <summary>
+    /// Get platform wallet transactions with pagination
+    /// </summary>
+    Task<ApiResponse<List<PlatformWalletTransactionResponse>>> GetPlatformWalletTransactionsAsync(PaginationRequest pagination);
+
+    /// <summary>
     /// Credit platform revenue (30% commission) after payment success
     /// </summary>
     Task CreditPlatformRevenueAsync(decimal platformFee, Guid orderId, string description);

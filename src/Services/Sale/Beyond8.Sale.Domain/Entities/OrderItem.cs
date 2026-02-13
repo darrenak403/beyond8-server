@@ -38,6 +38,9 @@ public class OrderItem : BaseEntity
     public int Quantity { get; set; } = 1; // Always 1 for courses
 
     [Column(TypeName = "decimal(18, 2)")]
+    public decimal InstructorDiscountAmount { get; set; } = 0; // Amount discounted by instructor coupon
+
+    [Column(TypeName = "decimal(18, 2)")]
     public decimal LineTotal { get; set; } // UnitPrice * Quantity (before platform coupon)
 
     // Revenue Split (Platform Fee - Per BR-19: 30% platform, 70% instructor)

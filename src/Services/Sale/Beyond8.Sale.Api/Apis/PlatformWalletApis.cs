@@ -1,6 +1,7 @@
 using Beyond8.Common;
 using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
+using Beyond8.Common.Utilities.Pagination;
 using Beyond8.Sale.Application.Dtos.Wallets;
 using Beyond8.Sale.Application.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -29,6 +30,14 @@ public static class PlatformWalletApis
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden);
 
+        group.MapGet("/transactions", GetPlatformWalletTransactionsAsync)
+            .RequireAuthorization(x => x.RequireRole(Role.Admin))
+            .WithName("GetPlatformWalletTransactions")
+            .WithDescription("Lấy lịch sử giao dịch ví nền tảng (Admin only)")
+            .Produces<ApiResponse<List<PlatformWalletTransactionResponse>>>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
+
         return group;
     }
 
@@ -36,6 +45,14 @@ public static class PlatformWalletApis
         [FromServices] IPlatformWalletService platformWalletService)
     {
         var result = await platformWalletService.GetPlatformWalletAsync();
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> GetPlatformWalletTransactionsAsync(
+        [FromServices] IPlatformWalletService platformWalletService,
+        [AsParameters] PaginationRequest pagination)
+    {
+        var result = await platformWalletService.GetPlatformWalletTransactionsAsync(pagination);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 }

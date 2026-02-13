@@ -100,8 +100,8 @@ public static class SaleSeedData
                 UsedCount = 0,
                 ApplicableInstructorId = null, // System coupon
                 ApplicableCourseId = null,
-                ValidFrom = new DateTime(now.Year, 2, 11),
-                ValidTo = new DateTime(now.Year, 9, 30),
+                ValidFrom = new DateTime(now.Year, 2, 11, 0, 0, 0, DateTimeKind.Utc),
+                ValidTo = new DateTime(now.Year, 9, 30, 23, 59, 59, DateTimeKind.Utc),
                 IsActive = true,
                 CreatedAt = now,
                 CreatedBy = systemId

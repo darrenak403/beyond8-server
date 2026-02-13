@@ -17,6 +17,7 @@ public class UnitOfWork(SaleDbContext context) : BaseUnitOfWork<SaleDbContext>(c
     private ICartRepository? _cartRepository;
     private ICartItemRepository? _cartItemRepository;
     private IPlatformWalletRepository? _platformWalletRepository;
+    private IPlatformWalletTransactionRepository? _platformWalletTransactionRepository;
 
     public IOrderRepository OrderRepository => _orderRepository ??= new OrderRepository(context);
     public IOrderItemRepository OrderItemRepository => _orderItemRepository ??= new OrderItemRepository(context);
@@ -29,4 +30,5 @@ public class UnitOfWork(SaleDbContext context) : BaseUnitOfWork<SaleDbContext>(c
     public ICartRepository CartRepository => _cartRepository ??= new CartRepository(context);
     public ICartItemRepository CartItemRepository => _cartItemRepository ??= new CartItemRepository(context);
     public IPlatformWalletRepository PlatformWalletRepository => _platformWalletRepository ??= new PlatformWalletRepository(context);
+    public IPlatformWalletTransactionRepository PlatformWalletTransactionRepository => _platformWalletTransactionRepository ??= new PlatformWalletTransactionRepository(context);
 }

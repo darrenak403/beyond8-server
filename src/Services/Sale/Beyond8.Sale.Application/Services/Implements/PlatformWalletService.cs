@@ -22,6 +22,23 @@ public class PlatformWalletService(
             wallet.ToResponse(), "Lấy thông tin ví nền tảng thành công");
     }
 
+    public async Task<ApiResponse<List<PlatformWalletTransactionResponse>>> GetPlatformWalletTransactionsAsync(PaginationRequest pagination)
+    {
+        var wallet = await GetOrCreatePlatformWalletAsync();
+
+        var transactions = await unitOfWork.PlatformWalletTransactionRepository.GetPagedAsync(
+            pageNumber: pagination.PageNumber,
+            pageSize: pagination.PageSize,
+            filter: t => t.PlatformWalletId == wallet.Id,
+            orderBy: query => query.OrderByDescending(t => t.CreatedAt));
+
+        var responses = transactions.Items.Select(t => t.ToResponse()).ToList();
+
+        return ApiResponse<List<PlatformWalletTransactionResponse>>.SuccessPagedResponse(
+            responses, transactions.TotalCount, pagination.PageNumber, pagination.PageSize,
+            "Lấy lịch sử giao dịch ví nền tảng thành công");
+    }
+
     /// <summary>
     /// Credit platform revenue (30% commission) after payment success.
     /// Platform balance increases.
@@ -30,10 +47,26 @@ public class PlatformWalletService(
     {
         var wallet = await GetOrCreatePlatformWalletAsync();
 
+        var balanceBefore = wallet.AvailableBalance;
         wallet.AvailableBalance += platformFee;
         wallet.TotalRevenue += platformFee;
         wallet.UpdatedAt = DateTime.UtcNow;
 
+        // Create transaction record
+        var transaction = new PlatformWalletTransaction
+        {
+            PlatformWalletId = wallet.Id,
+            ReferenceId = orderId,
+            ReferenceType = "Order",
+            Type = Domain.Enums.PlatformTransactionType.Revenue,
+            Amount = platformFee,
+            BalanceBefore = balanceBefore,
+            BalanceAfter = wallet.AvailableBalance,
+            Description = description,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await unitOfWork.PlatformWalletTransactionRepository.AddAsync(transaction);
         await unitOfWork.SaveChangesAsync();
 
         logger.LogInformation(
@@ -50,10 +83,26 @@ public class PlatformWalletService(
     {
         var wallet = await GetOrCreatePlatformWalletAsync();
 
+        var balanceBefore = wallet.AvailableBalance;
         wallet.AvailableBalance -= discountAmount;
         wallet.TotalCouponCost += discountAmount;
         wallet.UpdatedAt = DateTime.UtcNow;
 
+        // Create transaction record
+        var transaction = new PlatformWalletTransaction
+        {
+            PlatformWalletId = wallet.Id,
+            ReferenceId = orderId,
+            ReferenceType = "Order",
+            Type = Domain.Enums.PlatformTransactionType.CouponCost,
+            Amount = -discountAmount, // Negative for debit
+            BalanceBefore = balanceBefore,
+            BalanceAfter = wallet.AvailableBalance,
+            Description = description,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await unitOfWork.PlatformWalletTransactionRepository.AddAsync(transaction);
         await unitOfWork.SaveChangesAsync();
 
         logger.LogInformation(

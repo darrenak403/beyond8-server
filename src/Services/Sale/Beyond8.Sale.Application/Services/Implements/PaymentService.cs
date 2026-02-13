@@ -310,11 +310,11 @@ public class PaymentService(
         await CreditInstructorEarningsAsync(order);
 
         // ── Record coupon usage (Bug fix #1) ──
-        if (order.CouponId.HasValue)
+        if (order.SystemCouponId.HasValue)
         {
             await couponUsageService.RecordUsageAsync(new Dtos.CouponUsages.CreateCouponUsageRequest
             {
-                CouponId = order.CouponId.Value,
+                CouponId = order.SystemCouponId.Value,
                 UserId = order.UserId,
                 OrderId = order.Id,
                 DiscountApplied = order.DiscountAmount
@@ -347,12 +347,20 @@ public class PaymentService(
     /// </summary>
     private async Task CreditInstructorEarningsAsync(Order order)
     {
-        // Load coupon if exists to determine discount attribution
-        Coupon? coupon = null;
-        if (order.CouponId.HasValue)
+        // Load coupons to determine discount attribution
+        Coupon? instructorCoupon = null;
+        Coupon? systemCoupon = null;
+
+        if (order.InstructorCouponId.HasValue)
         {
-            coupon = await unitOfWork.CouponRepository.AsQueryable()
-                .FirstOrDefaultAsync(c => c.Id == order.CouponId.Value);
+            instructorCoupon = await unitOfWork.CouponRepository.AsQueryable()
+                .FirstOrDefaultAsync(c => c.Id == order.InstructorCouponId.Value);
+        }
+
+        if (order.SystemCouponId.HasValue)
+        {
+            systemCoupon = await unitOfWork.CouponRepository.AsQueryable()
+                .FirstOrDefaultAsync(c => c.Id == order.SystemCouponId.Value);
         }
 
         // Group order items by instructor to aggregate earnings
@@ -368,7 +376,7 @@ public class PaymentService(
             foreach (var item in group)
             {
                 // Recalculate revenue split with coupon discount attribution
-                var earnings = CalculateItemRevenueSplit(item, order, coupon);
+                var earnings = CalculateItemRevenueSplit(item, order, instructorCoupon, systemCoupon);
 
                 // Update OrderItem with final revenue split values
                 item.InstructorEarnings = earnings.InstructorEarnings;
@@ -382,6 +390,9 @@ public class PaymentService(
 
             if (totalInstructorEarnings > 0)
             {
+                logger.LogInformation("Crediting instructor {InstructorId} with earnings {Amount} for order {OrderId}",
+                    instructorId, totalInstructorEarnings, order.Id);
+
                 // Credit instructor wallet immediately (Phase 2 — no escrow)
                 await walletService.CreditEarningsAsync(
                     instructorId,
@@ -391,36 +402,36 @@ public class PaymentService(
             }
 
             // ── Instructor coupon: deduct actual discount from held funds ──
-            if (coupon != null && coupon.ApplicableInstructorId == instructorId && order.DiscountAmount > 0)
+            if (instructorCoupon != null && instructorCoupon.ApplicableInstructorId == instructorId && order.InstructorDiscountAmount > 0)
             {
-                // Calculate this instructor group's share of the discount
+                // Calculate this instructor group's share of the instructor discount
                 var instructorItems = group.ToList();
                 var instructorSubTotal = instructorItems.Sum(i => i.OriginalPrice);
                 var discountRatio = order.SubTotal > 0 ? instructorSubTotal / order.SubTotal : 0;
-                var instructorDiscount = order.DiscountAmount * discountRatio;
+                var instructorDiscount = order.InstructorDiscountAmount * discountRatio;
 
                 if (instructorDiscount > 0)
                 {
                     await walletService.DeductCouponUsageFromHoldAsync(
                         instructorId,
                         instructorDiscount,
-                        coupon.Id,
+                        instructorCoupon.Id,
                         order.Id,
-                        $"Chi phí coupon {coupon.Code} cho đơn hàng #{order.OrderNumber}");
+                        $"Chi phí coupon {instructorCoupon.Code} cho đơn hàng #{order.OrderNumber}");
 
                     // Update coupon's remaining hold
-                    coupon.RemainingHoldAmount = Math.Max(0, coupon.RemainingHoldAmount - instructorDiscount);
+                    instructorCoupon.RemainingHoldAmount = Math.Max(0, instructorCoupon.RemainingHoldAmount - instructorDiscount);
 
                     // If coupon is fully used, release any remaining hold
-                    if (coupon.UsageLimit.HasValue && coupon.UsedCount >= coupon.UsageLimit.Value && coupon.RemainingHoldAmount > 0)
+                    if (instructorCoupon.UsageLimit.HasValue && instructorCoupon.UsedCount >= instructorCoupon.UsageLimit.Value && instructorCoupon.RemainingHoldAmount > 0)
                     {
                         await walletService.ReleaseCouponHoldAsync(
                             instructorId,
-                            coupon.RemainingHoldAmount,
-                            coupon.Id,
-                            $"Hoàn trả số dư giữ còn lại cho coupon {coupon.Code} (đã dùng hết)");
+                            instructorCoupon.RemainingHoldAmount,
+                            instructorCoupon.Id,
+                            $"Hoàn trả số dư giữ còn lại cho coupon {instructorCoupon.Code} (đã dùng hết)");
 
-                        coupon.RemainingHoldAmount = 0;
+                        instructorCoupon.RemainingHoldAmount = 0;
                     }
                 }
             }
@@ -435,57 +446,63 @@ public class PaymentService(
         }
 
         // ── System coupon: Platform absorbs discount (balance can go negative) ──
-        if (coupon != null && coupon.ApplicableInstructorId == null && order.DiscountAmount > 0)
+        if (systemCoupon != null && order.SystemDiscountAmount > 0)
         {
             await platformWalletService.DebitSystemCouponCostAsync(
-                order.DiscountAmount, order.Id,
-                $"Chi phí coupon hệ thống {coupon.Code} cho đơn hàng #{order.OrderNumber}");
+                order.SystemDiscountAmount, order.Id,
+                $"Chi phí coupon hệ thống {systemCoupon.Code} cho đơn hàng #{order.OrderNumber}");
         }
     }
 
     /// <summary>
     /// Calculate revenue split for a single order item considering coupon discount attribution.
     /// Formula:
-    ///   - Instructor coupon: InstructorEarnings = (OriginalPrice - InstructorDiscount) * 0.7
-    ///   - System coupon: InstructorEarnings = OriginalPrice * 0.7 (platform absorbs discount)
-    ///   - No coupon: InstructorEarnings = OriginalPrice * 0.7
+    ///   - Instructor coupon: Instructor absorbs instructor discount
+    ///   - System coupon: Platform absorbs system discount
+    ///   - Both coupons: Instructor absorbs instructor discount, platform absorbs system discount
+    ///   - Final instructor earnings = (OriginalPrice - InstructorDiscount - SystemDiscount) * 0.7
     /// </summary>
     private static (decimal InstructorEarnings, decimal PlatformFee) CalculateItemRevenueSplit(
-        OrderItem item, Order order, Coupon? coupon)
+        OrderItem item, Order order, Coupon? instructorCoupon, Coupon? systemCoupon)
     {
         const decimal platformFeeRate = 0.30m; // Per BR-19: 30% platform
         var originalPrice = item.OriginalPrice;
+        var finalPrice = originalPrice;
 
-        // If no coupon or no discount, standard 70-30 split
-        if (coupon == null || order.DiscountAmount <= 0 || order.SubTotal <= 0)
+        // Calculate total original price of all items (before any discounts)
+        var totalOriginalPrice = order.OrderItems.Sum(oi => oi.OriginalPrice);
+
+        // Calculate instructor discount (absorbed by instructor)
+        decimal instructorDiscount = 0;
+        if (instructorCoupon != null && order.InstructorDiscountAmount > 0 && totalOriginalPrice > 0)
         {
-            var instructorEarnings = originalPrice * (1 - platformFeeRate);
-            var platformFee = originalPrice - instructorEarnings;
-            return (instructorEarnings, platformFee);
+            // Proportional discount for this item based on original price
+            var discountRatio = originalPrice / totalOriginalPrice;
+            instructorDiscount = order.InstructorDiscountAmount * discountRatio;
         }
 
-        // Calculate this item's share of the total discount (proportional)
-        var discountRatio = originalPrice / order.SubTotal;
-        var itemDiscount = order.DiscountAmount * discountRatio;
+        // Calculate system discount (absorbed by platform)
+        decimal systemDiscount = 0;
+        if (systemCoupon != null && order.SystemDiscountAmount > 0 && totalOriginalPrice > 0)
+        {
+            // Proportional discount for this item based on price after instructor discount
+            var itemPriceAfterInstructorDiscount = originalPrice - instructorDiscount;
+            var totalPriceAfterInstructorDiscount = totalOriginalPrice - order.InstructorDiscountAmount;
+            if (totalPriceAfterInstructorDiscount > 0)
+            {
+                var discountRatio = itemPriceAfterInstructorDiscount / totalPriceAfterInstructorDiscount;
+                systemDiscount = order.SystemDiscountAmount * discountRatio;
+            }
+        }
 
-        if (coupon.ApplicableInstructorId != null)
-        {
-            // Instructor coupon → Instructor absorbs discount
-            // InstructorEarnings = (OriginalPrice - ItemDiscount) * 0.7
-            var priceAfterDiscount = originalPrice - itemDiscount;
-            var instructorEarnings = priceAfterDiscount * (1 - platformFeeRate);
-            var platformFee = priceAfterDiscount - instructorEarnings;
-            return (instructorEarnings, platformFee);
-        }
-        else
-        {
-            // System coupon → Platform absorbs discount
-            // InstructorEarnings = OriginalPrice * 0.7 (instructor gets full 70% of original)
-            var instructorEarnings = originalPrice * (1 - platformFeeRate);
-            var finalAmount = originalPrice - itemDiscount;
-            var platformFee = finalAmount - instructorEarnings;
-            return (instructorEarnings, platformFee);
-        }
+        // Final price after all discounts
+        finalPrice = originalPrice - instructorDiscount - systemDiscount;
+
+        // Instructor gets 70% of final price, platform gets 30%
+        var instructorEarnings = finalPrice * (1 - platformFeeRate);
+        var platformFee = finalPrice - instructorEarnings;
+
+        return (instructorEarnings, platformFee);
     }
 
     /// <summary>
