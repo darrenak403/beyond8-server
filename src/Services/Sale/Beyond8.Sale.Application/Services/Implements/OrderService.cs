@@ -24,7 +24,6 @@ public class OrderService(
     IUnitOfWork unitOfWork,
     ICatalogClient catalogClient,
     ICouponService couponService,
-    ICouponUsageService couponUsageService,
     IPublishEndpoint publishEndpoint) : IOrderService
 {
     /// <summary>
@@ -336,18 +335,6 @@ public class OrderService(
         await unitOfWork.SaveChangesAsync();
 
         logger.LogInformation("Order created: {OrderId} for user {UserId}", order.Id, userId);
-
-        // ── Record coupon usage for free orders (Bug fix #1) ──
-        if (order.SystemCouponId.HasValue)
-        {
-            await couponUsageService.RecordUsageAsync(new Dtos.CouponUsages.CreateCouponUsageRequest
-            {
-                CouponId = order.SystemCouponId.Value,
-                UserId = userId,
-                OrderId = order.Id,
-                DiscountApplied = order.DiscountAmount
-            });
-        }
 
         // Publish event for free courses (BR-04)
         if (order.Status == OrderStatus.Paid)

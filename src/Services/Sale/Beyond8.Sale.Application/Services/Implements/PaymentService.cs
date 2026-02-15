@@ -297,6 +297,11 @@ public class PaymentService(
     private async Task HandlePaymentSuccessAsync(Payment payment, VNPayCallbackResult result)
     {
         var order = payment.Order;
+        if (order == null)
+        {
+            logger.LogWarning("Payment success but order not found: {PaymentId}", payment.Id);
+            return;
+        }
 
         payment.Status = PaymentStatus.Completed;
         payment.PaidAt = DateTime.UtcNow;
@@ -311,7 +316,7 @@ public class PaymentService(
         // ── Revenue Split & Wallet Credit (Per BR-19: 70% Instructor / 30% Platform) ──
         await CreditInstructorEarningsAsync(order);
 
-        // ── Record coupon usage (Bug fix #1) ──
+        // ── Record coupon usage ──
         if (order.SystemCouponId.HasValue)
         {
             await couponUsageService.RecordUsageAsync(new Dtos.CouponUsages.CreateCouponUsageRequest
@@ -543,6 +548,40 @@ public class PaymentService(
         payment.UpdatedAt = DateTime.UtcNow;
 
         await unitOfWork.SaveChangesAsync();
+
+        // ── Revert coupon usage if recorded (for backward compatibility) ──
+        if (payment.OrderId.HasValue && payment.Order?.SystemCouponId.HasValue == true)
+        {
+            try
+            {
+                var existingUsage = await unitOfWork.CouponUsageRepository.AsQueryable()
+                    .Include(u => u.Coupon)
+                    .FirstOrDefaultAsync(u => u.OrderId == payment.OrderId);
+
+                if (existingUsage != null)
+                {
+                    // Remove the usage record
+                    await unitOfWork.CouponUsageRepository.DeleteAsync(existingUsage.Id);
+
+                    // Decrement coupon usage count
+                    if (existingUsage.Coupon != null)
+                    {
+                        existingUsage.Coupon.UsedCount = Math.Max(0, existingUsage.Coupon.UsedCount - 1);
+                        existingUsage.Coupon.UpdatedAt = DateTime.UtcNow;
+                    }
+
+                    await unitOfWork.SaveChangesAsync();
+
+                    logger.LogInformation("Reverted coupon usage for failed payment: {PaymentId}, OrderId: {OrderId}",
+                        payment.Id, payment.OrderId);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to revert coupon usage for failed payment: {PaymentId}", payment.Id);
+                // Don't throw - payment failure handling should not fail
+            }
+        }
 
         // Bug fix #4: Do NOT remove cart items on payment failure.
         // Cart items should remain so user can retry payment.
