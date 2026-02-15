@@ -5,7 +5,9 @@ using Beyond8.Learning.Application.Clients.Identity;
 using Beyond8.Learning.Application.Dtos.Certificates;
 using Beyond8.Learning.Application.Mappings;
 using Beyond8.Learning.Application.Services.Interfaces;
+using Beyond8.Learning.Application.Helpers;
 using Beyond8.Learning.Domain.Entities;
+using Beyond8.Learning.Domain.Enums;
 using Beyond8.Learning.Domain.Repositories.Interfaces;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
@@ -35,8 +37,18 @@ public class CertificateService(
             if (enrollment == null || enrollment.CertificateId.HasValue)
                 return;
 
-            if (enrollment.TotalLessons <= 0 || enrollment.CompletedLessons < enrollment.TotalLessons)
+            var actualCompletedCount = enrollment.LessonProgresses.Count(lp =>
+                EnrollmentProgressHelper.IsCompletedOrFailed(lp.Status));
+            if (enrollment.TotalLessons <= 0 || actualCompletedCount < enrollment.TotalLessons)
                 return;
+
+            var progressPercent = EnrollmentProgressHelper.CalculateProgressPercent(actualCompletedCount, enrollment.TotalLessons);
+            if (enrollment.CompletedLessons != actualCompletedCount || enrollment.ProgressPercent != progressPercent)
+            {
+                EnrollmentProgressHelper.ApplyProgressToEnrollment(enrollment, actualCompletedCount, DateTime.UtcNow);
+                await unitOfWork.EnrollmentRepository.UpdateAsync(enrollment.Id, enrollment);
+                await unitOfWork.SaveChangesAsync();
+            }
 
             var config = await unitOfWork.CourseCertificateEligibilityConfigRepository
                 .FindOneAsync(c => c.CourseId == enrollment.CourseId);

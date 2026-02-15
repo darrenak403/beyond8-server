@@ -3,6 +3,7 @@ using Beyond8.Common.Events.Cache;
 using Beyond8.Common.Utilities;
 using Beyond8.Learning.Application.Clients.Catalog;
 using Beyond8.Learning.Application.Dtos.Enrollments;
+using Beyond8.Learning.Application.Helpers;
 using Beyond8.Learning.Application.Mappings;
 using Beyond8.Learning.Application.Services.Interfaces;
 using Beyond8.Learning.Domain.Entities;
@@ -237,8 +238,26 @@ public class EnrollmentService(
     {
         try
         {
-            var enrollments = await unitOfWork.EnrollmentRepository.GetEnrolledCoursesAsync(userId);
-            return ApiResponse<List<EnrollmentSimpleResponse>>.SuccessResponse(enrollments.Select(e => e.ToSimpleResponse()).ToList(), "Lấy danh sách khóa học đã đăng ký thành công.");
+            var enrollments = (await unitOfWork.EnrollmentRepository.GetEnrolledCoursesAsync(userId)).ToList();
+            if (enrollments.Count == 0)
+                return ApiResponse<List<EnrollmentSimpleResponse>>.SuccessResponse([], "Lấy danh sách khóa học đã đăng ký thành công.");
+
+            var enrollmentIds = enrollments.Select(e => e.Id).ToList();
+            var completedLessonProgress = await unitOfWork.LessonProgressRepository.GetAllAsync(lp =>
+                enrollmentIds.Contains(lp.EnrollmentId) &&
+                EnrollmentProgressHelper.IsCompletedOrFailed(lp.Status));
+            var completedCountByEnrollmentId = completedLessonProgress
+                .GroupBy(lp => lp.EnrollmentId)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            var responses = enrollments.Select(e =>
+            {
+                var completedCount = completedCountByEnrollmentId.GetValueOrDefault(e.Id, 0);
+                var progressPercent = EnrollmentProgressHelper.CalculateProgressPercent(completedCount, e.TotalLessons);
+                return e.ToSimpleResponse(progressPercent);
+            }).ToList();
+
+            return ApiResponse<List<EnrollmentSimpleResponse>>.SuccessResponse(responses, "Lấy danh sách khóa học đã đăng ký thành công.");
         }
         catch (Exception ex)
         {
@@ -256,6 +275,7 @@ public class EnrollmentService(
             {
                 return ApiResponse<EnrollmentResponse>.FailureResponse("Khóa học đã đăng ký không tồn tại.");
             }
+
             return ApiResponse<EnrollmentResponse>.SuccessResponse(enrollment.ToResponse(), "Lấy thông tin khóa học đã đăng ký thành công.");
         }
         catch (Exception ex)

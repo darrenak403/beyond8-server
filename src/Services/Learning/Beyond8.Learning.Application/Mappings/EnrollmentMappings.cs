@@ -88,7 +88,7 @@ public static class EnrollmentMappings
         };
     }
 
-    public static EnrollmentSimpleResponse ToSimpleResponse(this Enrollment entity)
+    public static EnrollmentSimpleResponse ToSimpleResponse(this Enrollment entity, decimal? progressPercent = null)
     {
         return new EnrollmentSimpleResponse
         {
@@ -99,7 +99,7 @@ public static class EnrollmentMappings
             Slug = entity.Slug,
             InstructorId = entity.InstructorId,
             InstructorName = entity.InstructorName,
-            ProgressPercent = entity.ProgressPercent
+            ProgressPercent = progressPercent ?? entity.ProgressPercent
         };
     }
 }

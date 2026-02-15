@@ -1,5 +1,6 @@
 using Beyond8.Learning.Application.Dtos.Catalog;
 using Beyond8.Learning.Application.Dtos.Progress;
+using Beyond8.Learning.Application.Helpers;
 using Beyond8.Learning.Domain.Entities;
 using Beyond8.Learning.Domain.Enums;
 
@@ -25,12 +26,9 @@ public static class CurriculumProgressMappings
         var completedLessons = allLessonIds.Count(lessonId =>
         {
             var progress = lessonProgressByLessonId.GetValueOrDefault(lessonId);
-            var status = progress?.Status;
-            return status is LessonProgressStatus.Completed or LessonProgressStatus.Failed;
+            return progress != null && EnrollmentProgressHelper.IsCompletedOrFailed(progress.Status);
         });
-        var progressPercent = totalLessons > 0
-            ? Math.Round((decimal)completedLessons * 100 / totalLessons, 2)
-            : 0;
+        var progressPercent = EnrollmentProgressHelper.CalculateProgressPercent(completedLessons, totalLessons);
 
         return new CurriculumProgressResponse
         {
@@ -75,9 +73,8 @@ public static class CurriculumProgressMappings
         this LessonStructureItem lesson,
         LessonProgress? progress)
     {
-        var status = progress?.Status;
-        var isCompleted = status is LessonProgressStatus.Completed or LessonProgressStatus.Failed;
-        var isPassed = status == LessonProgressStatus.Completed;
+        var isCompleted = progress != null && EnrollmentProgressHelper.IsCompletedOrFailed(progress.Status);
+        var isPassed = progress?.Status == LessonProgressStatus.Completed;
 
         return new LessonProgressItem
         {

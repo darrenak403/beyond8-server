@@ -1,6 +1,7 @@
 using Beyond8.Common.Utilities;
 using Beyond8.Learning.Application.Clients.Catalog;
 using Beyond8.Learning.Application.Dtos.Progress;
+using Beyond8.Learning.Application.Helpers;
 using Beyond8.Learning.Application.Mappings;
 using Beyond8.Learning.Application.Services.Interfaces;
 using Beyond8.Learning.Domain.Enums;
@@ -72,16 +73,10 @@ public class ProgressService(
                 e.Id == lp.EnrollmentId && e.DeletedAt == null);
             if (enrollment != null)
             {
-                var completedCount = await unitOfWork.LessonProgressRepository.CountAsync(l =>
-                    l.EnrollmentId == lp.EnrollmentId && l.Status == LessonProgressStatus.Completed);
-                enrollment.CompletedLessons = (int)completedCount;
-                enrollment.ProgressPercent = enrollment.TotalLessons > 0
-                    ? Math.Round((decimal)completedCount * 100 / enrollment.TotalLessons, 2)
-                    : 0;
-                enrollment.LastAccessedLessonId = lessonId;
-                enrollment.LastAccessedAt = now;
-                if (enrollment.CompletedLessons >= enrollment.TotalLessons && enrollment.TotalLessons > 0)
-                    enrollment.CompletedAt = enrollment.CompletedAt ?? now;
+                var completedCount = (int)await unitOfWork.LessonProgressRepository.CountAsync(l =>
+                    l.EnrollmentId == lp.EnrollmentId &&
+                    EnrollmentProgressHelper.IsCompletedOrFailed(l.Status));
+                EnrollmentProgressHelper.ApplyProgressToEnrollment(enrollment, completedCount, now, lessonId, now);
                 await unitOfWork.EnrollmentRepository.UpdateAsync(enrollment.Id, enrollment);
             }
 

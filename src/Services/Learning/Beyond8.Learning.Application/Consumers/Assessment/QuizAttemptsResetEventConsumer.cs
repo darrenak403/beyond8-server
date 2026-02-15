@@ -1,4 +1,5 @@
 using Beyond8.Common.Events.Assessment;
+using Beyond8.Learning.Application.Helpers;
 using Beyond8.Learning.Domain.Enums;
 using Beyond8.Learning.Domain.Repositories.Interfaces;
 using MassTransit;
@@ -44,13 +45,10 @@ public class QuizAttemptsResetEventConsumer(
 
         if (enrollment != null)
         {
-            var completedCount = await unitOfWork.LessonProgressRepository.CountAsync(l =>
-                l.EnrollmentId == lp.EnrollmentId && l.Status == LessonProgressStatus.Completed);
-            enrollment.CompletedLessons = (int)completedCount;
-            enrollment.ProgressPercent = enrollment.TotalLessons > 0
-                ? Math.Round((decimal)completedCount * 100 / enrollment.TotalLessons, 2)
-                : 0;
-            enrollment.CompletedAt = null;
+            var completedCount = (int)await unitOfWork.LessonProgressRepository.CountAsync(l =>
+                l.EnrollmentId == lp.EnrollmentId &&
+                EnrollmentProgressHelper.IsCompletedOrFailed(l.Status));
+            EnrollmentProgressHelper.ApplyProgressToEnrollment(enrollment, completedCount);
             await unitOfWork.EnrollmentRepository.UpdateAsync(enrollment.Id, enrollment);
         }
 
