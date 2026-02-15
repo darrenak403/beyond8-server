@@ -261,8 +261,7 @@ public class OrderService(
                 PendingPaymentInfo = pendingPaymentCheck.PendingPaymentInfo
             };
 
-            return ApiResponse<OrderResponse>.FailureResponse(
-                "Bạn có đơn hàng đang chờ thanh toán. Vui lòng hoàn tất thanh toán hoặc hủy đơn hàng đó trước khi tạo đơn hàng mới.", response);
+            return ApiResponse<OrderResponse>.SuccessResponse(response, "Bạn có đơn hàng đang chờ thanh toán. Vui lòng hoàn tất thanh toán hoặc hủy đơn hàng đó trước khi tạo đơn hàng mới.");
         }
 
         // Check if user already purchased any of these courses
