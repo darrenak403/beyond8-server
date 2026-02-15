@@ -12,6 +12,7 @@ public interface IOrderService
     Task<ApiResponse<PreviewBuyNowResponse>> PreviewBuyNowAsync(PreviewBuyNowRequest request, Guid userId);
     Task<ApiResponse<PreviewOrderResponse>> PreviewOrderAsync(PreviewOrderRequest request, Guid userId);
     Task<ApiResponse<OrderResponse>> CreateOrderAsync(CreateOrderRequest request, Guid userId);
+    Task<ApiResponse<OrderResponse>> CancelOrderAsync(Guid orderId, Guid userId);
     Task<ApiResponse<List<Guid>>> GetPurchasedCourseIdsAsync(Guid userId);
 
     // ── Owner / Admin ──

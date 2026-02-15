@@ -261,9 +261,8 @@ public class OrderService(
                 PendingPaymentInfo = pendingPaymentCheck.PendingPaymentInfo
             };
 
-            return ApiResponse<OrderResponse>.SuccessResponse(
-                response,
-                "Bạn có đơn hàng đang chờ thanh toán. Vui lòng hoàn tất thanh toán trước khi tạo đơn hàng mới.");
+            return ApiResponse<OrderResponse>.FailureResponse(
+                "Bạn có đơn hàng đang chờ thanh toán. Vui lòng hoàn tất thanh toán hoặc hủy đơn hàng đó trước khi tạo đơn hàng mới.", response);
         }
 
         // Check if user already purchased any of these courses
@@ -351,6 +350,87 @@ public class OrderService(
         }
 
         return ApiResponse<OrderResponse>.SuccessResponse(order.ToResponse(), "Đơn hàng đã được tạo thành công");
+    }
+
+    /// <summary>
+    /// Cancel order by order owner.
+    /// Only allows cancelling orders in Pending status.
+    /// Reverts coupon usage and updates payment status.
+    /// </summary>
+    public async Task<ApiResponse<OrderResponse>> CancelOrderAsync(Guid orderId, Guid userId)
+    {
+        var order = await unitOfWork.OrderRepository.AsQueryable()
+            .Include(o => o.OrderItems)
+            .Include(o => o.Payments)
+            .FirstOrDefaultAsync(o => o.Id == orderId);
+
+        if (order == null)
+            return ApiResponse<OrderResponse>.FailureResponse("Đơn hàng không tồn tại");
+
+        // Check ownership
+        if (order.UserId != userId)
+            return ApiResponse<OrderResponse>.FailureResponse("Bạn không có quyền hủy đơn hàng này");
+
+        // Only allow cancelling pending orders
+        if (order.Status != OrderStatus.Pending)
+            return ApiResponse<OrderResponse>.FailureResponse(
+                $"Không thể hủy đơn hàng ở trạng thái {order.Status}. Chỉ có thể hủy đơn hàng đang chờ thanh toán.");
+
+        // Update order status
+        order.Status = OrderStatus.Cancelled;
+        order.PendingPaymentInfo = null; // Clear pending payment info if any
+        order.UpdatedAt = DateTime.UtcNow;
+
+        // ── Revert coupon usage ──
+        if (order.SystemCouponId.HasValue)
+        {
+            try
+            {
+                var existingUsage = await unitOfWork.CouponUsageRepository.AsQueryable()
+                    .Include(u => u.Coupon)
+                    .FirstOrDefaultAsync(u => u.OrderId == orderId);
+
+                if (existingUsage != null)
+                {
+                    // Remove the usage record
+                    await unitOfWork.CouponUsageRepository.DeleteAsync(existingUsage.Id);
+
+                    // Decrement coupon usage count
+                    if (existingUsage.Coupon != null)
+                    {
+                        existingUsage.Coupon.UsedCount = Math.Max(0, existingUsage.Coupon.UsedCount - 1);
+                        existingUsage.Coupon.UpdatedAt = DateTime.UtcNow;
+                    }
+
+                    await unitOfWork.SaveChangesAsync();
+
+                    logger.LogInformation("Reverted coupon usage for cancelled order: {OrderId}", orderId);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to revert coupon usage for cancelled order: {OrderId}", orderId);
+                // Don't throw - order cancellation should succeed even if coupon revert fails
+            }
+        }
+
+        // ── Update payment status if exists ──
+        var pendingPayment = order.Payments.FirstOrDefault(p => p.Status == PaymentStatus.Pending);
+        if (pendingPayment != null)
+        {
+            pendingPayment.Status = PaymentStatus.Cancelled;
+            pendingPayment.UpdatedAt = DateTime.UtcNow;
+
+            logger.LogInformation("Cancelled pending payment {PaymentId} for order {OrderId}",
+                pendingPayment.Id, orderId);
+        }
+
+        await unitOfWork.SaveChangesAsync();
+
+        logger.LogInformation("Order cancelled: {OrderId} by user {UserId}", orderId, userId);
+
+        return ApiResponse<OrderResponse>.SuccessResponse(
+            order.ToResponse(), "Đơn hàng đã được hủy thành công");
     }
 
     public async Task<ApiResponse<OrderResponse>> GetOrderByIdAsync(Guid orderId)

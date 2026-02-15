@@ -81,6 +81,15 @@ public static class OrderApis
             .Produces<ApiResponse<List<Guid>>>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized);
 
+        group.MapPost("/{orderId}/cancel", CancelOrderAsync)
+            .WithName("CancelOrder")
+            .WithDescription("Hủy đơn hàng (chỉ order owner, chỉ trạng thái Pending)")
+            .RequireAuthorization()
+            .Produces<ApiResponse<OrderResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<OrderResponse>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
+
         // Instructor Operations
         group.MapGet("/instructor/{instructorId}", GetOrdersByInstructorAsync)
             .WithName("GetOrdersByInstructor")
@@ -212,6 +221,15 @@ public static class OrderApis
         [FromServices] IOrderService orderService)
     {
         var result = await orderService.GetOrdersByStatusAsync(status, pagination);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> CancelOrderAsync(
+        [FromRoute] Guid orderId,
+        [FromServices] IOrderService orderService,
+        [FromServices] ICurrentUserService currentUserService)
+    {
+        var result = await orderService.CancelOrderAsync(orderId, currentUserService.UserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
