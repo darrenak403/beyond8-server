@@ -19,7 +19,10 @@ public class Order : BaseEntity
 
     // Pricing Information
     [Column(TypeName = "decimal(18, 2)")]
-    public decimal SubTotal { get; set; }
+    public decimal OriginalSubTotal { get; set; } // Sum of all original course prices
+
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal SubTotal { get; set; } // Subtotal after instructor discounts (before system discount)
 
     [Column(TypeName = "decimal(18, 2)")]
     public decimal InstructorDiscountAmount { get; set; }

@@ -43,9 +43,14 @@ public class PreviewOrderResponse
     public List<PreviewOrderItemResponse> Items { get; set; } = new();
 
     /// <summary>
-    /// Subtotal before any discounts.
+    /// Subtotal of all original course prices.
     /// </summary>
     public decimal SubTotal { get; set; }
+
+    /// <summary>
+    /// Subtotal after instructor discounts applied.
+    /// </summary>
+    public decimal SubTotalAfterInstructorDiscount { get; set; }
 
     /// <summary>
     /// Total instructor discount amount.
@@ -102,16 +107,6 @@ public class PreviewOrderItemResponse
     /// Final price after instructor discount.
     /// </summary>
     public decimal FinalPrice { get; set; }
-
-    /// <summary>
-    /// Platform fee for this item.
-    /// </summary>
-    public decimal PlatformFee { get; set; }
-
-    /// <summary>
-    /// Instructor earnings for this item.
-    /// </summary>
-    public decimal InstructorEarnings { get; set; }
 
     /// <summary>
     /// Instructor coupon code applied (if any).

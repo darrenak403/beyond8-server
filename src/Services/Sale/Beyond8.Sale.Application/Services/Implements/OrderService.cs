@@ -144,6 +144,7 @@ public class OrderService(
         {
             Item = item,
             SubTotal = previewData.SubTotal,
+            SubTotalAfterInstructorDiscount = previewData.SubTotalAfterInstructorDiscount,
             InstructorDiscountAmount = previewData.InstructorDiscountAmount,
             SystemDiscountAmount = previewData.SystemDiscountAmount,
             TotalDiscountAmount = previewData.TotalDiscountAmount,
@@ -228,8 +229,6 @@ public class OrderService(
                 OriginalPrice = calculatedItem.OriginalPrice,
                 InstructorDiscount = calculatedItem.InstructorDiscountAmount,
                 FinalPrice = calculatedItem.LineTotal,
-                PlatformFee = calculatedItem.PlatformFeeAmount,
-                InstructorEarnings = calculatedItem.InstructorEarnings,
                 InstructorCouponCode = requestItem.InstructorCouponCode,
                 InstructorCouponApplied = !string.IsNullOrEmpty(requestItem.InstructorCouponCode) &&
                                          calculatedItem.InstructorDiscountAmount > 0
@@ -239,7 +238,8 @@ public class OrderService(
         var response = new PreviewOrderResponse
         {
             Items = previewItems,
-            SubTotal = calculation.SubTotal,
+            SubTotal = calculation.OriginalSubTotal,
+            SubTotalAfterInstructorDiscount = calculation.SubTotalAfterInstructorDiscount,
             InstructorDiscountAmount = calculation.InstructorDiscountAmount,
             SystemDiscountAmount = calculation.SystemDiscountAmount,
             TotalDiscountAmount = calculation.TotalDiscountAmount,
@@ -316,7 +316,8 @@ public class OrderService(
         var orderNumber = GenerateOrderNumber();
         var order = request.ToEntity(
             orderNumber,
-            calculation.SubTotal,
+            calculation.OriginalSubTotal,
+            calculation.SubTotalAfterInstructorDiscount,
             calculation.TotalAmount,
             calculation.TotalDiscountAmount,
             calculation.InstructorDiscountAmount,
@@ -468,27 +469,27 @@ public class OrderService(
         if (pendingOrder == null)
             return (false, null);
 
-        // Check if there's an active payment (pending or processing, not expired)
-        var activePayment = pendingOrder.Payments.FirstOrDefault(
-            p => (p.Status == PaymentStatus.Pending || p.Status == PaymentStatus.Processing)
-            && p.ExpiredAt > DateTime.UtcNow);
+        // Check if there's any payment with status Pending or Processing (including expired ones)
+        // This ensures consistency with background job that updates expired payments to Expired status
+        var pendingPayment = pendingOrder.Payments.FirstOrDefault(
+            p => p.Status == PaymentStatus.Pending || p.Status == PaymentStatus.Processing);
 
-        // If there's an active payment, return its info
-        if (activePayment != null)
+        // If there's a pending/processing payment, return its info (even if expired)
+        if (pendingPayment != null)
         {
-            var pendingPaymentInfo = pendingOrder.ToPendingPaymentResponse(activePayment);
+            var pendingPaymentInfo = pendingOrder.ToPendingPaymentResponse(pendingPayment);
             return (true, pendingPaymentInfo);
         }
 
-        // If no active payment (expired, failed, or completed), allow new order creation
-        // Don't create new payment here - let the new order creation handle it
+        // If no pending/processing payments (all completed, failed, or expired), allow new order creation
         return (false, null);
     }
 
-    private async Task<(bool IsValid, string? ErrorMessage, decimal SubTotal, decimal InstructorDiscountAmount, decimal SystemDiscountAmount, decimal TotalDiscountAmount, decimal TotalAmount, Guid? InstructorCouponId, Guid? SystemCouponId, List<OrderItemSnapshot> Items)> CalculateOrderTotalsAsync(List<OrderItemRequest> items, string? systemCouponCode, Guid userId)
+    private async Task<(bool IsValid, string? ErrorMessage, decimal OriginalSubTotal, decimal SubTotalAfterInstructorDiscount, decimal InstructorDiscountAmount, decimal SystemDiscountAmount, decimal TotalDiscountAmount, decimal TotalAmount, Guid? InstructorCouponId, Guid? SystemCouponId, List<OrderItemSnapshot> Items)> CalculateOrderTotalsAsync(List<OrderItemRequest> items, string? systemCouponCode, Guid userId)
     {
         var orderItems = new List<OrderItemSnapshot>();
-        decimal subTotal = 0;
+        decimal originalSubTotal = 0;
+        decimal subTotalAfterInstructorDiscount = 0;
         decimal totalInstructorDiscount = 0;
         Guid? instructorCouponId = null; // Track the first instructor coupon used
 
@@ -497,10 +498,10 @@ public class OrderService(
         {
             var courseResult = await catalogClient.GetCourseByIdAsync(item.CourseId);
             if (!courseResult.IsSuccess)
-                return (false, $"Khóa học không tồn tại", 0, 0, 0, 0, 0, null, null, orderItems);
+                return (false, $"Khóa học không tồn tại", 0, 0, 0, 0, 0, 0, null, null, orderItems);
 
             if (courseResult.Data == null)
-                return (false, "Dữ liệu khóa học không hợp lệ", 0, 0, 0, 0, 0, null, null, orderItems);
+                return (false, "Dữ liệu khóa học không hợp lệ", 0, 0, 0, 0, 0, 0, null, null, orderItems);
 
             var course = courseResult.Data;
             var unitPrice = course.FinalPrice; // Use final price (after instructor discounts)
@@ -514,11 +515,11 @@ public class OrderService(
                     item.InstructorCouponCode, itemSubTotal, new List<Guid> { item.CourseId }, userId);
 
                 if (!instructorCouponResult.IsSuccess)
-                    return (false, instructorCouponResult.Message ?? $"Lỗi xác thực coupon instructor cho khóa học {course.Title}", 0, 0, 0, 0, 0, null, null, orderItems);
+                    return (false, instructorCouponResult.Message ?? $"Lỗi xác thực coupon instructor cho khóa học {course.Title}", 0, 0, 0, 0, 0, 0, null, null, orderItems);
 
                 var (isValidInstructorCoupon, instructorCouponError, instructorDiscount, instructorCouponId_) = instructorCouponResult.Data;
                 if (!isValidInstructorCoupon)
-                    return (false, instructorCouponError, 0, 0, 0, 0, 0, null, null, orderItems);
+                    return (false, instructorCouponError, 0, 0, 0, 0, 0, 0, null, null, orderItems);
 
                 itemInstructorDiscount = instructorDiscount;
                 totalInstructorDiscount += itemInstructorDiscount;
@@ -539,7 +540,8 @@ public class OrderService(
 
             var pricing = CalculateOrderItemPricing(finalPrice, itemInstructorDiscount);
             orderItems.Add(course.ToOrderItemSnapshot(unitPrice, discountPercent, pricing));
-            subTotal += pricing.LineTotal;
+            originalSubTotal += unitPrice; // Sum of original prices
+            subTotalAfterInstructorDiscount += pricing.LineTotal; // Sum after instructor discounts
         }
 
         // ── Phase 2: Apply system coupon to the entire order ──
@@ -548,14 +550,14 @@ public class OrderService(
         if (!string.IsNullOrEmpty(systemCouponCode))
         {
             var systemCouponResult = await couponService.ValidateAndApplyCouponAsync(
-                systemCouponCode, subTotal, items.Select(i => i.CourseId).ToList(), userId);
+                systemCouponCode, subTotalAfterInstructorDiscount, items.Select(i => i.CourseId).ToList(), userId);
 
             if (!systemCouponResult.IsSuccess)
-                return (false, systemCouponResult.Message ?? "Lỗi xác thực coupon hệ thống", 0, 0, 0, 0, 0, null, null, orderItems);
+                return (false, systemCouponResult.Message ?? "Lỗi xác thực coupon hệ thống", 0, 0, 0, 0, 0, 0, null, null, orderItems);
 
             var (isValidSystemCoupon, systemCouponError, systemDiscountAmount, systemCouponId_) = systemCouponResult.Data;
             if (!isValidSystemCoupon)
-                return (false, systemCouponError, 0, 0, 0, 0, 0, null, null, orderItems);
+                return (false, systemCouponError, 0, 0, 0, 0, 0, 0, null, null, orderItems);
 
             systemDiscount = systemDiscountAmount;
             systemCouponId = systemCouponId_;
@@ -565,32 +567,31 @@ public class OrderService(
 
         // ── Phase 3: Calculate final totals ──
         var totalDiscount = totalInstructorDiscount + systemDiscount;
-        var totalAmount = Math.Max(0, subTotal - systemDiscount); // System discount applied to subtotal
+        var totalAmount = Math.Max(0, subTotalAfterInstructorDiscount - systemDiscount); // System discount applied to subtotal after instructor discounts
 
         // ── Phase 4: Recalculate platform fee and instructor earnings after system discount ──
         // System discount affects the final amount, so we need to redistribute platform fee and instructor earnings proportionally
-        if (systemDiscount > 0 && subTotal > 0)
+        if (systemDiscount > 0 && subTotalAfterInstructorDiscount > 0)
         {
-            var discountRatio = totalAmount / subTotal; // How much of original amount remains after system discount
+            var discountRatio = totalAmount / subTotalAfterInstructorDiscount; // How much of original amount remains after system discount
 
             foreach (var item in orderItems)
             {
                 // Recalculate platform fee and instructor earnings based on final amount
-                var adjustedLineTotal = item.LineTotal * discountRatio;
-                var adjustedPlatformFee = adjustedLineTotal * 0.30m; // Per BR-19: 30% platform fee
-                var adjustedInstructorEarnings = adjustedLineTotal - adjustedPlatformFee; // 70% to instructor
+                // LineTotal remains as UnitPrice * Quantity (after instructor discount only)
+                var adjustedPlatformFee = item.LineTotal * discountRatio * 0.30m; // Per BR-19: 30% platform fee
+                var adjustedInstructorEarnings = item.LineTotal * discountRatio - adjustedPlatformFee; // 70% to instructor
 
-                // Update the snapshot with adjusted values
-                item.LineTotal = adjustedLineTotal;
+                // Update the snapshot with adjusted values (keep LineTotal unchanged)
                 item.PlatformFeeAmount = adjustedPlatformFee;
                 item.InstructorEarnings = adjustedInstructorEarnings;
             }
 
-            logger.LogInformation("Recalculated pricing after system discount: ratio {Ratio}, totalAmount {TotalAmount}",
+            logger.LogInformation("Recalculated platform fee and instructor earnings after system discount: ratio {Ratio}, totalAmount {TotalAmount}",
                 discountRatio, totalAmount);
         }
 
-        return (true, null, subTotal, totalInstructorDiscount, systemDiscount, totalDiscount, totalAmount, instructorCouponId, systemCouponId, orderItems);
+        return (true, null, originalSubTotal, subTotalAfterInstructorDiscount, totalInstructorDiscount, systemDiscount, totalDiscount, totalAmount, instructorCouponId, systemCouponId, orderItems);
     }
 
     private string GenerateOrderNumber()

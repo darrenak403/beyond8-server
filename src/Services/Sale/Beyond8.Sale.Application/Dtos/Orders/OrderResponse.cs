@@ -11,7 +11,8 @@ public class OrderResponse
     public OrderStatus Status { get; set; }
 
     // Pricing
-    public decimal SubTotal { get; set; }
+    public decimal SubTotal { get; set; } // Original subtotal (sum of all original prices)
+    public decimal SubTotalAfterInstructorDiscount { get; set; } // Subtotal after instructor discounts applied
     public decimal InstructorDiscountAmount { get; set; }
     public decimal SystemDiscountAmount { get; set; }
     public decimal DiscountAmount { get; set; } // Total discount (Instructor + System)

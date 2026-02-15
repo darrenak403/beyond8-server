@@ -10,14 +10,15 @@ namespace Beyond8.Sale.Application.Mappings.Orders;
 
 public static class OrderMappings
 {
-    public static Order ToEntity(this CreateOrderRequest request, string orderNumber, decimal subTotal, decimal totalAmount, decimal totalDiscountAmount, decimal instructorDiscountAmount, decimal systemDiscountAmount, Guid? instructorCouponId, Guid? systemCouponId, Guid userId)
+    public static Order ToEntity(this CreateOrderRequest request, string orderNumber, decimal originalSubTotal, decimal subTotalAfterInstructorDiscount, decimal totalAmount, decimal totalDiscountAmount, decimal instructorDiscountAmount, decimal systemDiscountAmount, Guid? instructorCouponId, Guid? systemCouponId, Guid userId)
     {
         return new Order
         {
             UserId = userId,
             OrderNumber = orderNumber,
             Status = totalAmount == 0 ? OrderStatus.Paid : OrderStatus.Pending,
-            SubTotal = subTotal,
+            OriginalSubTotal = originalSubTotal,
+            SubTotal = subTotalAfterInstructorDiscount,
             InstructorDiscountAmount = instructorDiscountAmount,
             SystemDiscountAmount = systemDiscountAmount,
             DiscountAmount = totalDiscountAmount,
@@ -57,7 +58,8 @@ public static class OrderMappings
             UserId = order.UserId,
             OrderNumber = order.OrderNumber,
             Status = order.Status,
-            SubTotal = order.SubTotal,
+            SubTotal = order.OriginalSubTotal,
+            SubTotalAfterInstructorDiscount = order.SubTotal,
             InstructorDiscountAmount = order.InstructorDiscountAmount,
             SystemDiscountAmount = order.SystemDiscountAmount,
             DiscountAmount = order.DiscountAmount,

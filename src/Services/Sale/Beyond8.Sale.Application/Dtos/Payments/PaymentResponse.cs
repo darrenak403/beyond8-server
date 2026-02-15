@@ -1,4 +1,5 @@
 using Beyond8.Sale.Domain.Enums;
+using Beyond8.Sale.Application.Dtos.Orders;
 
 namespace Beyond8.Sale.Application.Dtos.Payments;
 
@@ -20,4 +21,5 @@ public class PaymentResponse
     public string? FailureReason { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
+    public PendingPaymentResponse? PendingPaymentInfo { get; set; }
 }

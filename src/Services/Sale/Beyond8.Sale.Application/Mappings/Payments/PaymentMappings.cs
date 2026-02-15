@@ -1,5 +1,8 @@
 using Beyond8.Sale.Application.Dtos.Payments;
 using Beyond8.Sale.Domain.Entities;
+using Beyond8.Sale.Domain.Enums;
+using Beyond8.Sale.Application.Dtos.Orders;
+using Beyond8.Sale.Application.Mappings.Orders;
 
 namespace Beyond8.Sale.Application.Mappings.Payments;
 
@@ -7,6 +10,16 @@ public static class PaymentMappings
 {
     public static PaymentResponse ToResponse(this Payment payment)
     {
+        // Check for pending payment info if this payment is for an order
+        PendingPaymentResponse? pendingPaymentInfo = null;
+        if (payment.Order != null &&
+            payment.Order.Status == OrderStatus.Pending &&
+            (payment.Status == PaymentStatus.Pending || payment.Status == PaymentStatus.Processing) &&
+            payment.ExpiredAt > DateTime.UtcNow)
+        {
+            pendingPaymentInfo = payment.Order.ToPendingPaymentResponse(payment);
+        }
+
         return new PaymentResponse
         {
             Id = payment.Id,
@@ -24,7 +37,8 @@ public static class PaymentMappings
             ExpiredAt = payment.ExpiredAt,
             FailureReason = payment.FailureReason,
             CreatedAt = payment.CreatedAt,
-            UpdatedAt = payment.UpdatedAt
+            UpdatedAt = payment.UpdatedAt,
+            PendingPaymentInfo = pendingPaymentInfo
         };
     }
 
