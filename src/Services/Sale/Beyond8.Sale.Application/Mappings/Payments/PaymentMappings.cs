@@ -33,11 +33,14 @@ public static class PaymentMappings
             Provider = payment.Provider,
             PaymentMethod = payment.PaymentMethod,
             ExternalTransactionId = payment.ExternalTransactionId,
+            PaymentUrl = payment.PaymentUrl,
             PaidAt = payment.PaidAt,
             ExpiredAt = payment.ExpiredAt,
             FailureReason = payment.FailureReason,
             CreatedAt = payment.CreatedAt,
             UpdatedAt = payment.UpdatedAt,
+            OrderSummary = payment.Order?.ToOrderSummary(),
+            Metadata = payment.Metadata,
             PendingPaymentInfo = pendingPaymentInfo
         };
     }

@@ -198,4 +198,25 @@ public static class OrderMappings
         public decimal PlatformFeeAmount { get; set; }
         public decimal InstructorEarnings { get; set; }
     }
+
+    public static OrderSummary ToOrderSummary(this Order order)
+    {
+        return new OrderSummary
+        {
+            Id = order.Id,
+            OrderNumber = order.OrderNumber,
+            Status = order.Status,
+            TotalAmount = order.TotalAmount,
+            Currency = order.Currency,
+            Items = order.OrderItems.Select(oi => new OrderItemSummary
+            {
+                CourseId = oi.CourseId,
+                CourseTitle = oi.CourseTitle,
+                CourseSlug = oi.CourseTitle.ToLower().Replace(" ", "-"), // Generate slug from title
+                OriginalPrice = oi.OriginalPrice,
+                FinalPrice = oi.UnitPrice,
+                InstructorName = oi.InstructorName
+            }).ToList()
+        };
+    }
 }
