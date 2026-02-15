@@ -245,7 +245,7 @@ public class EnrollmentService(
             var enrollmentIds = enrollments.Select(e => e.Id).ToList();
             var completedLessonProgress = await unitOfWork.LessonProgressRepository.GetAllAsync(lp =>
                 enrollmentIds.Contains(lp.EnrollmentId) &&
-                EnrollmentProgressHelper.IsCompletedOrFailed(lp.Status));
+                (lp.Status == LessonProgressStatus.Completed || lp.Status == LessonProgressStatus.Failed));
             var completedCountByEnrollmentId = completedLessonProgress
                 .GroupBy(lp => lp.EnrollmentId)
                 .ToDictionary(g => g.Key, g => g.Count());
