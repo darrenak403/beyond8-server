@@ -378,7 +378,6 @@ public class OrderService(
 
         // Update order status
         order.Status = OrderStatus.Cancelled;
-        order.PendingPaymentInfo = null; // Clear pending payment info if any
         order.UpdatedAt = DateTime.UtcNow;
 
         // ── Revert coupon usage ──
