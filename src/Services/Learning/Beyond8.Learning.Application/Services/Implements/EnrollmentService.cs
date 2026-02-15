@@ -206,6 +206,11 @@ public class EnrollmentService(
 
                 await unitOfWork.SaveChangesAsync();
 
+                // Publish enrollment count changed event
+                var totalStudents = await unitOfWork.EnrollmentRepository.CountActiveByCourseIdAsync(courseId);
+                await publishEndpoint.Publish(new CourseEnrollmentCountChangedEvent(
+                    courseId, totalStudents, DateTime.UtcNow, structure.InstructorId, 1));
+
                 logger.LogInformation("Successfully enrolled user {UserId} in paid course {CourseId} from order {OrderId}",
                     userId, courseId, orderId);
                 successCount++;
