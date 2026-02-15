@@ -20,14 +20,27 @@ public static class CurriculumProgressMappings
                 sectionProgressBySectionId.GetValueOrDefault(s.Id)))
             .ToList();
 
+        // Compute completed/total from actual lesson progress so summary matches section detail
+        var allLessonIds = structure.Sections.SelectMany(s => s.Lessons).Select(l => l.Id).ToList();
+        var totalLessons = allLessonIds.Count;
+        var completedLessons = allLessonIds.Count(lessonId =>
+        {
+            var progress = lessonProgressByLessonId.GetValueOrDefault(lessonId);
+            var status = progress?.Status;
+            return status is LessonProgressStatus.Completed or LessonProgressStatus.Failed;
+        });
+        var progressPercent = totalLessons > 0
+            ? Math.Round((decimal)completedLessons * 100 / totalLessons, 2)
+            : 0;
+
         return new CurriculumProgressResponse
         {
             EnrollmentId = enrollment.Id,
             CourseId = enrollment.CourseId,
             CourseTitle = enrollment.CourseTitle,
-            ProgressPercent = enrollment.ProgressPercent,
-            CompletedLessons = enrollment.CompletedLessons,
-            TotalLessons = enrollment.TotalLessons,
+            ProgressPercent = progressPercent,
+            CompletedLessons = completedLessons,
+            TotalLessons = totalLessons,
             Sections = sections
         };
     }
