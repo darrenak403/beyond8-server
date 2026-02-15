@@ -20,7 +20,6 @@ public static class CurriculumProgressMappings
                 sectionProgressBySectionId.GetValueOrDefault(s.Id)))
             .ToList();
 
-        // Compute completed/total from actual lesson progress so summary matches section detail
         var allLessonIds = structure.Sections.SelectMany(s => s.Lessons).Select(l => l.Id).ToList();
         var totalLessons = allLessonIds.Count;
         var completedLessons = allLessonIds.Count(lessonId =>
