@@ -81,6 +81,13 @@ public static class OrderApis
             .Produces<ApiResponse<List<Guid>>>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized);
 
+        group.MapGet("/check-course/{courseId}", CheckCoursePendingAsync)
+            .WithName("CheckCoursePending")
+            .WithDescription("Kiểm tra xem courseId có nằm trong đơn hàng đang chờ thanh toán của user hiện tại hay không")
+            .RequireAuthorization()
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized);
+
         group.MapPost("/{orderId}/cancel", CancelOrderAsync)
             .WithName("CancelOrder")
             .WithDescription("Hủy đơn hàng (chỉ order owner, chỉ trạng thái Pending)")
@@ -230,6 +237,15 @@ public static class OrderApis
         [FromServices] ICurrentUserService currentUserService)
     {
         var result = await orderService.CancelOrderAsync(orderId, currentUserService.UserId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> CheckCoursePendingAsync(
+        [FromRoute] Guid courseId,
+        [FromServices] IOrderService orderService,
+        [FromServices] ICurrentUserService currentUserService)
+    {
+        var result = await orderService.IsCourseInPendingOrderAsync(courseId, currentUserService.UserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 

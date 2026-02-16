@@ -499,6 +499,23 @@ public class OrderService(
             purchasedCourseIds,
             "Lấy danh sách ID khóa học đã mua thành công");
     }
+    
+    public async Task<ApiResponse<bool>> IsCourseInPendingOrderAsync(Guid courseId, Guid userId)
+    {
+        try
+        {
+            var exists = await unitOfWork.OrderRepository.AsQueryable()
+                .Where(o => o.UserId == userId && o.Status == OrderStatus.Pending)
+                .AnyAsync(o => o.OrderItems.Any(oi => oi.CourseId == courseId));
+
+            return ApiResponse<bool>.SuccessResponse(exists, "Kiểm tra đơn hàng thành công");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to check pending order existence for user {UserId} course {CourseId}", userId, courseId);
+            return ApiResponse<bool>.FailureResponse("Lỗi khi kiểm tra trạng thái đơn hàng");
+        }
+    }
 
     public async Task<ApiResponse<List<OrderResponse>>> GetOrdersByInstructorAsync(Guid instructorId, PaginationRequest pagination)
     {

@@ -14,6 +14,7 @@ public interface IOrderService
     Task<ApiResponse<OrderResponse>> CreateOrderAsync(CreateOrderRequest request, Guid userId);
     Task<ApiResponse<OrderResponse>> CancelOrderAsync(Guid orderId, Guid userId);
     Task<ApiResponse<List<Guid>>> GetPurchasedCourseIdsAsync(Guid userId);
+    Task<ApiResponse<bool>> IsCourseInPendingOrderAsync(Guid courseId, Guid userId);
 
     // ── Owner / Admin ──
     Task<ApiResponse<OrderResponse>> GetOrderByIdAsync(Guid orderId);
