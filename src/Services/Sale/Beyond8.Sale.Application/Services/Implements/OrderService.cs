@@ -499,14 +499,16 @@ public class OrderService(
             purchasedCourseIds,
             "Lấy danh sách ID khóa học đã mua thành công");
     }
-    
+
     public async Task<ApiResponse<bool>> IsCourseInPendingOrderAsync(Guid courseId, Guid userId)
     {
         try
         {
             var exists = await unitOfWork.OrderRepository.AsQueryable()
-                .Where(o => o.UserId == userId && o.Status == OrderStatus.Pending)
-                .AnyAsync(o => o.OrderItems.Any(oi => oi.CourseId == courseId));
+                .AsNoTracking()
+                .AnyAsync(o => o.UserId == userId
+                            && o.Status == OrderStatus.Pending
+                            && o.OrderItems.Any(oi => oi.CourseId == courseId));
 
             return ApiResponse<bool>.SuccessResponse(exists, "Kiểm tra đơn hàng thành công");
         }
