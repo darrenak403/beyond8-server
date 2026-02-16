@@ -500,7 +500,7 @@ public class OrderService(
             "Lấy danh sách ID khóa học đã mua thành công");
     }
 
-    public async Task<ApiResponse<bool>> IsCourseInPendingOrderAsync(Guid courseId, Guid userId)
+    public async Task<ApiResponse<bool>> IsCourseInPendingOrderAndPaymentAsync(Guid courseId, Guid userId)
     {
         try
         {
@@ -508,8 +508,8 @@ public class OrderService(
                 .AsNoTracking()
                 .AnyAsync(o => o.UserId == userId
                             && o.Status == OrderStatus.Pending
-                            && o.OrderItems.Any(oi => oi.CourseId == courseId));
-
+                            && o.OrderItems.Any(oi => oi.CourseId == courseId)
+                            && o.Payments.Any(p => p.Status == PaymentStatus.Pending || p.Status == PaymentStatus.Processing));
             return ApiResponse<bool>.SuccessResponse(exists, "Kiểm tra đơn hàng thành công");
         }
         catch (Exception ex)
