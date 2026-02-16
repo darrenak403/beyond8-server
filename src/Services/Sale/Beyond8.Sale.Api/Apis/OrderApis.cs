@@ -245,7 +245,7 @@ public static class OrderApis
         [FromServices] IOrderService orderService,
         [FromServices] ICurrentUserService currentUserService)
     {
-        var result = await orderService.IsCourseInPendingOrderAsync(courseId, currentUserService.UserId);
+        var result = await orderService.IsCourseInPendingOrderAndPaymentAsync(courseId, currentUserService.UserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
