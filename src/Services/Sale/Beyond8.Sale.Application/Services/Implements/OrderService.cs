@@ -15,6 +15,7 @@ using Beyond8.Sale.Domain.Repositories.Interfaces;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Data;
 using static Beyond8.Sale.Application.Mappings.Orders.OrderMappings;
 
 namespace Beyond8.Sale.Application.Services.Implements;
@@ -251,104 +252,112 @@ public class OrderService(
 
     public async Task<ApiResponse<OrderResponse>> CreateOrderAsync(CreateOrderRequest request, Guid userId)
     {
-        // ── Check for pending payment before creating new order ──
-        var pendingPaymentCheck = await CheckPendingPaymentAsync(userId);
-        if (pendingPaymentCheck.HasPendingPayment)
+        var strategy = unitOfWork.Context.Database.CreateExecutionStrategy();
+
+        return await strategy.ExecuteAsync(async () =>
         {
-            // Return response with pending payment info instead of creating new order
-            var response = new OrderResponse
+            await using var transaction = await unitOfWork.Context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
+            // ── Re-check pending payment before creating new order (inside transaction) ──
+            var pendingPaymentCheck = await CheckPendingPaymentAsync(userId);
+            if (pendingPaymentCheck.HasPendingPayment)
             {
-                PendingPaymentInfo = pendingPaymentCheck.PendingPaymentInfo
-            };
-
-            return ApiResponse<OrderResponse>.SuccessResponse(response, "Bạn có đơn hàng đang chờ thanh toán. Vui lòng hoàn tất thanh toán hoặc hủy đơn hàng đó trước khi tạo đơn hàng mới.");
-        }
-
-        // Check if user already purchased any of these courses
-        var requestedCourseIds = request.Items.Select(i => i.CourseId).ToList();
-
-        var alreadyPurchasedCourseIds = await unitOfWork.OrderRepository.AsQueryable()
-            .Where(o => o.UserId == userId && o.Status == OrderStatus.Paid)
-            .SelectMany(o => o.OrderItems.Select(oi => oi.CourseId))
-            .Where(courseId => requestedCourseIds.Contains(courseId))
-            .Distinct()
-            .ToListAsync();
-
-        if (alreadyPurchasedCourseIds.Any())
-        {
-            logger.LogWarning("User {UserId} attempted to purchase already owned courses: {CourseIds}",
-                userId, string.Join(", ", alreadyPurchasedCourseIds));
-            return ApiResponse<OrderResponse>.FailureResponse(
-                "Bạn đã mua một hoặc nhiều khóa học trong đơn hàng này rồi");
-        }
-
-        // Check if user is instructor of any requested courses (prevent self-purchase)
-        var instructorCourses = new List<Guid>();
-        foreach (var item in request.Items)
-        {
-            var courseResult = await catalogClient.GetCourseByIdAsync(item.CourseId);
-            if (courseResult.IsSuccess && courseResult.Data != null)
-            {
-                if (courseResult.Data.InstructorId == userId)
+                var response = new OrderResponse
                 {
-                    instructorCourses.Add(item.CourseId);
+                    PendingPaymentInfo = pendingPaymentCheck.PendingPaymentInfo
+                };
+
+                return ApiResponse<OrderResponse>.SuccessResponse(response, "Bạn có đơn hàng đang chờ thanh toán. Vui lòng hoàn tất thanh toán hoặc hủy đơn hàng đó trước khi tạo đơn hàng mới.");
+            }
+
+            // Check if user already purchased any of these courses
+            var requestedCourseIds = request.Items.Select(i => i.CourseId).ToList();
+
+            var alreadyPurchasedCourseIds = await unitOfWork.OrderRepository.AsQueryable()
+                .Where(o => o.UserId == userId && o.Status == OrderStatus.Paid)
+                .SelectMany(o => o.OrderItems.Select(oi => oi.CourseId))
+                .Where(courseId => requestedCourseIds.Contains(courseId))
+                .Distinct()
+                .ToListAsync();
+
+            if (alreadyPurchasedCourseIds.Any())
+            {
+                logger.LogWarning("User {UserId} attempted to purchase already owned courses: {CourseIds}",
+                    userId, string.Join(", ", alreadyPurchasedCourseIds));
+                return ApiResponse<OrderResponse>.FailureResponse(
+                    "Bạn đã mua một hoặc nhiều khóa học trong đơn hàng này rồi");
+            }
+
+            // Check if user is instructor of any requested courses (prevent self-purchase)
+            var instructorCourses = new List<Guid>();
+            foreach (var item in request.Items)
+            {
+                var courseResult = await catalogClient.GetCourseByIdAsync(item.CourseId);
+                if (courseResult.IsSuccess && courseResult.Data != null)
+                {
+                    if (courseResult.Data.InstructorId == userId)
+                    {
+                        instructorCourses.Add(item.CourseId);
+                    }
                 }
             }
-        }
 
-        if (instructorCourses.Any())
-        {
-            logger.LogWarning("Instructor {UserId} attempted to purchase their own courses: {CourseIds}",
-                userId, string.Join(", ", instructorCourses));
-            return ApiResponse<OrderResponse>.FailureResponse(
-                "Bạn không thể mua khóa học của chính mình");
-        }
+            if (instructorCourses.Any())
+            {
+                logger.LogWarning("Instructor {UserId} attempted to purchase their own courses: {CourseIds}",
+                    userId, string.Join(", ", instructorCourses));
+                return ApiResponse<OrderResponse>.FailureResponse(
+                    "Bạn không thể mua khóa học của chính mình");
+            }
 
-        // Validate and calculate totals
-        var calculation = await CalculateOrderTotalsAsync(request.Items, request.CouponCode, userId);
-        if (!calculation.IsValid)
-            return ApiResponse<OrderResponse>.FailureResponse(calculation.ErrorMessage ?? "Lỗi tạo đơn hàng");
+            // Validate and calculate totals
+            var calculation = await CalculateOrderTotalsAsync(request.Items, request.CouponCode, userId);
+            if (!calculation.IsValid)
+                return ApiResponse<OrderResponse>.FailureResponse(calculation.ErrorMessage ?? "Lỗi tạo đơn hàng");
 
-        // Create order with mapping
-        var orderNumber = GenerateOrderNumber();
-        var order = request.ToEntity(
-            orderNumber,
-            calculation.OriginalSubTotal,
-            calculation.SubTotalAfterInstructorDiscount,
-            calculation.TotalAmount,
-            calculation.TotalDiscountAmount,
-            calculation.InstructorDiscountAmount,
-            calculation.SystemDiscountAmount,
-            calculation.InstructorCouponId,
-            calculation.SystemCouponId,
-            userId);
+            // Create order with mapping
+            var orderNumber = GenerateOrderNumber();
+            var order = request.ToEntity(
+                orderNumber,
+                calculation.OriginalSubTotal,
+                calculation.SubTotalAfterInstructorDiscount,
+                calculation.TotalAmount,
+                calculation.TotalDiscountAmount,
+                calculation.InstructorDiscountAmount,
+                calculation.SystemDiscountAmount,
+                calculation.InstructorCouponId,
+                calculation.SystemCouponId,
+                userId);
 
-        // Add order items with snapshot using mapping
-        foreach (var item in calculation.Items)
-        {
-            order.OrderItems.Add(item.ToEntity(order.Id));
-        }
+            // Add order items with snapshot using mapping
+            foreach (var item in calculation.Items)
+            {
+                order.OrderItems.Add(item.ToEntity(order.Id));
+            }
 
-        await unitOfWork.OrderRepository.AddAsync(order);
-        await unitOfWork.SaveChangesAsync();
+            await unitOfWork.OrderRepository.AddAsync(order);
+            await unitOfWork.SaveChangesAsync();
 
-        logger.LogInformation("Order created: {OrderId} for user {UserId}", order.Id, userId);
+            logger.LogInformation("Order created: {OrderId} for user {UserId}", order.Id, userId);
 
-        // Publish event for free courses (BR-04)
-        if (order.Status == OrderStatus.Paid)
-        {
-            await publishEndpoint.Publish(new OrderCompletedEvent(
-                order.Id,
-                userId,
-                request.Items.Select(i => i.CourseId).ToList()));
+            // Publish event for free courses (BR-04)
+            if (order.Status == OrderStatus.Paid)
+            {
+                await publishEndpoint.Publish(new OrderCompletedEvent(
+                    order.Id,
+                    userId,
+                    request.Items.Select(i => i.CourseId).ToList()));
 
-            // Invalidate excluded courses cache so GetAllCourses hides purchased courses immediately
-            await publishEndpoint.Publish(new CacheInvalidateEvent($"excluded_courses:{userId}"));
+                // Invalidate excluded courses cache so GetAllCourses hides purchased courses immediately
+                await publishEndpoint.Publish(new CacheInvalidateEvent($"excluded_courses:{userId}"));
 
-            logger.LogInformation("Free enrollment event published for order {OrderId}", order.Id);
-        }
+                logger.LogInformation("Free enrollment event published for order {OrderId}", order.Id);
+            }
 
-        return ApiResponse<OrderResponse>.SuccessResponse(order.ToResponse(), "Đơn hàng đã được tạo thành công");
+            await transaction.CommitAsync();
+
+            return ApiResponse<OrderResponse>.SuccessResponse(order.ToResponse(), "Đơn hàng đã được tạo thành công");
+        });
     }
 
     /// <summary>
