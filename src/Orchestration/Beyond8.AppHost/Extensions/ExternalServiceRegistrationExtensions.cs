@@ -155,6 +155,7 @@ namespace Beyond8.AppHost.Extensions
                     config.AddRoute("/api/v1/wallets/{**catch-all}", saleCluster);
                     config.AddRoute("/api/v1/payouts/{**catch-all}", saleCluster);
                     config.AddRoute("/api/v1/transactions/{**catch-all}", saleCluster);
+                    config.AddRoute("/api/v1/platform-wallet/{**catch-all}", saleCluster);
 
                     var analyticCluster = config.AddProjectCluster(analyticService);
                     config.AddRoute("/api/v1/analytics/{**catch-all}", analyticCluster);
