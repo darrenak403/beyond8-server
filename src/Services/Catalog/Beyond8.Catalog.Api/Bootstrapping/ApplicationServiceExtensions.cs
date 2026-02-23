@@ -18,6 +18,7 @@ using FluentValidation;
 using Polly;
 using Polly.Extensions.Http;
 using Scalar.AspNetCore;
+using Beyond8.Catalog.Application.Consumers.Sale;
 
 namespace Beyond8.Catalog.Api.Bootstrapping
 {
@@ -36,6 +37,7 @@ namespace Beyond8.Catalog.Api.Bootstrapping
                 config.AddConsumer<InstructorHiddenEventConsumer>();
                 config.AddConsumer<InstructorApprovalEventConsumer>();
                 config.AddConsumer<CourseEnrollmentCountChangedEventConsumer>();
+                config.AddConsumer<OrderCompletedEventConsumer>();
                 config.AddConsumer<CourseRatingUpdatedEventConsumer>();
                 config.AddConsumer<CacheInvalidateEventConsumer>();
                 config.AddConsumer<AssignmentDeletedEventConsumer>();

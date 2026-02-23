@@ -433,12 +433,12 @@ public class CouponService(
 
     private static string? ValidateBusinessRulesForUpdate(Coupon coupon)
     {
+        if (coupon.UsedCount > 0)
+            return "Không thể cập nhật coupon đã (có người) được sử dụng";
+
         // Business rule: Don't allow updating expired coupons
         if (coupon.ValidTo < DateTime.UtcNow)
             return "Không thể cập nhật coupon đã hết hạn";
-
-        // Business rule: Don't allow updating coupons that have been used if it would break usage limits
-        // This is a business decision - for now, allow updates but log warnings
 
         return null;
     }
