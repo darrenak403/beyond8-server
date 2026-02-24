@@ -18,8 +18,20 @@ public class PlatformWalletService(
     {
         var wallet = await GetOrCreatePlatformWalletAsync();
 
+        var response = wallet.ToResponse();
+
+        // Fill pending info: pending balance (from wallet) and earliest pending AvailableAt from transactions
+        response.PendingBalance = wallet.PendingBalance;
+        var nextAvailable = await unitOfWork.PlatformWalletTransactionRepository.AsQueryable()
+            .Where(t => t.PlatformWalletId == wallet.Id && t.Status == Domain.Enums.TransactionStatus.Pending && t.AvailableAt != null)
+            .OrderBy(t => t.AvailableAt)
+            .Select(t => t.AvailableAt)
+            .FirstOrDefaultAsync();
+
+        response.NextAvailableAt = nextAvailable;
+
         return ApiResponse<PlatformWalletResponse>.SuccessResponse(
-            wallet.ToResponse(), "Lấy thông tin ví nền tảng thành công");
+            response, "Lấy thông tin ví nền tảng thành công");
     }
 
     public async Task<ApiResponse<List<PlatformWalletTransactionResponse>>> GetPlatformWalletTransactionsAsync(PaginationRequest pagination)
@@ -37,41 +49,6 @@ public class PlatformWalletService(
         return ApiResponse<List<PlatformWalletTransactionResponse>>.SuccessPagedResponse(
             responses, transactions.TotalCount, pagination.PageNumber, pagination.PageSize,
             "Lấy lịch sử giao dịch ví nền tảng thành công");
-    }
-
-    /// <summary>
-    /// Credit platform revenue (30% commission) after payment success.
-    /// Platform balance increases.
-    /// </summary>
-    public async Task CreditPlatformRevenueAsync(decimal platformFee, Guid orderId, string description)
-    {
-        var wallet = await GetOrCreatePlatformWalletAsync();
-
-        var balanceBefore = wallet.AvailableBalance;
-        wallet.AvailableBalance += platformFee;
-        wallet.TotalRevenue += platformFee;
-        wallet.UpdatedAt = DateTime.UtcNow;
-
-        // Create transaction record
-        var transaction = new PlatformWalletTransaction
-        {
-            PlatformWalletId = wallet.Id,
-            ReferenceId = orderId,
-            ReferenceType = "Order",
-            Type = Domain.Enums.PlatformTransactionType.Revenue,
-            Amount = platformFee,
-            BalanceBefore = balanceBefore,
-            BalanceAfter = wallet.AvailableBalance,
-            Description = description,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        await unitOfWork.PlatformWalletTransactionRepository.AddAsync(transaction);
-        await unitOfWork.SaveChangesAsync();
-
-        logger.LogInformation(
-            "Platform revenue credited — Amount: {Amount}, OrderId: {OrderId}, BalanceAfter: {Balance}",
-            platformFee, orderId, wallet.AvailableBalance);
     }
 
     /// <summary>

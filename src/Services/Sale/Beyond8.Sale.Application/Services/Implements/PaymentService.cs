@@ -27,7 +27,8 @@ public class PaymentService(
     IPlatformWalletService platformWalletService,
     ICouponUsageService couponUsageService,
     IPublishEndpoint publishEndpoint,
-    IIdentityClient identityClient) : IPaymentService
+    IIdentityClient identityClient,
+    Microsoft.Extensions.Configuration.IConfiguration configuration) : IPaymentService
 {
     public async Task<ApiResponse<PaymentUrlResponse>> ProcessPaymentAsync(
         Guid orderId, string returnUrl, string ipAddress)
@@ -395,7 +396,8 @@ public class PaymentService(
         // Mark settlement eligibility date (PaidAt + 14 days)
         try
         {
-            order.SettlementEligibleAt = order.PaidAt?.AddDays(14);
+            // Demo mode: shorten escrow from 14 days to 2 minutes
+            order.SettlementEligibleAt = order.PaidAt?.AddMinutes(2);
             order.IsSettled = false; // will be settled by background job
         }
         catch
@@ -491,7 +493,7 @@ public class PaymentService(
                     instructorId, totalInstructorEarnings, order.Id);
 
                 // Credit instructor wallet into pending/escrow (Phase 3 behavior). AvailableAt = PaidAt + 14 days
-                var availableAt = order.SettlementEligibleAt ?? (order.PaidAt.HasValue ? order.PaidAt.Value.AddDays(14) : DateTime.UtcNow.AddDays(14));
+                var availableAt = order.SettlementEligibleAt ?? (order.PaidAt.HasValue ? order.PaidAt.Value.AddMinutes(2) : DateTime.UtcNow.AddMinutes(2));
                 await walletService.CreditPendingAsync(
                     instructorId,
                     totalInstructorEarnings,
@@ -537,11 +539,15 @@ public class PaymentService(
         }
 
         // ── Credit Platform Wallet ──
+        // Always synchronize platform credit with instructor's pending/available date.
         if (totalPlatformFee > 0)
         {
-            await platformWalletService.CreditPlatformRevenueAsync(
+            var availableAt = order.SettlementEligibleAt ?? (order.PaidAt.HasValue ? order.PaidAt.Value.AddMinutes(2) : DateTime.UtcNow.AddMinutes(2));
+
+            await platformWalletService.CreditPlatformRevenuePendingAsync(
                 totalPlatformFee, order.Id,
-                $"Hoa hồng 30% đơn hàng #{order.OrderNumber}");
+                $"Hoa hồng 30% đơn hàng #{order.OrderNumber}",
+                availableAt);
         }
 
         // ── System coupon: Platform absorbs discount (balance can go negative) ──

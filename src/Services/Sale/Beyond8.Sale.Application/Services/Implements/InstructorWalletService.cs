@@ -24,8 +24,19 @@ public class InstructorWalletService(
         if (wallet == null)
             return ApiResponse<InstructorWalletResponse>.FailureResponse("Không tìm thấy ví giảng viên");
 
+        var response = wallet.ToResponse();
+
+        // Compute earliest AvailableAt among pending transactions for this wallet (if any)
+        var nextAvailable = await unitOfWork.TransactionLedgerRepository.AsQueryable()
+            .Where(t => t.WalletId == wallet.Id && t.Status == TransactionStatus.Pending && t.AvailableAt != null)
+            .OrderBy(t => t.AvailableAt)
+            .Select(t => t.AvailableAt)
+            .FirstOrDefaultAsync();
+
+        response.NextAvailableAt = nextAvailable;
+
         return ApiResponse<InstructorWalletResponse>.SuccessResponse(
-            wallet.ToResponse(), "Lấy thông tin ví thành công");
+            response, "Lấy thông tin ví thành công");
     }
 
     public async Task<ApiResponse<List<WalletTransactionResponse>>> GetWalletTransactionsAsync(
@@ -99,7 +110,8 @@ public class InstructorWalletService(
     {
         var wallet = await GetOrCreateWalletAsync(instructorId);
 
-        var balanceBefore = wallet.AvailableBalance + wallet.PendingBalance + wallet.HoldBalance;
+        // Record pending without changing available balance fields
+        var availableBefore = wallet.AvailableBalance;
         wallet.PendingBalance += amount;
         wallet.TotalEarnings += amount;
         wallet.UpdatedAt = DateTime.UtcNow;
@@ -111,8 +123,9 @@ public class InstructorWalletService(
             Status = TransactionStatus.Pending,
             Amount = amount,
             Currency = "VND",
-            BalanceBefore = balanceBefore,
-            BalanceAfter = balanceBefore + amount,
+            // For pending transactions, BalanceBefore/BalanceAfter reflect the available balance (unchanged)
+            BalanceBefore = availableBefore,
+            BalanceAfter = availableBefore,
             ReferenceId = orderId,
             ReferenceType = "Order",
             Description = description,

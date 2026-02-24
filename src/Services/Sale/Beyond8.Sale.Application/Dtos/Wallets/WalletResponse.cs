@@ -6,6 +6,8 @@ public class InstructorWalletResponse
     public Guid InstructorId { get; set; }
     // Pending balance held in escrow until settlement
     public decimal PendingBalance { get; set; }
+    // The earliest time any pending funds become available for withdrawal/settlement
+    public DateTime? NextAvailableAt { get; set; }
     public decimal AvailableBalance { get; set; }
     public decimal HoldBalance { get; set; }
     public string Currency { get; set; } = "VND";

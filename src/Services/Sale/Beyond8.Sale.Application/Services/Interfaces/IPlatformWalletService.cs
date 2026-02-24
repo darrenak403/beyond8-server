@@ -16,10 +16,11 @@ public interface IPlatformWalletService
     /// </summary>
     Task<ApiResponse<List<PlatformWalletTransactionResponse>>> GetPlatformWalletTransactionsAsync(PaginationRequest pagination);
 
+
     /// <summary>
-    /// Credit platform revenue (30% commission) after payment success
+    /// Credit platform revenue into PendingBalance (escrow). Caller provides the time when funds become available.
     /// </summary>
-    Task CreditPlatformRevenueAsync(decimal platformFee, Guid orderId, string description);
+    Task CreditPlatformRevenuePendingAsync(decimal platformFee, Guid orderId, string description, DateTime availableAt);
 
     /// <summary>
     /// Debit platform wallet for system coupon cost
