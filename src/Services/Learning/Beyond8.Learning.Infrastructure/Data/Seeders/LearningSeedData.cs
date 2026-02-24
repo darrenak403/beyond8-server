@@ -124,6 +124,7 @@ public static class LearningSeedData
             AssignmentSubmitted = true,
             AssignmentGrade = 85m,
             AssignmentPassed = true,
+            AssignmentInstructorGraded = true,
             AssignmentSubmittedAt = createdAt,
             AssignmentGradedAt = createdAt,
             CreatedAt = createdAt,

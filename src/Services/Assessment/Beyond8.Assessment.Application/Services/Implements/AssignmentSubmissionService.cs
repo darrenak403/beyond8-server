@@ -16,7 +16,8 @@ public class AssignmentSubmissionService(
     ILogger<AssignmentSubmissionService> logger,
     IUnitOfWork unitOfWork,
     IPublishEndpoint publishEndpoint,
-    ILearningClient learningClient) : IAssignmentSubmissionService
+    ILearningClient learningClient,
+    IReassignService reassignService) : IAssignmentSubmissionService
 {
     public async Task<ApiResponse<SubmissionResponse>> CreateSubmissionAsync(Guid assignmentId, CreateSubmissionRequest request, Guid userId)
     {
@@ -316,9 +317,6 @@ public class AssignmentSubmissionService(
             if (submissions.Count == 0)
                 return ApiResponse<bool>.FailureResponse("Học sinh chưa có lượt nộp nào cho assignment này.");
 
-            if (assignment.MaxSubmissions > 0 && submissions.Count < assignment.MaxSubmissions)
-                return ApiResponse<bool>.FailureResponse($"Học sinh vẫn còn lượt nộp bài ({submissions.Count}/{assignment.MaxSubmissions}). Chỉ reset khi đã hết lượt.");
-
             foreach (var submission in submissions)
             {
                 submission.DeletedAt = DateTime.UtcNow;
@@ -338,6 +336,8 @@ public class AssignmentSubmissionService(
                     ResetAt: DateTime.UtcNow
                 ));
             }
+
+            await reassignService.RecordAssignmentResetAsync(assignmentId, studentId, instructorId, assignment.SectionId, submissions.Count);
 
             logger.LogInformation(
                 "Assignment submissions reset: AssignmentId={AssignmentId}, StudentId={StudentId}, DeletedCount={Count}, ByInstructor={InstructorId}",

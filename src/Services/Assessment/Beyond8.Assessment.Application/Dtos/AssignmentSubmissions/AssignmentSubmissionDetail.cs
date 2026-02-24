@@ -1,5 +1,3 @@
-using Beyond8.Assessment.Domain.Enums;
-
 namespace Beyond8.Assessment.Application.Dtos.AssignmentSubmissions;
 
 public class AssignmentSubmissionDetail

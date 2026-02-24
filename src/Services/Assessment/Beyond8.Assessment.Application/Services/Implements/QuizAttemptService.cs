@@ -18,7 +18,8 @@ public class QuizAttemptService(
     ILogger<QuizAttemptService> logger,
     IUnitOfWork unitOfWork,
     IPublishEndpoint publishEndpoint,
-    ILearningClient learningClient) : IQuizAttemptService
+    ILearningClient learningClient,
+    IReassignService reassignService) : IQuizAttemptService
 {
     public async Task<ApiResponse<StartQuizResponse>> CreateQuizAttemptAsync(Guid quizId, Guid studentId)
     {
@@ -423,9 +424,6 @@ public class QuizAttemptService(
             if (attempts.Count == 0)
                 return ApiResponse<bool>.FailureResponse("Học sinh chưa có lượt làm nào cho quiz này.");
 
-            if (quiz.MaxAttempts > 0 && attempts.Count < quiz.MaxAttempts)
-                return ApiResponse<bool>.FailureResponse($"Học sinh vẫn còn lượt làm quiz ({attempts.Count}/{quiz.MaxAttempts}). Chỉ reset khi đã hết lượt.");
-
             foreach (var attempt in attempts)
             {
                 attempt.DeletedAt = DateTime.UtcNow;
@@ -445,6 +443,8 @@ public class QuizAttemptService(
                     ResetAt: DateTime.UtcNow
                 ));
             }
+
+            await reassignService.RecordQuizResetAsync(quizId, studentId, instructorId, quiz.LessonId, attempts.Count);
 
             logger.LogInformation(
                 "Quiz attempts reset: QuizId={QuizId}, StudentId={StudentId}, DeletedCount={Count}, ByInstructor={InstructorId}",

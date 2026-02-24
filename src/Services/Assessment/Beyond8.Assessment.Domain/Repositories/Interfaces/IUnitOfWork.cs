@@ -10,4 +10,6 @@ public interface IUnitOfWork : IBaseUnitOfWork
     IAssignmentRepository AssignmentRepository { get; }
     IQuizAttemptRepository QuizAttemptRepository { get; }
     IAssignmentSubmissionRepository AssignmentSubmissionRepository { get; }
+    IReassignRequestRepository ReassignRequestRepository { get; }
+    IReassignHistoryRepository ReassignHistoryRepository { get; }
 }

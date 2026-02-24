@@ -137,9 +137,6 @@ public class QuizService(
 
             await unitOfWork.SaveChangesAsync();
 
-            logger.LogInformation("Quiz created: {QuizId}, InstructorId: {InstructorId}, QuestionCount: {Count}",
-                quiz.Id, instructorId, request.QuestionIds.Count);
-
             if (request.LessonId != null)
             {
                 var catalogResponse = await catalogService.UpdateQuizForLessonAsync(request.LessonId.Value, quiz.Id);
@@ -148,6 +145,9 @@ public class QuizService(
                     return ApiResponse<QuizSimpleResponse>.FailureResponse(catalogResponse.Message!);
                 }
             }
+
+            logger.LogInformation("Quiz created: {QuizId}, InstructorId: {InstructorId}, QuestionCount: {Count}",
+                quiz.Id, instructorId, request.QuestionIds.Count);
 
             return ApiResponse<QuizSimpleResponse>.SuccessResponse(
                 quiz.ToSimpleResponse(request.QuestionIds.Count),
