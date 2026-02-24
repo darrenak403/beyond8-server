@@ -756,9 +756,12 @@ public class CourseService(
             if (!isValid)
                 return ApiResponse<CourseResponse>.FailureResponse(errorMessage!);
 
-            if (course!.Status != CourseStatus.Published || course!.Status != CourseStatus.Approved)
+            if (course!.Status != CourseStatus.Published
+                && course!.Status != CourseStatus.Approved)
             {
-                return ApiResponse<CourseResponse>.FailureResponse("Chỉ có thể cập nhật giảm giá khóa học đã được công bố hoặc đã được phê duyệt.");
+                return ApiResponse<CourseResponse>.FailureResponse(
+                    "Chỉ có thể cập nhật giảm giá khóa học đã được công bố hoặc đã được phê duyệt."
+                );
             }
 
             course.UpdateCourseDiscount(request);
