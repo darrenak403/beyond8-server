@@ -40,9 +40,25 @@ public static class ReassignApis
 
         group.MapGet("/instructor/overview", GetOverviewForInstructorAsync)
             .WithName("GetReassignOverviewForInstructor")
-            .WithDescription("Instructor xem tổng quan yêu cầu reassign (pending), có phân trang và tìm kiếm. Duyệt qua 2 endpoint reset quiz/assignment")
+            .WithDescription("Instructor xem tổng quan yêu cầu reassign (pending), có phân trang và tìm kiếm. Duyệt qua 2 endpoint reset bên dưới")
             .RequireAuthorization(x => x.RequireRole(Role.Instructor))
             .Produces<ApiResponse<List<ReassignRequestItemDto>>>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized);
+
+        group.MapPost("/quiz/{quizId:guid}/reset/{studentId:guid}", ResetQuizAttemptsAsync)
+            .WithName("ResetQuizAttempts")
+            .WithDescription("Instructor reset lượt làm quiz cho student để làm lại")
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
+        group.MapPost("/assignment/{assignmentId:guid}/reset/{studentId:guid}", ResetAssignmentSubmissionsAsync)
+            .WithName("ResetAssignmentSubmissions")
+            .WithDescription("Instructor reset lượt nộp assignment cho student để nộp lại")
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
         return group;
@@ -86,6 +102,26 @@ public static class ReassignApis
             return validationResult!;
 
         var result = await reassignService.GetOverviewForInstructorAsync(currentUserService.UserId, request);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> ResetQuizAttemptsAsync(
+        [FromRoute] Guid quizId,
+        [FromRoute] Guid studentId,
+        [FromServices] IQuizAttemptService quizAttemptService,
+        [FromServices] ICurrentUserService currentUserService)
+    {
+        var result = await quizAttemptService.ResetQuizAttemptsForStudentAsync(quizId, studentId, currentUserService.UserId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> ResetAssignmentSubmissionsAsync(
+        [FromRoute] Guid assignmentId,
+        [FromRoute] Guid studentId,
+        [FromServices] IAssignmentSubmissionService assignmentSubmissionService,
+        [FromServices] ICurrentUserService currentUserService)
+    {
+        var result = await assignmentSubmissionService.ResetSubmissionsForStudentAsync(assignmentId, studentId, currentUserService.UserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 }
