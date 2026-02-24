@@ -17,12 +17,14 @@
     <Folder Include="Dtos\" />
     <Folder Include="Dtos\Courses\" />
     <Folder Include="Dtos\OrderItems\" />
+    <Folder Include="Dtos\Subscriptions\" />
     <Folder Include="Dtos\VNPays\" />
     <Folder Include="Mappings\" />
     <Folder Include="Services\" />
     <Folder Include="Services\Implements\" />
     <Folder Include="Services\Interfaces\" />
     <Folder Include="Validators\" />
+    <Folder Include="Validators\Subscriptions\" />
   </ItemGroup>
 
 </Project>

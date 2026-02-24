@@ -17,6 +17,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Data;
 using static Beyond8.Sale.Application.Mappings.Orders.OrderMappings;
+using Beyond8.Sale.Application.Dtos.Subscriptions;
 
 namespace Beyond8.Sale.Application.Services.Implements;
 
@@ -25,7 +26,8 @@ public class OrderService(
     IUnitOfWork unitOfWork,
     ICatalogClient catalogClient,
     ICouponService couponService,
-    IPublishEndpoint publishEndpoint) : IOrderService
+    IPublishEndpoint publishEndpoint,
+    IPaymentService paymentService) : IOrderService
 {
     /// <summary>
     /// Buy Now - Direct single course purchase.
@@ -82,6 +84,15 @@ public class OrderService(
         }
 
         return orderResult;
+    }
+
+    public async Task<ApiResponse<PaymentUrlResponse>> BuySubscriptionAsync(BuySubscriptionRequest request, Guid userId, string returnUrl, string ipAddress)
+    {
+        if (string.IsNullOrWhiteSpace(request.PlanCode))
+            return ApiResponse<PaymentUrlResponse>.FailureResponse("PlanCode không hợp lệ");
+
+        var result = await paymentService.ProcessSubscriptionAsync(request.PlanCode, userId, returnUrl, ipAddress);
+        return result;
     }
 
     /// <summary>

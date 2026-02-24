@@ -5,6 +5,7 @@ using Beyond8.Identity.Application.Services.Interfaces;
 using Hangfire;
 using Beyond8.Identity.Application.Consumers.Catalog;
 using Beyond8.Identity.Application.Consumers.Learning;
+using Beyond8.Identity.Application.Consumers.Sale;
 using Beyond8.Identity.Application.Dtos.Auth;
 using Beyond8.Identity.Application.Services.Implements;
 using Beyond8.Identity.Domain.Entities;
@@ -36,11 +37,12 @@ namespace Beyond8.Identity.Api.Bootstrapping
             // Configure MassTransit with RabbitMQ
             builder.AddMassTransitWithRabbitMq(config =>
             {
-                // Register consumers from Catalog events
+                // Register consumers from Catalog and Sale events
                 config.AddConsumer<CoursePublishedEventConsumer>();
                 config.AddConsumer<CourseUnpublishedEventConsumer>();
                 config.AddConsumer<CourseEnrollmentCountChangedEventConsumer>();
                 config.AddConsumer<CourseRatingUpdatedEventConsumer>();
+                config.AddConsumer<SubscriptionPurchasedEventConsumer>();
             }, queueNamePrefix: "identity");
 
             // Register services

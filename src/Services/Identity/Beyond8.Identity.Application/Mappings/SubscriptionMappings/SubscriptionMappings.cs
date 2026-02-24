@@ -35,6 +35,7 @@ public static class SubscriptionMappings
     {
         return new SubscriptionPlanResponse
         {
+            Id = plan.Id,
             Code = plan.Code,
             Name = plan.Name,
             Description = plan.Description,

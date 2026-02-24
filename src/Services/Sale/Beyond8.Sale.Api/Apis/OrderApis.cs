@@ -3,10 +3,14 @@ using Beyond8.Common.Extensions;
 using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
 using Beyond8.Sale.Application.Dtos.Orders;
+using Beyond8.Sale.Application.Dtos.Subscriptions;
+using Beyond8.Sale.Application.Dtos.Payments;
 using Beyond8.Sale.Application.Services.Interfaces;
 using Beyond8.Sale.Domain.Enums;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using Beyond8.Sale.Application.Helpers;
 
 namespace Beyond8.Sale.Api.Apis;
 
@@ -45,6 +49,14 @@ public static class OrderApis
             .RequireAuthorization()
             .Produces<ApiResponse<PreviewBuyNowResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<PreviewBuyNowResponse>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
+        group.MapPost("/buy-subscription", BuySubscriptionAsync)
+            .WithName("BuySubscription")
+            .WithDescription("Mua gói subscription via Sale Service (Student)")
+            .RequireAuthorization()
+            .Produces<ApiResponse<PaymentUrlResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<PaymentUrlResponse>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
         group.MapPost("/preview", PreviewOrderAsync)
@@ -126,7 +138,6 @@ public static class OrderApis
 
         return group;
     }
-
     private static async Task<IResult> BuyNowAsync(
     [FromBody] BuyNowRequest request,
     [FromServices] IOrderService orderService,
@@ -166,6 +177,26 @@ public static class OrderApis
             return validationResult!;
 
         var result = await orderService.PreviewOrderAsync(request, currentUserService.UserId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> BuySubscriptionAsync(
+        [FromBody] BuySubscriptionRequest request,
+        [FromServices] IOrderService orderService,
+        [FromServices] IValidator<BuySubscriptionRequest>? validator,
+        [FromServices] ICurrentUserService currentUserService,
+        [FromServices] IOptions<VNPaySettings> vnPayOptions,
+        HttpContext httpContext)
+    {
+        // Validate request if validator available
+        if (validator != null && !request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
+        var ipAddress = httpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+        var callbackUrl = $"{vnPayOptions.Value.BackendCallbackUrl.TrimEnd('/')}/api/v1/payments/vnpay/callback";
+
+
+        var result = await orderService.BuySubscriptionAsync(request, currentUserService.UserId, callbackUrl, ipAddress);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 

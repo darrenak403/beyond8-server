@@ -11,6 +11,9 @@ using Beyond8.Sale.Domain.Entities;
 using Beyond8.Sale.Domain.Enums;
 using Beyond8.Sale.Domain.Repositories.Interfaces;
 using MassTransit;
+using System;
+using System.Linq;
+using Beyond8.Sale.Application.Clients.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -23,7 +26,8 @@ public class PaymentService(
     IInstructorWalletService walletService,
     IPlatformWalletService platformWalletService,
     ICouponUsageService couponUsageService,
-    IPublishEndpoint publishEndpoint) : IPaymentService
+    IPublishEndpoint publishEndpoint,
+    IIdentityClient identityClient) : IPaymentService
 {
     public async Task<ApiResponse<PaymentUrlResponse>> ProcessPaymentAsync(
         Guid orderId, string returnUrl, string ipAddress)
@@ -140,6 +144,8 @@ public class PaymentService(
             // Branch based on payment purpose
             if (payment.Purpose == PaymentPurpose.WalletTopUp)
                 await HandleTopUpSuccessAsync(payment, callbackResult);
+            else if (payment.Purpose == PaymentPurpose.Subscription)
+                await HandleSubscriptionSuccessAsync(payment, callbackResult);
             else
                 await HandlePaymentSuccessAsync(payment, callbackResult);
         }
@@ -290,6 +296,80 @@ public class PaymentService(
         return ApiResponse<PaymentUrlResponse>.SuccessResponse(
             payment.ToUrlResponse(paymentUrl),
             "Tạo giao dịch nạp tiền thành công");
+    }
+
+    public async Task<ApiResponse<PaymentUrlResponse>> ProcessSubscriptionAsync(string planCode, Guid userId, string returnUrl, string ipAddress)
+    {
+        if (string.IsNullOrWhiteSpace(planCode))
+            return ApiResponse<PaymentUrlResponse>.FailureResponse("PlanCode không được để trống");
+
+        // Get plans from Identity service and find the requested plan by code
+        var plansResponse = await identityClient.GetSubscriptionPlansAsync();
+        if (!plansResponse.IsSuccess)
+        {
+            logger.LogWarning("Failed to fetch subscription plans from Identity: {Message}", plansResponse.Message);
+            return ApiResponse<PaymentUrlResponse>.FailureResponse("Không thể lấy thông tin gói đăng ký");
+        }
+
+        var plan = plansResponse.Data?.FirstOrDefault(p => string.Equals(p.Code, planCode, StringComparison.OrdinalIgnoreCase));
+        if (plan == null)
+            return ApiResponse<PaymentUrlResponse>.FailureResponse("Gói đăng ký không tồn tại hoặc đã bị vô hiệu hóa");
+
+        // Create payment with correct amount from plan.Price
+        var payment = new Payment
+        {
+            OrderId = null,
+            Purpose = PaymentPurpose.Subscription,
+            PaymentNumber = GeneratePaymentNumber(),
+            Status = PaymentStatus.Pending,
+            Amount = plan.Price,
+            Currency = "VND",
+            Provider = "VNPay",
+            PaymentMethod = "VNPay",
+            ExpiredAt = DateTime.UtcNow.AddMinutes(15),
+            CreatedAt = DateTime.UtcNow
+        };
+
+        var details = new
+        {
+            PlanId = plan.Id,
+            PlanCode = plan.Code,
+            UserId = userId
+        };
+
+        payment.Metadata = System.Text.Json.JsonSerializer.Serialize(details);
+
+        await unitOfWork.PaymentRepository.AddAsync(payment);
+        await unitOfWork.SaveChangesAsync();
+
+        var vietnamTz = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+        var nowVietnam = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vietnamTz);
+        var expireVietnam = payment.ExpiredAt.HasValue
+            ? TimeZoneInfo.ConvertTimeFromUtc(payment.ExpiredAt.Value, vietnamTz)
+            : nowVietnam.AddMinutes(15);
+
+        var paymentInfo = new VNPayPaymentInfo
+        {
+            OrderId = payment.Id.ToString(),
+            PaymentNumber = payment.PaymentNumber,
+            Amount = payment.Amount,
+            // Use ASCII-friendly order info to avoid encoding issues on provider side
+            OrderInfo = $"Buy subscription {plan.Code}",
+            CreatedDate = nowVietnam,
+            ExpireDate = expireVietnam,
+            ReturnUrl = returnUrl
+        };
+
+        var paymentUrl = vnPayService.CreatePaymentUrl(paymentInfo, ipAddress);
+
+        // Save payment URL
+        payment.PaymentUrl = paymentUrl;
+        await unitOfWork.SaveChangesAsync();
+
+        logger.LogInformation("Subscription payment initiated — PaymentNumber: {PaymentNumber}, PlanCode: {PlanCode}, UserId: {UserId}",
+            payment.PaymentNumber, plan.Code, userId);
+
+        return ApiResponse<PaymentUrlResponse>.SuccessResponse(payment.ToUrlResponse(paymentUrl), "Tạo giao dịch mua subscription thành công");
     }
 
     // ── Private Helpers ──
@@ -538,6 +618,98 @@ public class PaymentService(
         logger.LogInformation(
             "TopUp SUCCESS — PaymentId: {PaymentId}, WalletId: {WalletId}, Amount: {Amount}, TxnNo: {TxnNo}",
             payment.Id, payment.WalletId, payment.Amount, result.TransactionNo);
+    }
+
+    private async Task HandleSubscriptionSuccessAsync(Payment payment, VNPayCallbackResult result)
+    {
+        payment.Status = PaymentStatus.Completed;
+        payment.PaidAt = DateTime.UtcNow;
+        payment.ExternalTransactionId = result.TransactionNo;
+        payment.PaymentMethod = result.CardType;
+        payment.UpdatedAt = DateTime.UtcNow;
+
+        await unitOfWork.SaveChangesAsync();
+
+        // Parse payment details to extract PlanId and UserId
+        try
+        {
+            if (!string.IsNullOrEmpty(payment.Metadata))
+            {
+                var doc = System.Text.Json.JsonDocument.Parse(payment.Metadata);
+                var root = doc.RootElement;
+
+                Guid planId = Guid.Empty;
+                Guid userId = Guid.Empty;
+
+                // Try to read PlanId first (newer behavior)
+                if (root.TryGetProperty("PlanId", out var planIdProp) && planIdProp.ValueKind == System.Text.Json.JsonValueKind.String)
+                {
+                    try { planId = planIdProp.GetGuid(); } catch { /* ignore parse error */ }
+                }
+
+                // Fall back to PlanCode (older behavior) and resolve via Identity client
+                if (planId == Guid.Empty && root.TryGetProperty("PlanCode", out var planCodeProp))
+                {
+                    var planCode = planCodeProp.GetString();
+                    if (!string.IsNullOrEmpty(planCode))
+                    {
+                        try
+                        {
+                            var plansResponse = await identityClient.GetSubscriptionPlansAsync();
+                            if (plansResponse.IsSuccess && plansResponse.Data != null)
+                            {
+                                var matched = plansResponse.Data.FirstOrDefault(p => string.Equals(p.Code, planCode, StringComparison.OrdinalIgnoreCase));
+                                if (matched != null)
+                                    planId = matched.Id;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogWarning(ex, "Failed to resolve PlanCode {PlanCode} to PlanId via Identity client", planCode);
+                        }
+                    }
+                }
+
+                if (root.TryGetProperty("UserId", out var userIdProp) && userIdProp.ValueKind == System.Text.Json.JsonValueKind.String)
+                {
+                    try { userId = userIdProp.GetGuid(); } catch { /* ignore parse error */ }
+                }
+
+                if (planId == Guid.Empty)
+                {
+                    logger.LogWarning("Subscription payment succeeded but PlanId could not be resolved (PaymentId={PaymentId})", payment.Id);
+                }
+                else if (userId == Guid.Empty)
+                {
+                    logger.LogWarning("Subscription payment succeeded but UserId missing in payment metadata (PaymentId={PaymentId})", payment.Id);
+                }
+                else
+                {
+                    // Publish SubscriptionPurchasedEvent for Identity to consume and activate subscription
+                    await publishEndpoint.Publish(new SubscriptionPurchasedEvent(
+                        payment.Id, // use payment.Id as OrderId placeholder
+                        userId,
+                        planId,
+                        payment.Id,
+                        DateTime.UtcNow,
+                        null));
+
+                    logger.LogInformation("Published SubscriptionPurchasedEvent for User {UserId}, Plan {PlanId}", userId, planId);
+                }
+            }
+            else
+            {
+                logger.LogWarning("Subscription payment succeeded but PaymentDetails missing (PaymentId={PaymentId})", payment.Id);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to publish SubscriptionPurchasedEvent for PaymentId={PaymentId}", payment.Id);
+        }
+
+        logger.LogInformation(
+            "Subscription Payment SUCCESS — PaymentId: {PaymentId}, Amount: {Amount}, TxnNo: {TxnNo}",
+            payment.Id, payment.Amount, result.TransactionNo);
     }
 
     private async Task HandlePaymentFailureAsync(Payment payment, VNPayCallbackResult result)

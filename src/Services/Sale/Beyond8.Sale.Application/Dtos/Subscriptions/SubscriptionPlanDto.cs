@@ -1,6 +1,9 @@
-namespace Beyond8.Identity.Application.Dtos.Users;
+using System;
+using System.Collections.Generic;
 
-public class SubscriptionPlanResponse
+namespace Beyond8.Sale.Application.Dtos.Subscriptions;
+
+public class SubscriptionPlanDto
 {
     public Guid Id { get; set; }
     public string Code { get; set; } = string.Empty;

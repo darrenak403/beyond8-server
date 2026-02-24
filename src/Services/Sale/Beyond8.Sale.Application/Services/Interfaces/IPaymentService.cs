@@ -8,6 +8,7 @@ public interface IPaymentService
 {
     // ── Student (Authenticated) ──
     Task<ApiResponse<PaymentUrlResponse>> ProcessPaymentAsync(Guid orderId, string returnUrl, string ipAddress);
+    Task<ApiResponse<PaymentUrlResponse>> ProcessSubscriptionAsync(string planCode, Guid userId, string returnUrl, string ipAddress);
     Task<ApiResponse<bool>> ConfirmPaymentAsync(string transactionId);
     Task<ApiResponse<PaymentResponse>> CheckPaymentStatusAsync(Guid paymentId);
     Task<ApiResponse<List<PaymentResponse>>> GetPaymentsByUserAsync(PaginationRequest pagination, Guid userId);

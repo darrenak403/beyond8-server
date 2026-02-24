@@ -2,6 +2,7 @@ using Beyond8.Common.Extensions;
 using Beyond8.Common.Utilities;
 using Beyond8.Sale.Api.Apis;
 using Beyond8.Sale.Application.Clients.Catalog;
+using Beyond8.Sale.Application.Clients.Identity;
 using Beyond8.Sale.Application.Consumers.Catalog;
 using Beyond8.Sale.Application.Consumers.Identity;
 using Beyond8.Sale.Application.Consumers.Learning;
@@ -87,6 +88,17 @@ public static class ApplicationServiceExtensions
             .AddHttpClient<ICatalogClient, CatalogClient>(client =>
             {
                 client.BaseAddress = new Uri(catalogBaseUrl);
+                client.Timeout = TimeSpan.FromSeconds(30);
+            })
+            .AddPolicyHandler(httpPolicy);
+
+        var identityBaseUrl = builder.Configuration["Clients:Identity:BaseUrl"]
+                            ?? throw new ArgumentNullException("Identity Service URL missing");
+
+        builder.Services
+            .AddHttpClient<IIdentityClient, IdentityClient>(client =>
+            {
+                client.BaseAddress = new Uri(identityBaseUrl);
                 client.Timeout = TimeSpan.FromSeconds(30);
             })
             .AddPolicyHandler(httpPolicy);

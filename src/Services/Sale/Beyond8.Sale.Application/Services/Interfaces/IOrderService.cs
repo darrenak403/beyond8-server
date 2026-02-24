@@ -1,6 +1,8 @@
 using Beyond8.Common;
 using Beyond8.Common.Utilities;
 using Beyond8.Sale.Application.Dtos.Orders;
+using Beyond8.Sale.Application.Dtos.Payments;
+using Beyond8.Sale.Application.Dtos.Subscriptions;
 using Beyond8.Sale.Domain.Enums;
 
 namespace Beyond8.Sale.Application.Services.Interfaces;
@@ -9,6 +11,7 @@ public interface IOrderService
 {
     // ── Student (Authenticated) ──
     Task<ApiResponse<OrderResponse>> BuyNowAsync(BuyNowRequest request, Guid userId);
+    Task<ApiResponse<PaymentUrlResponse>> BuySubscriptionAsync(BuySubscriptionRequest request, Guid userId, string returnUrl, string ipAddress);
     Task<ApiResponse<PreviewBuyNowResponse>> PreviewBuyNowAsync(PreviewBuyNowRequest request, Guid userId);
     Task<ApiResponse<PreviewOrderResponse>> PreviewOrderAsync(PreviewOrderRequest request, Guid userId);
     Task<ApiResponse<OrderResponse>> CreateOrderAsync(CreateOrderRequest request, Guid userId);

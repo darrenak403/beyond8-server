@@ -6,5 +6,6 @@ namespace Beyond8.Sale.Domain.Enums;
 public enum PaymentPurpose
 {
     OrderPayment = 0,  // Normal course purchase
-    WalletTopUp = 1    // Instructor wallet top-up
+    WalletTopUp = 1,   // Instructor wallet top-up
+    Subscription = 2 // Subscription purchase
 }
