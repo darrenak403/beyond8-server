@@ -45,6 +45,7 @@ namespace Beyond8.Assessment.Api.Bootstrapping
             builder.Services.AddScoped<IQuizAttemptService, QuizAttemptService>();
             builder.Services.AddScoped<IAssignmentService, AssignmentService>();
             builder.Services.AddScoped<IAssignmentSubmissionService, AssignmentSubmissionService>();
+            builder.Services.AddScoped<IReassignService, ReassignService>();
 
             return builder;
         }
@@ -111,6 +112,7 @@ namespace Beyond8.Assessment.Api.Bootstrapping
             app.MapQuizAttemptApi();
             app.MapAssignmentApi();
             app.MapAssignmentSubmissionApi();
+            app.MapReassignApi();
 
             return app;
         }

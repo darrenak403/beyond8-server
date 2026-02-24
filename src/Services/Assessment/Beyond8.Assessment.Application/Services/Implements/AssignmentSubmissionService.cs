@@ -16,7 +16,8 @@ public class AssignmentSubmissionService(
     ILogger<AssignmentSubmissionService> logger,
     IUnitOfWork unitOfWork,
     IPublishEndpoint publishEndpoint,
-    ILearningClient learningClient) : IAssignmentSubmissionService
+    ILearningClient learningClient,
+    IReassignService reassignService) : IAssignmentSubmissionService
 {
     public async Task<ApiResponse<SubmissionResponse>> CreateSubmissionAsync(Guid assignmentId, CreateSubmissionRequest request, Guid userId)
     {
@@ -338,6 +339,8 @@ public class AssignmentSubmissionService(
                     ResetAt: DateTime.UtcNow
                 ));
             }
+
+            await reassignService.RecordAssignmentResetAsync(assignmentId, studentId, instructorId, assignment.SectionId, submissions.Count);
 
             logger.LogInformation(
                 "Assignment submissions reset: AssignmentId={AssignmentId}, StudentId={StudentId}, DeletedCount={Count}, ByInstructor={InstructorId}",

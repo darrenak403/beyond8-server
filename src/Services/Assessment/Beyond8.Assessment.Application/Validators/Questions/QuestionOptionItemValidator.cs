@@ -12,7 +12,7 @@ namespace Beyond8.Assessment.Application.Validators.Questions
 
             RuleFor(x => x.Text)
                 .NotEmpty().WithMessage("Text không được để trống")
-                .MaximumLength(100).WithMessage("Text không được vượt quá 100 ký tự");
+                .MaximumLength(500).WithMessage("Text không được vượt quá 500 ký tự");
 
             RuleFor(x => x.IsCorrect)
                 .Must(x => x == true || x == false).WithMessage("IsCorrect không hợp lệ");

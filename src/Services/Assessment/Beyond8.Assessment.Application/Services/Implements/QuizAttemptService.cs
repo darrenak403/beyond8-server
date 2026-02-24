@@ -18,7 +18,8 @@ public class QuizAttemptService(
     ILogger<QuizAttemptService> logger,
     IUnitOfWork unitOfWork,
     IPublishEndpoint publishEndpoint,
-    ILearningClient learningClient) : IQuizAttemptService
+    ILearningClient learningClient,
+    IReassignService reassignService) : IQuizAttemptService
 {
     public async Task<ApiResponse<StartQuizResponse>> CreateQuizAttemptAsync(Guid quizId, Guid studentId)
     {
@@ -445,6 +446,8 @@ public class QuizAttemptService(
                     ResetAt: DateTime.UtcNow
                 ));
             }
+
+            await reassignService.RecordQuizResetAsync(quizId, studentId, instructorId, quiz.LessonId, attempts.Count);
 
             logger.LogInformation(
                 "Quiz attempts reset: QuizId={QuizId}, StudentId={StudentId}, DeletedCount={Count}, ByInstructor={InstructorId}",
