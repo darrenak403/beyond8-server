@@ -92,6 +92,89 @@ public class InstructorWalletService(
     }
 
     /// <summary>
+    /// Credit amount into PendingBalance with a pending transaction that becomes available at `availableAt`.
+    /// </summary>
+    public async Task<ApiResponse<bool>> CreditPendingAsync(
+        Guid instructorId, decimal amount, Guid orderId, string description, DateTime availableAt)
+    {
+        var wallet = await GetOrCreateWalletAsync(instructorId);
+
+        var balanceBefore = wallet.AvailableBalance + wallet.PendingBalance + wallet.HoldBalance;
+        wallet.PendingBalance += amount;
+        wallet.TotalEarnings += amount;
+        wallet.UpdatedAt = DateTime.UtcNow;
+
+        var transaction = new TransactionLedger
+        {
+            WalletId = wallet.Id,
+            Type = TransactionType.Sale,
+            Status = TransactionStatus.Pending,
+            Amount = amount,
+            Currency = "VND",
+            BalanceBefore = balanceBefore,
+            BalanceAfter = balanceBefore + amount,
+            ReferenceId = orderId,
+            ReferenceType = "Order",
+            Description = description,
+            AvailableAt = availableAt,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await unitOfWork.TransactionLedgerRepository.AddAsync(transaction);
+        await unitOfWork.SaveChangesAsync();
+
+        logger.LogInformation(
+            "Earnings credited to pending — InstructorId: {InstructorId}, Amount: {Amount}, OrderId: {OrderId}, AvailableAt: {AvailableAt}",
+            instructorId, amount, orderId, availableAt);
+
+        return ApiResponse<bool>.SuccessResponse(true, "Đã ghi nhận số dư chờ cho ví giảng viên");
+    }
+
+    /// <summary>
+    /// Move funds from PendingBalance to AvailableBalance for a given order/transaction.
+    /// </summary>
+    public async Task<ApiResponse<bool>> SettleToAvailableAsync(Guid instructorId, decimal amount, Guid orderId, Guid transactionId, string description)
+    {
+        var wallet = await unitOfWork.InstructorWalletRepository.AsQueryable()
+            .FirstOrDefaultAsync(w => w.InstructorId == instructorId && w.DeletedAt == null);
+
+        if (wallet == null)
+            return ApiResponse<bool>.FailureResponse("Không tìm thấy ví giảng viên");
+
+        // Ensure enough pending balance
+        var settleAmount = Math.Min(amount, wallet.PendingBalance);
+
+        var balanceBefore = wallet.AvailableBalance;
+        wallet.PendingBalance -= settleAmount;
+        wallet.AvailableBalance += settleAmount;
+        wallet.UpdatedAt = DateTime.UtcNow;
+
+        var transaction = new TransactionLedger
+        {
+            WalletId = wallet.Id,
+            Type = TransactionType.Settlement,
+            Status = TransactionStatus.Completed,
+            Amount = settleAmount,
+            Currency = "VND",
+            BalanceBefore = balanceBefore,
+            BalanceAfter = wallet.AvailableBalance,
+            ReferenceId = orderId,
+            ReferenceType = "Order",
+            Description = description,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await unitOfWork.TransactionLedgerRepository.AddAsync(transaction);
+        await unitOfWork.SaveChangesAsync();
+
+        logger.LogInformation(
+            "Pending settled — InstructorId: {InstructorId}, Settled: {Amount}, OrderId: {OrderId}, AvailableAfter: {AvailableAfter}",
+            instructorId, settleAmount, orderId, wallet.AvailableBalance);
+
+        return ApiResponse<bool>.SuccessResponse(true, "Đã chuyển số dư chờ sang khả dụng");
+    }
+
+    /// <summary>
     /// Credit wallet from VNPay top-up
     /// </summary>
     public async Task<ApiResponse<bool>> CreditTopUpAsync(

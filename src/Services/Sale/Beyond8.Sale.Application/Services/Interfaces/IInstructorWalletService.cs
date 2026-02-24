@@ -18,6 +18,16 @@ public interface IInstructorWalletService
     Task<ApiResponse<bool>> CreditEarningsAsync(Guid instructorId, decimal amount, Guid orderId, string description);
 
     /// <summary>
+    /// Credit instructor earnings into PendingBalance (escrow). Caller provides the time when funds become available.
+    /// </summary>
+    Task<ApiResponse<bool>> CreditPendingAsync(Guid instructorId, decimal amount, Guid orderId, string description, DateTime availableAt);
+
+    /// <summary>
+    /// Settle pending amount to available balance for an order (internal - performed by settlement job).
+    /// </summary>
+    Task<ApiResponse<bool>> SettleToAvailableAsync(Guid instructorId, decimal amount, Guid orderId, Guid transactionId, string description);
+
+    /// <summary>
     /// Credit wallet from VNPay top-up
     /// </summary>
     Task<ApiResponse<bool>> CreditTopUpAsync(Guid instructorId, decimal amount, Guid paymentId, string description);

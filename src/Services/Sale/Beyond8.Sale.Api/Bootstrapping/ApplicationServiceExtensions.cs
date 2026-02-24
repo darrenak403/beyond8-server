@@ -52,6 +52,7 @@ public static class ApplicationServiceExtensions
         builder.Services.AddScoped<ICouponUsageService, CouponUsageService>();
         builder.Services.AddScoped<ICartService, CartService>();
         builder.Services.AddScoped<IPaymentService, PaymentService>();
+        builder.Services.AddScoped<ISettlementService, SettlementService>();
         builder.Services.AddValidatorsFromAssemblyContaining<CreateOrderRequest>();
 
         // Register HTTP clients with Polly retry policy
@@ -73,6 +74,7 @@ public static class ApplicationServiceExtensions
 
         // Background services
         builder.Services.AddHostedService<PaymentCleanupService>();
+        builder.Services.AddHostedService<SettlementBackgroundService>();
 
         return builder;
     }
@@ -126,6 +128,7 @@ public static class ApplicationServiceExtensions
         app.MapPlatformWalletApi();
         app.MapPayoutApi();
         app.MapTransactionApi();
+        app.MapSettlementApi();
 
         return app;
     }

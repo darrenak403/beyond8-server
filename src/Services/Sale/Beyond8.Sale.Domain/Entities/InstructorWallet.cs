@@ -22,6 +22,12 @@ public class InstructorWallet : BaseEntity
     [Column(TypeName = "decimal(18, 2)")]
     public decimal HoldBalance { get; set; } = 0;
 
+    /// <summary>
+    /// Pending balance held in escrow until settlement release (Paid -> Pending for 14 days)
+    /// </summary>
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal PendingBalance { get; set; } = 0;
+
     [MaxLength(10)]
     public string Currency { get; set; } = "VND";
 

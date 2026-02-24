@@ -392,6 +392,16 @@ public class PaymentService(
         order.Status = OrderStatus.Paid;
         order.PaidAt = DateTime.UtcNow;
         order.UpdatedAt = DateTime.UtcNow;
+        // Mark settlement eligibility date (PaidAt + 14 days)
+        try
+        {
+            order.SettlementEligibleAt = order.PaidAt?.AddDays(14);
+            order.IsSettled = false; // will be settled by background job
+        }
+        catch
+        {
+            // defensive: ignore if Order entity doesn't support settlement yet
+        }
 
         // ── Revenue Split & Wallet Credit (Per BR-19: 70% Instructor / 30% Platform) ──
         await CreditInstructorEarningsAsync(order);
@@ -480,12 +490,14 @@ public class PaymentService(
                 logger.LogInformation("Crediting instructor {InstructorId} with earnings {Amount} for order {OrderId}",
                     instructorId, totalInstructorEarnings, order.Id);
 
-                // Credit instructor wallet immediately (Phase 2 — no escrow)
-                await walletService.CreditEarningsAsync(
+                // Credit instructor wallet into pending/escrow (Phase 3 behavior). AvailableAt = PaidAt + 14 days
+                var availableAt = order.SettlementEligibleAt ?? (order.PaidAt.HasValue ? order.PaidAt.Value.AddDays(14) : DateTime.UtcNow.AddDays(14));
+                await walletService.CreditPendingAsync(
                     instructorId,
                     totalInstructorEarnings,
                     order.Id,
-                    $"Doanh thu đơn hàng #{order.OrderNumber}");
+                    $"Doanh thu đơn hàng #{order.OrderNumber}",
+                    availableAt);
             }
 
             // ── Instructor coupon: deduct actual discount from held funds ──

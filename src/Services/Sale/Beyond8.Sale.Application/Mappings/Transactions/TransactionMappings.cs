@@ -14,6 +14,7 @@ public static class TransactionMappings
             WalletId = transaction.WalletId,
             Type = transaction.Type.ToString(),
             Status = transaction.Status.ToString(),
+            AvailableAt = transaction.AvailableAt,
             Amount = transaction.Amount,
             Currency = transaction.Currency,
             BalanceBefore = transaction.BalanceBefore,

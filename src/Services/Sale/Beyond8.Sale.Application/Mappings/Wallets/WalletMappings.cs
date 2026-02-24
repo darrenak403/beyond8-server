@@ -11,6 +11,7 @@ public static class WalletMappings
         {
             Id = wallet.Id,
             InstructorId = wallet.InstructorId,
+            PendingBalance = wallet.PendingBalance,
             AvailableBalance = wallet.AvailableBalance,
             HoldBalance = wallet.HoldBalance,
             Currency = wallet.Currency,

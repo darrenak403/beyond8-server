@@ -20,6 +20,13 @@ public class PlatformWallet : BaseEntity
     public decimal AvailableBalance { get; set; } = 0;
 
     /// <summary>
+    /// Pending revenue held in escrow until platform settlement (if platform uses escrow).
+    /// This field is optional for Phase 2, used by PoC when platform fee is escrowed.
+    /// </summary>
+    [Column(TypeName = "decimal(18, 2)")]
+    public decimal PendingBalance { get; set; } = 0;
+
+    /// <summary>
     /// Lifetime accumulated revenue (only increases)
     /// </summary>
     [Column(TypeName = "decimal(18, 2)")]

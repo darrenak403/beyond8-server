@@ -52,6 +52,18 @@ public class Order : BaseEntity
     // Payment Tracking
     public DateTime? PaidAt { get; set; }
 
+    // Settlement / Escrow (Phase 3)
+    // When payment is completed, funds become eligible for settlement after 14 days.
+    // SettlementEligibleAt = PaidAt + 14 days
+    public DateTime? SettlementEligibleAt { get; set; }
+
+    // Has this order's settlement been performed (Pending -> Available)?
+    // Default false - migration will mark historical already-credited orders as settled to avoid double-credit.
+    public bool IsSettled { get; set; } = false;
+
+    // Timestamp when settlement was executed
+    public DateTime? SettledAt { get; set; }
+
     // Audit & Security
     [MaxLength(45)]
     public string? IpAddress { get; set; }

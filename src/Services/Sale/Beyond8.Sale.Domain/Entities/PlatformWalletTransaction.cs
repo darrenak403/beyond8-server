@@ -30,6 +30,9 @@ public class PlatformWalletTransaction : BaseEntity
     [Column(TypeName = "decimal(18, 2)")]
     public decimal Amount { get; set; }
 
+    // When this platform transaction becomes available to be applied to AvailableBalance
+    public DateTime? AvailableAt { get; set; }
+
     [MaxLength(10)]
     public string Currency { get; set; } = "VND";
 

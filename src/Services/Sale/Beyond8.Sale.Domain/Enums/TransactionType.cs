@@ -12,5 +12,6 @@ public enum TransactionType
     TopUp = 4,        // Instructor wallet top-up via VNPay
     CouponHold = 5,   // Funds held for instructor coupon commitment
     CouponRelease = 6,// Funds released from expired/deactivated coupon
-    CouponUsage = 7   // Funds consumed when instructor coupon is used
+    CouponUsage = 7,   // Funds consumed when instructor coupon is used
+    Settlement = 8    // Release from PendingBalance -> AvailableBalance
 }

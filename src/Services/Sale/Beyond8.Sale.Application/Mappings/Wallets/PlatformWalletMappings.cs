@@ -31,6 +31,7 @@ public static class PlatformWalletMappings
             Type = transaction.Type,
             Status = transaction.Status,
             Amount = transaction.Amount,
+            AvailableAt = transaction.AvailableAt,
             Currency = transaction.Currency,
             BalanceBefore = transaction.BalanceBefore,
             BalanceAfter = transaction.BalanceAfter,

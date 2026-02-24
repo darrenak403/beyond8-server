@@ -41,6 +41,9 @@ public class SaleDbContext : BaseDbContext
             entity.HasIndex(e => e.Status);
             entity.HasIndex(e => e.PaidAt);
             entity.HasIndex(e => new { e.Status, e.PaidAt });
+            // Settlement indexes (for scheduled settlement processing)
+            entity.HasIndex(e => e.SettlementEligibleAt);
+            entity.HasIndex(e => new { e.IsSettled, e.SettlementEligibleAt });
 
             // JSONB Column
             entity.Property(e => e.PaymentDetails)
@@ -214,6 +217,9 @@ public class SaleDbContext : BaseDbContext
             entity.HasIndex(e => new { e.ReferenceId, e.ReferenceType });
             entity.HasIndex(e => e.Type);
             entity.HasIndex(e => e.Status);
+            // Index to quickly find pending transactions that become available
+            entity.HasIndex(e => e.AvailableAt);
+            entity.HasIndex(e => new { e.Status, e.AvailableAt });
 
             // JSONB Column
             entity.Property(e => e.Metadata)

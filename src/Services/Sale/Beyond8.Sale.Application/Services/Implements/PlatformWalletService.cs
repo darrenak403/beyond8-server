@@ -75,6 +75,43 @@ public class PlatformWalletService(
     }
 
     /// <summary>
+    /// Credit platform revenue into PendingBalance (escrow). Caller provides the time when funds become available.
+    /// This method does NOT increase `AvailableBalance` immediately; it increases `PendingBalance` and creates a pending transaction.
+    /// </summary>
+    public async Task CreditPlatformRevenuePendingAsync(decimal platformFee, Guid orderId, string description, DateTime availableAt)
+    {
+        var wallet = await GetOrCreatePlatformWalletAsync();
+
+        var balanceBefore = wallet.AvailableBalance;
+        // Increase pending balance, available balance unchanged until settlement
+        wallet.PendingBalance += platformFee;
+        wallet.TotalRevenue += platformFee; // lifetime metric
+        wallet.UpdatedAt = DateTime.UtcNow;
+
+        var transaction = new PlatformWalletTransaction
+        {
+            PlatformWalletId = wallet.Id,
+            ReferenceId = orderId,
+            ReferenceType = "Order",
+            Type = Domain.Enums.PlatformTransactionType.Revenue,
+            Status = Domain.Enums.TransactionStatus.Pending,
+            Amount = platformFee,
+            AvailableAt = availableAt,
+            BalanceBefore = balanceBefore,
+            BalanceAfter = balanceBefore, // no change to available balance yet
+            Description = description,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await unitOfWork.PlatformWalletTransactionRepository.AddAsync(transaction);
+        await unitOfWork.SaveChangesAsync();
+
+        logger.LogInformation(
+            "Platform revenue pending — Amount: {Amount}, OrderId: {OrderId}, AvailableAt: {AvailableAt}",
+            platformFee, orderId, availableAt);
+    }
+
+    /// <summary>
     /// Debit platform wallet for system coupon cost.
     /// Platform absorbs discount — balance CAN go negative.
     /// Will auto-offset via 30% commission revenue.

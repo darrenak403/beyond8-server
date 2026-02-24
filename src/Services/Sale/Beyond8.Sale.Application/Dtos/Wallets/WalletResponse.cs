@@ -4,6 +4,8 @@ public class InstructorWalletResponse
 {
     public Guid Id { get; set; }
     public Guid InstructorId { get; set; }
+    // Pending balance held in escrow until settlement
+    public decimal PendingBalance { get; set; }
     public decimal AvailableBalance { get; set; }
     public decimal HoldBalance { get; set; }
     public string Currency { get; set; } = "VND";

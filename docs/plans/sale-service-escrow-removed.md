@@ -1,246 +1,79 @@
-# Sale Service - Escrow/Settlement Logic Removed (Phase 2)
+## TÓM TẮT THAY ĐỔI (VIỆT) — Sale Service: Escrow & Settlement
 
-> **Ngày thay đổi**: 2026-02-06  
-> **Lý do**: Đơn giản hóa flow thanh toán Phase 2 — thanh toán xong chuyển tiền cho instructor ngay lập tức, không giữ escrow 14 ngày.  
-> **Kế hoạch**: Sau khi hoàn thiện Phase 2, sẽ re-implement escrow/settlement logic theo BR-05, BR-19.
+Mục tiêu: áp lại cơ chế giữ tiền giảng viên 14 ngày (escrow) và tự động giải ngân sau 14 ngày; hỗ trợ tùy chọn giữ phí nền tảng (PoC) và đảm bảo tính chất atomic, idempotent cho quá trình release.
 
----
+1. Những thay đổi chính (ngắn gọn)
 
-## Tổng Quan Thay Đổi
+- Schema & Domain:
+  - `Order`: thêm `SettlementEligibleAt`, `IsSettled`, `SettledAt`.
+  - `InstructorWallet`: thêm `PendingBalance` (tiền đang giữ cho instructor).
+  - `TransactionLedger`: thêm `AvailableAt` (thời điểm release) và `Status` (Pending/Completed).
+  - `TransactionType`: thêm `Settlement`.
+  - `PlatformWallet` (PoC): thêm `PendingBalance`; `PlatformWalletTransaction` có `AvailableAt`.
 
-**Trước**: Payment Success → Escrow 14 ngày (PendingBalance) → Settlement Job → AvailableBalance → Payout  
-**Sau**: Payment Success → Credit trực tiếp vào AvailableBalance → Payout
+2. Luồng xử lý (ngắn gọn)
 
----
+- Khi payment thành công:
+  - Ghi platform fee (30%) vào `PlatformWallet.AvailableBalance` theo mặc định (hoặc vào pending nếu bật PoC).
+  - Ghi instructor share (70%) vào `InstructorWallet.PendingBalance` và tạo `TransactionLedger` với `Status = Pending` và `AvailableAt = PaidAt + 14 days`.
+- Release sau 14 ngày: `SettlementBackgroundService` gọi `SettlementService.ProcessPendingSettlementsAsync()`
+  - Job query các transaction `Type == Sale && Status == Pending && AvailableAt <= now`.
+  - Với mỗi transaction: xử lý trong DB transaction — re-query và lock → giảm `PendingBalance`, tăng `AvailableBalance` → tạo transaction `Settlement` (ghi audit, BalanceBefore/After) → đánh dấu transaction gốc `Completed` → nếu liên quan thì `Order.IsSettled = true` → commit → publish `SettlementCompletedEvent`.
+  - Sau đó job xử lý các `PlatformWalletTransaction` pending tương tự (nếu PoC bật).
 
-## Chi Tiết Thay Đổi
+3. API / DTO / Mapping
 
-### 1. Order.cs (Entity)
+- Endpoint admin: `GET /api/v1/settlements/upcoming` (filter by from/to) — trả `UpcomingSettlementResponse` (TransactionId, WalletId, OrderId, Amount, Currency, AvailableAt, CreatedAt).
+- `InstructorWalletResponse` expose `PendingBalance`.
+- `TransactionLedgerResponse` và `PlatformWalletTransactionResponse` expose `AvailableAt`.
 
-**Đã xóa các field:**
+4. Migrations & running
 
-```csharp
-// Settlement (14-day escrow logic)
-public DateTime? SettlementEligibleAt { get; set; }  // PaidAt + 14 days
-public bool IsSettled { get; set; } = false;
-public DateTime? SettledAt { get; set; }
+- Đã có migration `20260224161702_ReintroduceSettlement` (thêm cột, + SQL mark các order lịch sử đã settled để tránh double-credit). Kiểm tra kỹ SQL trước khi áp lên production.
+- Sau khi thay đổi domain cho platform PoC, tạo migration mới: `PlatformWalletPendingAndAvailableAt` và chạy:
 
-// Refund Information
-// public decimal TotalRefunded { get; set; } = 0;
+```bash
+cd src/Services/Sale/Beyond8.Sale.Infrastructure
+dotnet ef migrations add PlatformWalletPendingAndAvailableAt
+dotnet ef database update
+
+cd src/Orchestration/Beyond8.AppHost
+dotnet run
 ```
 
-**Khi re-implement cần thêm lại:**
+5. Kiểm tra nhanh (SQL)
 
-- `SettlementEligibleAt` = `PaidAt + 14 days` (per BR-19)
-- `IsSettled` flag để track settlement status
-- `SettledAt` timestamp
-- Index: `SettlementEligibleAt` với filter `IsSettled = false`
+- Orders ready to settle:
 
----
-
-### 2. OrderItem.cs (Entity)
-
-**Đã sửa:**
-
-```csharp
-// Trước: PlatformFeePercent = 20 (sai)
-// Sau:   PlatformFeePercent = 30 (đúng per BR-19: 70% instructor, 30% platform)
+```sql
+SELECT COUNT(*) FROM "Orders" WHERE "IsSettled" = false AND "SettlementEligibleAt" <= now();
 ```
 
-> ⚠️ Không cần revert — đây là bug fix, không phải escrow logic.
+- Pending transactions available now:
 
----
-
-### 3. InstructorWallet.cs (Entity)
-
-**Đã xóa các field (3-tier → 1-tier):**
-
-```csharp
-// Escrow balance (tiền đang giữ 14 ngày, không rút được)
-[Column(TypeName = "decimal(18, 2)")]
-public decimal PendingBalance { get; set; } = 0;
-
-// Hold balance (tiền đang xử lý payout)
-[Column(TypeName = "decimal(18, 2)")]
-public decimal HoldBalance { get; set; } = 0;
-
-// Refund Statistics
-// public decimal TotalRefunded { get; set; } = 0;
+```sql
+SELECT * FROM "TransactionLedgers" WHERE "Status" = 0 /*Pending*/ AND "AvailableAt" <= now() ORDER BY "AvailableAt" LIMIT 50;
 ```
 
-**Khi re-implement cần thêm lại:**
+6. Rủi ro & khuyến nghị
 
-- `PendingBalance`: Tiền escrow chưa settle (credited khi payment success, moved to Available sau 14 ngày)
-- `HoldBalance`: Tiền đang xử lý payout (moved from Available khi payout approved, deducted khi payout completed)
-- Flow: Payment → PendingBalance ↑ → (14 days) → AvailableBalance ↑ → Payout → HoldBalance ↑ → TotalWithdrawn ↑
+- Refunds: cần định nghĩa rõ rollback cho pending txs nếu xảy ra refund trước khi release.
+- Reconciliation: implement job so sánh `InstructorWallet.PendingBalance` vs tổng pending `TransactionLedger` cho mỗi wallet.
+- Migration caution: `ReintroduceSettlement` chứa SQL mark-order — review before production. Run migrations on staging first.
 
----
+7. File chính (tham khảo)
 
-### 4. TransactionLedger.cs (Entity)
+- `src/Services/Sale/Beyond8.Sale.Application/Services/Implements/SettlementService.cs`
+- `src/Services/Sale/Beyond8.Sale.Application/Services/Implements/SettlementBackgroundService.cs`
+- `src/Services/Sale/Beyond8.Sale.Application/Services/Implements/PaymentService.cs`
+- `src/Services/Sale/Beyond8.Sale.Application/Services/Implements/InstructorWalletService.cs`
+- `src/Services/Sale/Beyond8.Sale.Application/Services/Implements/PlatformWalletService.cs`
+- `src/Services/Sale/Beyond8.Sale.Infrastructure/Migrations/20260224161702_ReintroduceSettlement.cs`
 
-**Đã xóa:**
+8. Next actions (tùy bạn chọn)
 
-```csharp
-// Escrow release date
-public DateTime? AvailableAt { get; set; }
-```
+- (A) Tôi tạo migration `PlatformWalletPendingAndAvailableAt` và commit.
+- (B) Tôi viết unit/integration tests cho flow VNPay → Pending → Settlement (bao gồm refund case).
+- (C) Tôi thêm SQL audit queries + Postman collection để test nhanh.
 
-**Đã sửa:**
-
-```csharp
-// Trước: default Pending (chờ escrow settle)
-public TransactionStatus Status { get; set; } = TransactionStatus.Pending;
-
-// Sau: default Completed (credit ngay lập tức)
-public TransactionStatus Status { get; set; } = TransactionStatus.Completed;
-```
-
-**Khi re-implement:**
-
-- Thêm lại `AvailableAt` = `Order.SettlementEligibleAt`
-- Default status lại `Pending` (settlement job sẽ update thành Completed)
-- Thêm lại index: `AvailableAt` với filter `Status = 0 (Pending)`
-
----
-
-### 5. TransactionType.cs (Enum)
-
-**Đã xóa:**
-
-```csharp
-Settlement = 3  // Chuyển PendingBalance → AvailableBalance sau 14 ngày
-```
-
-**Khi re-implement:** Thêm lại `Settlement` type.
-
----
-
-### 6. SaleDbContext.cs (Infrastructure)
-
-**Đã xóa 2 indexes:**
-
-```csharp
-// Order: Settlement eligibility index
-entity.HasIndex(e => e.SettlementEligibleAt)
-    .HasFilter("\"IsSettled\" = false AND \"SettlementEligibleAt\" IS NOT NULL");
-
-// TransactionLedger: Pending escrow index
-entity.HasIndex(e => e.AvailableAt)
-    .HasFilter("\"Status\" = 0 AND \"AvailableAt\" IS NOT NULL");
-```
-
----
-
-### 7. Files Đã Xóa Hoàn Toàn
-
-| File                                                   | Mục đích                                        |
-| ------------------------------------------------------ | ----------------------------------------------- |
-| `Dtos/Settlements/SettlementStatusResponse.cs`         | DTO tracking settlement status per order        |
-| `Dtos/Settlements/SettlementStatisticsResponse.cs`     | DTO thống kê settlement (by instructor, by day) |
-| `Services/Interfaces/ISettlementService.cs`            | Interface settlement service (7 methods)        |
-| `Dtos/Payments/RefundPaymentRequest.cs`                | DTO refund (Phase 3)                            |
-| `Dtos/Payments/PayOSCallbackRequest.cs`                | DTO PayOS (out of scope)                        |
-| `Validators/Payments/RefundPaymentRequestValidator.cs` | Validator refund (Phase 3)                      |
-
-**Khi re-implement cần tạo lại:**
-
-- `ISettlementService` với methods: `ProcessPendingSettlementsAsync`, `SettleOrderAsync`, `GetPendingSettlementsAsync`, `GetSettlementStatusAsync`, `ForceSettleAsync`, `GetUpcomingSettlementsAsync`, `GetSettlementStatisticsAsync`
-- Settlement DTOs
-- Background job (IHostedService hoặc Hangfire) chạy daily 2:00 AM UTC
-
----
-
-### 8. Interfaces Đã Sửa
-
-**IPaymentService.cs** — Xóa 2 methods:
-
-```csharp
-Task<ApiResponse<bool>> HandlePayOSCallbackAsync(PayOSCallbackRequest request);  // Out of scope
-Task<ApiResponse<bool>> RefundPaymentAsync(Guid orderId, RefundPaymentRequest request);  // Phase 3
-```
-
-**IInstructorWalletService.cs** — Thay đổi hoàn toàn:
-
-```csharp
-// Trước (generic add/deduct):
-Task<ApiResponse<bool>> AddFundsAsync(Guid instructorId, decimal amount, string description);
-Task<ApiResponse<bool>> DeductFundsAsync(Guid instructorId, decimal amount, string description);
-
-// Sau (specific operations, no escrow):
-Task<ApiResponse<bool>> CreditEarningsAsync(Guid instructorId, decimal amount, Guid orderId, string description);
-Task<ApiResponse<bool>> DeductForPayoutAsync(Guid instructorId, decimal amount, Guid payoutId, string description);
-Task<ApiResponse<InstructorWalletResponse>> CreateWalletAsync(Guid instructorId);
-```
-
-**Khi re-implement:** Thêm methods cho escrow flow:
-
-- `CreditPendingBalanceAsync` (payment success → PendingBalance ↑)
-- `SettleToAvailableAsync` (settlement → PendingBalance ↓, AvailableBalance ↑)
-- `HoldForPayoutAsync` (payout approved → AvailableBalance ↓, HoldBalance ↑)
-- `CompletePayoutAsync` (payout completed → HoldBalance ↓, TotalWithdrawn ↑)
-- `ReleaseHoldAsync` (payout rejected → HoldBalance ↓, AvailableBalance ↑)
-
-**ITransactionService.cs** — Sửa nhỏ:
-
-```csharp
-// Trước: GetTransactionsByUserAsync(Guid userId, ...)
-// Sau:   GetTransactionsByWalletAsync(Guid walletId, ...)
-```
-
----
-
-### 9. DTOs Đã Sửa
-
-**OrderResponse.cs** — Thêm fields thiếu:
-
-- `OrderNumber`, `SubTotal`, `DiscountAmount`, `Currency`, `CouponId`, `PaidAt`, `Notes`
-
-**OrderItemResponse.cs** — Thêm revenue fields:
-
-- `CourseThumbnail`, `InstructorId`, `InstructorName`, `OriginalPrice`, `UnitPrice`, `DiscountPercent`, `LineTotal`, `PlatformFeePercent`, `PlatformFeeAmount`, `InstructorEarnings`
-
-**InstructorWalletResponse.cs** — Match entity mới:
-
-- Bỏ `Balance` (generic) → dùng `AvailableBalance` (specific)
-- Thêm `Id`, `Currency`, `LastPayoutAt`, `IsActive`
-
-**WalletTransactionResponse.cs** — Match TransactionLedger entity:
-
-- Thêm `WalletId`, `Status`, `Currency`, `BalanceBefore`, `BalanceAfter`, `ReferenceId`, `ReferenceType`, `ExternalTransactionId`
-
-**TransactionLedgerResponse.cs** — Match entity:
-
-- Thay `UserId` → `WalletId`, thêm `Status`, `Currency`, `BalanceBefore`, `BalanceAfter`, `ReferenceId`, `ReferenceType`
-
-**CreateTransactionRequest.cs** — Match entity:
-
-- Thay `UserId` → `WalletId`, `string Type` → `TransactionType Type` (enum)
-
-**OrderStatisticsResponse.cs** — Xóa `PendingSettlements`
-
----
-
-## Checklist Re-implement Escrow (Phase 3)
-
-- [ ] Thêm lại fields vào `Order.cs` (SettlementEligibleAt, IsSettled, SettledAt)
-- [ ] Thêm lại `PendingBalance`, `HoldBalance` vào `InstructorWallet.cs`
-- [ ] Thêm lại `AvailableAt` vào `TransactionLedger.cs`, default status → `Pending`
-- [ ] Thêm lại `Settlement` vào `TransactionType` enum
-- [ ] Thêm lại indexes trong `SaleDbContext.cs`
-- [ ] Tạo lại `ISettlementService` + implementation
-- [ ] Tạo lại Settlement DTOs
-- [ ] Tạo background job (daily 2:00 AM UTC)
-- [ ] Update `IInstructorWalletService` cho 3-tier balance flow
-- [ ] Thêm lại `PendingSettlements` vào `OrderStatisticsResponse`
-- [ ] Tạo EF Core migration cho schema changes
-- [ ] Test settlement flow end-to-end
-- [ ] Thêm refund logic (RefundPaymentRequest, validator, IPaymentService.RefundPaymentAsync)
-
----
-
-## Business Rules Tham Chiếu
-
-- **BR-05**: Refund policy — 14 days, <10% progress
-- **BR-19**: Revenue split — 70% Instructor, 30% Platform, 14-day escrow, min 500k payout
-- **NFR-07.01**: Security — Checksum verification, Idempotency
-- **NFR-07.02**: Financial accuracy — Decimal type, ACID transactions
+Ngắn gọn: escrow instructor đã được tái áp dụng (PendingBalance + AvailableAt + job release). Platform fee hiện default vào Available nhưng có PoC để giữ vào Pending và release tương tự. Tôi đang tiến hành ghi lại tài liệu này (xong). Muốn tôi làm tiếp (A)/(B)/(C)?
