@@ -66,10 +66,10 @@ public class CertificateService(
             var assignmentSections = enrollment.SectionProgresses.Where(sp => sp.AssignmentSubmitted).ToList();
             if (assignmentSections.Count > 0)
             {
-                var graded = assignmentSections.Where(sp => sp.AssignmentGrade.HasValue).ToList();
-                if (graded.Count < assignmentSections.Count)
+                var gradedByInstructor = assignmentSections.Where(sp => sp.AssignmentInstructorGraded).ToList();
+                if (gradedByInstructor.Count < assignmentSections.Count)
                     return;
-                if (graded.Select(sp => sp.AssignmentGrade!.Value).Average() < assignmentMin)
+                if (gradedByInstructor.Where(sp => sp.AssignmentGrade.HasValue).Select(sp => sp.AssignmentGrade!.Value).Average() < assignmentMin)
                     return;
             }
 

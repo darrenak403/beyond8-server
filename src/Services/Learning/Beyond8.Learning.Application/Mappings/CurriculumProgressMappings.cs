@@ -63,6 +63,7 @@ public static class CurriculumProgressMappings
             AssignmentSubmitted = sectionProgress?.AssignmentSubmitted ?? false,
             AssignmentGrade = sectionProgress?.AssignmentGrade,
             AssignmentPassed = sectionProgress?.AssignmentPassed ?? false,
+            AssignmentInstructorGraded = sectionProgress?.AssignmentInstructorGraded ?? false,
             AssignmentSubmittedAt = sectionProgress?.AssignmentSubmittedAt,
             AssignmentGradedAt = sectionProgress?.AssignmentGradedAt,
             Lessons = lessons

@@ -20,6 +20,7 @@ public class SectionProgressItem
     public bool AssignmentSubmitted { get; set; }
     public decimal? AssignmentGrade { get; set; }
     public bool AssignmentPassed { get; set; }
+    public bool AssignmentInstructorGraded { get; set; }
     public DateTime? AssignmentSubmittedAt { get; set; }
     public DateTime? AssignmentGradedAt { get; set; }
     public List<LessonProgressItem> Lessons { get; set; } = [];

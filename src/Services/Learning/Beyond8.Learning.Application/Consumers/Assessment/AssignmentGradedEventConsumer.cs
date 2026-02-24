@@ -34,6 +34,7 @@ public class AssignmentGradedEventConsumer(
         sp.AssignmentGrade = msg.Score;
         sp.AssignmentGradedAt = msg.GradedAt;
         sp.AssignmentPassed = msg.ScorePercent >= msg.PassScorePercent;
+        sp.AssignmentInstructorGraded = true;
         await unitOfWork.SectionProgressRepository.UpdateAsync(sp.Id, sp);
         await unitOfWork.SaveChangesAsync();
 
