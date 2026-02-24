@@ -1,7 +1,6 @@
 using Beyond8.Assessment.Application.Dtos.Reassign;
 using Beyond8.Assessment.Application.Mappings.ReassignMappings;
 using Beyond8.Assessment.Application.Services.Interfaces;
-using Beyond8.Assessment.Domain.Entities;
 using Beyond8.Assessment.Domain.Enums;
 using Beyond8.Assessment.Domain.Repositories.Interfaces;
 using Beyond8.Common.Utilities;
@@ -90,18 +89,7 @@ public class ReassignService(
     public async Task RecordQuizResetAsync(Guid quizId, Guid studentId, Guid instructorId, Guid? lessonId, int deletedCount)
     {
         var resetAt = DateTime.UtcNow;
-        var history = new ReassignHistory
-        {
-            Type = ReassignType.Quiz,
-            SourceId = quizId,
-            StudentId = studentId,
-            ResetByInstructorId = instructorId,
-            LessonId = lessonId,
-            ResetAt = resetAt,
-            DeletedCount = deletedCount,
-            CreatedAt = resetAt,
-            CreatedBy = instructorId
-        };
+        var history = ReassignMappings.ToQuizResetHistory(quizId, studentId, instructorId, lessonId, deletedCount, resetAt);
         var pendingRequest = await unitOfWork.ReassignRequestRepository.FindOneAsync(r =>
             r.Type == ReassignType.Quiz && r.SourceId == quizId && r.StudentId == studentId && r.Status == ReassignRequestStatus.Pending);
         if (pendingRequest != null)
@@ -119,18 +107,7 @@ public class ReassignService(
     public async Task RecordAssignmentResetAsync(Guid assignmentId, Guid studentId, Guid instructorId, Guid? sectionId, int deletedCount)
     {
         var resetAt = DateTime.UtcNow;
-        var history = new ReassignHistory
-        {
-            Type = ReassignType.Assignment,
-            SourceId = assignmentId,
-            StudentId = studentId,
-            ResetByInstructorId = instructorId,
-            SectionId = sectionId,
-            ResetAt = resetAt,
-            DeletedCount = deletedCount,
-            CreatedAt = resetAt,
-            CreatedBy = instructorId
-        };
+        var history = ReassignMappings.ToAssignmentResetHistory(assignmentId, studentId, instructorId, sectionId, deletedCount, resetAt);
         var pendingRequest = await unitOfWork.ReassignRequestRepository.FindOneAsync(r =>
             r.Type == ReassignType.Assignment && r.SourceId == assignmentId && r.StudentId == studentId && r.Status == ReassignRequestStatus.Pending);
         if (pendingRequest != null)
@@ -161,13 +138,7 @@ public class ReassignService(
                 (r.Type == ReassignType.Quiz && quizIds.Contains(r.SourceId)) ||
                 (r.Type == ReassignType.Assignment && assignmentIds.Contains(r.SourceId))).ToList();
 
-            var items = forInstructor.Select(r =>
-            {
-                var title = r.Type == ReassignType.Quiz
-                    ? quizTitles.GetValueOrDefault(r.SourceId, "")
-                    : assignmentTitles.GetValueOrDefault(r.SourceId, "");
-                return r.ToOverviewItem(title);
-            }).ToList();
+            var items = forInstructor.ToOverviewItems(quizTitles, assignmentTitles);
 
             // Search: filter by SourceTitle or Note (case insensitive)
             var search = request.Search?.Trim();

@@ -317,9 +317,6 @@ public class AssignmentSubmissionService(
             if (submissions.Count == 0)
                 return ApiResponse<bool>.FailureResponse("Học sinh chưa có lượt nộp nào cho assignment này.");
 
-            if (assignment.MaxSubmissions > 0 && submissions.Count < assignment.MaxSubmissions)
-                return ApiResponse<bool>.FailureResponse($"Học sinh vẫn còn lượt nộp bài ({submissions.Count}/{assignment.MaxSubmissions}). Chỉ reset khi đã hết lượt.");
-
             foreach (var submission in submissions)
             {
                 submission.DeletedAt = DateTime.UtcNow;

@@ -66,5 +66,64 @@ public static class ReassignMappings
         };
     }
 
+
+    public static List<ReassignRequestItemDto> ToOverviewItems(
+        this List<ReassignRequest> requests,
+        IReadOnlyDictionary<Guid, string> quizTitles,
+        IReadOnlyDictionary<Guid, string> assignmentTitles)
+    {
+        return requests.Select(r =>
+        {
+            var title = r.Type == ReassignType.Quiz
+                ? quizTitles.GetValueOrDefault(r.SourceId, "")
+                : assignmentTitles.GetValueOrDefault(r.SourceId, "");
+            return r.ToOverviewItem(title);
+        }).ToList();
+    }
+
+    public static ReassignHistory ToQuizResetHistory(
+        Guid quizId,
+        Guid studentId,
+        Guid instructorId,
+        Guid? lessonId,
+        int deletedCount,
+        DateTime resetAt)
+    {
+        return new ReassignHistory
+        {
+            Type = ReassignType.Quiz,
+            SourceId = quizId,
+            StudentId = studentId,
+            ResetByInstructorId = instructorId,
+            LessonId = lessonId,
+            ResetAt = resetAt,
+            DeletedCount = deletedCount,
+            CreatedAt = resetAt,
+            CreatedBy = instructorId
+        };
+    }
+
+    public static ReassignHistory ToAssignmentResetHistory(
+        Guid assignmentId,
+        Guid studentId,
+        Guid instructorId,
+        Guid? sectionId,
+        int deletedCount,
+        DateTime resetAt)
+    {
+        return new ReassignHistory
+        {
+            Type = ReassignType.Assignment,
+            SourceId = assignmentId,
+            StudentId = studentId,
+            ResetByInstructorId = instructorId,
+            SectionId = sectionId,
+            ResetAt = resetAt,
+            DeletedCount = deletedCount,
+            CreatedAt = resetAt,
+            CreatedBy = instructorId
+        };
+    }
+
     internal static string? TruncateNote(string? note) => note == null ? null : note.Length > NoteMaxLength ? note[..NoteMaxLength] : note;
 }
