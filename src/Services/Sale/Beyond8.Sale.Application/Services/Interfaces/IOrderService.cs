@@ -24,6 +24,7 @@ public interface IOrderService
     Task<ApiResponse<List<OrderResponse>>> GetOrdersByUserAsync(PaginationRequest pagination, Guid userId);
 
     // ── Admin Only ──
+    Task<ApiResponse<OrderResponse>> UpdateOrderSettlementAsync(Guid orderId, UpdateOrderSettlementRequest request);
     Task<ApiResponse<OrderResponse>> UpdateOrderStatusAsync(Guid orderId, UpdateOrderStatusRequest request);
     Task<ApiResponse<List<OrderResponse>>> GetOrdersByStatusAsync(OrderStatus status, PaginationRequest pagination);
 

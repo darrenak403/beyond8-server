@@ -136,6 +136,15 @@ public static class OrderApis
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden);
 
+        group.MapPatch("/{orderId}/settlement", UpdateOrderSettlementAsync)
+            .WithName("UpdateOrderSettlement")
+            .WithDescription("Cập nhật SettlementEligibleAt cho đơn hàng (Admin only)")
+            .RequireAuthorization(x => x.RequireRole(Role.Admin))
+            .Produces<ApiResponse<OrderResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<OrderResponse>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
+
         return group;
     }
     private static async Task<IResult> BuyNowAsync(
@@ -286,6 +295,15 @@ public static class OrderApis
         [FromServices] IOrderService orderService)
     {
         var result = await orderService.UpdateOrderStatusAsync(orderId, request);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> UpdateOrderSettlementAsync(
+        [FromRoute] Guid orderId,
+        [FromBody] UpdateOrderSettlementRequest request,
+        [FromServices] IOrderService orderService)
+    {
+        var result = await orderService.UpdateOrderSettlementAsync(orderId, request);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 

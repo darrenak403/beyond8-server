@@ -483,6 +483,39 @@ public class OrderService(
         return ApiResponse<OrderResponse>.SuccessResponse(order.ToResponse(), "Cập nhật trạng thái thành công");
     }
 
+    public async Task<ApiResponse<OrderResponse>> UpdateOrderSettlementAsync(Guid orderId, UpdateOrderSettlementRequest request)
+    {
+        var order = await unitOfWork.OrderRepository.AsQueryable()
+            .FirstOrDefaultAsync(o => o.Id == orderId);
+
+        if (order == null)
+            return ApiResponse<OrderResponse>.FailureResponse("Đơn hàng không tồn tại");
+
+        // Validate provided date against PaidAt if present
+        if (request.SettlementEligibleAt.HasValue && order.PaidAt.HasValue)
+        {
+            if (request.SettlementEligibleAt.Value < order.PaidAt.Value)
+            {
+                return ApiResponse<OrderResponse>.FailureResponse("SettlementEligibleAt không thể nhỏ hơn PaidAt");
+            }
+        }
+
+        // Apply update only if provided
+        if (request.SettlementEligibleAt.HasValue)
+            order.SettlementEligibleAt = request.SettlementEligibleAt;
+
+        order.UpdatedAt = DateTime.UtcNow;
+
+        await unitOfWork.SaveChangesAsync();
+
+        logger.LogInformation("Order settlement updated: {OrderId}, SettlementEligibleAt: {Date}", orderId, order.SettlementEligibleAt);
+
+        if (!string.IsNullOrEmpty(request.Note))
+            logger.LogInformation("Settlement update note for Order {OrderId}: {Note}", orderId, request.Note);
+
+        return ApiResponse<OrderResponse>.SuccessResponse(order.ToResponse(), "Cập nhật thời điểm settlement thành công");
+    }
+
     public async Task<ApiResponse<List<OrderResponse>>> GetOrdersByUserAsync(PaginationRequest pagination, Guid userId)
     {
         var orders = await unitOfWork.OrderRepository.GetPagedAsync(

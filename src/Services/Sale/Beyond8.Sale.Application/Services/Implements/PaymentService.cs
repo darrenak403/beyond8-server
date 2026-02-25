@@ -16,6 +16,7 @@ using System.Linq;
 using Beyond8.Sale.Application.Clients.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 
 namespace Beyond8.Sale.Application.Services.Implements;
 
@@ -28,8 +29,9 @@ public class PaymentService(
     ICouponUsageService couponUsageService,
     IPublishEndpoint publishEndpoint,
     IIdentityClient identityClient,
-    Microsoft.Extensions.Configuration.IConfiguration configuration) : IPaymentService
+    IConfiguration configuration) : IPaymentService
 {
+    // Read settlement delay from configuration where needed. Prefer using IOptions<SaleSettings> for cleaner code.
     public async Task<ApiResponse<PaymentUrlResponse>> ProcessPaymentAsync(
         Guid orderId, string returnUrl, string ipAddress)
     {
@@ -396,13 +398,12 @@ public class PaymentService(
         // Mark settlement eligibility date (PaidAt + 14 days)
         try
         {
-            // Demo mode: shorten escrow from 14 days to 2 minutes
-            order.SettlementEligibleAt = order.PaidAt?.AddMinutes(2);
+            // Per BR-19: settlement eligibility at PaidAt + 14 days
+            order.SettlementEligibleAt = order.PaidAt?.AddDays(14);
             order.IsSettled = false; // will be settled by background job
         }
         catch
         {
-            // defensive: ignore if Order entity doesn't support settlement yet
         }
 
         // ── Revenue Split & Wallet Credit (Per BR-19: 70% Instructor / 30% Platform) ──
@@ -493,7 +494,7 @@ public class PaymentService(
                     instructorId, totalInstructorEarnings, order.Id);
 
                 // Credit instructor wallet into pending/escrow (Phase 3 behavior). AvailableAt = PaidAt + 14 days
-                var availableAt = order.SettlementEligibleAt ?? (order.PaidAt.HasValue ? order.PaidAt.Value.AddMinutes(2) : DateTime.UtcNow.AddMinutes(2));
+                var availableAt = order.SettlementEligibleAt ?? (order.PaidAt.HasValue ? order.PaidAt.Value.AddDays(14) : DateTime.UtcNow.AddDays(14));
                 await walletService.CreditPendingAsync(
                     instructorId,
                     totalInstructorEarnings,
@@ -542,7 +543,7 @@ public class PaymentService(
         // Always synchronize platform credit with instructor's pending/available date.
         if (totalPlatformFee > 0)
         {
-            var availableAt = order.SettlementEligibleAt ?? (order.PaidAt.HasValue ? order.PaidAt.Value.AddMinutes(2) : DateTime.UtcNow.AddMinutes(2));
+            var availableAt = order.SettlementEligibleAt ?? (order.PaidAt.HasValue ? order.PaidAt.Value.AddDays(14) : DateTime.UtcNow.AddDays(14));
 
             await platformWalletService.CreditPlatformRevenuePendingAsync(
                 totalPlatformFee, order.Id,
