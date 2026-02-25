@@ -31,6 +31,11 @@ public class OrderResponse
     // Payment
     public DateTime? PaidAt { get; set; }
 
+    // Settlement
+    public DateTime? SettlementEligibleAt { get; set; }
+    public bool IsSettled { get; set; }
+    public DateTime? SettledAt { get; set; }
+
     // Security
     public string? IpAddress { get; set; }
     public string? UserAgent { get; set; }

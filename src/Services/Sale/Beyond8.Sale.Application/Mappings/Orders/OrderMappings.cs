@@ -70,7 +70,9 @@ public static class OrderMappings
             InstructorCouponId = order.InstructorCouponId,
             SystemCouponId = order.SystemCouponId,
             Currency = order.Currency,
+            IsSettled = order.IsSettled,
             PaidAt = order.PaidAt,
+            SettlementEligibleAt = order.SettlementEligibleAt,
             IpAddress = order.IpAddress,
             UserAgent = order.UserAgent,
             CreatedAt = order.CreatedAt,
@@ -79,6 +81,8 @@ public static class OrderMappings
             PendingPaymentInfo = pendingPaymentInfo
         };
     }
+
+    // Dates are stored as UTC; responses expose raw UTC values.
 
     public static OrderItemResponse ToResponse(this OrderItem item)
     {

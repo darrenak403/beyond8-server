@@ -28,7 +28,15 @@ public class SettlementBackgroundService : BackgroundService
             {
                 using var scope = _scopeFactory.CreateScope();
                 var settlementService = scope.ServiceProvider.GetRequiredService<ISettlementService>();
-                await settlementService.ProcessPendingSettlementsAsync();
+                _logger.LogInformation("SettlementBackgroundService invoking ProcessPendingSettlementsAsync - app now={Now}", DateTime.UtcNow);
+                var result = await settlementService.ProcessPendingSettlementsAsync();
+                if (result != null)
+                {
+                    if (result.IsSuccess)
+                        _logger.LogInformation("SettlementBackgroundService run: {Message}", result.Message);
+                    else
+                        _logger.LogWarning("SettlementBackgroundService run failed: {Message}", result.Message);
+                }
             }
             catch (Exception ex)
             {

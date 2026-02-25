@@ -491,18 +491,41 @@ public class OrderService(
         if (order == null)
             return ApiResponse<OrderResponse>.FailureResponse("Đơn hàng không tồn tại");
 
-        // Validate provided date against PaidAt if present
-        if (request.SettlementEligibleAt.HasValue && order.PaidAt.HasValue)
-        {
-            if (request.SettlementEligibleAt.Value < order.PaidAt.Value)
-            {
-                return ApiResponse<OrderResponse>.FailureResponse("SettlementEligibleAt không thể nhỏ hơn PaidAt");
-            }
-        }
-
-        // Apply update only if provided
+        DateTime? normalizedUtc = null;
         if (request.SettlementEligibleAt.HasValue)
-            order.SettlementEligibleAt = request.SettlementEligibleAt;
+        {
+            var input = request.SettlementEligibleAt.Value;
+            if (input.Kind == DateTimeKind.Utc)
+            {
+                normalizedUtc = input;
+            }
+            else if (input.Kind == DateTimeKind.Local)
+            {
+                normalizedUtc = input.ToUniversalTime();
+            }
+            else // Unspecified
+            {
+                try
+                {
+                    // Try convert from Asia/Bangkok timezone
+                    TimeZoneInfo tz = TimeZoneInfo.FindSystemTimeZoneById("Asia/Bangkok");
+                    var unspecified = DateTime.SpecifyKind(input, DateTimeKind.Unspecified);
+                    normalizedUtc = TimeZoneInfo.ConvertTimeToUtc(unspecified, tz);
+                }
+                catch
+                {
+                    // Fallback: assume +07 offset
+                    normalizedUtc = input - TimeSpan.FromHours(7);
+                }
+            }
+
+            // Validate provided date against PaidAt if present (both in UTC)
+            if (order.PaidAt.HasValue && normalizedUtc.HasValue && normalizedUtc.Value < order.PaidAt.Value)
+                return ApiResponse<OrderResponse>.FailureResponse("SettlementEligibleAt không thể nhỏ hơn PaidAt");
+
+            // Apply normalized UTC value
+            order.SettlementEligibleAt = normalizedUtc;
+        }
 
         order.UpdatedAt = DateTime.UtcNow;
 
@@ -512,6 +535,40 @@ public class OrderService(
 
         if (!string.IsNullOrEmpty(request.Note))
             logger.LogInformation("Settlement update note for Order {OrderId}: {Note}", orderId, request.Note);
+
+        // Propagate change to related pending transactions so wallets/settlement APIs reflect new AvailableAt
+        if (request.SettlementEligibleAt.HasValue)
+        {
+            var newAvailableAt = request.SettlementEligibleAt.Value;
+
+            // Update instructor transaction ledgers (pending sale transactions referencing this order)
+            var pendingTxs = await unitOfWork.TransactionLedgerRepository.AsQueryable()
+                .Where(t => t.ReferenceType == "Order" && t.ReferenceId == orderId && t.Status == TransactionStatus.Pending)
+                .ToListAsync();
+
+            foreach (var tx in pendingTxs)
+            {
+                tx.AvailableAt = newAvailableAt;
+                tx.UpdatedAt = DateTime.UtcNow;
+            }
+
+            // Update platform wallet transactions referencing this order
+            var platformTxs = await unitOfWork.PlatformWalletTransactionRepository.AsQueryable()
+                .Where(t => t.ReferenceType == "Order" && t.ReferenceId == orderId && t.Status == TransactionStatus.Pending)
+                .ToListAsync();
+
+            foreach (var ptx in platformTxs)
+            {
+                ptx.AvailableAt = newAvailableAt;
+                ptx.UpdatedAt = DateTime.UtcNow;
+            }
+
+            if (pendingTxs.Any() || platformTxs.Any())
+            {
+                await unitOfWork.SaveChangesAsync();
+                logger.LogInformation("Updated {TxCount} transaction(s) AvailableAt for Order {OrderId}", pendingTxs.Count + platformTxs.Count, orderId);
+            }
+        }
 
         return ApiResponse<OrderResponse>.SuccessResponse(order.ToResponse(), "Cập nhật thời điểm settlement thành công");
     }

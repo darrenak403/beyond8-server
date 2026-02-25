@@ -39,92 +39,96 @@ public class SettlementService(
         {
             try
             {
-                // Begin DB transaction to ensure atomicity
-                await unitOfWork.BeginTransactionAsync();
+                // Use execution-strategy-safe transaction wrapper
+                Guid? referenceId = null;
+                Guid instructorId = Guid.Empty;
+                decimal settledAmount = 0m;
 
-                // Re-load the transaction within the transaction scope and check status again
-                var trackedTx = await unitOfWork.TransactionLedgerRepository.AsQueryable()
-                    .FirstOrDefaultAsync(t => t.Id == tx.Id);
-
-                if (trackedTx == null || trackedTx.Status != TransactionStatus.Pending)
+                await unitOfWork.ExecuteInTransactionAsync(async () =>
                 {
-                    await unitOfWork.RollbackTransactionAsync();
-                    continue; // already processed by another worker
-                }
+                    // Re-load the transaction within the transaction scope and check status again
+                    var trackedTx = await unitOfWork.TransactionLedgerRepository.AsQueryable()
+                        .FirstOrDefaultAsync(t => t.Id == tx.Id);
 
-                // Load wallet and order within the same transaction
-                var wallet = await unitOfWork.InstructorWalletRepository.AsQueryable()
-                    .FirstOrDefaultAsync(w => w.Id == trackedTx.WalletId);
+                    if (trackedTx == null || trackedTx.Status != TransactionStatus.Pending)
+                        return; // already processed by another worker
 
-                if (wallet == null)
-                {
-                    logger.LogWarning("Settlement skipped - wallet not found for tx {TxId}", trackedTx.Id);
-                    await unitOfWork.RollbackTransactionAsync();
-                    continue;
-                }
+                    // Load wallet and order within the same transaction
+                    var wallet = await unitOfWork.InstructorWalletRepository.AsQueryable()
+                        .FirstOrDefaultAsync(w => w.Id == trackedTx.WalletId);
 
-                // Determine settle amount
-                var settleAmount = Math.Min(trackedTx.Amount, wallet.PendingBalance);
-                if (settleAmount <= 0)
-                {
-                    logger.LogError("Settlement amount invalid or pending balance insufficient for tx {TxId}", trackedTx.Id);
-                    await unitOfWork.RollbackTransactionAsync();
-                    continue;
-                }
-
-                // Apply balances and create settlement ledger entry
-                var balanceBefore = wallet.AvailableBalance;
-                wallet.PendingBalance -= settleAmount;
-                wallet.AvailableBalance += settleAmount;
-                wallet.UpdatedAt = DateTime.UtcNow;
-
-                var settlementTx = new TransactionLedger
-                {
-                    WalletId = wallet.Id,
-                    Type = TransactionType.Settlement,
-                    Status = TransactionStatus.Completed,
-                    Amount = settleAmount,
-                    Currency = trackedTx.Currency,
-                    BalanceBefore = balanceBefore,
-                    BalanceAfter = wallet.AvailableBalance,
-                    ReferenceId = trackedTx.ReferenceId,
-                    ReferenceType = trackedTx.ReferenceType,
-                    Description = $"Settlement for order {trackedTx.ReferenceId}",
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                await unitOfWork.TransactionLedgerRepository.AddAsync(settlementTx);
-
-                // Mark original pending transaction as completed
-                trackedTx.Status = TransactionStatus.Completed;
-                trackedTx.UpdatedAt = DateTime.UtcNow;
-
-                // Mark related order as settled if present
-                if (trackedTx.ReferenceId.HasValue)
-                {
-                    var order = await unitOfWork.OrderRepository.AsQueryable()
-                        .FirstOrDefaultAsync(o => o.Id == trackedTx.ReferenceId.Value);
-                    if (order != null)
+                    if (wallet == null)
                     {
-                        order.IsSettled = true;
-                        order.SettledAt = DateTime.UtcNow;
-                        order.UpdatedAt = DateTime.UtcNow;
+                        logger.LogWarning("Settlement skipped - wallet not found for tx {TxId}", trackedTx.Id);
+                        return;
                     }
+
+                    // Determine settle amount
+                    var settleAmount = Math.Min(trackedTx.Amount, wallet.PendingBalance);
+                    if (settleAmount <= 0)
+                    {
+                        logger.LogError("Settlement amount invalid or pending balance insufficient for tx {TxId}", trackedTx.Id);
+                        return;
+                    }
+
+                    // Apply balances and create settlement ledger entry
+                    var balanceBefore = wallet.AvailableBalance;
+                    wallet.PendingBalance -= settleAmount;
+                    wallet.AvailableBalance += settleAmount;
+                    wallet.UpdatedAt = DateTime.UtcNow;
+
+                    var settlementTx = new TransactionLedger
+                    {
+                        WalletId = wallet.Id,
+                        Type = TransactionType.Settlement,
+                        Status = TransactionStatus.Completed,
+                        Amount = settleAmount,
+                        Currency = trackedTx.Currency,
+                        BalanceBefore = balanceBefore,
+                        BalanceAfter = wallet.AvailableBalance,
+                        ReferenceId = trackedTx.ReferenceId,
+                        ReferenceType = trackedTx.ReferenceType,
+                        Description = $"Settlement for order {trackedTx.ReferenceId}",
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    await unitOfWork.TransactionLedgerRepository.AddAsync(settlementTx);
+
+                    // Mark original pending transaction as completed
+                    trackedTx.Status = TransactionStatus.Completed;
+                    trackedTx.UpdatedAt = DateTime.UtcNow;
+
+                    // Mark related order as settled if present
+                    if (trackedTx.ReferenceId.HasValue)
+                    {
+                        var order = await unitOfWork.OrderRepository.AsQueryable()
+                            .FirstOrDefaultAsync(o => o.Id == trackedTx.ReferenceId.Value);
+                        if (order != null)
+                        {
+                            order.IsSettled = true;
+                            order.SettledAt = DateTime.UtcNow;
+                            order.UpdatedAt = DateTime.UtcNow;
+                        }
+                    }
+
+                    // capture info for publishing after commit
+                    referenceId = trackedTx.ReferenceId;
+                    instructorId = wallet.InstructorId;
+                    settledAmount = settleAmount;
+                });
+
+                // If executed and we have captured data, publish event
+                if (settledAmount > 0)
+                {
+                    await publishEndpoint.Publish(new SettlementCompletedEvent(
+                        referenceId ?? Guid.Empty,
+                        instructorId,
+                        settledAmount,
+                        DateTime.UtcNow));
                 }
-
-                await unitOfWork.SaveChangesAsync();
-                await unitOfWork.CommitTransactionAsync();
-
-                // Publish event outside transaction
-                await publishEndpoint.Publish(new SettlementCompletedEvent(
-                    trackedTx.ReferenceId ?? Guid.Empty,
-                    wallet.InstructorId,
-                    settleAmount,
-                    DateTime.UtcNow));
             }
             catch (Exception ex)
             {
-                try { await unitOfWork.RollbackTransactionAsync(); } catch { }
                 logger.LogError(ex, "Failed to process settlement for tx {TxId}", tx.Id);
             }
         }
@@ -152,70 +156,72 @@ public class SettlementService(
         {
             try
             {
-                await unitOfWork.BeginTransactionAsync();
+                decimal settledAmount = 0m;
+                Guid trackedId = Guid.Empty;
 
-                var trackedPtx = await unitOfWork.PlatformWalletTransactionRepository.AsQueryable()
-                    .FirstOrDefaultAsync(t => t.Id == ptx.Id);
-
-                if (trackedPtx == null || trackedPtx.Status != TransactionStatus.Pending)
+                await unitOfWork.ExecuteInTransactionAsync(async () =>
                 {
-                    await unitOfWork.RollbackTransactionAsync();
-                    continue;
+                    var trackedPtx = await unitOfWork.PlatformWalletTransactionRepository.AsQueryable()
+                        .FirstOrDefaultAsync(t => t.Id == ptx.Id);
+
+                    if (trackedPtx == null || trackedPtx.Status != TransactionStatus.Pending)
+                        return;
+
+                    var wallet = await unitOfWork.PlatformWalletRepository.AsQueryable()
+                        .FirstOrDefaultAsync(w => w.Id == trackedPtx.PlatformWalletId);
+
+                    if (wallet == null)
+                    {
+                        logger.LogWarning("Platform settlement skipped - wallet not found for tx {TxId}", trackedPtx.Id);
+                        return;
+                    }
+
+                    var settleAmount = Math.Min(trackedPtx.Amount, wallet.PendingBalance);
+                    if (settleAmount <= 0)
+                    {
+                        logger.LogError("Platform settlement invalid or pending balance insufficient for tx {TxId}", trackedPtx.Id);
+                        return;
+                    }
+
+                    var availableBefore = wallet.AvailableBalance;
+                    wallet.PendingBalance -= settleAmount;
+                    wallet.AvailableBalance += settleAmount;
+                    wallet.UpdatedAt = DateTime.UtcNow;
+
+                    // Create a completed platform transaction to reflect available balance change
+                    var settlementPtx = new PlatformWalletTransaction
+                    {
+                        PlatformWalletId = wallet.Id,
+                        ReferenceId = trackedPtx.ReferenceId,
+                        ReferenceType = trackedPtx.ReferenceType,
+                        Type = PlatformTransactionType.Revenue,
+                        Status = TransactionStatus.Completed,
+                        Amount = settleAmount,
+                        Currency = trackedPtx.Currency,
+                        BalanceBefore = availableBefore,
+                        BalanceAfter = wallet.AvailableBalance,
+                        Description = $"Settlement release for platform tx {trackedPtx.Id}",
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    await unitOfWork.PlatformWalletTransactionRepository.AddAsync(settlementPtx);
+
+                    // Mark original pending platform tx as completed
+                    trackedPtx.Status = TransactionStatus.Completed;
+                    trackedPtx.UpdatedAt = DateTime.UtcNow;
+
+                    // capture for logging after commit
+                    settledAmount = settleAmount;
+                    trackedId = trackedPtx.Id;
+                });
+
+                if (settledAmount > 0)
+                {
+                    logger.LogInformation("Platform transaction settled: {TxId} released {Amount}", trackedId, settledAmount);
                 }
-
-                var wallet = await unitOfWork.PlatformWalletRepository.AsQueryable()
-                    .FirstOrDefaultAsync(w => w.Id == trackedPtx.PlatformWalletId);
-
-                if (wallet == null)
-                {
-                    logger.LogWarning("Platform settlement skipped - wallet not found for tx {TxId}", trackedPtx.Id);
-                    await unitOfWork.RollbackTransactionAsync();
-                    continue;
-                }
-
-                var settleAmount = Math.Min(trackedPtx.Amount, wallet.PendingBalance);
-                if (settleAmount <= 0)
-                {
-                    logger.LogError("Platform settlement invalid or pending balance insufficient for tx {TxId}", trackedPtx.Id);
-                    await unitOfWork.RollbackTransactionAsync();
-                    continue;
-                }
-
-                var availableBefore = wallet.AvailableBalance;
-                wallet.PendingBalance -= settleAmount;
-                wallet.AvailableBalance += settleAmount;
-                wallet.UpdatedAt = DateTime.UtcNow;
-
-                // Create a completed platform transaction to reflect available balance change
-                var settlementPtx = new PlatformWalletTransaction
-                {
-                    PlatformWalletId = wallet.Id,
-                    ReferenceId = trackedPtx.ReferenceId,
-                    ReferenceType = trackedPtx.ReferenceType,
-                    Type = Domain.Enums.PlatformTransactionType.Revenue,
-                    Status = TransactionStatus.Completed,
-                    Amount = settleAmount,
-                    Currency = trackedPtx.Currency,
-                    BalanceBefore = availableBefore,
-                    BalanceAfter = wallet.AvailableBalance,
-                    Description = $"Settlement release for platform tx {trackedPtx.Id}",
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                await unitOfWork.PlatformWalletTransactionRepository.AddAsync(settlementPtx);
-
-                // Mark original pending platform tx as completed
-                trackedPtx.Status = TransactionStatus.Completed;
-                trackedPtx.UpdatedAt = DateTime.UtcNow;
-
-                await unitOfWork.SaveChangesAsync();
-                await unitOfWork.CommitTransactionAsync();
-
-                logger.LogInformation("Platform transaction settled: {TxId} released {Amount}", trackedPtx.Id, settleAmount);
             }
             catch (Exception ex)
             {
-                try { await unitOfWork.RollbackTransactionAsync(); } catch { }
                 logger.LogError(ex, "Failed to process platform settlement for tx {TxId}", ptx.Id);
             }
         }
