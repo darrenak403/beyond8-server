@@ -86,11 +86,11 @@ namespace Beyond8.Identity.Api.Bootstrapping
         private static void RegisterHangfireRecurringJobs(WebApplication app)
         {
             RecurringJob.AddOrUpdate<ISubscriptionService>(
-                "reset-weekly-requests",
+                "identity:subscription.reset-weekly-requests",
                 x => x.ResetWeeklyRequestsAsync(),
                 Cron.Weekly(DayOfWeek.Monday, 0));
             RecurringJob.AddOrUpdate<ISubscriptionService>(
-                "expire-subscriptions",
+                "identity:subscription.expire-daily",
                 x => x.ExpireSubscriptionsAsync(),
                 Cron.Daily(0, 0));
         }

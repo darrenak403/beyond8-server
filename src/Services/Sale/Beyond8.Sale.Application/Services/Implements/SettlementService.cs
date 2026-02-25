@@ -312,7 +312,7 @@ public class SettlementService(
         if (to.HasValue) instructorQuery = instructorQuery.Where(t => t.AvailableAt <= to.Value);
 
         var instructorTxs = await instructorQuery
-            .Select(t => new { OrderId = t.ReferenceId.Value, t.Amount, t.AvailableAt })
+            .Select(t => new { OrderId = t.ReferenceId!.Value, t.Amount, t.AvailableAt })
             .ToListAsync();
 
         // Load platform transactions (by order reference).
@@ -325,7 +325,7 @@ public class SettlementService(
         if (to.HasValue) platformQuery = platformQuery.Where(t => (t.AvailableAt ?? t.CreatedAt) <= to.Value);
 
         var platformTxs = await platformQuery
-            .Select(t => new { OrderId = t.ReferenceId.Value, t.Amount, EffectiveAt = (DateTime?)(t.AvailableAt ?? t.CreatedAt) })
+            .Select(t => new { OrderId = t.ReferenceId!.Value, t.Amount, EffectiveAt = (DateTime?)(t.AvailableAt ?? t.CreatedAt) })
             .ToListAsync();
 
         // Group by order

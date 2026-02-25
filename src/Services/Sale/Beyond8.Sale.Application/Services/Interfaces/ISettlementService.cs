@@ -16,18 +16,7 @@ public interface ISettlementService
     /// Force settle a single order (admin override).
     /// </summary>
     Task<ApiResponse<bool>> ForceSettleOrderAsync(Guid orderId);
-
-    /// <summary>
-    /// <summary>
-    /// (Deprecated) Individual instructor/platform upcoming queries were consolidated.
-    /// Use `GetUpcomingByOrderAsync` for admin-facing upcoming settlements grouped by order,
-    /// and `GetMyUpcomingSettlementsAsync` for instructor-facing upcoming releases.
-    /// </summary>
-
-    /// <summary>
-    /// Get upcoming settlements for a specific instructor (their wallet incoming releases).
-    /// Instructor only.
-    /// </summary>
+    
     Task<ApiResponse<List<UpcomingSettlementResponse>>> GetMyUpcomingSettlementsAsync(Guid instructorId, PaginationRequest pagination);
 
     /// <summary>
@@ -35,4 +24,9 @@ public interface ISettlementService
     /// Admin only.
     /// </summary>
     Task<ApiResponse<List<UpcomingByOrderResponse>>> GetUpcomingByOrderAsync(DateTime? from, DateTime? to, PaginationRequest pagination);
+
+    /// <summary>
+    /// Background entry point to run pending settlement processing once.
+    /// Intended to be called by schedulers (Hangfire) or on-demand.
+    /// </summary>
 }

@@ -6,6 +6,9 @@ namespace Beyond8.Sale.Application.Services.Interfaces;
 
 public interface IPaymentService
 {
+    // Run cleanup of expired payments (for Hangfire recurring job)
+    Task RunCleanupAsync();
+
     // ── Student (Authenticated) ──
     Task<ApiResponse<PaymentUrlResponse>> ProcessPaymentAsync(Guid orderId, string returnUrl, string ipAddress);
     Task<ApiResponse<PaymentUrlResponse>> ProcessSubscriptionAsync(string planCode, Guid userId, string returnUrl, string ipAddress);

@@ -16,6 +16,7 @@ using Beyond8.Sale.Infrastructure.Data;
 using Beyond8.Sale.Infrastructure.Repositories.Implements;
 using FluentValidation;
 using Microsoft.Extensions.Hosting;
+using Hangfire;
 using Polly;
 using Polly.Extensions.Http;
 using Scalar.AspNetCore;
@@ -72,9 +73,12 @@ public static class ApplicationServiceExtensions
         builder.Services.AddScoped<IPayoutService, PayoutService>();
         builder.Services.AddScoped<ITransactionService, TransactionService>();
 
-        // Background services
-        builder.Services.AddHostedService<PaymentCleanupService>();
-        builder.Services.AddHostedService<SettlementBackgroundService>();
+        // Payment cleanup will be executed via Hangfire by calling IPaymentService.RunCleanupAsync()
+
+        // Background services: run via Hangfire recurring jobs (do not register as hosted services)
+
+        // Configure Hangfire (shared extension from Common)
+        builder.AddHangfire(Const.HangfireDatabase);
 
         return builder;
     }
@@ -111,11 +115,17 @@ public static class ApplicationServiceExtensions
     public static WebApplication UseApplicationServices(this WebApplication app)
     {
         app.UseCommonService();
+
+        // Hangfire dashboard + recurring jobs
+        app.UseHangfireDashboard("/hangfire", allowAnonymousInDevelopment: false);
+        RegisterHangfireRecurringJobs(app);
+
         if (app.Environment.IsDevelopment())
         {
             app.MapOpenApi();
             app.MapScalarApiReference();
         }
+
         app.UseHttpsRedirection();
 
         // Map API endpoints
@@ -131,5 +141,20 @@ public static class ApplicationServiceExtensions
         app.MapSettlementApi();
 
         return app;
+    }
+
+    private static void RegisterHangfireRecurringJobs(WebApplication app)
+    {
+        // Schedule payment cleanup every 5 minutes
+        RecurringJob.AddOrUpdate<IPaymentService>(
+            "sale:payment.cleanup:expired-payments",
+            x => x.RunCleanupAsync(),
+            Cron.MinuteInterval(5));
+
+        // Schedule settlement processing hourly
+        RecurringJob.AddOrUpdate<ISettlementService>(
+            "sale:settlement.process:hourly",
+            x => x.ProcessPendingSettlementsAsync(),
+            Cron.Hourly);
     }
 }
