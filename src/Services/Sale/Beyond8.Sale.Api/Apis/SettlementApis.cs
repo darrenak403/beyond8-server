@@ -21,6 +21,16 @@ public static class SettlementApis
 
     public static RouteGroupBuilder MapSettlementRoutes(this RouteGroupBuilder group)
     {
+        // Admin: trigger processing now (for demo / maintenance)
+        group.MapPost("/trigger", TriggerProcessPendingSettlementsAsync)
+            .WithName("TriggerProcessPendingSettlements")
+            .WithDescription("Trigger settlement processing immediately (Admin only). Use for demo/maintenance only.")
+            .RequireAuthorization(x => x.RequireRole(Role.Admin))
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
+
         group.MapGet("/upcoming", GetUpcomingByOrderAsync)
             .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
             .WithName("GetUpcomingByOrder")
@@ -36,6 +46,13 @@ public static class SettlementApis
             .Produces(401);
 
         return group;
+    }
+
+    private static async Task<IResult> TriggerProcessPendingSettlementsAsync(
+        [FromServices] ISettlementService settlementService)
+    {
+        var result = await settlementService.ProcessPendingSettlementsAsync();
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 
     private static async Task<IResult> GetUpcomingByOrderAsync(
