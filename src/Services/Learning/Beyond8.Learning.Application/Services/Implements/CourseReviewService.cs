@@ -27,12 +27,12 @@ public class CourseReviewService(
                 return ApiResponse<CourseReviewResponse>.FailureResponse("Khóa học đã đăng ký không tồn tại.");
             }
 
-            // if (enrollment.TotalLessons <= 0 || enrollment.CompletedLessons < enrollment.TotalLessons)
-            // {
-            //     logger.LogWarning("User {UserId} has not completed course {CourseId} (progress {Completed}/{Total})",
-            //         userId, request.CourseId, enrollment.CompletedLessons, enrollment.TotalLessons);
-            //     return ApiResponse<CourseReviewResponse>.FailureResponse("Bạn cần hoàn thành khóa học (100% tiến độ) trước khi đánh giá.");
-            // }
+            if (enrollment.TotalLessons <= 0 || enrollment.CompletedLessons < enrollment.TotalLessons)
+            {
+                logger.LogWarning("User {UserId} has not completed course {CourseId} (progress {Completed}/{Total})",
+                    userId, request.CourseId, enrollment.CompletedLessons, enrollment.TotalLessons);
+                return ApiResponse<CourseReviewResponse>.FailureResponse("Bạn cần hoàn thành khóa học (100% tiến độ) trước khi đánh giá.");
+            }
 
             var isCourseReviewed = await unitOfWork.CourseReviewRepository.IsCourseReviewedAsync(request.CourseId, userId);
             if (isCourseReviewed)
