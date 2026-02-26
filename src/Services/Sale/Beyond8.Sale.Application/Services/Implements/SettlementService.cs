@@ -316,11 +316,12 @@ public class SettlementService(
             .Select(t => new { OrderId = t.ReferenceId!.Value, t.Amount, t.AvailableAt, t.Status })
             .ToListAsync();
 
-        // Load platform transactions (by order reference).
-        // Include pending escrowed transactions and already-completed immediate credits.
-        // Exclude internal settlement-release transactions (created when pending platform txs are released)
+        // Load platform revenue transactions (by order reference).
+        // Only include Revenue type — CouponCost transactions are immediate debits, not part of settlement.
         var platformQuery = unitOfWork.PlatformWalletTransactionRepository.AsQueryable()
-            .Where(t => t.ReferenceId != null && !(t.Description != null && t.Description.Contains("Settlement release for platform tx")));
+            .Where(t => t.ReferenceId != null
+                && t.Type == PlatformTransactionType.Revenue
+                && !(t.Description != null && t.Description.Contains("Settlement release for platform tx")));
 
         // Use effective available time = AvailableAt (if set) otherwise CreatedAt for immediate credits
         if (from.HasValue) platformQuery = platformQuery.Where(t => (t.AvailableAt ?? t.CreatedAt) >= from.Value);
