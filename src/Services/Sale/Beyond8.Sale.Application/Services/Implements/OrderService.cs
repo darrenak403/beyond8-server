@@ -732,7 +732,7 @@ public class OrderService(
             // Calculate discount percent from instructor coupon
             var discountPercent = itemInstructorDiscount > 0 ? (itemInstructorDiscount / unitPrice) * 100 : 0;
 
-            var pricing = CalculateOrderItemPricing(finalPrice, itemInstructorDiscount);
+            var pricing = CalculateOrderItemPricing(finalPrice, itemInstructorDiscount, course.OriginalPrice);
             orderItems.Add(course.ToOrderItemSnapshot(unitPrice, discountPercent, pricing));
             originalSubTotal += unitPrice; // Sum of original prices
             subTotalAfterInstructorDiscount += pricing.LineTotal; // Sum after instructor discounts
@@ -763,26 +763,35 @@ public class OrderService(
         var totalDiscount = totalInstructorDiscount + systemDiscount;
         var totalAmount = Math.Max(0, subTotalAfterInstructorDiscount - systemDiscount); // System discount applied to subtotal after instructor discounts
 
-        // ── Phase 4: Recalculate platform fee and instructor earnings after system discount ──
-        // System discount affects the final amount, so we need to redistribute platform fee and instructor earnings proportionally
-        if (systemDiscount > 0 && subTotalAfterInstructorDiscount > 0)
+        // ── Phase 4: Recalculate platform fee and instructor earnings with correct discount attribution ──
+        // Per BR-19: Always split 70/30 from ORIGINAL PRICE, each party absorbs their own coupon cost
         {
-            var discountRatio = totalAmount / subTotalAfterInstructorDiscount; // How much of original amount remains after system discount
-
+            // Calculate per-item system discount proportionally
             foreach (var item in orderItems)
             {
-                // Recalculate platform fee and instructor earnings based on final amount
-                // LineTotal remains as UnitPrice * Quantity (after instructor discount only)
-                var adjustedPlatformFee = item.LineTotal * discountRatio * 0.30m; // Per BR-19: 30% platform fee
-                var adjustedInstructorEarnings = item.LineTotal * discountRatio - adjustedPlatformFee; // 70% to instructor
+                // Base split from original price
+                var baseInstructorEarnings = item.OriginalPrice * 0.70m;
+                var basePlatformFee = item.OriginalPrice * 0.30m;
 
-                // Update the snapshot with adjusted values (keep LineTotal unchanged)
+                // Instructor absorbs instructor discount
+                var itemInstructorDiscount = item.InstructorDiscountAmount;
+                var adjustedInstructorEarnings = baseInstructorEarnings - itemInstructorDiscount;
+
+                // Platform absorbs system discount (proportionally distributed)
+                decimal itemSystemDiscount = 0;
+                if (systemDiscount > 0 && subTotalAfterInstructorDiscount > 0)
+                {
+                    var ratio = item.LineTotal / subTotalAfterInstructorDiscount;
+                    itemSystemDiscount = systemDiscount * ratio;
+                }
+                var adjustedPlatformFee = basePlatformFee - itemSystemDiscount;
+
                 item.PlatformFeeAmount = adjustedPlatformFee;
                 item.InstructorEarnings = adjustedInstructorEarnings;
             }
 
-            logger.LogInformation("Recalculated platform fee and instructor earnings after system discount: ratio {Ratio}, totalAmount {TotalAmount}",
-                discountRatio, totalAmount);
+            logger.LogInformation("Calculated revenue split from original prices — totalAmount {TotalAmount}, instructorDiscount {InstructorDiscount}, systemDiscount {SystemDiscount}",
+                totalAmount, totalInstructorDiscount, systemDiscount);
         }
 
         return (true, null, originalSubTotal, subTotalAfterInstructorDiscount, totalInstructorDiscount, systemDiscount, totalDiscount, totalAmount, instructorCouponId, systemCouponId, orderItems);

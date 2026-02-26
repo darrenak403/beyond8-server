@@ -686,58 +686,63 @@ public class PaymentService(
         }
 
         // ── Credit Platform Wallet ──
-        // Always synchronize platform credit with instructor's pending/available date.
-        if (totalPlatformFee > 0)
+        // Platform fee already has system coupon discount absorbed (from CalculateItemRevenueSplit)
+        // No need for separate DebitSystemCouponCostAsync — would cause double-deduction
+        if (totalPlatformFee != 0)
         {
             var availableAt = order.SettlementEligibleAt ?? (order.PaidAt.HasValue ? order.PaidAt.Value.AddDays(14) : DateTime.UtcNow.AddDays(14));
 
-            await platformWalletService.CreditPlatformRevenuePendingAsync(
-                totalPlatformFee, order.Id,
-                $"Hoa hồng 30% đơn hàng #{order.OrderNumber}",
-                availableAt);
-        }
-
-        // ── System coupon: Platform absorbs discount (balance can go negative) ──
-        if (systemCoupon != null && order.SystemDiscountAmount > 0)
-        {
-            await platformWalletService.DebitSystemCouponCostAsync(
-                order.SystemDiscountAmount, order.Id,
-                $"Chi phí coupon hệ thống {systemCoupon.Code} cho đơn hàng #{order.OrderNumber}");
+            if (totalPlatformFee > 0)
+            {
+                await platformWalletService.CreditPlatformRevenuePendingAsync(
+                    totalPlatformFee, order.Id,
+                    $"Hoa hồng 30% đơn hàng #{order.OrderNumber}" +
+                    (systemCoupon != null ? $" (đã trừ coupon hệ thống {systemCoupon.Code})" : ""),
+                    availableAt);
+            }
+            else
+            {
+                // When system discount exceeds 30% platform share, platform owes money
+                await platformWalletService.DebitSystemCouponCostAsync(
+                    Math.Abs(totalPlatformFee), order.Id,
+                    $"Chi phí coupon hệ thống {systemCoupon?.Code} vượt hoa hồng đơn hàng #{order.OrderNumber}");
+            }
         }
     }
 
     /// <summary>
     /// Calculate revenue split for a single order item considering coupon discount attribution.
-    /// Formula:
-    ///   - Instructor coupon: Instructor absorbs instructor discount
-    ///   - System coupon: Platform absorbs system discount
-    ///   - Both coupons: Instructor absorbs instructor discount, platform absorbs system discount
-    ///   - Final instructor earnings = (OriginalPrice - InstructorDiscount - SystemDiscount) * 0.7
+    /// Formula (BR-19):
+    ///   - Always split 70/30 from ORIGINAL PRICE
+    ///   - Instructor coupon: Instructor absorbs discount (deducted from their 70%)
+    ///   - System coupon: Platform absorbs discount (deducted from their 30%)
     /// </summary>
     private static (decimal InstructorEarnings, decimal PlatformFee) CalculateItemRevenueSplit(
         OrderItem item, Order order, Coupon? instructorCoupon, Coupon? systemCoupon)
     {
+        const decimal instructorRate = 0.70m; // Per BR-19: 70% instructor
         const decimal platformFeeRate = 0.30m; // Per BR-19: 30% platform
         var originalPrice = item.OriginalPrice;
-        var finalPrice = originalPrice;
 
         // Calculate total original price of all items (before any discounts)
         var totalOriginalPrice = order.OrderItems.Sum(oi => oi.OriginalPrice);
 
-        // Calculate instructor discount (absorbed by instructor)
+        // Always calculate base split from ORIGINAL PRICE
+        var baseInstructorEarnings = originalPrice * instructorRate;
+        var basePlatformFee = originalPrice * platformFeeRate;
+
+        // Calculate instructor discount (absorbed by instructor — deducted from their 70%)
         decimal instructorDiscount = 0;
         if (instructorCoupon != null && order.InstructorDiscountAmount > 0 && totalOriginalPrice > 0)
         {
-            // Proportional discount for this item based on original price
             var discountRatio = originalPrice / totalOriginalPrice;
             instructorDiscount = order.InstructorDiscountAmount * discountRatio;
         }
 
-        // Calculate system discount (absorbed by platform)
+        // Calculate system discount (absorbed by platform — deducted from their 30%)
         decimal systemDiscount = 0;
         if (systemCoupon != null && order.SystemDiscountAmount > 0 && totalOriginalPrice > 0)
         {
-            // Proportional discount for this item based on price after instructor discount
             var itemPriceAfterInstructorDiscount = originalPrice - instructorDiscount;
             var totalPriceAfterInstructorDiscount = totalOriginalPrice - order.InstructorDiscountAmount;
             if (totalPriceAfterInstructorDiscount > 0)
@@ -747,12 +752,9 @@ public class PaymentService(
             }
         }
 
-        // Final price after all discounts
-        finalPrice = originalPrice - instructorDiscount - systemDiscount;
-
-        // Instructor gets 70% of final price, platform gets 30%
-        var instructorEarnings = finalPrice * (1 - platformFeeRate);
-        var platformFee = finalPrice - instructorEarnings;
+        // Each party absorbs their own coupon cost
+        var instructorEarnings = baseInstructorEarnings - instructorDiscount;
+        var platformFee = basePlatformFee - systemDiscount;
 
         return (instructorEarnings, platformFee);
     }
