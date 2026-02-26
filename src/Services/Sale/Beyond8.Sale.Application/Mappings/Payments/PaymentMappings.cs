@@ -20,6 +20,19 @@ public static class PaymentMappings
             pendingPaymentInfo = payment.Order.ToPendingPaymentResponse(payment);
         }
 
+        // For non-order payments (Subscription, WalletTopUp), expose pending info similarly
+        if (pendingPaymentInfo == null && payment.Order == null && 
+            (payment.Status == PaymentStatus.Pending || payment.Status == PaymentStatus.Processing) && 
+            payment.ExpiredAt > DateTime.UtcNow)
+        {
+            pendingPaymentInfo = new PendingPaymentResponse
+            {
+                OrderId = payment.Id, // use payment.Id as placeholder
+                OrderNumber = payment.PaymentNumber,
+                PaymentInfo = payment.ToUrlResponse(payment.PaymentUrl ?? string.Empty)
+            };
+        }
+
         // Parse metadata to a JSON object (JsonElement) so it returns cleanly rather than as an escaped string
         object? parsedMetadata = null;
         if (!string.IsNullOrEmpty(payment.Metadata))
