@@ -29,8 +29,7 @@ public static class PaymentMappings
             {
                 OrderId = payment.Id, // use payment.Id as placeholder
                 OrderNumber = payment.PaymentNumber,
-                PaymentInfo = payment.ToUrlResponse(payment.PaymentUrl ?? string.Empty),
-                Message = "Bạn có giao dịch mua gói đang chờ xử lý. Vui lòng hoàn tất giao dịch trước khi mua gói mới."
+                PaymentInfo = payment.ToUrlResponse(payment.PaymentUrl ?? string.Empty)
             };
         }
 
@@ -67,7 +66,23 @@ public static class PaymentMappings
             PaymentNumber = payment.PaymentNumber,
             Purpose = payment.Purpose.ToString(),
             PaymentUrl = paymentUrl,
-            ExpiredAt = payment.ExpiredAt ?? DateTime.UtcNow.AddMinutes(15)
+            ExpiredAt = payment.ExpiredAt ?? DateTime.UtcNow.AddMinutes(15),
+            Status = payment.Status
+        };
+    }
+
+    public static PendingPaymentResponse ToPendingPaymentResponse(this Payment payment)
+    {
+        // If the payment belongs to an Order, reuse the Order -> PendingPaymentResponse mapping
+        if (payment.Order != null)
+            return payment.Order.ToPendingPaymentResponse(payment);
+
+        // Otherwise build a subscription/non-order pending response
+        return new PendingPaymentResponse
+        {
+            OrderId = payment.Id,
+            OrderNumber = payment.PaymentNumber,
+            PaymentInfo = payment.ToUrlResponse(payment.PaymentUrl ?? string.Empty)
         };
     }
 }

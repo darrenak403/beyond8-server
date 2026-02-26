@@ -67,4 +67,6 @@ public class Payment : BaseEntity
 
     [Column(TypeName = "jsonb")]
     public string? Metadata { get; set; }
+    
+    public Guid? TargetUserId { get; set; }
 }

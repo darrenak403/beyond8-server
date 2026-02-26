@@ -17,6 +17,8 @@ using Beyond8.Sale.Application.Clients.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
+using Beyond8.Sale.Application.Dtos.Orders;
+using Beyond8.Sale.Application.Mappings.Orders;
 
 namespace Beyond8.Sale.Application.Services.Implements;
 
@@ -344,6 +346,16 @@ public class PaymentService(
         if (!wallet.IsActive)
             return ApiResponse<PaymentUrlResponse>.FailureResponse("Ví giảng viên đã bị vô hiệu hóa");
 
+        var pendingCheck = await CheckPendingPaymentAsync(PaymentPurpose.WalletTopUp, instructorId);
+        if (pendingCheck.IsSuccess && pendingCheck.Data != null && pendingCheck.Data.PaymentInfo != null)
+        {
+            var existingInfo = pendingCheck.Data.PaymentInfo;
+            existingInfo.IsPending = true;
+            return ApiResponse<PaymentUrlResponse>.SuccessResponse(
+                existingInfo,
+                "Đã có giao dịch nạp tiền đang chờ xử lý. Vui lòng hoàn tất giao dịch trước khi tạo giao dịch mới.");
+        }
+
         var payment = new Payment
         {
             OrderId = null,
@@ -391,10 +403,97 @@ public class PaymentService(
             "Tạo giao dịch nạp tiền thành công");
     }
 
+
+    public async Task<ApiResponse<PendingPaymentResponse>> CheckPendingPaymentAsync(PaymentPurpose purpose, Guid userId)
+    {
+        try
+        {
+            // Fetch recent candidate payments for the purpose that are still pending/processing
+            var candidates = await unitOfWork.PaymentRepository.AsQueryable()
+                .Include(p => p.Order)
+                .Include(p => p.InstructorWallet)
+                .Where(p => p.Purpose == purpose
+                            && (p.Status == PaymentStatus.Pending || p.Status == PaymentStatus.Processing)
+                            && p.ExpiredAt > DateTime.UtcNow)
+                .OrderByDescending(p => p.CreatedAt)
+                .Take(50)
+                .ToListAsync();
+
+            Payment? matched = null;
+
+            foreach (var p in candidates)
+            {
+                // 1) Order-linked payment for the same user
+                if (p.Order != null && p.Order.UserId == userId)
+                {
+                    matched = p; break;
+                }
+
+                // 2) Explicit TargetUserId (used for subscription payments)
+                if (p.TargetUserId == userId)
+                {
+                    matched = p; break;
+                }
+
+                // 3) Wallet top-up: match by instructor wallet owner
+                if (p.InstructorWallet != null && p.InstructorWallet.InstructorId == userId)
+                {
+                    matched = p; break;
+                }
+
+                // 4) Metadata fallback (e.g., older subscription metadata storing UserId)
+                if (!string.IsNullOrEmpty(p.Metadata))
+                {
+                    try
+                    {
+                        using var doc = System.Text.Json.JsonDocument.Parse(p.Metadata);
+                        var root = doc.RootElement;
+                        if (root.TryGetProperty("UserId", out var userIdProp) && userIdProp.ValueKind == System.Text.Json.JsonValueKind.String)
+                        {
+                            if (Guid.TryParse(userIdProp.GetString(), out var parsed) && parsed == userId)
+                            {
+                                matched = p; break;
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // ignore malformed metadata
+                    }
+                }
+            }
+
+            if (matched != null)
+            {
+                // Return PendingPaymentResponse using mapping helper
+                var pending = matched.ToPendingPaymentResponse();
+                return ApiResponse<PendingPaymentResponse>.SuccessResponse(pending, "Đã có giao dịch đang chờ xử lý");
+            }
+
+            return ApiResponse<PendingPaymentResponse>.SuccessResponse(null!, "Không có giao dịch đang chờ xử lý");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error checking pending payments for Purpose: {Purpose}, UserId: {UserId}", purpose, userId);
+            return ApiResponse<PendingPaymentResponse>.FailureResponse("Lỗi khi kiểm tra giao dịch đang chờ xử lý");
+        }
+    }
+
     public async Task<ApiResponse<PaymentUrlResponse>> ProcessSubscriptionAsync(string planCode, Guid userId, string returnUrl, string ipAddress)
     {
         if (string.IsNullOrWhiteSpace(planCode))
             return ApiResponse<PaymentUrlResponse>.FailureResponse("PlanCode không được để trống");
+
+
+        var pendingCheck = await CheckPendingPaymentAsync(PaymentPurpose.Subscription, userId);
+        if (pendingCheck.IsSuccess && pendingCheck.Data != null && pendingCheck.Data.PaymentInfo != null)
+        {
+            var existingInfo = pendingCheck.Data.PaymentInfo;
+            existingInfo.IsPending = true;
+            return ApiResponse<PaymentUrlResponse>.SuccessResponse(
+                existingInfo,
+                "Đã có giao dịch mua subscription đang chờ xử lý. Vui lòng hoàn tất giao dịch trước khi mua gói mới.");
+        }
 
         // Get plans from Identity service and find the requested plan by code
         var plansResponse = await identityClient.GetSubscriptionPlansAsync();
@@ -408,86 +507,13 @@ public class PaymentService(
         if (plan == null)
             return ApiResponse<PaymentUrlResponse>.FailureResponse("Gói đăng ký không tồn tại hoặc đã bị vô hiệu hóa");
 
-        // Fetch candidates and filter in-memory to avoid SQL casting issues with jsonb columns.
-        var pendingCandidates = await unitOfWork.PaymentRepository.AsQueryable()
-            .Where(p => p.Purpose == PaymentPurpose.Subscription
-                        && (p.Status == PaymentStatus.Pending || p.Status == PaymentStatus.Processing)
-                        && p.ExpiredAt > DateTime.UtcNow
-                        && p.Metadata != null)
-            .OrderByDescending(p => p.CreatedAt)
-            .ToListAsync();
-
-        Payment? existingPending = null;
-        foreach (var candidate in pendingCandidates)
-        {
-            if (string.IsNullOrEmpty(candidate.Metadata))
-                continue;
-
-            try
-            {
-                using var doc = System.Text.Json.JsonDocument.Parse(candidate.Metadata);
-                var root = doc.RootElement;
-
-                // Find a property named UserId (case-insensitive)
-                string? found = null;
-                foreach (var prop in root.EnumerateObject())
-                {
-                    if (string.Equals(prop.Name, "UserId", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (prop.Value.ValueKind == System.Text.Json.JsonValueKind.String)
-                            found = prop.Value.GetString();
-                        else
-                            found = prop.Value.ToString();
-                        break;
-                    }
-                }
-
-                if (!string.IsNullOrEmpty(found) && Guid.TryParse(found, out var parsed) && parsed == userId)
-                {
-                    existingPending = candidate;
-                    break;
-                }
-            }
-            catch
-            {
-                // ignore malformed metadata
-            }
-        }
-
-        if (existingPending != null)
-        {
-            if (!string.IsNullOrEmpty(existingPending.PaymentUrl))
-            {
-                return ApiResponse<PaymentUrlResponse>.SuccessResponse(
-                    existingPending.ToUrlResponse(existingPending.PaymentUrl),
-                    "Đã có giao dịch mua gói đang chờ xử lý. Vui lòng hoàn tất giao dịch trước khi mua gói mới.");
-            }
-
-            var paymentInfoExisting = new VNPayPaymentInfo
-            {
-                OrderId = existingPending.Id.ToString(),
-                PaymentNumber = existingPending.PaymentNumber,
-                Amount = existingPending.Amount,
-                OrderInfo = $"Buy subscription {plan.Code}",
-                CreatedDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")),
-                ExpireDate = existingPending.ExpiredAt.HasValue ? TimeZoneInfo.ConvertTimeFromUtc(existingPending.ExpiredAt.Value, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")) : DateTime.UtcNow.AddMinutes(15),
-                ReturnUrl = returnUrl
-            };
-
-            var existingUrl = vnPayService.CreatePaymentUrl(paymentInfoExisting, ipAddress);
-            existingPending.PaymentUrl = existingUrl;
-            await unitOfWork.SaveChangesAsync();
-
-            return ApiResponse<PaymentUrlResponse>.SuccessResponse(
-                existingPending.ToUrlResponse(existingUrl),
-                "Đã có giao dịch mua gói đang chờ xử lý. Vui lòng hoàn tất giao dịch trước khi mua gói mới.");
-        }
-
         // Create payment with correct amount from plan.Price
         var payment = new Payment
         {
             OrderId = null,
             Purpose = PaymentPurpose.Subscription,
+            // Record explicit target user for reliable DB-side pending checks
+            TargetUserId = userId,
             PaymentNumber = GeneratePaymentNumber(),
             Status = PaymentStatus.Pending,
             Amount = plan.Price,
@@ -1057,4 +1083,5 @@ public class PaymentService(
             // Don't throw - payment already succeeded, cart cleanup is non-critical
         }
     }
+
 }

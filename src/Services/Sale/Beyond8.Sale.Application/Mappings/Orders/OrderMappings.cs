@@ -179,7 +179,8 @@ public static class OrderMappings
                 PaymentNumber = activePayment.PaymentNumber,
                 Purpose = activePayment.Purpose.ToString(),
                 PaymentUrl = activePayment.PaymentUrl ?? string.Empty,
-                ExpiredAt = activePayment.ExpiredAt ?? DateTime.UtcNow.AddMinutes(15)
+                ExpiredAt = activePayment.ExpiredAt ?? DateTime.UtcNow.AddMinutes(15),
+                Status = activePayment.Status
             }
         };
     }

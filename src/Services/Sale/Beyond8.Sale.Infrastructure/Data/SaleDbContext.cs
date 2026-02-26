@@ -92,6 +92,10 @@ public class SaleDbContext : BaseDbContext
             entity.HasIndex(e => e.WalletId)
                 .HasFilter("\"WalletId\" IS NOT NULL");
 
+            // Index for subscription quick-lookup by target user
+            entity.HasIndex(e => e.TargetUserId)
+                .HasFilter("\"TargetUserId\" IS NOT NULL");
+
             // Default values
             entity.Property(e => e.Purpose)
                 .HasDefaultValue(PaymentPurpose.OrderPayment);
