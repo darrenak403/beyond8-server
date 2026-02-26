@@ -408,43 +408,18 @@ public class PaymentService(
         if (plan == null)
             return ApiResponse<PaymentUrlResponse>.FailureResponse("Gói đăng ký không tồn tại hoặc đã bị vô hiệu hóa");
 
-        // Prevent duplicate pending subscription payments for same user
-        // Fetch pending subscription payments with non-null metadata, then filter by UserId in-memory
-        var pendingCandidates = await unitOfWork.PaymentRepository.AsQueryable()
+        var userIdStr = userId.ToString();
+        var existingPending = await unitOfWork.PaymentRepository.AsQueryable()
             .Where(p => p.Purpose == PaymentPurpose.Subscription
                         && (p.Status == PaymentStatus.Pending || p.Status == PaymentStatus.Processing)
                         && p.ExpiredAt > DateTime.UtcNow
-                        && p.Metadata != null)
+                        && p.Metadata != null
+                        && EF.Functions.Like(p.Metadata, $"%{userIdStr}%"))
             .OrderByDescending(p => p.CreatedAt)
-            .ToListAsync();
-
-        Payment? existingPending = null;
-        foreach (var candidate in pendingCandidates)
-        {
-            if (candidate.Metadata == null) continue;
-
-            try
-            {
-                using var doc = System.Text.Json.JsonDocument.Parse(candidate.Metadata);
-                var root = doc.RootElement;
-                if (root.TryGetProperty("UserId", out var userIdProp) && userIdProp.ValueKind == System.Text.Json.JsonValueKind.String)
-                {
-                    if (Guid.TryParse(userIdProp.GetString(), out var parsed) && parsed == userId)
-                    {
-                        existingPending = candidate;
-                        break;
-                    }
-                }
-            }
-            catch
-            {
-                // ignore malformed metadata
-            }
-        }
+            .FirstOrDefaultAsync();
 
         if (existingPending != null)
         {
-            // If URL already exists, return it
             if (!string.IsNullOrEmpty(existingPending.PaymentUrl))
             {
                 return ApiResponse<PaymentUrlResponse>.SuccessResponse(
@@ -452,7 +427,6 @@ public class PaymentService(
                     "Đã có giao dịch mua gói đang chờ xử lý. Vui lòng hoàn tất giao dịch trước khi mua gói mới.");
             }
 
-            // Otherwise generate and save a URL for reuse
             var paymentInfoExisting = new VNPayPaymentInfo
             {
                 OrderId = existingPending.Id.ToString(),
