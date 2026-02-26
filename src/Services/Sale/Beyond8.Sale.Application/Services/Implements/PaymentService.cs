@@ -408,15 +408,51 @@ public class PaymentService(
         if (plan == null)
             return ApiResponse<PaymentUrlResponse>.FailureResponse("Gói đăng ký không tồn tại hoặc đã bị vô hiệu hóa");
 
-        var userIdStr = userId.ToString();
-        var existingPending = await unitOfWork.PaymentRepository.AsQueryable()
+        // Fetch candidates and filter in-memory to avoid SQL casting issues with jsonb columns.
+        var pendingCandidates = await unitOfWork.PaymentRepository.AsQueryable()
             .Where(p => p.Purpose == PaymentPurpose.Subscription
                         && (p.Status == PaymentStatus.Pending || p.Status == PaymentStatus.Processing)
                         && p.ExpiredAt > DateTime.UtcNow
-                        && p.Metadata != null
-                        && EF.Functions.Like(p.Metadata, $"%{userIdStr}%"))
+                        && p.Metadata != null)
             .OrderByDescending(p => p.CreatedAt)
-            .FirstOrDefaultAsync();
+            .ToListAsync();
+
+        Payment? existingPending = null;
+        foreach (var candidate in pendingCandidates)
+        {
+            if (string.IsNullOrEmpty(candidate.Metadata))
+                continue;
+
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(candidate.Metadata);
+                var root = doc.RootElement;
+
+                // Find a property named UserId (case-insensitive)
+                string? found = null;
+                foreach (var prop in root.EnumerateObject())
+                {
+                    if (string.Equals(prop.Name, "UserId", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (prop.Value.ValueKind == System.Text.Json.JsonValueKind.String)
+                            found = prop.Value.GetString();
+                        else
+                            found = prop.Value.ToString();
+                        break;
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(found) && Guid.TryParse(found, out var parsed) && parsed == userId)
+                {
+                    existingPending = candidate;
+                    break;
+                }
+            }
+            catch
+            {
+                // ignore malformed metadata
+            }
+        }
 
         if (existingPending != null)
         {
