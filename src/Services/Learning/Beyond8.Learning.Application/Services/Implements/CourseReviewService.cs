@@ -1,8 +1,10 @@
 using Beyond8.Common.Events.Learning;
 using Beyond8.Common.Utilities;
 using Beyond8.Learning.Application.Dtos.CourseReview;
+using Beyond8.Learning.Application.Helpers;
 using Beyond8.Learning.Application.Mappings;
 using Beyond8.Learning.Application.Services.Interfaces;
+using Beyond8.Learning.Domain.Enums;
 using Beyond8.Learning.Domain.Repositories.Interfaces;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
@@ -19,18 +21,29 @@ public class CourseReviewService(
     {
         try
         {
-            var enrollment = await unitOfWork.EnrollmentRepository.FindOneAsync(e =>
-                e.Id == request.EnrollmentId && e.DeletedAt == null);
+            var enrollment = await unitOfWork.EnrollmentRepository.AsQueryable()
+                .Include(e => e.LessonProgresses)
+                .FirstOrDefaultAsync(e => e.Id == request.EnrollmentId && e.DeletedAt == null);
             if (enrollment == null)
             {
                 logger.LogWarning("Enrollment not found: {EnrollmentId}", request.EnrollmentId);
                 return ApiResponse<CourseReviewResponse>.FailureResponse("Khóa học đã đăng ký không tồn tại.");
             }
 
-            if (enrollment.TotalLessons <= 0 || enrollment.CompletedLessons < enrollment.TotalLessons)
+            // Use actual LessonProgress count (source of truth) so progress and review eligibility stay in sync
+            var actualCompletedCount = enrollment.LessonProgresses.Count(lp =>
+                EnrollmentProgressHelper.IsCompletedOrFailed(lp.Status));
+            if (enrollment.CompletedLessons != actualCompletedCount)
+            {
+                EnrollmentProgressHelper.ApplyProgressToEnrollment(enrollment, actualCompletedCount, DateTime.UtcNow);
+                await unitOfWork.EnrollmentRepository.UpdateAsync(enrollment.Id, enrollment);
+                await unitOfWork.SaveChangesAsync();
+            }
+
+            if (enrollment.TotalLessons <= 0 || actualCompletedCount < enrollment.TotalLessons)
             {
                 logger.LogWarning("User {UserId} has not completed course {CourseId} (progress {Completed}/{Total})",
-                    userId, request.CourseId, enrollment.CompletedLessons, enrollment.TotalLessons);
+                    userId, request.CourseId, actualCompletedCount, enrollment.TotalLessons);
                 return ApiResponse<CourseReviewResponse>.FailureResponse("Bạn cần hoàn thành khóa học (100% tiến độ) trước khi đánh giá.");
             }
 
