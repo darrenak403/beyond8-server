@@ -394,6 +394,8 @@ public class PaymentService(
 
         var paymentUrl = vnPayService.CreatePaymentUrl(paymentInfo, ipAddress);
 
+        payment.PaymentUrl = paymentUrl;
+        await unitOfWork.SaveChangesAsync();
         logger.LogInformation(
             "TopUp payment initiated — PaymentNumber: {PaymentNumber}, InstructorId: {InstructorId}, Amount: {Amount}",
             payment.PaymentNumber, instructorId, amount);
