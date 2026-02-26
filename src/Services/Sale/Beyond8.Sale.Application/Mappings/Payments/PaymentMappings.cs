@@ -20,17 +20,18 @@ public static class PaymentMappings
             pendingPaymentInfo = payment.Order.ToPendingPaymentResponse(payment);
         }
 
-        // For subscription payments (no Order), expose pending info similarly so clients can show pending subscription purchase
-        if (pendingPaymentInfo == null && payment.Purpose == PaymentPurpose.Subscription
-            && (payment.Status == PaymentStatus.Pending || payment.Status == PaymentStatus.Processing)
-            && payment.ExpiredAt > DateTime.UtcNow)
+        // Parse metadata to a JSON object (JsonElement) so it returns cleanly rather than as an escaped string
+        object? parsedMetadata = null;
+        if (!string.IsNullOrEmpty(payment.Metadata))
         {
-            pendingPaymentInfo = new PendingPaymentResponse
+            try
             {
-                OrderId = payment.Id, // use payment.Id as placeholder
-                OrderNumber = payment.PaymentNumber,
-                PaymentInfo = payment.ToUrlResponse(payment.PaymentUrl ?? string.Empty)
-            };
+                parsedMetadata = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(payment.Metadata);
+            }
+            catch
+            {
+                parsedMetadata = payment.Metadata; // fallback to string if invalid json
+            }
         }
 
         return new PaymentResponse
@@ -53,7 +54,7 @@ public static class PaymentMappings
             CreatedAt = payment.CreatedAt,
             UpdatedAt = payment.UpdatedAt,
             OrderSummary = payment.Order?.ToOrderSummary(),
-            Metadata = payment.Metadata,
+            Metadata = parsedMetadata,
             PendingPaymentInfo = pendingPaymentInfo
         };
     }

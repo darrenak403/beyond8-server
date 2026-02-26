@@ -26,8 +26,8 @@ public class PaymentResponse
     // Essential order information when purchasing courses
     public OrderSummary? OrderSummary { get; set; }
 
-    // Additional metadata
-    public string? Metadata { get; set; }
+    // Additional metadata (parsed from JSON string)
+    public object? Metadata { get; set; }
 
     // Pending payment info (for blocked orders)
     public PendingPaymentResponse? PendingPaymentInfo { get; set; }

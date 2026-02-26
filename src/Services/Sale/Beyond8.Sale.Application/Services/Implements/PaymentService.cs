@@ -16,9 +16,9 @@ using System.Linq;
 using Beyond8.Sale.Application.Clients.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Configuration;
 using Beyond8.Sale.Application.Dtos.Orders;
 using Beyond8.Sale.Application.Mappings.Orders;
+using System.Text.Json;
 
 namespace Beyond8.Sale.Application.Services.Implements;
 
@@ -30,10 +30,8 @@ public class PaymentService(
     IPlatformWalletService platformWalletService,
     ICouponUsageService couponUsageService,
     IPublishEndpoint publishEndpoint,
-    IIdentityClient identityClient,
-    IConfiguration configuration) : IPaymentService
+    IIdentityClient identityClient) : IPaymentService
 {
-    // Read settlement delay from configuration where needed. Prefer using IOptions<SaleSettings> for cleaner code.
     public async Task<ApiResponse<PaymentUrlResponse>> ProcessPaymentAsync(
         Guid orderId, string returnUrl, string ipAddress)
     {
@@ -226,16 +224,14 @@ public class PaymentService(
     public async Task<ApiResponse<List<PaymentResponse>>> GetPaymentsByUserAsync(
         PaginationRequest pagination, Guid userId)
     {
-        // Include both order-related payments and subscription payments (which have OrderId == null
-        // and store the target user in Payment.Metadata). We fetch candidate payments then filter
-        // in-memory by parsing Metadata for subscription payments, and perform manual pagination
-        // so the returned total is accurate.
-
         var candidates = await unitOfWork.PaymentRepository.AsQueryable()
             .Include(p => p.Order!)
                 .ThenInclude(o => o!.OrderItems)
+            .Include(p => p.InstructorWallet)
             .Where(p => (p.Order != null && p.Order.UserId == userId)
-                        || (p.Purpose == PaymentPurpose.Subscription && p.Metadata != null))
+                        || p.TargetUserId == userId
+                        || (p.Purpose == PaymentPurpose.WalletTopUp && p.InstructorWallet != null && p.InstructorWallet.InstructorId == userId)
+                        || (p.Purpose == PaymentPurpose.Subscription && p.TargetUserId == null && p.Metadata != null))
             .OrderByDescending(p => p.CreatedAt)
             .AsNoTracking()
             .ToListAsync();
@@ -243,7 +239,9 @@ public class PaymentService(
         var paymentsForUser = new List<Payment>();
         foreach (var p in candidates)
         {
-            if (p.Order != null && p.Order.UserId == userId)
+            if ((p.Order != null && p.Order.UserId == userId) 
+                || p.TargetUserId == userId
+                || (p.Purpose == PaymentPurpose.WalletTopUp && p.InstructorWallet != null && p.InstructorWallet.InstructorId == userId))
             {
                 paymentsForUser.Add(p);
                 continue;
@@ -253,20 +251,13 @@ public class PaymentService(
             {
                 try
                 {
-                    using var doc = System.Text.Json.JsonDocument.Parse(p.Metadata);
-                    var root = doc.RootElement;
-                    if (root.TryGetProperty("UserId", out var userIdProp) && userIdProp.ValueKind == System.Text.Json.JsonValueKind.String)
+                    var md = JsonSerializer.Deserialize<SubscriptionPaymentMetadata>(p.Metadata, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    if (md?.UserId == userId)
                     {
-                        if (Guid.TryParse(userIdProp.GetString(), out var parsed) && parsed == userId)
-                        {
-                            paymentsForUser.Add(p);
-                        }
+                        paymentsForUser.Add(p);
                     }
                 }
-                catch
-                {
-                    // ignore malformed metadata
-                }
+                catch { }
             }
         }
 
@@ -410,60 +401,17 @@ public class PaymentService(
     {
         try
         {
-            // Fetch recent candidate payments for the purpose that are still pending/processing
-            var candidates = await unitOfWork.PaymentRepository.AsQueryable()
+            var matched = await unitOfWork.PaymentRepository.AsQueryable()
                 .Include(p => p.Order)
                 .Include(p => p.InstructorWallet)
                 .Where(p => p.Purpose == purpose
                             && (p.Status == PaymentStatus.Pending || p.Status == PaymentStatus.Processing)
-                            && p.ExpiredAt > DateTime.UtcNow)
+                            && p.ExpiredAt > DateTime.UtcNow
+                            && ((p.Order != null && p.Order.UserId == userId)
+                                || p.TargetUserId == userId
+                                || (p.InstructorWallet != null && p.InstructorWallet.InstructorId == userId)))
                 .OrderByDescending(p => p.CreatedAt)
-                .Take(50)
-                .ToListAsync();
-
-            Payment? matched = null;
-
-            foreach (var p in candidates)
-            {
-                // 1) Order-linked payment for the same user
-                if (p.Order != null && p.Order.UserId == userId)
-                {
-                    matched = p; break;
-                }
-
-                // 2) Explicit TargetUserId (used for subscription payments)
-                if (p.TargetUserId == userId)
-                {
-                    matched = p; break;
-                }
-
-                // 3) Wallet top-up: match by instructor wallet owner
-                if (p.InstructorWallet != null && p.InstructorWallet.InstructorId == userId)
-                {
-                    matched = p; break;
-                }
-
-                // 4) Metadata fallback (e.g., older subscription metadata storing UserId)
-                if (!string.IsNullOrEmpty(p.Metadata))
-                {
-                    try
-                    {
-                        using var doc = System.Text.Json.JsonDocument.Parse(p.Metadata);
-                        var root = doc.RootElement;
-                        if (root.TryGetProperty("UserId", out var userIdProp) && userIdProp.ValueKind == System.Text.Json.JsonValueKind.String)
-                        {
-                            if (Guid.TryParse(userIdProp.GetString(), out var parsed) && parsed == userId)
-                            {
-                                matched = p; break;
-                            }
-                        }
-                    }
-                    catch
-                    {
-                        // ignore malformed metadata
-                    }
-                }
-            }
+                .FirstOrDefaultAsync();
 
             if (matched != null)
             {
@@ -858,44 +806,28 @@ public class PaymentService(
         {
             if (!string.IsNullOrEmpty(payment.Metadata))
             {
-                var doc = System.Text.Json.JsonDocument.Parse(payment.Metadata);
-                var root = doc.RootElement;
+                var md = JsonSerializer.Deserialize<SubscriptionPaymentMetadata>(payment.Metadata, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-                Guid planId = Guid.Empty;
-                Guid userId = Guid.Empty;
-
-                // Try to read PlanId first (newer behavior)
-                if (root.TryGetProperty("PlanId", out var planIdProp) && planIdProp.ValueKind == System.Text.Json.JsonValueKind.String)
-                {
-                    try { planId = planIdProp.GetGuid(); } catch { /* ignore parse error */ }
-                }
+                Guid planId = md?.PlanId ?? Guid.Empty;
+                Guid userId = md?.UserId ?? payment.TargetUserId ?? Guid.Empty;
 
                 // Fall back to PlanCode (older behavior) and resolve via Identity client
-                if (planId == Guid.Empty && root.TryGetProperty("PlanCode", out var planCodeProp))
+                if (planId == Guid.Empty && !string.IsNullOrEmpty(md?.PlanCode))
                 {
-                    var planCode = planCodeProp.GetString();
-                    if (!string.IsNullOrEmpty(planCode))
+                    try
                     {
-                        try
+                        var plansResponse = await identityClient.GetSubscriptionPlansAsync();
+                        if (plansResponse.IsSuccess && plansResponse.Data != null)
                         {
-                            var plansResponse = await identityClient.GetSubscriptionPlansAsync();
-                            if (plansResponse.IsSuccess && plansResponse.Data != null)
-                            {
-                                var matched = plansResponse.Data.FirstOrDefault(p => string.Equals(p.Code, planCode, StringComparison.OrdinalIgnoreCase));
-                                if (matched != null)
-                                    planId = matched.Id;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.LogWarning(ex, "Failed to resolve PlanCode {PlanCode} to PlanId via Identity client", planCode);
+                            var matched = plansResponse.Data.FirstOrDefault(p => string.Equals(p.Code, md.PlanCode, StringComparison.OrdinalIgnoreCase));
+                            if (matched != null)
+                                planId = matched.Id;
                         }
                     }
-                }
-
-                if (root.TryGetProperty("UserId", out var userIdProp) && userIdProp.ValueKind == System.Text.Json.JsonValueKind.String)
-                {
-                    try { userId = userIdProp.GetGuid(); } catch { /* ignore parse error */ }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(ex, "Failed to resolve PlanCode {PlanCode} to PlanId via Identity client", md.PlanCode);
+                    }
                 }
 
                 if (planId == Guid.Empty)
@@ -1085,5 +1017,4 @@ public class PaymentService(
             // Don't throw - payment already succeeded, cart cleanup is non-critical
         }
     }
-
 }
