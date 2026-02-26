@@ -300,7 +300,7 @@ public class CourseService(
             await publishEndpoint.Publish(new CourseUpdatedMetadataEvent(
                 course.Id,
                 course.Title,
-                course.Slug,
+                course.Price.ToString(),
                 course.ThumbnailUrl));
 
             logger.LogInformation("Course metadata updated successfully: {CourseId}", id);
@@ -735,7 +735,7 @@ public class CourseService(
             await publishEndpoint.Publish(new CourseUpdatedMetadataEvent(
                 course.Id,
                 course.Title,
-                course.Slug,
+                course.Price.ToString(),
                 course.ThumbnailUrl));
 
             logger.LogInformation("Course thumbnail updated successfully: {CourseId}", courseId);

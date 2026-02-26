@@ -15,8 +15,8 @@ public class CourseUpdatedMetadataEventConsumer(
 
         try
         {
-            logger.LogInformation("Updating cart items for course {CourseId} with new metadata: Title={Title}, Thumbnail={ThumbnailUrl}",
-                message.CourseId, message.Title, message.ThumbnailUrl);
+            logger.LogInformation("Updating cart items for course {CourseId} with new metadata: Title={Title}, Price={Price}, Thumbnail={ThumbnailUrl}",
+                message.CourseId, message.Title, message.Price, message.ThumbnailUrl);
 
             // Find all cart items for this course
             var cartItems = await unitOfWork.CartRepository.GetCartItemsByCourseIdAsync(message.CourseId);
@@ -27,6 +27,7 @@ public class CourseUpdatedMetadataEventConsumer(
                 foreach (var cartItem in cartItems)
                 {
                     cartItem.CourseTitle = message.Title;
+                    cartItem.OriginalPrice = decimal.TryParse(message.Price, out var price) ? price : 0;
                     cartItem.CourseThumbnail = message.ThumbnailUrl;
                 }
 
