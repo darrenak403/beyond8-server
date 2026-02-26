@@ -302,6 +302,7 @@ public class CourseService(
                 course.Title,
                 course.Slug,
                 course.Price.ToString(),
+                course.ComputeFinalPrice().ToString(),
                 course.ThumbnailUrl));
 
             logger.LogInformation("Course metadata updated successfully: {CourseId}", id);
@@ -738,6 +739,7 @@ public class CourseService(
                 course.Title,
                 course.Slug,
                 course.Price.ToString(),
+                course.ComputeFinalPrice().ToString(),
                 course.ThumbnailUrl));
 
             logger.LogInformation("Course thumbnail updated successfully: {CourseId}", courseId);
@@ -769,6 +771,14 @@ public class CourseService(
             course.UpdateCourseDiscount(request);
             await unitOfWork.CourseRepository.UpdateAsync(courseId, course);
             await unitOfWork.SaveChangesAsync();
+
+            await publishEndpoint.Publish(new CourseUpdatedMetadataEvent(
+                course.Id,
+                course.Title,
+                course.Slug,
+                course.Price.ToString(),
+                course.ComputeFinalPrice().ToString(),
+                course.ThumbnailUrl));
 
             logger.LogInformation("Course discount updated successfully: {CourseId}", courseId);
             return ApiResponse<CourseResponse>.SuccessResponse(course.ToResponse(), "Cập nhật giảm giá khóa học thành công.");

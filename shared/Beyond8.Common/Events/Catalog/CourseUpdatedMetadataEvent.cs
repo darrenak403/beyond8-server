@@ -4,6 +4,7 @@ public record CourseUpdatedMetadataEvent(
     Guid CourseId,
     string Title,
     string Slug,
-    string Price,
+    string Price, // OriginalPrice
+    string FinalPrice, // Price after discount
     string ThumbnailUrl
 );
