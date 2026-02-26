@@ -33,12 +33,10 @@ public static class OrderMappings
 
     public static OrderResponse ToResponse(this Order order)
     {
-        // Calculate final revenue split from ORIGINAL PRICE (Per BR-19: 30% platform, 70% instructor)
-        // Each party absorbs their own coupon cost
-        var basePlatformFee = order.OriginalSubTotal * 0.30m;
-        var baseInstructorEarnings = order.OriginalSubTotal * 0.70m;
-        var platformFeeAmount = basePlatformFee - order.SystemDiscountAmount;
-        var instructorEarnings = baseInstructorEarnings - order.InstructorDiscountAmount;
+        // Calculate revenue split from base price (Per BR-19: 30% platform, 70% instructor)
+        // Coupon costs are separate — tracked in InstructorDiscountAmount/SystemDiscountAmount
+        var platformFeeAmount = order.OriginalSubTotal * 0.30m;
+        var instructorEarnings = order.OriginalSubTotal * 0.70m;
 
         // Check for active pending payment
         PendingPaymentResponse? pendingPaymentInfo = null;
@@ -136,17 +134,16 @@ public static class OrderMappings
     /// </summary>
     public record OrderItemPricing(decimal LineTotal, decimal PlatformFeeAmount, decimal InstructorEarnings, decimal InstructorDiscountAmount);
 
-    public static OrderItemPricing CalculateOrderItemPricing(decimal unitPrice, decimal instructorDiscountAmount = 0, decimal originalPrice = 0)
+    public static OrderItemPricing CalculateOrderItemPricing(decimal unitPrice, decimal instructorDiscountAmount = 0)
     {
         var lineTotal = unitPrice * 1; // Quantity = 1 for courses
-        // If originalPrice not provided, fall back to unitPrice (no instructor discount case)
-        var basePrice = originalPrice > 0 ? originalPrice : unitPrice + instructorDiscountAmount;
-        // Per BR-19: Always split 70/30 from ORIGINAL PRICE
-        var basePlatformFee = basePrice * 0.30m;
-        var baseInstructorEarnings = basePrice * 0.70m;
-        // Instructor absorbs their own coupon discount
-        var instructorEarnings = baseInstructorEarnings - instructorDiscountAmount;
-        return new OrderItemPricing(lineTotal, basePlatformFee, instructorEarnings, instructorDiscountAmount);
+        // Base price = unitPrice (after instructor coupon) + instructorDiscountAmount = Course.FinalPrice
+        var basePrice = unitPrice + instructorDiscountAmount;
+        // Per BR-19: Pure 70/30 from Course.FinalPrice
+        // Coupon costs are NOT deducted — they are separate wallet transactions
+        var platformFeeAmount = basePrice * 0.30m;
+        var instructorEarnings = basePrice * 0.70m;
+        return new OrderItemPricing(lineTotal, platformFeeAmount, instructorEarnings, instructorDiscountAmount);
     }
 
     /// <summary>

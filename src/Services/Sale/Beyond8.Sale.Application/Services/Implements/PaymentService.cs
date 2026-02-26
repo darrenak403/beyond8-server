@@ -686,75 +686,50 @@ public class PaymentService(
         }
 
         // ── Credit Platform Wallet ──
-        // Platform fee already has system coupon discount absorbed (from CalculateItemRevenueSplit)
-        // No need for separate DebitSystemCouponCostAsync — would cause double-deduction
-        if (totalPlatformFee != 0)
+        // Full 30% commission goes to PendingBalance (settlement-eligible)
+        // System coupon cost deducted immediately from AvailableBalance
+        var fullPlatformFee = order.OrderItems.Sum(oi => oi.UnitPrice) * 0.30m;
+
+        if (fullPlatformFee > 0)
         {
             var availableAt = order.SettlementEligibleAt ?? (order.PaidAt.HasValue ? order.PaidAt.Value.AddDays(14) : DateTime.UtcNow.AddDays(14));
 
-            if (totalPlatformFee > 0)
-            {
-                await platformWalletService.CreditPlatformRevenuePendingAsync(
-                    totalPlatformFee, order.Id,
-                    $"Hoa hồng 30% đơn hàng #{order.OrderNumber}" +
-                    (systemCoupon != null ? $" (đã trừ coupon hệ thống {systemCoupon.Code})" : ""),
-                    availableAt);
-            }
-            else
-            {
-                // When system discount exceeds 30% platform share, platform owes money
-                await platformWalletService.DebitSystemCouponCostAsync(
-                    Math.Abs(totalPlatformFee), order.Id,
-                    $"Chi phí coupon hệ thống {systemCoupon?.Code} vượt hoa hồng đơn hàng #{order.OrderNumber}");
-            }
+            await platformWalletService.CreditPlatformRevenuePendingAsync(
+                fullPlatformFee, order.Id,
+                $"Hoa hồng 30% đơn hàng #{order.OrderNumber}",
+                availableAt);
+        }
+
+        // ── System coupon: Platform absorbs discount (deducted from AvailableBalance immediately) ──
+        if (systemCoupon != null && order.SystemDiscountAmount > 0)
+        {
+            await platformWalletService.DebitSystemCouponCostAsync(
+                order.SystemDiscountAmount, order.Id,
+                $"Chi phí coupon hệ thống {systemCoupon.Code} cho đơn hàng #{order.OrderNumber}");
         }
     }
 
     /// <summary>
-    /// Calculate revenue split for a single order item considering coupon discount attribution.
+    /// Calculate revenue split for a single order item.
     /// Formula (BR-19):
-    ///   - Always split 70/30 from ORIGINAL PRICE
-    ///   - Instructor coupon: Instructor absorbs discount (deducted from their 70%)
-    ///   - System coupon: Platform absorbs discount (deducted from their 30%)
+    ///   - Instructor-set discount (Course.DiscountPercent/Amount) is shared 70/30 (reflected in UnitPrice)
+    ///   - Always split 70/30 from UnitPrice (= Course.FinalPrice)
+    ///   - Coupon costs are NOT deducted here — they are handled separately:
+    ///     * Instructor coupon → DeductCouponUsageFromHoldAsync (from instructor holdBalance)
+    ///     * System coupon → DebitSystemCouponCostAsync (from platform AvailableBalance)
     /// </summary>
     private static (decimal InstructorEarnings, decimal PlatformFee) CalculateItemRevenueSplit(
         OrderItem item, Order order, Coupon? instructorCoupon, Coupon? systemCoupon)
     {
         const decimal instructorRate = 0.70m; // Per BR-19: 70% instructor
         const decimal platformFeeRate = 0.30m; // Per BR-19: 30% platform
-        var originalPrice = item.OriginalPrice;
 
-        // Calculate total original price of all items (before any discounts)
-        var totalOriginalPrice = order.OrderItems.Sum(oi => oi.OriginalPrice);
+        // UnitPrice = Course.FinalPrice (after instructor-set discount, before coupons)
+        var unitPrice = item.UnitPrice;
 
-        // Always calculate base split from ORIGINAL PRICE
-        var baseInstructorEarnings = originalPrice * instructorRate;
-        var basePlatformFee = originalPrice * platformFeeRate;
-
-        // Calculate instructor discount (absorbed by instructor — deducted from their 70%)
-        decimal instructorDiscount = 0;
-        if (instructorCoupon != null && order.InstructorDiscountAmount > 0 && totalOriginalPrice > 0)
-        {
-            var discountRatio = originalPrice / totalOriginalPrice;
-            instructorDiscount = order.InstructorDiscountAmount * discountRatio;
-        }
-
-        // Calculate system discount (absorbed by platform — deducted from their 30%)
-        decimal systemDiscount = 0;
-        if (systemCoupon != null && order.SystemDiscountAmount > 0 && totalOriginalPrice > 0)
-        {
-            var itemPriceAfterInstructorDiscount = originalPrice - instructorDiscount;
-            var totalPriceAfterInstructorDiscount = totalOriginalPrice - order.InstructorDiscountAmount;
-            if (totalPriceAfterInstructorDiscount > 0)
-            {
-                var discountRatio = itemPriceAfterInstructorDiscount / totalPriceAfterInstructorDiscount;
-                systemDiscount = order.SystemDiscountAmount * discountRatio;
-            }
-        }
-
-        // Each party absorbs their own coupon cost
-        var instructorEarnings = baseInstructorEarnings - instructorDiscount;
-        var platformFee = basePlatformFee - systemDiscount;
+        // Pure 70/30 split — coupon costs are separate wallet transactions
+        var instructorEarnings = unitPrice * instructorRate;
+        var platformFee = unitPrice * platformFeeRate;
 
         return (instructorEarnings, platformFee);
     }
