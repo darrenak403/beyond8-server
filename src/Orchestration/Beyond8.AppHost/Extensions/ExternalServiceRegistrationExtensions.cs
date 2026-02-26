@@ -93,6 +93,7 @@ namespace Beyond8.AppHost.Extensions
                 .WithReference(redis)
                 .WithReference(rabbitMq)
                 .WithReference(catalogService)
+                .WithReference(hangfireDb)
                 .WithReference(learningService)
                 .WaitFor(postgres)
                 .WaitFor(redis)

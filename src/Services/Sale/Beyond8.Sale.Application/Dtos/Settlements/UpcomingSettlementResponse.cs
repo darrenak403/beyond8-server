@@ -1,3 +1,5 @@
+using Beyond8.Sale.Domain.Enums;
+
 namespace Beyond8.Sale.Application.Dtos.Settlements;
 
 public class UpcomingSettlementResponse
@@ -9,4 +11,7 @@ public class UpcomingSettlementResponse
     public string Currency { get; set; } = "VND";
     public DateTime? AvailableAt { get; set; }
     public DateTime CreatedAt { get; set; }
+
+    // Transaction status to indicate if this has been released to wallet
+    public TransactionStatus Status { get; set; }
 }

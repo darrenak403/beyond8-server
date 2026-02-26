@@ -34,6 +34,9 @@ public static class ApplicationServiceExtensions
 
         builder.AddServiceRedis(nameof(Sale), connectionName: Const.Redis);
 
+        // Configure Hangfire (shared extension from Common)
+        builder.AddHangfire(Const.HangfireDatabase);
+
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         builder.AddMassTransitWithRabbitMq(config =>
@@ -77,8 +80,6 @@ public static class ApplicationServiceExtensions
 
         // Background services: run via Hangfire recurring jobs (do not register as hosted services)
 
-        // Configure Hangfire (shared extension from Common)
-        builder.AddHangfire(Const.HangfireDatabase);
 
         return builder;
     }
