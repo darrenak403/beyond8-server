@@ -192,6 +192,7 @@ public class PaymentService(
             if (trackedPayment != null)
             {
                 trackedPayment.Status = PaymentStatus.Expired;
+                trackedPayment.PaymentUrl = null; // Clear stored payment URL on expiry
                 trackedPayment.UpdatedAt = DateTime.UtcNow;
                 await unitOfWork.SaveChangesAsync();
                 return ApiResponse<PaymentResponse>.SuccessResponse(
@@ -223,18 +224,107 @@ public class PaymentService(
     public async Task<ApiResponse<List<PaymentResponse>>> GetPaymentsByUserAsync(
         PaginationRequest pagination, Guid userId)
     {
-        var payments = await unitOfWork.PaymentRepository.GetPagedAsync(
-            pageNumber: pagination.PageNumber,
-            pageSize: pagination.PageSize,
-            filter: p => p.Order!.UserId == userId,
-            orderBy: q => q.OrderByDescending(p => p.CreatedAt),
-            includes: q => q.Include(p => p.Order!)
-                .ThenInclude(o => o!.OrderItems));
+        // Include both order-related payments and subscription payments (which have OrderId == null
+        // and store the target user in Payment.Metadata). We fetch candidate payments then filter
+        // in-memory by parsing Metadata for subscription payments, and perform manual pagination
+        // so the returned total is accurate.
+
+        var candidates = await unitOfWork.PaymentRepository.AsQueryable()
+            .Include(p => p.Order!)
+                .ThenInclude(o => o!.OrderItems)
+            .Where(p => (p.Order != null && p.Order.UserId == userId)
+                        || (p.Purpose == PaymentPurpose.Subscription && p.Metadata != null))
+            .OrderByDescending(p => p.CreatedAt)
+            .AsNoTracking()
+            .ToListAsync();
+
+        var paymentsForUser = new List<Payment>();
+        foreach (var p in candidates)
+        {
+            if (p.Order != null && p.Order.UserId == userId)
+            {
+                paymentsForUser.Add(p);
+                continue;
+            }
+
+            if (p.Purpose == PaymentPurpose.Subscription && !string.IsNullOrEmpty(p.Metadata))
+            {
+                try
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(p.Metadata);
+                    var root = doc.RootElement;
+                    if (root.TryGetProperty("UserId", out var userIdProp) && userIdProp.ValueKind == System.Text.Json.JsonValueKind.String)
+                    {
+                        if (Guid.TryParse(userIdProp.GetString(), out var parsed) && parsed == userId)
+                        {
+                            paymentsForUser.Add(p);
+                        }
+                    }
+                }
+                catch
+                {
+                    // ignore malformed metadata
+                }
+            }
+        }
+
+        var total = paymentsForUser.Count;
+        var items = paymentsForUser
+            .Skip((pagination.PageNumber - 1) * pagination.PageSize)
+            .Take(pagination.PageSize)
+            .Select(p => p.ToResponse())
+            .ToList();
 
         return ApiResponse<List<PaymentResponse>>.SuccessPagedResponse(
-            payments.Items.Select(p => p.ToResponse()).ToList(),
-            payments.TotalCount, pagination.PageNumber, pagination.PageSize,
+            items,
+            total, pagination.PageNumber, pagination.PageSize,
             "Lấy lịch sử thanh toán thành công");
+    }
+
+    // Run cleanup of expired payments (migrated from PaymentCleanupService)
+    public async Task RunCleanupAsync()
+    {
+        var now = DateTime.UtcNow;
+        var expiredPayments = await unitOfWork.PaymentRepository.AsQueryable()
+            .Where(p => p.Status == PaymentStatus.Pending && p.ExpiredAt < now)
+            .ToListAsync();
+
+        if (!expiredPayments.Any())
+        {
+            logger.LogDebug("No expired payments found to clean up at {Now}.", now);
+            return;
+        }
+
+        logger.LogInformation("Found {Count} expired payments to clean up.", expiredPayments.Count);
+
+        foreach (var payment in expiredPayments)
+        {
+            try
+            {
+                payment.Status = PaymentStatus.Expired;
+                payment.PaymentUrl = null;
+                payment.FailureReason = "Payment expired after 15 minutes";
+                payment.UpdatedAt = DateTime.UtcNow;
+
+                if (payment.OrderId.HasValue)
+                {
+                    var order = await unitOfWork.OrderRepository.FindOneAsync(o => o.Id == payment.OrderId.Value);
+                    if (order != null && order.Status == Domain.Enums.OrderStatus.Pending)
+                    {
+                        logger.LogInformation("Order {OrderId} remains pending for retry after payment {PaymentId} expired.", order.Id, payment.Id);
+                    }
+                }
+
+                logger.LogInformation("Marked payment {PaymentId} as expired and cleared URL.", payment.Id);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to mark payment {PaymentId} as expired.", payment.Id);
+            }
+        }
+
+        await unitOfWork.SaveChangesAsync();
+        logger.LogInformation("Successfully cleaned up {Count} expired payments.", expiredPayments.Count);
     }
 
     /// <summary>
@@ -318,6 +408,81 @@ public class PaymentService(
         if (plan == null)
             return ApiResponse<PaymentUrlResponse>.FailureResponse("Gói đăng ký không tồn tại hoặc đã bị vô hiệu hóa");
 
+        // Fetch candidates and filter in-memory to avoid SQL casting issues with jsonb columns.
+        var pendingCandidates = await unitOfWork.PaymentRepository.AsQueryable()
+            .Where(p => p.Purpose == PaymentPurpose.Subscription
+                        && (p.Status == PaymentStatus.Pending || p.Status == PaymentStatus.Processing)
+                        && p.ExpiredAt > DateTime.UtcNow
+                        && p.Metadata != null)
+            .OrderByDescending(p => p.CreatedAt)
+            .ToListAsync();
+
+        Payment? existingPending = null;
+        foreach (var candidate in pendingCandidates)
+        {
+            if (string.IsNullOrEmpty(candidate.Metadata))
+                continue;
+
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(candidate.Metadata);
+                var root = doc.RootElement;
+
+                // Find a property named UserId (case-insensitive)
+                string? found = null;
+                foreach (var prop in root.EnumerateObject())
+                {
+                    if (string.Equals(prop.Name, "UserId", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (prop.Value.ValueKind == System.Text.Json.JsonValueKind.String)
+                            found = prop.Value.GetString();
+                        else
+                            found = prop.Value.ToString();
+                        break;
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(found) && Guid.TryParse(found, out var parsed) && parsed == userId)
+                {
+                    existingPending = candidate;
+                    break;
+                }
+            }
+            catch
+            {
+                // ignore malformed metadata
+            }
+        }
+
+        if (existingPending != null)
+        {
+            if (!string.IsNullOrEmpty(existingPending.PaymentUrl))
+            {
+                return ApiResponse<PaymentUrlResponse>.SuccessResponse(
+                    existingPending.ToUrlResponse(existingPending.PaymentUrl),
+                    "Đã có giao dịch mua gói đang chờ xử lý. Vui lòng hoàn tất giao dịch trước khi mua gói mới.");
+            }
+
+            var paymentInfoExisting = new VNPayPaymentInfo
+            {
+                OrderId = existingPending.Id.ToString(),
+                PaymentNumber = existingPending.PaymentNumber,
+                Amount = existingPending.Amount,
+                OrderInfo = $"Buy subscription {plan.Code}",
+                CreatedDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")),
+                ExpireDate = existingPending.ExpiredAt.HasValue ? TimeZoneInfo.ConvertTimeFromUtc(existingPending.ExpiredAt.Value, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")) : DateTime.UtcNow.AddMinutes(15),
+                ReturnUrl = returnUrl
+            };
+
+            var existingUrl = vnPayService.CreatePaymentUrl(paymentInfoExisting, ipAddress);
+            existingPending.PaymentUrl = existingUrl;
+            await unitOfWork.SaveChangesAsync();
+
+            return ApiResponse<PaymentUrlResponse>.SuccessResponse(
+                existingPending.ToUrlResponse(existingUrl),
+                "Đã có giao dịch mua gói đang chờ xử lý. Vui lòng hoàn tất giao dịch trước khi mua gói mới.");
+        }
+
         // Create payment with correct amount from plan.Price
         var payment = new Payment
         {
@@ -337,7 +502,9 @@ public class PaymentService(
         {
             PlanId = plan.Id,
             PlanCode = plan.Code,
-            UserId = userId
+            UserId = userId,
+            // Indicate this payment is intended to override any existing subscription
+            OverrideExisting = true
         };
 
         payment.Metadata = System.Text.Json.JsonSerializer.Serialize(details);
@@ -391,6 +558,9 @@ public class PaymentService(
         payment.ExternalTransactionId = result.TransactionNo;
         payment.PaymentMethod = result.CardType;
         payment.UpdatedAt = DateTime.UtcNow;
+
+        // Clear stored payment URL after successful processing
+        payment.PaymentUrl = null;
 
         order.Status = OrderStatus.Paid;
         order.PaidAt = DateTime.UtcNow;
@@ -622,6 +792,9 @@ public class PaymentService(
         payment.PaymentMethod = result.CardType;
         payment.UpdatedAt = DateTime.UtcNow;
 
+        // Clear stored payment URL after successful processing
+        payment.PaymentUrl = null;
+
         await unitOfWork.SaveChangesAsync();
 
         // Credit instructor wallet
@@ -646,6 +819,9 @@ public class PaymentService(
         payment.ExternalTransactionId = result.TransactionNo;
         payment.PaymentMethod = result.CardType;
         payment.UpdatedAt = DateTime.UtcNow;
+
+        // Clear stored payment URL after successful processing
+        payment.PaymentUrl = null;
 
         await unitOfWork.SaveChangesAsync();
 
@@ -704,16 +880,53 @@ public class PaymentService(
                 }
                 else
                 {
+                    // Try to resolve plan duration to compute ExpiresAt
+                    DateTime startedAt = DateTime.UtcNow;
+                    DateTime? expiresAt = null;
+
+                    try
+                    {
+                        var plansResponse2 = await identityClient.GetSubscriptionPlansAsync();
+                        if (plansResponse2.IsSuccess && plansResponse2.Data != null)
+                        {
+                            var matchedPlan = plansResponse2.Data.FirstOrDefault(p => p.Id == planId);
+                            if (matchedPlan != null && matchedPlan.DurationDays > 0)
+                            {
+                                expiresAt = startedAt.AddDays(matchedPlan.DurationDays);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(ex, "Failed to fetch subscription plan details to compute ExpiresAt for PlanId={PlanId}", planId);
+                    }
+
                     // Publish SubscriptionPurchasedEvent for Identity to consume and activate subscription
                     await publishEndpoint.Publish(new SubscriptionPurchasedEvent(
                         payment.Id, // use payment.Id as OrderId placeholder
                         userId,
                         planId,
                         payment.Id,
-                        DateTime.UtcNow,
-                        null));
+                        startedAt,
+                        expiresAt));
 
-                    logger.LogInformation("Published SubscriptionPurchasedEvent for User {UserId}, Plan {PlanId}", userId, planId);
+                    logger.LogInformation("Published SubscriptionPurchasedEvent for User {UserId}, Plan {PlanId}, ExpiresAt={ExpiresAt}", userId, planId, expiresAt);
+
+                    // Credit platform wallet for subscription revenue. Subscription revenue is platform-owned.
+                    try
+                    {
+                        // Subscription revenue should become available quickly (5 minutes), not the 14-day order settlement.
+                        var subscriptionAvailableAt = DateTime.UtcNow.AddMinutes(5);
+                        await platformWalletService.CreditPlatformRevenuePendingAsync(
+                            payment.Amount,
+                            payment.Id,
+                            $"Subscription purchase {planId} for user {userId}",
+                            subscriptionAvailableAt);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(ex, "Failed to credit platform wallet for subscription payment {PaymentId}", payment.Id);
+                    }
                 }
             }
             else

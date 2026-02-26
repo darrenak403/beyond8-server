@@ -20,6 +20,20 @@ public static class PaymentMappings
             pendingPaymentInfo = payment.Order.ToPendingPaymentResponse(payment);
         }
 
+        // For subscription payments (no Order), expose pending info similarly so clients can show pending subscription purchase
+        if (pendingPaymentInfo == null && payment.Purpose == PaymentPurpose.Subscription
+            && (payment.Status == PaymentStatus.Pending || payment.Status == PaymentStatus.Processing)
+            && payment.ExpiredAt > DateTime.UtcNow)
+        {
+            pendingPaymentInfo = new PendingPaymentResponse
+            {
+                OrderId = payment.Id, // use payment.Id as placeholder
+                OrderNumber = payment.PaymentNumber,
+                PaymentInfo = payment.ToUrlResponse(payment.PaymentUrl ?? string.Empty),
+                Message = "Bạn có giao dịch mua gói đang chờ xử lý. Vui lòng hoàn tất giao dịch trước khi mua gói mới."
+            };
+        }
+
         return new PaymentResponse
         {
             Id = payment.Id,

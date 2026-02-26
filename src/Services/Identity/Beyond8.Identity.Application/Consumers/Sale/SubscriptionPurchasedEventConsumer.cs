@@ -1,7 +1,9 @@
 using Beyond8.Common.Events.Sale;
 using Beyond8.Identity.Domain.Entities;
+using Beyond8.Identity.Domain.Enums;
 using Beyond8.Identity.Domain.Repositories.Interfaces;
 using MassTransit;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Beyond8.Identity.Application.Consumers.Sale;
@@ -38,7 +40,7 @@ public class SubscriptionPurchasedEventConsumer(
                 PlanId = message.PlanId,
                 StartedAt = message.StartedAt == default ? now : message.StartedAt,
                 ExpiresAt = message.ExpiresAt,
-                Status = Domain.Enums.SubscriptionStatus.Active,
+                Status = SubscriptionStatus.Active,
                 TotalRemainingRequests = plan.TotalRequestsInPeriod,
                 RemainingRequestsPerWeek = plan.MaxRequestsPerWeek,
                 RequestLimitedEndsAt = null,
@@ -46,6 +48,32 @@ public class SubscriptionPurchasedEventConsumer(
                 CreatedAt = now,
                 CreatedBy = message.UserId
             };
+
+            // Expire existing active subscriptions for this user so the new plan overrides them
+            try
+            {
+                var existingActive = await unitOfWork.UserSubscriptionRepository.AsQueryable()
+                    .Where(us => us.UserId == message.UserId && us.Status == SubscriptionStatus.Active)
+                    .ToListAsync();
+
+                foreach (var ex in existingActive)
+                {
+                    ex.Status = SubscriptionStatus.Expired;
+                    // Set ExpiresAt to new subscription start so it is effectively overridden
+                    ex.ExpiresAt = userSubscription.StartedAt;
+                    ex.UpdatedAt = now;
+                }
+
+                if (existingActive.Any())
+                {
+                    await unitOfWork.SaveChangesAsync();
+                    logger.LogInformation("Expired {Count} existing subscriptions for user {UserId} due to new purchase", existingActive.Count, message.UserId);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to expire existing subscriptions for user {UserId}", message.UserId);
+            }
 
             await unitOfWork.UserSubscriptionRepository.AddAsync(userSubscription);
             await unitOfWork.SaveChangesAsync();

@@ -290,7 +290,8 @@ public class SettlementService(
                 Amount = t.Amount,
                 Currency = t.Currency,
                 AvailableAt = t.AvailableAt,
-                CreatedAt = t.CreatedAt
+                CreatedAt = t.CreatedAt,
+                Status = t.Status
             })
             .ToListAsync();
 
@@ -312,20 +313,21 @@ public class SettlementService(
         if (to.HasValue) instructorQuery = instructorQuery.Where(t => t.AvailableAt <= to.Value);
 
         var instructorTxs = await instructorQuery
-            .Select(t => new { OrderId = t.ReferenceId.Value, t.Amount, t.AvailableAt })
+            .Select(t => new { OrderId = t.ReferenceId!.Value, t.Amount, t.AvailableAt, t.Status })
             .ToListAsync();
 
         // Load platform transactions (by order reference).
         // Include pending escrowed transactions and already-completed immediate credits.
+        // Exclude internal settlement-release transactions (created when pending platform txs are released)
         var platformQuery = unitOfWork.PlatformWalletTransactionRepository.AsQueryable()
-            .Where(t => t.ReferenceId != null);
+            .Where(t => t.ReferenceId != null && !(t.Description != null && t.Description.Contains("Settlement release for platform tx")));
 
         // Use effective available time = AvailableAt (if set) otherwise CreatedAt for immediate credits
         if (from.HasValue) platformQuery = platformQuery.Where(t => (t.AvailableAt ?? t.CreatedAt) >= from.Value);
         if (to.HasValue) platformQuery = platformQuery.Where(t => (t.AvailableAt ?? t.CreatedAt) <= to.Value);
 
         var platformTxs = await platformQuery
-            .Select(t => new { OrderId = t.ReferenceId.Value, t.Amount, EffectiveAt = (DateTime?)(t.AvailableAt ?? t.CreatedAt) })
+            .Select(t => new { OrderId = t.ReferenceId!.Value, t.Amount, EffectiveAt = (DateTime?)(t.AvailableAt ?? t.CreatedAt), t.Status })
             .ToListAsync();
 
         // Group by order
@@ -350,7 +352,9 @@ public class SettlementService(
                         InstructorAmount = ins.Sum(x => x.Amount),
                         PlatformAmount = plat.Sum(x => x.Amount),
                         AvailableAt = availableAt,
-                        Currency = "VND"
+                        Currency = "VND",
+                        InstructorStatus = ins.Any() ? (ins.All(x => x.Status == TransactionStatus.Completed) ? TransactionStatus.Completed : TransactionStatus.Pending) : (TransactionStatus?)null,
+                        PlatformStatus = plat.Any() ? (plat.All(x => x.Status == TransactionStatus.Completed) ? TransactionStatus.Completed : TransactionStatus.Pending) : (TransactionStatus?)null
                     };
                 }
             })

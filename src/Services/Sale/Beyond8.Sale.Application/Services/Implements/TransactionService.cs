@@ -75,15 +75,52 @@ public class TransactionService(
 
     public async Task<ApiResponse<List<TransactionLedgerResponse>>> GetAllTransactionsAsync(PaginationRequest pagination)
     {
-        var transactions = await unitOfWork.TransactionLedgerRepository.GetPagedAsync(
-            pageNumber: pagination.PageNumber,
-            pageSize: pagination.PageSize,
-            filter: t => t.DeletedAt == null,
-            orderBy: q => q.OrderByDescending(t => t.CreatedAt));
+        // Combine instructor ledger transactions and platform wallet transactions
+        // so admin `/api/v1/transactions` shows subscription/platform revenue entries as well.
+        var instructorTxs = await unitOfWork.TransactionLedgerRepository.AsQueryable()
+            .Where(t => t.DeletedAt == null)
+            .AsNoTracking()
+            .ToListAsync();
+
+        var platformTxs = await unitOfWork.PlatformWalletTransactionRepository.AsQueryable()
+            .Where(p => p.DeletedAt == null)
+            .AsNoTracking()
+            .ToListAsync();
+
+        // Map both kinds to unified response model
+        var unified = new List<TransactionLedgerResponse>(instructorTxs.Count + platformTxs.Count);
+
+        unified.AddRange(instructorTxs.Select(t => t.ToResponse()));
+
+        unified.AddRange(platformTxs.Select(p => new TransactionLedgerResponse
+        {
+            Id = p.Id,
+            WalletId = p.PlatformWalletId,
+            Type = p.Type.ToString(),
+            Status = p.Status.ToString(),
+            AvailableAt = p.AvailableAt,
+            Amount = p.Amount,
+            Currency = p.Currency,
+            BalanceBefore = p.BalanceBefore,
+            BalanceAfter = p.BalanceAfter,
+            ReferenceId = p.ReferenceId,
+            ReferenceType = p.ReferenceType,
+            Description = p.Description,
+            ExternalTransactionId = null,
+            CreatedAt = p.CreatedAt
+        }));
+
+        // Sort by CreatedAt desc and paginate in-memory to provide consistent paging across both sets
+        var ordered = unified.OrderByDescending(u => u.CreatedAt).ToList();
+        var total = ordered.Count;
+        var items = ordered
+            .Skip((pagination.PageNumber - 1) * pagination.PageSize)
+            .Take(pagination.PageSize)
+            .ToList();
 
         return ApiResponse<List<TransactionLedgerResponse>>.SuccessPagedResponse(
-            transactions.Items.Select(t => t.ToResponse()).ToList(),
-            transactions.TotalCount,
+            items,
+            total,
             pagination.PageNumber,
             pagination.PageSize,
             "Lấy tất cả giao dịch thành công");

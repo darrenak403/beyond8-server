@@ -93,6 +93,7 @@ namespace Beyond8.AppHost.Extensions
                 .WithReference(redis)
                 .WithReference(rabbitMq)
                 .WithReference(catalogService)
+                .WithReference(hangfireDb)
                 .WithReference(learningService)
                 .WaitFor(postgres)
                 .WaitFor(redis)
@@ -157,6 +158,7 @@ namespace Beyond8.AppHost.Extensions
                     config.AddRoute("/api/v1/payouts/{**catch-all}", saleCluster);
                     config.AddRoute("/api/v1/transactions/{**catch-all}", saleCluster);
                     config.AddRoute("/api/v1/platform-wallet/{**catch-all}", saleCluster);
+                    config.AddRoute("/api/v1/settlements/{**catch-all}", saleCluster);
 
                     var analyticCluster = config.AddProjectCluster(analyticService);
                     config.AddRoute("/api/v1/analytics/{**catch-all}", analyticCluster);
