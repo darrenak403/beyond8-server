@@ -300,6 +300,7 @@ public class CourseService(
             await publishEndpoint.Publish(new CourseUpdatedMetadataEvent(
                 course.Id,
                 course.Title,
+                course.Slug,
                 course.Price.ToString(),
                 course.ThumbnailUrl));
 
@@ -735,6 +736,7 @@ public class CourseService(
             await publishEndpoint.Publish(new CourseUpdatedMetadataEvent(
                 course.Id,
                 course.Title,
+                course.Slug,
                 course.Price.ToString(),
                 course.ThumbnailUrl));
 
