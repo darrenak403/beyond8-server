@@ -7,11 +7,10 @@ public class UpcomingSettlementResponse
     public Guid TransactionId { get; set; }
     public Guid WalletId { get; set; }
     public Guid? OrderId { get; set; }
+    public string? OrderNumber { get; set; }
     public decimal Amount { get; set; }
     public string Currency { get; set; } = "VND";
     public DateTime? AvailableAt { get; set; }
     public DateTime CreatedAt { get; set; }
-
-    // Transaction status to indicate if this has been released to wallet
     public TransactionStatus Status { get; set; }
 }

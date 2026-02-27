@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Beyond8.Common.Utilities;
 using Beyond8.Sale.Application.Dtos.Settlements;
+using Beyond8.Sale.Application.Mappings.Settlements;
 
 namespace Beyond8.Sale.Application.Services.Implements;
 
@@ -278,22 +279,20 @@ public class SettlementService(
 
         var total = await query.CountAsync();
 
-        var items = await query
+        var ledgerItems = await query
             .OrderBy(t => t.AvailableAt)
             .Skip((pagination.PageNumber - 1) * pagination.PageSize)
             .Take(pagination.PageSize)
-            .Select(t => new UpcomingSettlementResponse
-            {
-                TransactionId = t.Id,
-                WalletId = t.WalletId,
-                OrderId = t.ReferenceId,
-                Amount = t.Amount,
-                Currency = t.Currency,
-                AvailableAt = t.AvailableAt,
-                CreatedAt = t.CreatedAt,
-                Status = t.Status
-            })
             .ToListAsync();
+
+        var upcomingOrderIds = ledgerItems.Where(x => x.ReferenceId.HasValue).Select(x => x.ReferenceId!.Value).Distinct().ToList();
+        var orderNumbers = await unitOfWork.OrderRepository.AsQueryable()
+            .Where(o => upcomingOrderIds.Contains(o.Id))
+            .ToDictionaryAsync(o => o.Id, o => o.OrderNumber);
+
+        var items = ledgerItems.Select(t => t.ToUpcomingSettlementResponse(
+            t.ReferenceId.HasValue ? orderNumbers.GetValueOrDefault(t.ReferenceId.Value) : null
+        )).ToList();
 
         return ApiResponse<List<UpcomingSettlementResponse>>.SuccessPagedResponse(
             items,
@@ -334,30 +333,22 @@ public class SettlementService(
         // Group by order
         var orderIds = instructorTxs.Select(x => x.OrderId).Union(platformTxs.Select(x => x.OrderId)).Distinct().ToList();
 
+        var orderNumbersDict = await unitOfWork.OrderRepository.AsQueryable()
+            .Where(o => orderIds.Contains(o.Id))
+            .ToDictionaryAsync(o => o.Id, o => o.OrderNumber);
+
         var groups = orderIds
             .Select(id =>
             {
                 var ins = instructorTxs.Where(x => x.OrderId == id).ToList();
                 var plat = platformTxs.Where(x => x.OrderId == id).ToList();
 
-                {
-                    var insMin = ins.Any() ? ins.Min(x => x.AvailableAt) : (DateTime?)null;
-                    var platMin = plat.Any() ? plat.Min(x => x.EffectiveAt) : (DateTime?)null;
-                    var availableAt = insMin.HasValue && platMin.HasValue
-                        ? (insMin.Value <= platMin.Value ? insMin : platMin)
-                        : insMin ?? platMin;
-
-                    return new UpcomingByOrderResponse
-                    {
-                        OrderId = id,
-                        InstructorAmount = ins.Sum(x => x.Amount),
-                        PlatformAmount = plat.Sum(x => x.Amount),
-                        AvailableAt = availableAt,
-                        Currency = "VND",
-                        InstructorStatus = ins.Any() ? (ins.All(x => x.Status == TransactionStatus.Completed) ? TransactionStatus.Completed : TransactionStatus.Pending) : (TransactionStatus?)null,
-                        PlatformStatus = plat.Any() ? (plat.All(x => x.Status == TransactionStatus.Completed) ? TransactionStatus.Completed : TransactionStatus.Pending) : (TransactionStatus?)null
-                    };
-                }
+                return SettlementMappings.ToUpcomingByOrderResponse(
+                    id,
+                    orderNumbersDict.GetValueOrDefault(id),
+                    ins.Select(i => (i.Amount, i.AvailableAt, i.Status)),
+                    plat.Select(p => (p.Amount, p.EffectiveAt, p.Status))
+                );
             })
             .OrderBy(x => x.AvailableAt ?? DateTime.MaxValue)
             .ToList();
