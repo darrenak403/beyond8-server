@@ -8,8 +8,7 @@ namespace Beyond8.Sale.Application.Consumers.Catalog;
 
 public class CourseUpdatedMetadataEventConsumer(
     ILogger<CourseUpdatedMetadataEventConsumer> logger,
-    IUnitOfWork unitOfWork,
-    ICartService cartService) : IConsumer<CourseUpdatedMetadataEvent>
+    IUnitOfWork unitOfWork) : IConsumer<CourseUpdatedMetadataEvent>
 {
     public async Task Consume(ConsumeContext<CourseUpdatedMetadataEvent> context)
     {
@@ -31,8 +30,10 @@ public class CourseUpdatedMetadataEventConsumer(
                 {
                     foreach (var cartItem in cartItems)
                     {
-                        await cartService.RemoveFromCartAsync(cartItem.Cart.UserId, cartItem.CourseId);
+                        await unitOfWork.CartItemRepository.DeleteAsync(cartItem.Id);
                     }
+
+                    await unitOfWork.SaveChangesAsync();
 
                     logger.LogInformation("Removed {Count} cart items because course {CourseId} became free",
                         cartItems.Count, message.CourseId);
