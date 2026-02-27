@@ -16,6 +16,7 @@ public class CourseRejectedEventConsumer(
     public async Task Consume(ConsumeContext<CourseRejectedEvent> context)
     {
         var message = context.Message;
+        var status = NotificationStatus.Failed;
 
         try
         {
@@ -23,23 +24,38 @@ public class CourseRejectedEventConsumer(
                 "Consuming course rejected event: CourseId={CourseId}, CourseName={CourseName}",
                 message.CourseId, message.CourseName);
 
-            var success = await emailService.SendCourseRejectedEmailAsync(
-                message.InstructorEmail,
-                message.InstructorName,
-                message.CourseName,
-                message.Reason ?? "Khóa học chưa đáp ứng đủ tiêu chuẩn chất lượng của Beyond8."
-            );
-
-            if (success)
+            try
             {
-                logger.LogInformation(
-                    "Successfully sent course rejected email to {Email} for course {CourseName}",
-                    message.InstructorEmail, message.CourseName);
+                var success = await emailService.SendCourseRejectedEmailAsync(
+                    message.InstructorEmail,
+                    message.InstructorName,
+                    message.CourseName,
+                    message.Reason ?? "Khóa học chưa đáp ứng đủ tiêu chuẩn chất lượng của Beyond8."
+                );
+
+                if (success)
+                {
+                    status = NotificationStatus.Delivered;
+                    logger.LogInformation(
+                        "Successfully sent course rejected email to {Email} for course {CourseName}",
+                        message.InstructorEmail, message.CourseName);
+                }
+                else
+                {
+                    logger.LogError(
+                        "Failed to send course rejected email to {Email} for course {CourseName}",
+                        message.InstructorEmail, message.CourseName);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex,
+                    "Error sending course rejected email: CourseId={CourseId}, Email={Email}",
+                    message.CourseId, message.InstructorEmail);
             }
 
             try
             {
-                var status = success ? NotificationStatus.Delivered : NotificationStatus.Failed;
                 await unitOfWork.NotificationRepository.AddAsync(message.CourseRejectedEventToNotification(status));
                 await unitOfWork.SaveChangesAsync();
             }

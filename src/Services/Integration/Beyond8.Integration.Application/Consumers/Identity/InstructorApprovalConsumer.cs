@@ -19,66 +19,70 @@ namespace Beyond8.Integration.Application.Consumers.Identity
         public async Task Consume(ConsumeContext<InstructorApprovalEvent> context)
         {
             var message = context.Message;
+            var emailStatus = NotificationStatus.Failed;
+            var reLoginStatus = NotificationStatus.Failed;
 
             try
             {
                 logger.LogInformation("Consuming instructor approval email event for {Email}", message.ToEmail);
-
-                var success = await emailService.SendInstructorApprovalEmailAsync(
-                    message.ToEmail,
-                    message.InstructorName,
-                    message.ProfileUrl
-                );
-
-                if (success)
+                try
                 {
-                    logger.LogInformation("Successfully sent instructor approval email to {Email}", message.ToEmail);
+                    var emailSent = await emailService.SendInstructorApprovalEmailAsync(
+                        message.ToEmail,
+                        message.InstructorName,
+                        message.ProfileUrl
+                    );
 
-                    try
+                    if (emailSent)
                     {
-                        // Save email notification
-                        await unitOfWork.NotificationRepository.AddAsync(message.InstructorApprovalEventToNotification(NotificationStatus.Delivered));
-
-                        // Save re-login notification
-                        await unitOfWork.NotificationRepository.AddAsync(message.ReLoginNotificationToNotification(NotificationStatus.Delivered));
-                        await unitOfWork.SaveChangesAsync();
-
-                        var data = new DataInfor
-                        {
-                            Title = "Đơn giảng viên được duyệt",
-                            Message = $"Đơn giảng viên của bạn {message.InstructorName} đã được duyệt thành công. Xem hồ sơ: {message.ProfileUrl}",
-                            Metadata = new
-                            {
-                                RequireReLogin = true
-                            }
-                        };
-
-                        await notificationService.SendToUserAsync(
-                            message.UserId.ToString(),
-                            "RequireReLogin",
-                            data
-                        );
-                        logger.LogInformation("Successfully sent real-time re-login notification to user {UserId}", message.UserId);
+                        emailStatus = NotificationStatus.Delivered;
+                        logger.LogInformation("Successfully sent instructor approval email to {Email}", message.ToEmail);
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        logger.LogWarning(ex, "Failed to save notification for instructor approval email to {Email}, but email was sent successfully", message.ToEmail);
+                        logger.LogError("Failed to send instructor approval email to {Email}", message.ToEmail);
                     }
                 }
-                else
+                catch (Exception ex)
                 {
-                    logger.LogError("Failed to send instructor approval email to {Email}", message.ToEmail);
+                    logger.LogError(ex, "Error sending instructor approval email to {Email}", message.ToEmail);
+                }
 
-                    try
+                try
+                {
+                    var data = new DataInfor
                     {
-                        await unitOfWork.NotificationRepository.AddAsync(message.InstructorApprovalEventToNotification(NotificationStatus.Failed));
-                        await unitOfWork.NotificationRepository.AddAsync(message.ReLoginNotificationToNotification(NotificationStatus.Failed));
-                        await unitOfWork.SaveChangesAsync();
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogWarning(ex, "Failed to save notification for instructor approval email to {Email}", message.ToEmail);
-                    }
+                        Title = "Đơn giảng viên được duyệt",
+                        Message = $"Đơn giảng viên của bạn {message.InstructorName} đã được duyệt thành công. Xem hồ sơ: {message.ProfileUrl}",
+                        Metadata = new
+                        {
+                            RequireReLogin = true
+                        }
+                    };
+
+                    await notificationService.SendToUserAsync(
+                        message.UserId.ToString(),
+                        "RequireReLogin",
+                        data
+                    );
+
+                    reLoginStatus = NotificationStatus.Delivered;
+                    logger.LogInformation("Successfully sent real-time re-login notification to user {UserId}", message.UserId);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Failed to send real-time re-login notification to user {UserId}", message.UserId);
+                }
+
+                try
+                {
+                    await unitOfWork.NotificationRepository.AddAsync(message.InstructorApprovalEventToNotification(emailStatus));
+                    await unitOfWork.NotificationRepository.AddAsync(message.ReLoginNotificationToNotification(reLoginStatus));
+                    await unitOfWork.SaveChangesAsync();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Failed to save notification records for instructor approval event of {Email}", message.ToEmail);
                 }
             }
             catch (Exception ex)

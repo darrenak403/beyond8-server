@@ -18,6 +18,8 @@ public class CourseCompletedEventConsumer(
     public async Task Consume(ConsumeContext<CourseCompletedEvent> context)
     {
         var message = context.Message;
+        var inAppStatus = NotificationStatus.Failed;
+        var emailStatus = NotificationStatus.Failed;
 
         try
         {
@@ -37,27 +39,57 @@ public class CourseCompletedEventConsumer(
                 }
             };
 
-            await notificationService.SendToUserAsync(message.UserId.ToString(), "CourseCompleted", data);
+            try
+            {
+                await notificationService.SendToUserAsync(message.UserId.ToString(), "CourseCompleted", data);
+                inAppStatus = NotificationStatus.Delivered;
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex,
+                    "Failed to send in-app course completed notification: EnrollmentId={EnrollmentId}, UserId={UserId}",
+                    message.EnrollmentId, message.UserId);
+            }
 
             if (message.CertificateId.HasValue && !string.IsNullOrEmpty(message.UserEmail))
             {
-                var userName = message.UserFullName ?? "Bạn";
-                var success = await emailService.SendCourseCompletedEmailAsync(
-                    message.UserEmail,
-                    userName,
-                    message.CourseTitle);
-
-                if (success)
+                try
                 {
-                    logger.LogInformation(
-                        "Course completed email sent to {Email} for course {CourseTitle}",
-                        message.UserEmail, message.CourseTitle);
+                    var userName = message.UserFullName ?? "Bạn";
+                    var success = await emailService.SendCourseCompletedEmailAsync(
+                        message.UserEmail,
+                        userName,
+                        message.CourseTitle);
+
+                    if (success)
+                    {
+                        emailStatus = NotificationStatus.Delivered;
+                        logger.LogInformation(
+                            "Course completed email sent to {Email} for course {CourseTitle}",
+                            message.UserEmail, message.CourseTitle);
+                    }
+                    else
+                    {
+                        logger.LogError(
+                            "Failed to send course completed email to {Email} for course {CourseTitle}",
+                            message.UserEmail, message.CourseTitle);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex,
+                        "Error sending course completed email: EnrollmentId={EnrollmentId}, UserId={UserId}, Email={Email}",
+                        message.EnrollmentId, message.UserId, message.UserEmail);
                 }
             }
 
             try
             {
-                await unitOfWork.NotificationRepository.AddAsync(message.CourseCompletedEventToNotification(NotificationStatus.Delivered, data));
+                var status = inAppStatus == NotificationStatus.Delivered || emailStatus == NotificationStatus.Delivered
+                    ? NotificationStatus.Delivered
+                    : NotificationStatus.Failed;
+
+                await unitOfWork.NotificationRepository.AddAsync(message.CourseCompletedEventToNotification(status, data));
                 await unitOfWork.SaveChangesAsync();
                 logger.LogInformation(
                     "Successfully saved notification for course completed event: EnrollmentId={EnrollmentId}, UserId={UserId}",
