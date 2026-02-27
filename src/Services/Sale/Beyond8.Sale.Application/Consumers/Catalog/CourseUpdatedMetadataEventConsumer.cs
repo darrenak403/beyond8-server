@@ -1,4 +1,5 @@
 using Beyond8.Common.Events.Catalog;
+using Beyond8.Sale.Application.Services.Interfaces;
 using Beyond8.Sale.Domain.Repositories.Interfaces;
 using MassTransit;
 using Microsoft.Extensions.Logging;
@@ -7,7 +8,8 @@ namespace Beyond8.Sale.Application.Consumers.Catalog;
 
 public class CourseUpdatedMetadataEventConsumer(
     ILogger<CourseUpdatedMetadataEventConsumer> logger,
-    IUnitOfWork unitOfWork) : IConsumer<CourseUpdatedMetadataEvent>
+    IUnitOfWork unitOfWork,
+    ICartService cartService) : IConsumer<CourseUpdatedMetadataEvent>
 {
     public async Task Consume(ConsumeContext<CourseUpdatedMetadataEvent> context)
     {
@@ -18,24 +20,38 @@ public class CourseUpdatedMetadataEventConsumer(
             logger.LogInformation("Updating cart items for course {CourseId} with new metadata: Title={Title}, Price={Price}, Final={FinalPrice}, Thumbnail={ThumbnailUrl}",
                 message.CourseId, message.Title, message.Price, message.FinalPrice, message.ThumbnailUrl);
 
-            // Find all cart items for this course
             var cartItems = await unitOfWork.CartRepository.GetCartItemsByCourseIdAsync(message.CourseId);
 
             if (cartItems.Any())
             {
-                // Update metadata for all cart items
-                foreach (var cartItem in cartItems)
+                var originalPrice = decimal.TryParse(message.Price, out var price) ? price : 0;
+                var finalPrice = decimal.TryParse(message.FinalPrice, out var parsedFinalPrice) ? parsedFinalPrice : originalPrice;
+
+                if (originalPrice == 0 || finalPrice == 0)
                 {
-                    cartItem.CourseTitle = message.Title;
-                    cartItem.OriginalPrice = decimal.TryParse(message.Price, out var price) ? price : 0;
-                    cartItem.FinalPrice = decimal.TryParse(message.FinalPrice, out var finalPrice) ? finalPrice : cartItem.OriginalPrice;
-                    cartItem.CourseThumbnail = message.ThumbnailUrl;
+                    foreach (var cartItem in cartItems)
+                    {
+                        await cartService.RemoveFromCartAsync(cartItem.Cart.UserId, cartItem.CourseId);
+                    }
+
+                    logger.LogInformation("Removed {Count} cart items because course {CourseId} became free",
+                        cartItems.Count, message.CourseId);
                 }
+                else
+                {
+                    foreach (var cartItem in cartItems)
+                    {
+                        cartItem.CourseTitle = message.Title;
+                        cartItem.OriginalPrice = originalPrice;
+                        cartItem.FinalPrice = finalPrice;
+                        cartItem.CourseThumbnail = message.ThumbnailUrl;
+                    }
 
-                await unitOfWork.SaveChangesAsync();
+                    await unitOfWork.SaveChangesAsync();
 
-                logger.LogInformation("Updated metadata for {Count} cart items for course {CourseId}",
-                    cartItems.Count, message.CourseId);
+                    logger.LogInformation("Updated metadata for {Count} cart items for course {CourseId}",
+                        cartItems.Count, message.CourseId);
+                }
             }
             else
             {
@@ -45,7 +61,7 @@ public class CourseUpdatedMetadataEventConsumer(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error updating cart items for course {CourseId}", message.CourseId);
-            throw; // Let MassTransit handle retry
+            throw;
         }
     }
 }
