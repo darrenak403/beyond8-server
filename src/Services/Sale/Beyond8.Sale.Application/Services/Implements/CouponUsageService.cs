@@ -182,7 +182,7 @@ public class CouponUsageService(
     {
         return ApiResponse<CouponValidationResult>.SuccessResponse(
             new CouponValidationResult { IsValid = false, ErrorMessage = errorMessage },
-            "Validation failed");
+            "Xác thực thất bại");
     }
 
     private static decimal CalculateDiscount(Coupon coupon, decimal orderTotal)

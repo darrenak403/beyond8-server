@@ -51,7 +51,7 @@ public class InstructorWalletService(
         var transactions = await unitOfWork.TransactionLedgerRepository.GetPagedAsync(
             pageNumber: pagination.PageNumber,
             pageSize: pagination.PageSize,
-            filter: t => t.WalletId == wallet.Id,
+            filter: t => t.WalletId == wallet.Id && t.Type != TransactionType.Settlement,
             orderBy: q => q.OrderByDescending(t => t.CreatedAt));
 
         return ApiResponse<List<WalletTransactionResponse>>.SuccessPagedResponse(

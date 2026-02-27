@@ -32,7 +32,7 @@ public class SettlementService(
         {
             // still attempt platform txs
             await ProcessPendingPlatformTransactionsAsync();
-            return ApiResponse<bool>.SuccessResponse(true, "No pending instructor settlements");
+            return ApiResponse<bool>.SuccessResponse(true, "Không có khoản thanh toán nào của giảng viên đang chờ xử lý");
         }
 
         foreach (var tx in pendingTxs)
@@ -88,7 +88,7 @@ public class SettlementService(
                         BalanceAfter = wallet.AvailableBalance,
                         ReferenceId = trackedTx.ReferenceId,
                         ReferenceType = trackedTx.ReferenceType,
-                        Description = $"Settlement for order {trackedTx.ReferenceId}",
+                        Description = $"Thanh toán cho đơn hàng {trackedTx.ReferenceId}",
                         CreatedAt = DateTime.UtcNow
                     };
 
@@ -136,7 +136,7 @@ public class SettlementService(
         // After instructor settlements, process platform pending transactions too
         await ProcessPendingPlatformTransactionsAsync();
 
-        return ApiResponse<bool>.SuccessResponse(true, "Processed pending settlements");
+        return ApiResponse<bool>.SuccessResponse(true, "Đã xử lý các khoản thanh toán đang chờ");
     }
 
     // Process pending platform wallet transactions whose AvailableAt <= now
@@ -200,7 +200,7 @@ public class SettlementService(
                         Currency = trackedPtx.Currency,
                         BalanceBefore = availableBefore,
                         BalanceAfter = wallet.AvailableBalance,
-                        Description = $"Settlement release for platform tx {trackedPtx.Id}",
+                        Description = $"Xử lý thanh toán cho giao dịch nền tảng {trackedPtx.Id}",
                         CreatedAt = DateTime.UtcNow
                     };
 
@@ -235,7 +235,7 @@ public class SettlementService(
             .ToListAsync();
 
         if (!txs.Any())
-            return ApiResponse<bool>.FailureResponse("No transactions found for order");
+            return ApiResponse<bool>.FailureResponse("Không tìm thấy giao dịch nào cho đơn hàng");
 
         foreach (var tx in txs)
         {
@@ -247,7 +247,7 @@ public class SettlementService(
             if (wallet == null)
                 continue;
 
-            var settleResult = await walletService.SettleToAvailableAsync(wallet.InstructorId, tx.Amount, orderId, tx.Id, $"Forced settlement for order {orderId}");
+            var settleResult = await walletService.SettleToAvailableAsync(wallet.InstructorId, tx.Amount, orderId, tx.Id, $"Bắt buộc thanh toán cho đơn hàng {orderId}");
             if (!settleResult.IsSuccess)
                 return ApiResponse<bool>.FailureResponse(settleResult.Message);
 
@@ -265,7 +265,7 @@ public class SettlementService(
 
         await unitOfWork.SaveChangesAsync();
 
-        return ApiResponse<bool>.SuccessResponse(true, "Order forced settled");
+        return ApiResponse<bool>.SuccessResponse(true, "Đơn hàng đã được xử lý thanh toán (forced settled)");
     }
 
     // Note: individual instructor/platform upcoming queries were consolidated.
@@ -300,14 +300,14 @@ public class SettlementService(
             total,
             pagination.PageNumber,
             pagination.PageSize,
-            "Upcoming settlements for instructor retrieved");
+            "Lấy danh sách khoản thanh toán sắp tới của giảng viên thành công");
     }
 
     public async Task<ApiResponse<List<UpcomingByOrderResponse>>> GetUpcomingByOrderAsync(DateTime? from, DateTime? to, PaginationRequest pagination)
     {
         // Load pending instructor transactions (by order)
         var instructorQuery = unitOfWork.TransactionLedgerRepository.AsQueryable()
-            .Where(t => t.Type == TransactionType.Sale && t.Status == TransactionStatus.Pending && t.AvailableAt != null && t.ReferenceId != null);
+            .Where(t => t.Type == TransactionType.Sale && (t.Status == TransactionStatus.Pending || t.Status == TransactionStatus.Completed) && t.AvailableAt != null && t.ReferenceId != null);
 
         if (from.HasValue) instructorQuery = instructorQuery.Where(t => t.AvailableAt >= from.Value);
         if (to.HasValue) instructorQuery = instructorQuery.Where(t => t.AvailableAt <= to.Value);
@@ -321,7 +321,7 @@ public class SettlementService(
         var platformQuery = unitOfWork.PlatformWalletTransactionRepository.AsQueryable()
             .Where(t => t.ReferenceId != null
                 && t.Type == PlatformTransactionType.Revenue
-                && !(t.Description != null && t.Description.Contains("Settlement release for platform tx")));
+                && (t.Description == null || !t.Description.Contains("Xử lý thanh toán cho giao dịch nền tảng")));
 
         // Use effective available time = AvailableAt (if set) otherwise CreatedAt for immediate credits
         if (from.HasValue) platformQuery = platformQuery.Where(t => (t.AvailableAt ?? t.CreatedAt) >= from.Value);
@@ -369,6 +369,6 @@ public class SettlementService(
             .Take(pagination.PageSize)
             .ToList();
 
-        return ApiResponse<List<UpcomingByOrderResponse>>.SuccessPagedResponse(items, total, pagination.PageNumber, pagination.PageSize, "Upcoming settlements by order retrieved");
+        return ApiResponse<List<UpcomingByOrderResponse>>.SuccessPagedResponse(items, total, pagination.PageNumber, pagination.PageSize, "Lấy danh sách khoản thanh toán sắp tới theo đơn hàng thành công");
     }
 }
