@@ -239,7 +239,7 @@ public class PaymentService(
         var paymentsForUser = new List<Payment>();
         foreach (var p in candidates)
         {
-            if ((p.Order != null && p.Order.UserId == userId) 
+            if ((p.Order != null && p.Order.UserId == userId)
                 || p.TargetUserId == userId
                 || (p.Purpose == PaymentPurpose.WalletTopUp && p.InstructorWallet != null && p.InstructorWallet.InstructorId == userId))
             {
@@ -645,7 +645,7 @@ public class PaymentService(
                     instructorId,
                     totalInstructorEarnings,
                     order.Id,
-                    $"Doanh thu đơn hàng #{order.OrderNumber}",
+                    $"Doanh thu {totalInstructorEarnings:N0} VND từ đơn hàng",
                     availableAt);
             }
 
@@ -665,7 +665,7 @@ public class PaymentService(
                         instructorDiscount,
                         instructorCoupon.Id,
                         order.Id,
-                        $"Chi phí coupon {instructorCoupon.Code} cho đơn hàng #{order.OrderNumber}");
+                        $"Khấu trừ {instructorDiscount:N0} VND chi phí coupon cho đơn hàng");
 
                     // Update coupon's remaining hold
                     instructorCoupon.RemainingHoldAmount = Math.Max(0, instructorCoupon.RemainingHoldAmount - instructorDiscount);
@@ -677,7 +677,7 @@ public class PaymentService(
                             instructorId,
                             instructorCoupon.RemainingHoldAmount,
                             instructorCoupon.Id,
-                            $"Hoàn trả số dư giữ còn lại cho coupon {instructorCoupon.Code} (đã dùng hết)");
+                            $"Hoàn tiền {instructorCoupon.RemainingHoldAmount:N0} VND số dư giữ còn lại cho coupon");
 
                         instructorCoupon.RemainingHoldAmount = 0;
                     }
@@ -696,7 +696,7 @@ public class PaymentService(
 
             await platformWalletService.CreditPlatformRevenuePendingAsync(
                 fullPlatformFee, order.Id,
-                $"Hoa hồng 30% đơn hàng #{order.OrderNumber}",
+                $"Hoa hồng {fullPlatformFee:N0} VND từ đơn hàng",
                 availableAt);
         }
 
@@ -705,7 +705,7 @@ public class PaymentService(
         {
             await platformWalletService.DebitSystemCouponCostAsync(
                 order.SystemDiscountAmount, order.Id,
-                $"Chi phí coupon hệ thống {systemCoupon.Code} cho đơn hàng #{order.OrderNumber}");
+                $"Khấu trừ {order.SystemDiscountAmount:N0} VND chi phí coupon hệ thống");
         }
     }
 
@@ -757,7 +757,7 @@ public class PaymentService(
                 payment.InstructorWallet.InstructorId,
                 payment.Amount,
                 payment.Id,
-                $"Nạp tiền qua VNPay - Mã GD: {result.TransactionNo}");
+                $"Nạp {payment.Amount:N0} VND qua VNPay");
         }
 
         logger.LogInformation(
@@ -857,7 +857,7 @@ public class PaymentService(
                         await platformWalletService.CreditPlatformRevenuePendingAsync(
                             payment.Amount,
                             payment.Id,
-                            $"Subscription purchase {planId} for user {userId}",
+                            $"Doanh thu {payment.Amount:N0} VND từ gói đăng ký",
                             subscriptionAvailableAt);
                     }
                     catch (Exception ex)

@@ -89,7 +89,7 @@ public class SettlementService(
                         BalanceAfter = wallet.AvailableBalance,
                         ReferenceId = trackedTx.ReferenceId,
                         ReferenceType = trackedTx.ReferenceType,
-                        Description = $"Thanh toán cho đơn hàng {trackedTx.ReferenceId}",
+                        Description = $"Thanh toán {settleAmount:N0} VND cho đơn hàng",
                         CreatedAt = DateTime.UtcNow
                     };
 
@@ -201,7 +201,7 @@ public class SettlementService(
                         Currency = trackedPtx.Currency,
                         BalanceBefore = availableBefore,
                         BalanceAfter = wallet.AvailableBalance,
-                        Description = $"Xử lý thanh toán cho giao dịch nền tảng {trackedPtx.Id}",
+                        Description = $"Xử lý thanh toán {settleAmount:N0} VND cho giao dịch",
                         CreatedAt = DateTime.UtcNow
                     };
 
@@ -248,7 +248,7 @@ public class SettlementService(
             if (wallet == null)
                 continue;
 
-            var settleResult = await walletService.SettleToAvailableAsync(wallet.InstructorId, tx.Amount, orderId, tx.Id, $"Bắt buộc thanh toán cho đơn hàng {orderId}");
+            var settleResult = await walletService.SettleToAvailableAsync(wallet.InstructorId, tx.Amount, orderId, tx.Id, $"Thanh toán {tx.Amount:N0} VND cho đơn hàng");
             if (!settleResult.IsSuccess)
                 return ApiResponse<bool>.FailureResponse(settleResult.Message);
 
@@ -320,7 +320,7 @@ public class SettlementService(
         var platformQuery = unitOfWork.PlatformWalletTransactionRepository.AsQueryable()
             .Where(t => t.ReferenceId != null
                 && t.Type == PlatformTransactionType.Revenue
-                && (t.Description == null || !t.Description.Contains("Xử lý thanh toán cho giao dịch nền tảng")));
+                && (t.Description == null || !t.Description.Contains("Xử lý thanh toán")));
 
         // Use effective available time = AvailableAt (if set) otherwise CreatedAt for immediate credits
         if (from.HasValue) platformQuery = platformQuery.Where(t => (t.AvailableAt ?? t.CreatedAt) >= from.Value);

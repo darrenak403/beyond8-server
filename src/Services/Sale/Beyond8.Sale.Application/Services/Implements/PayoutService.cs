@@ -87,7 +87,7 @@ public class PayoutService(
         // Deduct from wallet (validates balance)
         var deductResult = await walletService.DeductForPayoutAsync(
             payout.InstructorId, payout.Amount, payout.Id,
-            $"Rút tiền #{payout.RequestNumber}");
+            $"Rút {payout.Amount:N0} VND");
 
         if (!deductResult.IsSuccess)
             return ApiResponse<bool>.FailureResponse(deductResult.Message ?? "Không thể trừ tiền từ ví");

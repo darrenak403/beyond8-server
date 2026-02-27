@@ -83,7 +83,7 @@ public class CouponService(
                     request.InstructorId,
                     holdAmount,
                     coupon.Id,
-                    $"Giữ tiền cho coupon {coupon.Code} ({request.UsageLimit} lần sử dụng)");
+                    $"Giữ {holdAmount:N0} VND từ ví chi phí coupon");
 
                 if (!holdResult.IsSuccess)
                     return ApiResponse<CouponResponse>.FailureResponse(holdResult.Message ?? "Không thể giữ tiền từ ví");
@@ -219,7 +219,7 @@ public class CouponService(
                     coupon.ApplicableInstructorId.Value,
                     coupon.RemainingHoldAmount,
                     coupon.Id,
-                    $"Hoàn trả tiền giữ do xóa coupon {coupon.Code}");
+                    $"Hoàn tiền {coupon.RemainingHoldAmount:N0} VND tiền giữ do xóa coupon");
 
                 coupon.RemainingHoldAmount = 0;
             }
@@ -332,7 +332,7 @@ public class CouponService(
                     coupon.ApplicableInstructorId.Value,
                     coupon.RemainingHoldAmount,
                     coupon.Id,
-                    $"Hoàn trả tiền giữ do vô hiệu hóa coupon {coupon.Code}");
+                    $"Hoàn tiền {coupon.RemainingHoldAmount:N0} VND tiền giữ do vô hiệu hóa coupon");
 
                 coupon.RemainingHoldAmount = 0;
             }
