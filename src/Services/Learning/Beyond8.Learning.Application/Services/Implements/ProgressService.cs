@@ -74,8 +74,7 @@ public class ProgressService(
             if (enrollment != null)
             {
                 var completedCount = (int)await unitOfWork.LessonProgressRepository.CountAsync(l =>
-                    l.EnrollmentId == lp.EnrollmentId &&
-                    (l.Status == LessonProgressStatus.Completed || l.Status == LessonProgressStatus.Failed));
+                    l.EnrollmentId == lp.EnrollmentId && l.Status == LessonProgressStatus.Completed);
                 EnrollmentProgressHelper.ApplyProgressToEnrollment(enrollment, completedCount, now, lessonId, now);
                 await unitOfWork.EnrollmentRepository.UpdateAsync(enrollment.Id, enrollment);
             }

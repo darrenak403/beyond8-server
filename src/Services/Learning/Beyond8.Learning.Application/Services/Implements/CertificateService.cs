@@ -38,7 +38,7 @@ public class CertificateService(
                 return;
 
             var actualCompletedCount = enrollment.LessonProgresses.Count(lp =>
-                EnrollmentProgressHelper.IsCompletedOrFailed(lp.Status));
+                EnrollmentProgressHelper.IsCountedForProgress(lp.Status));
             if (enrollment.TotalLessons <= 0 || actualCompletedCount < enrollment.TotalLessons)
                 return;
 
@@ -79,6 +79,7 @@ public class CertificateService(
             await unitOfWork.CertificateRepository.AddAsync(cert);
             enrollment.CertificateId = cert.Id;
             enrollment.CertificateIssuedAt = now;
+            enrollment.CompletedAt = enrollment.CompletedAt ?? now; // Mark course completed only when certificate is issued (all lessons + quiz + assignment met)
             await unitOfWork.EnrollmentRepository.UpdateAsync(enrollment.Id, enrollment);
             await unitOfWork.SaveChangesAsync();
 

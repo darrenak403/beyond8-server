@@ -51,8 +51,7 @@ public class LessonVideoDurationUpdatedEventConsumer(
                 if (enrollment == null) continue;
 
                 var completedCount = (int)await unitOfWork.LessonProgressRepository.CountAsync(l =>
-                    l.EnrollmentId == enrollmentId &&
-                    (l.Status == LessonProgressStatus.Completed || l.Status == LessonProgressStatus.Failed));
+                    l.EnrollmentId == enrollmentId && l.Status == LessonProgressStatus.Completed);
                 EnrollmentProgressHelper.ApplyProgressToEnrollment(enrollment, completedCount, DateTime.UtcNow);
                 await unitOfWork.EnrollmentRepository.UpdateAsync(enrollment.Id, enrollment);
             }

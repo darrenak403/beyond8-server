@@ -24,4 +24,8 @@ public class AssignmentResponse
     public decimal? AverageScore { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    /// <summary>Hạn nộp bài (tính từ CreatedAt + TimeLimitMinutes). Null nếu không giới hạn thời gian.</summary>
+    public DateTime? DueAt { get; set; }
+    /// <summary>True nếu đã quá hạn nộp (DueAt != null và hiện tại > DueAt).</summary>
+    public bool IsExpired { get; set; }
 }

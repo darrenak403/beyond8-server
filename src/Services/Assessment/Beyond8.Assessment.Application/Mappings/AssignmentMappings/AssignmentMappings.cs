@@ -8,8 +8,14 @@ public static class AssignmentMappings
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
-    public static AssignmentResponse ToResponse(this Assignment entity)
+    public static AssignmentResponse ToResponse(this Assignment entity, DateTime? asOfUtc = null)
     {
+        var now = asOfUtc ?? DateTime.UtcNow;
+        var dueAt = entity.TimeLimitMinutes.HasValue && entity.TimeLimitMinutes.Value > 0
+            ? entity.CreatedAt.AddMinutes(entity.TimeLimitMinutes.Value)
+            : (DateTime?)null;
+        var isExpired = dueAt.HasValue && now > dueAt.Value;
+
         return new AssignmentResponse
         {
             Id = entity.Id,
@@ -30,7 +36,9 @@ public static class AssignmentMappings
             MaxSubmissions = entity.MaxSubmissions,
             AverageScore = entity.AverageScore,
             CreatedAt = entity.CreatedAt,
-            UpdatedAt = entity.UpdatedAt ?? entity.CreatedAt
+            UpdatedAt = entity.UpdatedAt ?? entity.CreatedAt,
+            DueAt = dueAt,
+            IsExpired = isExpired
         };
     }
 
