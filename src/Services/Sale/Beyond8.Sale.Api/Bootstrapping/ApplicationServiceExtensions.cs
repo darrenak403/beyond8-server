@@ -70,10 +70,9 @@ public static class ApplicationServiceExtensions
 
         builder.AddClientServices(httpPolicy);
 
-        // Wallet, Payout, Transaction services
+        // Wallet, Transaction services
         builder.Services.AddScoped<IInstructorWalletService, InstructorWalletService>();
         builder.Services.AddScoped<IPlatformWalletService, PlatformWalletService>();
-        builder.Services.AddScoped<IPayoutService, PayoutService>();
         builder.Services.AddScoped<ITransactionService, TransactionService>();
 
         // Payment cleanup will be executed via Hangfire by calling IPaymentService.RunCleanupAsync()
@@ -137,7 +136,6 @@ public static class ApplicationServiceExtensions
         app.MapCouponUsageApi();
         app.MapWalletApi();
         app.MapPlatformWalletApi();
-        app.MapPayoutApi();
         app.MapTransactionApi();
         app.MapSettlementApi();
 

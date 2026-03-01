@@ -6,7 +6,7 @@ namespace Beyond8.Sale.Application.Services.Interfaces;
 
 public interface ITransactionService
 {
-    // ── Internal (called by PaymentService / PayoutService) ──
+    // ── Internal (called by PaymentService) ──
     Task<ApiResponse<TransactionLedgerResponse>> CreateTransactionAsync(CreateTransactionRequest request);
 
     // ── Instructor / Admin ──

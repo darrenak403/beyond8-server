@@ -37,9 +37,6 @@ public class InstructorWallet : BaseEntity
     [Column(TypeName = "decimal(18, 2)")]
     public decimal TotalWithdrawn { get; set; } = 0;
 
-    // Timestamps
-    public DateTime? LastPayoutAt { get; set; }
-
     public bool IsActive { get; set; } = true;
 
     // Bank Account Information (Encrypted in production)
@@ -48,5 +45,4 @@ public class InstructorWallet : BaseEntity
 
     // Navigation Properties
     public virtual ICollection<TransactionLedger> Transactions { get; set; } = [];
-    public virtual ICollection<PayoutRequest> PayoutRequests { get; set; } = [];
 }

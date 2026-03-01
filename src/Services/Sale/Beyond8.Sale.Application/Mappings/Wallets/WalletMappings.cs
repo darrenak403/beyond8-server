@@ -17,7 +17,6 @@ public static class WalletMappings
             Currency = wallet.Currency,
             TotalEarnings = wallet.TotalEarnings,
             TotalWithdrawn = wallet.TotalWithdrawn,
-            LastPayoutAt = wallet.LastPayoutAt,
             IsActive = wallet.IsActive,
             CreatedAt = wallet.CreatedAt,
             UpdatedAt = wallet.UpdatedAt

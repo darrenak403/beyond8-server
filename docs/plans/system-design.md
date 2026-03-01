@@ -1,5 +1,43 @@
 # THIẾT KẾ HỆ THỐNG CẤP CAO: NỀN TẢNG E-LEARNING
 
+## 0. As-Built Update (2026-03-01)
+
+Phần này cập nhật nhanh theo code thực tế trong `src/Services` để tránh lệch với bản thiết kế khái niệm.
+
+### 0.1 Endpoint convention thực tế
+
+- Các service đang dùng prefix dạng `/api/v1/...` theo từng domain, ví dụ:
+  - Identity: `/api/v1/auth`, `/api/v1/users`, `/api/v1/instructors`
+  - Catalog: `/api/v1/courses`, `/api/v1/categories`, `/api/v1/sections`, `/api/v1/lessons`
+  - Assessment: `/api/v1/questions`, `/api/v1/quizzes`, `/api/v1/quiz-attempts`, `/api/v1/assignments`
+  - Learning: `/api/v1/enrollments`, `/api/v1/certificates`, `/api/v1/course-reviews`
+  - Sale: `/api/v1/orders`, `/api/v1/cart`, `/api/v1/payments`, `/api/v1/coupons`, `/api/v1/settlements`, ...
+  - Integration: `/api/v1/media`, `/api/v1/ai`, `/api/v1/notifications`, ...
+  - Analytic: `/api/v1/analytics/system|courses|instructors|lessons`
+
+### 0.2 Event-driven topology thực tế
+
+- Event contracts nằm tại `shared/Beyond8.Common/Events/*` và đang dùng rộng rãi giữa Identity/Catalog/Assessment/Learning/Sale/Integration/Analytic.
+- Ngoài các event business cơ bản, hệ thống có các event vận hành quan trọng như:
+  - `CourseUpdatedMetadataEvent`
+  - `LessonVideoDurationUpdatedEvent`
+  - `OrderItemCompletedEvent`
+  - `SettlementCompletedEvent`
+  - `CacheInvalidateEvent`
+
+### 0.3 Sale thực tế: có Settlement + Escrow
+
+- Sale API hiện map đầy đủ `MapSettlementApi()` và expose `/api/v1/settlements/*`.
+- Có Hangfire recurring jobs:
+  - cleanup payment hết hạn
+  - process pending settlements theo giờ
+- Trong payment success flow, order được set `SettlementEligibleAt = PaidAt + 14 ngày` và xử lý chuyển pending -> available qua settlement service.
+
+### 0.4 Tài liệu Mermaid as-built
+
+- Mermaid code để import vào draw.io đã được tạo tại:
+  - `docs/plans/as-built-mermaid-drawio.md`
+
 ## 1. Tổng Quan Hệ Thống
 
 ### Mục Đích Hệ Thống

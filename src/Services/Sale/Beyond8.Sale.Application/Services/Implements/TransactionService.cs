@@ -26,7 +26,7 @@ public class TransactionService(
         var balanceAfter = request.Type switch
         {
             TransactionType.Sale or TransactionType.Adjustment => balanceBefore + request.Amount,
-            TransactionType.Payout or TransactionType.PlatformFee => balanceBefore - request.Amount,
+            TransactionType.PlatformFee => balanceBefore - request.Amount,
             _ => balanceBefore
         };
 

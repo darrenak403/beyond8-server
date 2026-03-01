@@ -44,9 +44,9 @@ public class TransactionLedger : BaseEntity
     public string? Description { get; set; }
 
     [Column(TypeName = "jsonb")]
-    public string? Metadata { get; set; } // Additional data (order details, payout info, etc.)
+    public string? Metadata { get; set; } // Additional data (order/coupon/payment details, etc.)
 
     // External Transaction Reference
     [MaxLength(200)]
-    public string? ExternalTransactionId { get; set; } // Bank transaction ID for payouts
+    public string? ExternalTransactionId { get; set; } // External provider transaction ID
 }

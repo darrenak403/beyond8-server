@@ -10,7 +10,7 @@ public interface IInstructorWalletService
     Task<ApiResponse<InstructorWalletResponse>> GetWalletByInstructorAsync(Guid instructorId);
     Task<ApiResponse<List<WalletTransactionResponse>>> GetWalletTransactionsAsync(Guid instructorId, PaginationRequest pagination);
 
-    // ── Internal (called by PaymentService / PayoutService / Event consumers) ──
+    // ── Internal (called by PaymentService / Event consumers) ──
 
     /// <summary>
     /// Credit instructor earnings immediately after payment success (no escrow)
@@ -31,11 +31,6 @@ public interface IInstructorWalletService
     /// Credit wallet from VNPay top-up
     /// </summary>
     Task<ApiResponse<bool>> CreditTopUpAsync(Guid instructorId, decimal amount, Guid paymentId, string description);
-
-    /// <summary>
-    /// Deduct funds for payout processing
-    /// </summary>
-    Task<ApiResponse<bool>> DeductForPayoutAsync(Guid instructorId, decimal amount, Guid payoutId, string description);
 
     /// <summary>
     /// Create wallet when instructor is approved (consumed from Identity event)
