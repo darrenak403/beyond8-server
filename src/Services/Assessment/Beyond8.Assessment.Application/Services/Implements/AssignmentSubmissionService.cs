@@ -30,6 +30,16 @@ public class AssignmentSubmissionService(
                 return ApiResponse<SubmissionResponse>.FailureResponse("Assignment không tồn tại.");
             }
 
+            if (assignment.TimeLimitMinutes.HasValue && assignment.TimeLimitMinutes.Value > 0)
+            {
+                var dueAt = assignment.CreatedAt.AddMinutes(assignment.TimeLimitMinutes.Value);
+                if (DateTime.UtcNow > dueAt)
+                {
+                    logger.LogWarning("Student {StudentId} attempted to submit after due date for assignment {AssignmentId}. DueAt: {DueAt}", userId, assignmentId, dueAt);
+                    return ApiResponse<SubmissionResponse>.FailureResponse("Assignment đã hết hạn nộp bài. Không thể nộp thêm.");
+                }
+            }
+
             var existingSubmissions = await unitOfWork.AssignmentSubmissionRepository
                 .GetAllAsync(s => s.AssignmentId == assignmentId && s.StudentId == userId);
 

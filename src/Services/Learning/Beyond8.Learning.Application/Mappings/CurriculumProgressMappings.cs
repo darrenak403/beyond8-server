@@ -26,7 +26,7 @@ public static class CurriculumProgressMappings
         var completedLessons = allLessonIds.Count(lessonId =>
         {
             var progress = lessonProgressByLessonId.GetValueOrDefault(lessonId);
-            return progress != null && EnrollmentProgressHelper.IsCompletedOrFailed(progress.Status);
+            return progress != null && EnrollmentProgressHelper.IsCountedForProgress(progress.Status);
         });
         var progressPercent = EnrollmentProgressHelper.CalculateProgressPercent(completedLessons, totalLessons);
 
@@ -74,7 +74,7 @@ public static class CurriculumProgressMappings
         this LessonStructureItem lesson,
         LessonProgress? progress)
     {
-        var isCompleted = progress != null && EnrollmentProgressHelper.IsCompletedOrFailed(progress.Status);
+        var isCompleted = progress != null && EnrollmentProgressHelper.IsCountedForProgress(progress.Status);
         var isPassed = progress?.Status == LessonProgressStatus.Completed;
 
         return new LessonProgressItem

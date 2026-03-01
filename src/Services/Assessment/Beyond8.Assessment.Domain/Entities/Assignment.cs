@@ -36,7 +36,7 @@ public class Assignment : BaseEntity
 
     public string? RubricUrl { get; set; }
 
-    public int? TimeLimitMinutes { get; set; } = 60;
+    public int? TimeLimitMinutes { get; set; }
 
     public int MaxSubmissions { get; set; } = 1;
 
