@@ -7,7 +7,6 @@ using Beyond8.Learning.Application.Mappings;
 using Beyond8.Learning.Application.Services.Interfaces;
 using Beyond8.Learning.Application.Helpers;
 using Beyond8.Learning.Domain.Entities;
-using Beyond8.Learning.Domain.Enums;
 using Beyond8.Learning.Domain.Repositories.Interfaces;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
@@ -63,14 +62,41 @@ public class CertificateService(
                     return;
             }
 
-            var assignmentSections = enrollment.SectionProgresses.Where(sp => sp.AssignmentSubmitted).ToList();
-            if (assignmentSections.Count > 0)
+            var structureResult = await catalogClient.GetCourseStructureAsync(enrollment.CourseId);
+            if (structureResult.IsSuccess && structureResult.Data != null)
             {
-                var gradedByInstructor = assignmentSections.Where(sp => sp.AssignmentInstructorGraded).ToList();
-                if (gradedByInstructor.Count < assignmentSections.Count)
-                    return;
-                if (gradedByInstructor.Where(sp => sp.AssignmentGrade.HasValue).Select(sp => sp.AssignmentGrade!.Value).Average() < assignmentMin)
-                    return;
+                var sectionIdsWithAssignment = structureResult.Data.Sections
+                    .Where(s => s.AssignmentId.HasValue)
+                    .Select(s => s.Id)
+                    .ToHashSet();
+                if (sectionIdsWithAssignment.Count > 0)
+                {
+                    var progressBySection = enrollment.SectionProgresses
+                        .Where(sp => sectionIdsWithAssignment.Contains(sp.SectionId))
+                        .ToList();
+                    var allSubmitted = progressBySection.Count == sectionIdsWithAssignment.Count
+                        && progressBySection.All(sp => sp.AssignmentSubmitted);
+                    if (!allSubmitted)
+                        return;
+                    var allGradedByInstructor = progressBySection.All(sp => sp.AssignmentInstructorGraded);
+                    if (!allGradedByInstructor)
+                        return;
+                    var grades = progressBySection.Where(sp => sp.AssignmentInstructorGraded && sp.AssignmentGrade.HasValue).Select(sp => sp.AssignmentGrade!.Value).ToList();
+                    if (grades.Count != progressBySection.Count || grades.Average() < assignmentMin)
+                        return;
+                }
+            }
+            else
+            {
+                var assignmentSections = enrollment.SectionProgresses.Where(sp => sp.AssignmentSubmitted).ToList();
+                if (assignmentSections.Count > 0)
+                {
+                    var gradedByInstructor = assignmentSections.Where(sp => sp.AssignmentInstructorGraded).ToList();
+                    if (gradedByInstructor.Count < assignmentSections.Count)
+                        return;
+                    if (gradedByInstructor.Where(sp => sp.AssignmentGrade.HasValue).Select(sp => sp.AssignmentGrade!.Value).Average() < assignmentMin)
+                        return;
+                }
             }
 
             var now = DateTime.UtcNow;
@@ -79,7 +105,7 @@ public class CertificateService(
             await unitOfWork.CertificateRepository.AddAsync(cert);
             enrollment.CertificateId = cert.Id;
             enrollment.CertificateIssuedAt = now;
-            enrollment.CompletedAt = enrollment.CompletedAt ?? now; // Mark course completed only when certificate is issued (all lessons + quiz + assignment met)
+            enrollment.CompletedAt = enrollment.CompletedAt ?? now;
             await unitOfWork.EnrollmentRepository.UpdateAsync(enrollment.Id, enrollment);
             await unitOfWork.SaveChangesAsync();
 
