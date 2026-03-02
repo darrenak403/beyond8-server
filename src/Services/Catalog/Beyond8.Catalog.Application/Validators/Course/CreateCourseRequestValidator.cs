@@ -12,8 +12,8 @@ public class CreateCourseRequestValidator : AbstractValidator<CreateCourseReques
             .MaximumLength(200).WithMessage("Tiêu đề không được vượt quá 200 ký tự");
 
         RuleFor(x => x.Description)
-            .MaximumLength(5000).WithMessage("Mô tả không được vượt quá 5000 ký tự")
-            .When(x => !string.IsNullOrEmpty(x.Description));
+            .MaximumLength(5000).WithMessage("Mô tả khóa học không được vượt quá 5000 ký tự.")
+            .When(x => x.Description != null);
 
         RuleFor(x => x.ShortDescription)
             .MaximumLength(1000).WithMessage("Mô tả ngắn không được vượt quá 1000 ký tự")

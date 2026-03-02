@@ -27,9 +27,10 @@ namespace Beyond8.Catalog.Domain.Entities
         public string Slug { get; set; } = string.Empty;
 
         [Required]
+        [MaxLength(500)]
         public string Description { get; set; } = string.Empty;
 
-        [MaxLength(1000)]
+        [MaxLength(100)]
         public string? ShortDescription { get; set; }
 
         [Column(TypeName = "decimal(18, 2)")]
