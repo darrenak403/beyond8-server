@@ -225,53 +225,6 @@ public class InstructorWalletService(
     }
 
     /// <summary>
-    /// Deduct funds from wallet for payout processing
-    /// </summary>
-    public async Task<ApiResponse<bool>> DeductForPayoutAsync(
-        Guid instructorId, decimal amount, Guid payoutId, string description)
-    {
-        var wallet = await unitOfWork.InstructorWalletRepository.AsQueryable()
-            .FirstOrDefaultAsync(w => w.InstructorId == instructorId);
-
-        if (wallet == null)
-            return ApiResponse<bool>.FailureResponse("Không tìm thấy ví giảng viên");
-
-        if (wallet.AvailableBalance < amount)
-            return ApiResponse<bool>.FailureResponse("Số dư không đủ để thực hiện rút tiền");
-
-        var balanceBefore = wallet.AvailableBalance;
-        wallet.AvailableBalance -= amount;
-        wallet.TotalWithdrawn += amount;
-        wallet.LastPayoutAt = DateTime.UtcNow;
-        wallet.UpdatedAt = DateTime.UtcNow;
-
-        // Create audit trail transaction
-        var transaction = new TransactionLedger
-        {
-            WalletId = wallet.Id,
-            Type = TransactionType.Payout,
-            Status = TransactionStatus.Completed,
-            Amount = amount,
-            Currency = "VND",
-            BalanceBefore = balanceBefore,
-            BalanceAfter = wallet.AvailableBalance,
-            ReferenceId = payoutId,
-            ReferenceType = "Payout",
-            Description = description,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        await unitOfWork.TransactionLedgerRepository.AddAsync(transaction);
-        await unitOfWork.SaveChangesAsync();
-
-        logger.LogInformation(
-            "Payout deducted — InstructorId: {InstructorId}, Amount: {Amount}, PayoutId: {PayoutId}, BalanceAfter: {BalanceAfter}",
-            instructorId, amount, payoutId, wallet.AvailableBalance);
-
-        return ApiResponse<bool>.SuccessResponse(true, "Đã trừ tiền từ ví giảng viên");
-    }
-
-    /// <summary>
     /// Create wallet when instructor is approved (consumed from Identity InstructorApprovalEvent)
     /// </summary>
     public async Task<ApiResponse<InstructorWalletResponse>> CreateWalletAsync(Guid instructorId)

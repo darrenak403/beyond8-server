@@ -9,5 +9,5 @@ public class CreateTransactionRequest
     public decimal Amount { get; set; }
     public string? Description { get; set; }
     public Guid? ReferenceId { get; set; }
-    public string? ReferenceType { get; set; } // "Order", "Payout"
+    public string? ReferenceType { get; set; } // "Order", "Payment", "Coupon", ...
 }

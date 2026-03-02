@@ -10,7 +10,6 @@ public interface IUnitOfWork : IBaseUnitOfWork
     ICouponRepository CouponRepository { get; }
     ICouponUsageRepository CouponUsageRepository { get; }
     IInstructorWalletRepository InstructorWalletRepository { get; }
-    IPayoutRequestRepository PayoutRequestRepository { get; }
     ITransactionLedgerRepository TransactionLedgerRepository { get; }
     ICartRepository CartRepository { get; }
     ICartItemRepository CartItemRepository { get; }

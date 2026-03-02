@@ -17,7 +17,6 @@ public class SaleDbContext : BaseDbContext
     public DbSet<Coupon> Coupons { get; set; } = null!;
     public DbSet<CouponUsage> CouponUsages { get; set; } = null!;
     public DbSet<InstructorWallet> InstructorWallets { get; set; } = null!;
-    public DbSet<PayoutRequest> PayoutRequests { get; set; } = null!;
     public DbSet<TransactionLedger> TransactionLedgers { get; set; } = null!;
     public DbSet<Cart> Carts { get; set; } = null!;
     public DbSet<CartItem> CartItems { get; set; } = null!;
@@ -188,27 +187,6 @@ public class SaleDbContext : BaseDbContext
                 .WithOne(t => t.InstructorWallet)
                 .HasForeignKey(t => t.WalletId)
                 .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasMany(w => w.PayoutRequests)
-                .WithOne(p => p.InstructorWallet)
-                .HasForeignKey(p => p.WalletId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        // PayoutRequest Configuration
-        modelBuilder.Entity<PayoutRequest>(entity =>
-        {
-            entity.HasQueryFilter(e => e.DeletedAt == null);
-
-            // Unique Constraints
-            entity.HasIndex(e => e.RequestNumber).IsUnique();
-
-            // Performance Indexes
-            entity.HasIndex(e => e.WalletId);
-            entity.HasIndex(e => e.InstructorId);
-            entity.HasIndex(e => e.Status);
-            entity.HasIndex(e => e.RequestedAt);
-            entity.HasIndex(e => new { e.Status, e.RequestedAt });
         });
 
         // TransactionLedger Configuration

@@ -13,7 +13,6 @@ public class InstructorWalletResponse
     public string Currency { get; set; } = "VND";
     public decimal TotalEarnings { get; set; }
     public decimal TotalWithdrawn { get; set; }
-    public DateTime? LastPayoutAt { get; set; }
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
