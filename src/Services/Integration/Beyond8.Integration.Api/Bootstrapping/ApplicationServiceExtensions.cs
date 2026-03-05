@@ -246,7 +246,7 @@ namespace Beyond8.Integration.Api.Bootstrapping
             RecurringJob.AddOrUpdate<IAiUsageService>(
                 "integration:ai-usage.daily-aggregate",
                 x => x.AggregateAndPublishDailyUsageAsync(null),
-                Cron.Daily(hour: 0, minute: 5));
+                Cron.MinuteInterval(1));
         }
     }
 }

@@ -13,29 +13,46 @@ public class AiUsageDailyAggregatedEventConsumer(
     public async Task Consume(ConsumeContext<AiUsageDailyAggregatedEvent> context)
     {
         var message = context.Message;
-
-        var existing = await unitOfWork.AggAiUsageDailyRepository.GetBySnapshotDateAsync(message.SnapshotDate);
-        foreach (var e in existing)
-            await unitOfWork.AggAiUsageDailyRepository.DeleteAsync(e.Id);
+        var repo = unitOfWork.AggAiUsageDailyRepository;
+        var existingList = await repo.GetBySnapshotDateAsync(message.SnapshotDate);
 
         foreach (var item in message.Items)
         {
-            var entity = new AggAiUsageDaily
+            var existing = existingList.FirstOrDefault(e =>
+                e.Model == item.Model && e.Provider == item.Provider);
+
+            if (existing != null)
             {
-                SnapshotDate = message.SnapshotDate,
-                Model = item.Model,
-                Provider = item.Provider,
-                TotalInputTokens = item.TotalInputTokens,
-                TotalOutputTokens = item.TotalOutputTokens,
-                TotalTokens = item.TotalTokens,
-                TotalInputCost = item.TotalInputCost,
-                TotalOutputCost = item.TotalOutputCost,
-                TotalCost = item.TotalCost,
-                UsageCount = item.UsageCount,
-                CreatedAt = DateTime.UtcNow,
-                CreatedBy = Guid.Empty
-            };
-            await unitOfWork.AggAiUsageDailyRepository.AddAsync(entity);
+                existing.TotalInputTokens = item.TotalInputTokens;
+                existing.TotalOutputTokens = item.TotalOutputTokens;
+                existing.TotalTokens = item.TotalTokens;
+                existing.TotalInputCost = item.TotalInputCost;
+                existing.TotalOutputCost = item.TotalOutputCost;
+                existing.TotalCost = item.TotalCost;
+                existing.UsageCount = item.UsageCount;
+                existing.UpdatedAt = DateTime.UtcNow;
+                existing.UpdatedBy = Guid.Empty;
+                await repo.UpdateAsync(existing.Id, existing);
+            }
+            else
+            {
+                var entity = new AggAiUsageDaily
+                {
+                    SnapshotDate = message.SnapshotDate,
+                    Model = item.Model,
+                    Provider = item.Provider,
+                    TotalInputTokens = item.TotalInputTokens,
+                    TotalOutputTokens = item.TotalOutputTokens,
+                    TotalTokens = item.TotalTokens,
+                    TotalInputCost = item.TotalInputCost,
+                    TotalOutputCost = item.TotalOutputCost,
+                    TotalCost = item.TotalCost,
+                    UsageCount = item.UsageCount,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = Guid.Empty
+                };
+                await repo.AddAsync(entity);
+            }
         }
 
         await unitOfWork.SaveChangesAsync();
