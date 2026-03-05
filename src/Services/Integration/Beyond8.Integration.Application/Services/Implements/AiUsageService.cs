@@ -159,12 +159,12 @@ namespace Beyond8.Integration.Application.Services.Implements
                 var statistics = new AiUsageStatisticsResponse
                 {
                     TotalUsage = allUsages.Count,
-                    TotalCost = (int)allUsages.Sum(u => u.TotalCost),
+                    TotalCost = allUsages.Sum(u => u.TotalCost),
                     TotalTokens = allUsages.Sum(u => u.TotalTokens),
                     TotalInputTokens = allUsages.Sum(u => u.InputTokens),
                     TotalOutputTokens = allUsages.Sum(u => u.OutputTokens),
-                    TotalInputCost = (int)allUsages.Sum(u => u.InputCost),
-                    TotalOutputCost = (int)allUsages.Sum(u => u.OutputCost)
+                    TotalInputCost = allUsages.Sum(u => u.InputCost),
+                    TotalOutputCost = allUsages.Sum(u => u.OutputCost)
                 };
 
                 logger.LogInformation("Retrieved AI usage statistics: Total usage {TotalUsage}, Total cost {TotalCost}",
