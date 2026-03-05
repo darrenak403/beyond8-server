@@ -13,6 +13,7 @@ namespace Beyond8.Integration.Domain.Enums
         FormatQuizQuestions = 8,
         AssignmentGrading = 9,
         ExplainQuizQuestion = 10,
+        Embedding = 11,
         Custom = 99
     }
 }

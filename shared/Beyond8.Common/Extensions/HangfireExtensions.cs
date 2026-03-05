@@ -10,11 +10,10 @@ namespace Beyond8.Common.Extensions;
 
 public static class HangfireExtensions
 {
-    private const string DefaultConnectionName = Const.HangfireDatabase;
 
     public static IHostApplicationBuilder AddHangfire(
         this IHostApplicationBuilder builder,
-        string connectionName = DefaultConnectionName,
+        string connectionName,
         Action<IGlobalConfiguration>? configure = null)
     {
         var connectionString = builder.Configuration.GetConnectionString(connectionName);

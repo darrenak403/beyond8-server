@@ -184,9 +184,13 @@ namespace Beyond8.Integration.Application.Services.Implements
 
         public async Task AggregateAndPublishDailyUsageAsync(DateOnly? date = null)
         {
-            var snapshotDate = date ?? DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1));
+            var snapshotDate = date ?? DateOnly.FromDateTime(DateTime.UtcNow);
             var start = snapshotDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
             var end = snapshotDate.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+
+            logger.LogInformation(
+                "[AI Usage Cron] Started aggregation for date {Date} (range {Start:O} - {End:O})",
+                snapshotDate, start, end);
 
             try
             {
@@ -215,7 +219,9 @@ namespace Beyond8.Integration.Application.Services.Implements
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error aggregating and publishing daily AI usage for {Date}", snapshotDate);
+                logger.LogError(ex,
+                    "[AI Usage Cron] Error aggregating and publishing daily AI usage for {Date}: {Message}",
+                    snapshotDate, ex.Message);
                 throw;
             }
         }

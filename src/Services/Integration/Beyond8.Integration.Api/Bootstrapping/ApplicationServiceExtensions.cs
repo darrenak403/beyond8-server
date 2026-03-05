@@ -41,7 +41,7 @@ namespace Beyond8.Integration.Api.Bootstrapping
 
             builder.AddPostgresDatabase<IntegrationDbContext>(Const.IntegrationServiceDatabase);
 
-            builder.AddHangfire(Const.HangfireDatabase);
+            builder.AddHangfire(Const.HangfireIntegrationDatabase);
 
             builder.AddServiceRedis(nameof(Integration), connectionName: Const.Redis);
 
@@ -217,7 +217,7 @@ namespace Beyond8.Integration.Api.Bootstrapping
         {
             app.UseCommonService();
 
-            app.UseHangfireDashboard("/hangfire", allowAnonymousInDevelopment: false);
+            app.UseHangfireDashboard("/hangfire", allowAnonymousInDevelopment: true);
             RegisterHangfireRecurringJobs(app);
 
             if (app.Environment.IsDevelopment())

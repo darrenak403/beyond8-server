@@ -30,7 +30,7 @@ namespace Beyond8.Identity.Api.Bootstrapping
 
             builder.AddServiceRedis(nameof(Identity), connectionName: Const.Redis);
 
-            builder.AddHangfire(Const.HangfireDatabase);
+            builder.AddHangfire(Const.HangfireIdentityDatabase);
 
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 

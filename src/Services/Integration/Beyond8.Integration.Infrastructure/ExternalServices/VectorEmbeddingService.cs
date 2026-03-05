@@ -4,8 +4,10 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Embedding;
+using Beyond8.Integration.Application.Dtos.Usages;
 using Beyond8.Integration.Application.Mappings.AiIntegrationMappings;
 using Beyond8.Integration.Application.Services.Interfaces;
+using Beyond8.Integration.Domain.Enums;
 using Beyond8.Integration.Infrastructure.Configuration;
 using Beyond8.Integration.Infrastructure.Mappings;
 using Microsoft.Extensions.Logging;
@@ -19,12 +21,16 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
         IHttpClientFactory httpClientFactory,
         QdrantClient qdrantClient,
         IPdfChunkService pdfChunkService,
+        IAiUsageService aiUsageService,
         IOptions<HuggingFaceSettings> huggingFaceSettings,
         IOptions<QdrantSettings> qdrantSettings,
         ILogger<VectorEmbeddingService> logger) : IVectorEmbeddingService
     {
         private readonly HuggingFaceSettings _hfSettings = huggingFaceSettings.Value;
         private readonly QdrantSettings _qdrantSettings = qdrantSettings.Value;
+
+        /// <summary>Ước lượng token từ ký tự (Hugging Face không trả về token count).</summary>
+        private const int CharsPerTokenEstimate = 4;
 
         public async Task<List<DocumentEmbeddingResponse>> EmbedAndSavePdfAsync(
             Stream pdfStream,
@@ -561,6 +567,7 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                 return [];
             }
 
+            var stopwatch = Stopwatch.StartNew();
             var httpClient = httpClientFactory.CreateClient();
             httpClient.Timeout = TimeSpan.FromSeconds(_hfSettings.TimeoutSeconds);
 
@@ -609,7 +616,9 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
 
             if (response == null || !response.IsSuccessStatusCode)
             {
+                stopwatch.Stop();
                 logger.LogError("Hugging Face API error: {StatusCode} - {Content}", response?.StatusCode, lastResponseContent);
+                await TrackHuggingFaceUsageAsync(texts, stopwatch.ElapsedMilliseconds, AiUsageStatus.Failed);
                 return [];
             }
 
@@ -644,12 +653,44 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                     logger.LogWarning("Response vector count ({VectorCount}) does not match input text count ({TextCount})", vectors.Count, texts.Length);
                 }
 
+                stopwatch.Stop();
+                await TrackHuggingFaceUsageAsync(texts, stopwatch.ElapsedMilliseconds, AiUsageStatus.Success);
                 return vectors;
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error parsing Hugging Face response: {Content}", lastResponseContent);
+                stopwatch.Stop();
+                await TrackHuggingFaceUsageAsync(texts, stopwatch.ElapsedMilliseconds, AiUsageStatus.Failed);
                 return [];
+            }
+        }
+
+        private async Task TrackHuggingFaceUsageAsync(string[] texts, long responseTimeMs, AiUsageStatus status)
+        {
+            try
+            {
+                var totalChars = texts.Sum(t => t?.Length ?? 0);
+                var estimatedInputTokens = Math.Max(0, totalChars / CharsPerTokenEstimate);
+                var usageRequest = new AiUsageRequest
+                {
+                    UserId = Guid.Empty,
+                    Provider = AiProvider.HuggingFace,
+                    Model = _hfSettings.DefaultModel,
+                    Operation = AiOperation.Embedding,
+                    InputTokens = estimatedInputTokens,
+                    OutputTokens = 0,
+                    InputCost = 0,
+                    OutputCost = 0,
+                    RequestSummary = $"Embedding batch, {texts.Length} text(s), ~{estimatedInputTokens} tokens",
+                    ResponseTimeMs = (int)Math.Min(responseTimeMs, int.MaxValue),
+                    Status = status
+                };
+                await aiUsageService.TrackUsageAsync(usageRequest);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to track Hugging Face usage");
             }
         }
 

@@ -35,7 +35,7 @@ public static class ApplicationServiceExtensions
         builder.AddServiceRedis(nameof(Sale), connectionName: Const.Redis);
 
         // Configure Hangfire (shared extension from Common)
-        builder.AddHangfire(Const.HangfireDatabase);
+        builder.AddHangfire(Const.HangfireSaleDatabase);
 
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 

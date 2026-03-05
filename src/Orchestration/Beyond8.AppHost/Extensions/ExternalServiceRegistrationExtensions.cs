@@ -34,7 +34,9 @@ namespace Beyond8.AppHost.Extensions
                 .WithImageTag("dev")
                 .WithDataVolume();
 
-            var hangfireDb = postgres.AddDatabase("hangfire-db", "Hangfires");
+            var hangfireIdentityDb = postgres.AddDatabase("hangfire-identity-db", "HangfiresIdentity");
+            var hangfireSaleDb = postgres.AddDatabase("hangfire-sale-db", "HangfiresSale");
+            var hangfireIntegrationDb = postgres.AddDatabase("hangfire-integration-db", "HangfiresIntegration");
             var identityDb = postgres.AddDatabase("identity-db", "Identities");
             var integrationDb = postgres.AddDatabase("integration-db", "Integrations");
             var catalogDb = postgres.AddDatabase("catalog-db", "Catalogs");
@@ -47,7 +49,7 @@ namespace Beyond8.AppHost.Extensions
                 .WithReference(identityDb)
                 .WithReference(redis)
                 .WithReference(rabbitMq)
-                .WithReference(hangfireDb)
+                .WithReference(hangfireIdentityDb)
                 .WaitFor(postgres)
                 .WaitFor(redis)
                 .WaitFor(rabbitMq);
@@ -57,7 +59,7 @@ namespace Beyond8.AppHost.Extensions
                 .WithReference(redis)
                 .WithReference(rabbitMq)
                 .WithReference(qdrant)
-                .WithReference(hangfireDb)
+                .WithReference(hangfireIntegrationDb)
                 .WaitFor(postgres)
                 .WaitFor(redis)
                 .WaitFor(rabbitMq)
@@ -93,7 +95,7 @@ namespace Beyond8.AppHost.Extensions
                 .WithReference(redis)
                 .WithReference(rabbitMq)
                 .WithReference(catalogService)
-                .WithReference(hangfireDb)
+                .WithReference(hangfireSaleDb)
                 .WithReference(learningService)
                 .WaitFor(postgres)
                 .WaitFor(redis)
@@ -119,6 +121,7 @@ namespace Beyond8.AppHost.Extensions
                     config.AddRoute("/api/v1/subscriptions/{**catch-all}", identityCluster);
 
                     var integrationCluster = config.AddProjectCluster(integrationService);
+                    config.AddRoute("/hangfire/{**catch-all}", integrationCluster);
                     config.AddRoute("/api/v1/media/{**catch-all}", integrationCluster);
                     config.AddRoute("/api/v1/ai/{**catch-all}", integrationCluster);
                     config.AddRoute("/api/v1/vnpt-ekyc/{**catch-all}", integrationCluster);
