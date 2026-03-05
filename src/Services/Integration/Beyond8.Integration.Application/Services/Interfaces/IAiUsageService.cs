@@ -11,5 +11,6 @@ namespace Beyond8.Integration.Application.Services.Interfaces
         Task<ApiResponse<List<AiUsageResponse>>> GetUsageByProviderAsync(Guid userId, int provider, PaginationRequest pagination);
         Task<ApiResponse<List<AiUsageResponse>>> GetAllUsageAsync(AiUsageSearchRequest searchRequest);
         Task<ApiResponse<AiUsageStatisticsResponse>> GetUsageStatisticsAsync();
+        Task AggregateAndPublishDailyUsageAsync(DateOnly? date = null);
     }
 }

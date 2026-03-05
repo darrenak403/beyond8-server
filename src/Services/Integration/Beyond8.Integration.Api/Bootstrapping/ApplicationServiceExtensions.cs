@@ -3,6 +3,7 @@ using Amazon;
 using Amazon.S3;
 using Beyond8.Common.Extensions;
 using Beyond8.Common.Utilities;
+using Hangfire;
 using Beyond8.Integration.Api.Apis;
 using Beyond8.Integration.Application.Clients;
 using Beyond8.Integration.Application.Consumers.Assessment;
@@ -39,6 +40,8 @@ namespace Beyond8.Integration.Api.Bootstrapping
             builder.AddCommonExtensions();
 
             builder.AddPostgresDatabase<IntegrationDbContext>(Const.IntegrationServiceDatabase);
+
+            builder.AddHangfire(Const.HangfireDatabase);
 
             builder.AddServiceRedis(nameof(Integration), connectionName: Const.Redis);
 
@@ -214,6 +217,9 @@ namespace Beyond8.Integration.Api.Bootstrapping
         {
             app.UseCommonService();
 
+            app.UseHangfireDashboard("/hangfire", allowAnonymousInDevelopment: false);
+            RegisterHangfireRecurringJobs(app);
+
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
@@ -233,6 +239,14 @@ namespace Beyond8.Integration.Api.Bootstrapping
             app.MapNotificationApi();
 
             return app;
+        }
+
+        private static void RegisterHangfireRecurringJobs(WebApplication app)
+        {
+            RecurringJob.AddOrUpdate<IAiUsageService>(
+                "integration:ai-usage.daily-aggregate",
+                x => x.AggregateAndPublishDailyUsageAsync(null),
+                Cron.Daily(hour: 0, minute: 5));
         }
     }
 }

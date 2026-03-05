@@ -10,6 +10,7 @@ public class AnalyticDbContext(DbContextOptions<AnalyticDbContext> options) : Ba
     public DbSet<AggLessonPerformance> AggLessonPerformances { get; set; } = null!;
     public DbSet<AggInstructorRevenue> AggInstructorRevenues { get; set; } = null!;
     public DbSet<AggSystemOverview> AggSystemOverviews { get; set; } = null!;
+    public DbSet<AggAiUsageDaily> AggAiUsageDailies { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -45,6 +46,13 @@ public class AnalyticDbContext(DbContextOptions<AnalyticDbContext> options) : Ba
             entity.HasQueryFilter(e => e.DeletedAt == null);
             entity.HasIndex(e => e.IsCurrent);
             entity.HasIndex(e => e.SnapshotDate);
+        });
+
+        modelBuilder.Entity<AggAiUsageDaily>(entity =>
+        {
+            entity.HasQueryFilter(e => e.DeletedAt == null);
+            entity.HasIndex(e => e.SnapshotDate);
+            entity.HasIndex(e => new { e.SnapshotDate, e.Model, e.Provider }).IsUnique();
         });
     }
 }

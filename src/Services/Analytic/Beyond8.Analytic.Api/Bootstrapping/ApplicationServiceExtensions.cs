@@ -2,6 +2,7 @@ using Beyond8.Analytic.Api.Apis;
 using Beyond8.Analytic.Application.Consumers.Assessment;
 using Beyond8.Analytic.Application.Consumers.Catalog;
 using Beyond8.Analytic.Application.Consumers.Identity;
+using Beyond8.Analytic.Application.Consumers.Integration;
 using Beyond8.Analytic.Application.Consumers.Learning;
 using Beyond8.Analytic.Application.Consumers.Sale;
 using Beyond8.Analytic.Application.Services.Implements;
@@ -43,6 +44,8 @@ public static class ApplicationServiceExtensions
             config.AddConsumer<OrderItemCompletedEventConsumer>();
             // Assessment events
             config.AddConsumer<QuizAttemptCompletedEventConsumer>();
+            // Integration (AI usage) events
+            config.AddConsumer<AiUsageDailyAggregatedEventConsumer>();
         }, queueNamePrefix: "analytic");
 
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -50,6 +53,7 @@ public static class ApplicationServiceExtensions
         builder.Services.AddScoped<IInstructorRevenueService, InstructorRevenueService>();
         builder.Services.AddScoped<ISystemOverviewService, SystemOverviewService>();
         builder.Services.AddScoped<ILessonPerformanceService, LessonPerformanceService>();
+        builder.Services.AddScoped<IAiUsageAnalyticService, AiUsageAnalyticService>();
 
         return builder;
     }
@@ -66,6 +70,7 @@ public static class ApplicationServiceExtensions
         app.MapCourseStatsApi();
         app.MapInstructorAnalyticsApi();
         app.MapLessonPerformanceApi();
+        app.MapAiUsageAnalyticsApi();
 
         return app;
     }

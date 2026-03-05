@@ -1,16 +1,19 @@
 using System.Linq.Expressions;
+using Beyond8.Common.Events.Integration;
 using Beyond8.Common.Utilities;
 using Beyond8.Integration.Application.Dtos.Usages;
 using Beyond8.Integration.Application.Mappings.AiIntegrationMappings;
 using Beyond8.Integration.Application.Services.Interfaces;
 using Beyond8.Integration.Domain.Entities;
 using Beyond8.Integration.Domain.Repositories.Interfaces;
+using MassTransit;
 using Microsoft.Extensions.Logging;
 
 namespace Beyond8.Integration.Application.Services.Implements
 {
     public class AiUsageService(
         IUnitOfWork unitOfWork,
+        IPublishEndpoint publishEndpoint,
         ILogger<AiUsageService> logger) : IAiUsageService
     {
         public async Task<ApiResponse<AiUsageResponse>> TrackUsageAsync(AiUsageRequest request)
@@ -179,5 +182,42 @@ namespace Beyond8.Integration.Application.Services.Implements
             }
         }
 
+        public async Task AggregateAndPublishDailyUsageAsync(DateOnly? date = null)
+        {
+            var snapshotDate = date ?? DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1));
+            var start = snapshotDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+            var end = snapshotDate.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+
+            try
+            {
+                var usages = await unitOfWork.AiUsageRepository.GetAllAsync(
+                    u => u.CreatedAt >= start && u.CreatedAt < end);
+
+                var items = usages
+                    .GroupBy(u => new { u.Model, u.Provider })
+                    .Select(g => new AiUsageDailyItem(
+                        Model: g.Key.Model,
+                        Provider: (int)g.Key.Provider,
+                        TotalInputTokens: g.Sum(x => x.InputTokens),
+                        TotalOutputTokens: g.Sum(x => x.OutputTokens),
+                        TotalTokens: g.Sum(x => x.TotalTokens),
+                        TotalInputCost: g.Sum(x => x.InputCost),
+                        TotalOutputCost: g.Sum(x => x.OutputCost),
+                        TotalCost: g.Sum(x => x.TotalCost),
+                        UsageCount: g.Count()))
+                    .ToList();
+
+                await publishEndpoint.Publish(new AiUsageDailyAggregatedEvent(snapshotDate, items));
+
+                logger.LogInformation(
+                    "Published AI usage daily aggregation for {Date}: {Count} model(s), {TotalUsages} usages",
+                    snapshotDate, items.Count, usages.Count);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error aggregating and publishing daily AI usage for {Date}", snapshotDate);
+                throw;
+            }
+        }
     }
 }
