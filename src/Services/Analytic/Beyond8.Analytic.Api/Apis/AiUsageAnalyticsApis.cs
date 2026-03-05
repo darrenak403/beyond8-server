@@ -24,8 +24,8 @@ public static class AiUsageAnalyticsApis
             .WithName("GetAiUsageChart")
             .WithDescription("Lấy dữ liệu AI usage theo khoảng thời gian để vẽ biểu đồ (1/3/6/9/12 tháng hoặc startDate-endDate)")
             .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
-            .Produces<ApiResponse<List<AiUsageDailyChartItemResponse>>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<List<AiUsageDailyChartItemResponse>>>(StatusCodes.Status400BadRequest);
+            .Produces<ApiResponse<List<AiUsageChartByDateResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<List<AiUsageChartByDateResponse>>>(StatusCodes.Status400BadRequest);
 
         return group;
     }

@@ -13,7 +13,7 @@ public class AiUsageAnalyticService(
 {
     private static readonly int[] AllowedPeriodMonths = [1, 3, 6, 9, 12];
 
-    public async Task<ApiResponse<List<AiUsageDailyChartItemResponse>>> GetAiUsageChartAsync(AiUsageChartRequest request)
+    public async Task<ApiResponse<List<AiUsageChartByDateResponse>>> GetAiUsageChartAsync(AiUsageChartRequest request)
     {
         try
         {
@@ -25,7 +25,7 @@ public class AiUsageAnalyticService(
                 var months = request.PeriodMonths.Value;
                 if (!AllowedPeriodMonths.Contains(months))
                 {
-                    return ApiResponse<List<AiUsageDailyChartItemResponse>>.FailureResponse(
+                    return ApiResponse<List<AiUsageChartByDateResponse>>.FailureResponse(
                         "PeriodMonths chỉ chấp nhận: 1, 3, 6, 9, 12.");
                 }
                 endDate = DateOnly.FromDateTime(DateTime.UtcNow);
@@ -37,27 +37,35 @@ public class AiUsageAnalyticService(
                 endDate = request.EndDate.Value;
                 if (startDate > endDate)
                 {
-                    return ApiResponse<List<AiUsageDailyChartItemResponse>>.FailureResponse(
+                    return ApiResponse<List<AiUsageChartByDateResponse>>.FailureResponse(
                         "StartDate phải nhỏ hơn hoặc bằng EndDate.");
                 }
             }
             else
             {
-                return ApiResponse<List<AiUsageDailyChartItemResponse>>.FailureResponse(
+                return ApiResponse<List<AiUsageChartByDateResponse>>.FailureResponse(
                     "Cung cấp PeriodMonths (1,3,6,9,12) hoặc StartDate và EndDate.");
             }
 
             var items = await unitOfWork.AggAiUsageDailyRepository.GetByDateRangeAsync(startDate, endDate);
-            var response = items.Select(e => e.ToChartItemResponse()).ToList();
+            var response = items
+                .GroupBy(e => e.SnapshotDate)
+                .OrderBy(g => g.Key)
+                .Select(g => new AiUsageChartByDateResponse
+                {
+                    SnapshotDate = g.Key,
+                    Models = g.Select(e => e.ToModelSummaryResponse()).ToList()
+                })
+                .ToList();
 
-            logger.LogInformation("AiUsage chart: {Start} - {End}, {Count} records", startDate, endDate, response.Count);
-            return ApiResponse<List<AiUsageDailyChartItemResponse>>.SuccessResponse(
+            logger.LogInformation("AiUsage chart: {Start} - {End}, {Days} day(s)", startDate, endDate, response.Count);
+            return ApiResponse<List<AiUsageChartByDateResponse>>.SuccessResponse(
                 response, "Lấy dữ liệu AI usage thành công.");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting AI usage chart");
-            return ApiResponse<List<AiUsageDailyChartItemResponse>>.FailureResponse(
+            return ApiResponse<List<AiUsageChartByDateResponse>>.FailureResponse(
                 "Đã xảy ra lỗi khi lấy dữ liệu AI usage.");
         }
     }

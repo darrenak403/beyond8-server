@@ -18,4 +18,17 @@ public static class AiUsageMappings
         TotalCost = entity.TotalCost,
         UsageCount = entity.UsageCount
     };
+
+    public static AiUsageModelSummaryResponse ToModelSummaryResponse(this AggAiUsageDaily entity) => new()
+    {
+        Model = entity.Model,
+        Provider = entity.Provider,
+        TotalInputTokens = entity.TotalInputTokens,
+        TotalOutputTokens = entity.TotalOutputTokens,
+        TotalTokens = entity.TotalTokens,
+        TotalInputCost = entity.TotalInputCost,
+        TotalOutputCost = entity.TotalOutputCost,
+        TotalCost = entity.TotalCost,
+        UsageCount = entity.UsageCount
+    };
 }

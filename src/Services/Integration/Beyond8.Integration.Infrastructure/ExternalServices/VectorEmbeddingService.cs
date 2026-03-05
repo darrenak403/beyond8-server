@@ -672,6 +672,7 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
             {
                 var totalChars = texts.Sum(t => t?.Length ?? 0);
                 var estimatedInputTokens = Math.Max(0, totalChars / CharsPerTokenEstimate);
+                var inputCost = (estimatedInputTokens / 1_000_000m) * _hfSettings.Pricing.InputCostPer1MTokens;
                 var usageRequest = new AiUsageRequest
                 {
                     UserId = Guid.Empty,
@@ -680,7 +681,7 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                     Operation = AiOperation.Embedding,
                     InputTokens = estimatedInputTokens,
                     OutputTokens = 0,
-                    InputCost = 0,
+                    InputCost = inputCost,
                     OutputCost = 0,
                     RequestSummary = $"Embedding batch, {texts.Length} text(s), ~{estimatedInputTokens} tokens",
                     ResponseTimeMs = (int)Math.Min(responseTimeMs, int.MaxValue),

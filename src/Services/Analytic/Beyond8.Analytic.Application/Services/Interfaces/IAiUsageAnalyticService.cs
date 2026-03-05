@@ -5,5 +5,5 @@ namespace Beyond8.Analytic.Application.Services.Interfaces;
 
 public interface IAiUsageAnalyticService
 {
-    Task<ApiResponse<List<AiUsageDailyChartItemResponse>>> GetAiUsageChartAsync(AiUsageChartRequest request);
+    Task<ApiResponse<List<AiUsageChartByDateResponse>>> GetAiUsageChartAsync(AiUsageChartRequest request);
 }
