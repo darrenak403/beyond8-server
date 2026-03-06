@@ -310,7 +310,7 @@ public class CouponService(
         }
     }
 
-    public async Task<ApiResponse<bool>> ToggleCouponStatusAsync(Guid couponId)
+    public async Task<ApiResponse<bool>> ToggleCouponStatusAsync(Guid couponId, Guid? requestorId = null)
     {
         try
         {
@@ -320,6 +320,10 @@ public class CouponService(
 
             if (coupon == null)
                 return ApiResponse<bool>.FailureResponse("Coupon không tồn tại");
+
+            // Ownership check: instructor can only toggle their own coupons
+            if (requestorId.HasValue && coupon.ApplicableInstructorId != requestorId)
+                return ApiResponse<bool>.FailureResponse("Bạn không có quyền thay đổi trạng thái coupon này");
 
             // Toggle the status
             coupon.IsActive = !coupon.IsActive;
