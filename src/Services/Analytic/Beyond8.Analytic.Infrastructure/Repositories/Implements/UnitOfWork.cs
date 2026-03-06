@@ -10,6 +10,8 @@ public class UnitOfWork(AnalyticDbContext context) : BaseUnitOfWork<AnalyticDbCo
     private IAggLessonPerformanceRepository? _aggLessonPerformanceRepository;
     private IAggInstructorRevenueRepository? _aggInstructorRevenueRepository;
     private IAggSystemOverviewRepository? _aggSystemOverviewRepository;
+    private IAggSystemOverviewMonthlyRepository? _aggSystemOverviewMonthlyRepository;
+    private IAggSystemOverviewDailyRepository? _aggSystemOverviewDailyRepository;
     private IAggAiUsageDailyRepository? _aggAiUsageDailyRepository;
 
     public IAggCourseStatsRepository AggCourseStatsRepository =>
@@ -23,6 +25,12 @@ public class UnitOfWork(AnalyticDbContext context) : BaseUnitOfWork<AnalyticDbCo
 
     public IAggSystemOverviewRepository AggSystemOverviewRepository =>
         _aggSystemOverviewRepository ??= new AggSystemOverviewRepository(context);
+
+    public IAggSystemOverviewMonthlyRepository AggSystemOverviewMonthlyRepository =>
+        _aggSystemOverviewMonthlyRepository ??= new AggSystemOverviewMonthlyRepository(context);
+
+    public IAggSystemOverviewDailyRepository AggSystemOverviewDailyRepository =>
+        _aggSystemOverviewDailyRepository ??= new AggSystemOverviewDailyRepository(context);
 
     public IAggAiUsageDailyRepository AggAiUsageDailyRepository =>
         _aggAiUsageDailyRepository ??= new AggAiUsageDailyRepository(context);

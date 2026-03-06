@@ -27,7 +27,8 @@ public class OrderItemCompletedEventConsumer(
             instructorRevenue.TotalRevenue += message.LineTotal;
             instructorRevenue.TotalPlatformFee += message.PlatformFeeAmount;
             instructorRevenue.TotalInstructorEarnings += message.InstructorEarnings;
-            instructorRevenue.PendingBalance = instructorRevenue.TotalInstructorEarnings - instructorRevenue.TotalPaidOut;
+            // Phase 2: credit immediately — AvailableBalance = total earned minus already paid out
+            instructorRevenue.AvailableBalance = instructorRevenue.TotalInstructorEarnings - instructorRevenue.TotalPaidOut;
             await unitOfWork.AggInstructorRevenueRepository.UpdateAsync(instructorRevenue.Id, instructorRevenue);
         }
 
@@ -35,6 +36,21 @@ public class OrderItemCompletedEventConsumer(
         overview.TotalRevenue += message.LineTotal;
         overview.TotalPlatformFee += message.PlatformFeeAmount;
         overview.TotalInstructorEarnings += message.InstructorEarnings;
+
+        var now = DateTime.UtcNow;
+        var yearMonth = $"{now.Year:D4}-{now.Month:D2}";
+        var monthly = await unitOfWork.AggSystemOverviewMonthlyRepository
+            .GetOrCreateForMonthAsync(yearMonth, now.Year, now.Month);
+        monthly.Revenue += message.LineTotal;
+        monthly.PlatformProfit += message.PlatformFeeAmount;
+        monthly.InstructorEarnings += message.InstructorEarnings;
+
+        var dateKey = $"{now.Year:D4}-{now.Month:D2}-{now.Day:D2}";
+        var daily = await unitOfWork.AggSystemOverviewDailyRepository
+            .GetOrCreateForDateAsync(dateKey, now.Year, now.Month, now.Day);
+        daily.Revenue += message.LineTotal;
+        daily.PlatformProfit += message.PlatformFeeAmount;
+        daily.InstructorEarnings += message.InstructorEarnings;
 
         await unitOfWork.SaveChangesAsync();
 

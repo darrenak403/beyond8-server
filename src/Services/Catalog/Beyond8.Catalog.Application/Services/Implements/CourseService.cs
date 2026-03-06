@@ -265,6 +265,9 @@ public class CourseService(
             await unitOfWork.CourseRepository.AddAsync(course);
             await unitOfWork.SaveChangesAsync();
 
+            await publishEndpoint.Publish(new CourseCreatedEvent(
+                course.Id, course.InstructorId, course.InstructorName, course.Title, DateTime.UtcNow));
+
             logger.LogInformation("Course created successfully: {CourseId} by instructor: {InstructorId}", course.Id, course.InstructorId);
             return ApiResponse<CourseResponse>.SuccessResponse(course.ToResponse(), "Tạo khóa học thành công.");
         }
@@ -478,6 +481,9 @@ public class CourseService(
             course.Status = CourseStatus.PendingApproval;
             await unitOfWork.CourseRepository.UpdateAsync(courseId, course);
             await unitOfWork.SaveChangesAsync();
+
+            await publishEndpoint.Publish(new CourseSubmittedForApprovalEvent(
+                courseId, course.InstructorId, course.InstructorName, course.Title, DateTime.UtcNow));
 
             logger.LogInformation("Course submitted for approval: {CourseId}", courseId);
             return ApiResponse<bool>.SuccessResponse(true, "Nộp duyệt khóa học thành công.");

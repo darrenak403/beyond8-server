@@ -69,6 +69,15 @@ public static class CouponApis
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden);
 
+        group.MapPatch("/instructor/{couponId}/toggle-status", ToggleInstructorCouponStatusAsync)
+            .WithName("ToggleInstructorCouponStatus")
+            .WithDescription("Bật/tắt trạng thái coupon của instructor (Instructor - owner only)")
+            .RequireAuthorization(x => x.RequireRole(Role.Instructor))
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<bool>>(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
+
         // ── Admin / Instructor ──
         group.MapPut("/{couponId}", UpdateCouponAsync)
             .WithName("UpdateCoupon")
@@ -180,6 +189,15 @@ public static class CouponApis
         [FromServices] ICouponService couponService)
     {
         var result = await couponService.ToggleCouponStatusAsync(couponId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> ToggleInstructorCouponStatusAsync(
+        [FromRoute] Guid couponId,
+        [FromServices] ICouponService couponService,
+        [FromServices] ICurrentUserService currentUserService)
+    {
+        var result = await couponService.ToggleCouponStatusAsync(couponId, currentUserService.UserId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 

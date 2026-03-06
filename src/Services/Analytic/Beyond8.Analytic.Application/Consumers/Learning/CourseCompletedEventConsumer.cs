@@ -31,6 +31,12 @@ public class CourseCompletedEventConsumer(
                 (decimal)overview.TotalCompletedEnrollments / overview.TotalEnrollments * 100, 2);
         }
 
+        var now = DateTime.UtcNow;
+        var yearMonth = $"{now.Year:D4}-{now.Month:D2}";
+        var monthly = await unitOfWork.AggSystemOverviewMonthlyRepository
+            .GetOrCreateForMonthAsync(yearMonth, now.Year, now.Month);
+        monthly.NewCompletedEnrollments++;
+
         await unitOfWork.SaveChangesAsync();
 
         logger.LogInformation("Course completed in analytics: {CourseId} by user {UserId}",

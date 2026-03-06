@@ -4,6 +4,7 @@ using Beyond8.Common.Events.Cache;
 using Beyond8.Common.Events.Sale;
 using Beyond8.Common.Utilities;
 using Beyond8.Sale.Application.Clients.Catalog;
+using Beyond8.Sale.Application.Dtos.Analytics;
 using Beyond8.Sale.Application.Dtos.Orders;
 using Beyond8.Sale.Application.Dtos.OrderItems;
 using Beyond8.Sale.Application.Dtos.Payments;
@@ -793,5 +794,47 @@ public class OrderService(
     private string GeneratePaymentNumber()
     {
         return $"PAY-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper()}";
+    }
+
+    public async Task<ApiResponse<List<DailyRevenueSummary>>> GetRevenueByDateRangeAsync(DateTime from, DateTime to)
+    {
+        var fromUtc = from.Date.ToUniversalTime();
+        var toUtc = to.Date.AddDays(1).ToUniversalTime(); // exclusive upper bound
+
+        var items = await unitOfWork.OrderRepository.AsQueryable()
+            .AsNoTracking()
+            .Where(o => o.Status == OrderStatus.Paid && o.PaidAt >= fromUtc && o.PaidAt < toUtc)
+            .Include(o => o.OrderItems)
+            .SelectMany(o => o.OrderItems.Select(oi => new
+            {
+                PaidAt = o.PaidAt!.Value,
+                oi.LineTotal,
+                oi.PlatformFeeAmount,
+                oi.InstructorEarnings,
+            }))
+            .ToListAsync();
+
+        var grouped = items
+            .GroupBy(x => x.PaidAt.Date)
+            .Select(g =>
+            {
+                var date = g.Key;
+                return new DailyRevenueSummary
+                {
+                    DateKey = date.ToString("yyyy-MM-dd"),
+                    Year = date.Year,
+                    Month = date.Month,
+                    Day = date.Day,
+                    Revenue = g.Sum(x => x.LineTotal),
+                    PlatformFee = g.Sum(x => x.PlatformFeeAmount),
+                    InstructorEarnings = g.Sum(x => x.InstructorEarnings),
+                    NewEnrollments = g.Count()
+                };
+            })
+            .OrderBy(s => s.DateKey)
+            .ToList();
+
+        logger.LogInformation("Revenue backfill query: {From} – {To}, {Days} days with data", fromUtc, to.Date, grouped.Count);
+        return ApiResponse<List<DailyRevenueSummary>>.SuccessResponse(grouped, "Lấy dữ liệu doanh thu theo ngày thành công");
     }
 }

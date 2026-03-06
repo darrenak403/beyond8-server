@@ -1,5 +1,6 @@
 using Beyond8.Common;
 using Beyond8.Common.Utilities;
+using Beyond8.Sale.Application.Dtos.Analytics;
 using Beyond8.Sale.Application.Dtos.Orders;
 using Beyond8.Sale.Application.Dtos.Payments;
 using Beyond8.Sale.Application.Dtos.Subscriptions;
@@ -30,4 +31,7 @@ public interface IOrderService
 
     // ── Instructor ──
     Task<ApiResponse<List<OrderResponse>>> GetOrdersByInstructorAsync(Guid instructorId, PaginationRequest pagination);
+
+    // ── Internal / Analytics ──
+    Task<ApiResponse<List<DailyRevenueSummary>>> GetRevenueByDateRangeAsync(DateTime from, DateTime to);
 }

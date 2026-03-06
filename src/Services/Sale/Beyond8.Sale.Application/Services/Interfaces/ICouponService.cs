@@ -9,7 +9,7 @@ public interface ICouponService
     // ── Admin ──
     Task<ApiResponse<CouponResponse>> CreateAdminCouponAsync(CreateAdminCouponRequest request);
     Task<ApiResponse<List<CouponResponse>>> GetCouponsAsync(PaginationRequest pagination);
-    Task<ApiResponse<bool>> ToggleCouponStatusAsync(Guid couponId);
+    Task<ApiResponse<bool>> ToggleCouponStatusAsync(Guid couponId, Guid? requestorId = null);
 
     // ── Instructor ──
     Task<ApiResponse<CouponResponse>> CreateInstructorCouponAsync(CreateInstructorCouponRequest request, Guid instructorId);

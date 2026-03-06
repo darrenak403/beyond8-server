@@ -35,6 +35,20 @@ public class CourseEnrollmentCountChangedEventConsumer(
         var overview = await unitOfWork.AggSystemOverviewRepository.GetOrCreateCurrentAsync();
         overview.TotalEnrollments += message.Delta ?? 0;
 
+        if (message.Delta.HasValue && message.Delta.Value > 0)
+        {
+            var now = DateTime.UtcNow;
+            var yearMonth = $"{now.Year:D4}-{now.Month:D2}";
+            var monthly = await unitOfWork.AggSystemOverviewMonthlyRepository
+                .GetOrCreateForMonthAsync(yearMonth, now.Year, now.Month);
+            monthly.NewEnrollments += message.Delta.Value;
+
+            var dateKey = $"{now.Year:D4}-{now.Month:D2}-{now.Day:D2}";
+            var daily = await unitOfWork.AggSystemOverviewDailyRepository
+                .GetOrCreateForDateAsync(dateKey, now.Year, now.Month, now.Day);
+            daily.NewEnrollments += message.Delta.Value;
+        }
+
         await unitOfWork.SaveChangesAsync();
 
         logger.LogInformation("Enrollment count updated in analytics: Course {CourseId} = {TotalStudents}",

@@ -24,6 +24,16 @@ public class UserRegisteredEventConsumer(
         else if (roleUpper == Role.Student)
             overview.TotalStudents++;
 
+        var now = DateTime.UtcNow;
+        var yearMonth = $"{now.Year:D4}-{now.Month:D2}";
+        var monthly = await unitOfWork.AggSystemOverviewMonthlyRepository
+            .GetOrCreateForMonthAsync(yearMonth, now.Year, now.Month);
+        monthly.NewUsers++;
+        if (roleUpper == Role.Instructor)
+            monthly.NewInstructors++;
+        else if (roleUpper == Role.Student)
+            monthly.NewStudents++;
+
         await unitOfWork.SaveChangesAsync();
 
         logger.LogInformation("User registered in analytics: UserId {UserId}, Role {Role}",

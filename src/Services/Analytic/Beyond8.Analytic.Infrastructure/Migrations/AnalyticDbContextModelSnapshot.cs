@@ -186,6 +186,15 @@ namespace Beyond8.Analytic.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int>("ApprovedCourses")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ArchivedCourses")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("AvailableBalance")
+                        .HasColumnType("decimal(18, 2)");
+
                     b.Property<decimal>("AvgCourseRating")
                         .HasColumnType("decimal(5, 2)");
 
@@ -201,6 +210,9 @@ namespace Beyond8.Analytic.Infrastructure.Migrations
                     b.Property<Guid?>("DeletedBy")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("DraftCourses")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("InstructorId")
                         .HasColumnType("uuid");
 
@@ -212,11 +224,20 @@ namespace Beyond8.Analytic.Infrastructure.Migrations
                     b.Property<bool>("IsCurrent")
                         .HasColumnType("boolean");
 
-                    b.Property<decimal>("PendingBalance")
-                        .HasColumnType("decimal(18, 2)");
+                    b.Property<int>("PendingApprovalCourses")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PublishedCourses")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RejectedCourses")
+                        .HasColumnType("integer");
 
                     b.Property<DateOnly>("SnapshotDate")
                         .HasColumnType("date");
+
+                    b.Property<int>("SuspendedCourses")
+                        .HasColumnType("integer");
 
                     b.Property<int>("TotalCourses")
                         .HasColumnType("integer");
@@ -424,6 +445,150 @@ namespace Beyond8.Analytic.Infrastructure.Migrations
                     b.HasIndex("SnapshotDate");
 
                     b.ToTable("AggSystemOverviews");
+                });
+
+            modelBuilder.Entity("Beyond8.Analytic.Domain.Entities.AggSystemOverviewDaily", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DateKey")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<int>("Day")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("InstructorEarnings")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<int>("Month")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NewCompletedEnrollments")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NewEnrollments")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("PlatformProfit")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<decimal>("RefundAmount")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<decimal>("Revenue")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DateKey")
+                        .IsUnique();
+
+                    b.HasIndex("Year", "Month", "Day");
+
+                    b.ToTable("AggSystemOverviewDailies");
+                });
+
+            modelBuilder.Entity("Beyond8.Analytic.Domain.Entities.AggSystemOverviewMonthly", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("InstructorEarnings")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<int>("Month")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NewCompletedEnrollments")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NewCourses")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NewEnrollments")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NewInstructors")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NewPublishedCourses")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NewStudents")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NewUsers")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("PlatformProfit")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<decimal>("RefundAmount")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<decimal>("Revenue")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("YearMonth")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("YearMonth")
+                        .IsUnique();
+
+                    b.HasIndex("Year", "Month");
+
+                    b.ToTable("AggSystemOverviewMonthlies");
                 });
 #pragma warning restore 612, 618
         }

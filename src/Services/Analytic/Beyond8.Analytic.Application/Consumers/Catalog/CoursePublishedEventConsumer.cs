@@ -34,13 +34,17 @@ public class CoursePublishedEventConsumer(
             {
                 InstructorId = message.InstructorId,
                 InstructorName = message.InstructorName,
-                TotalCourses = 1
+                TotalCourses = 1,
+                PublishedCourses = 1
             };
             await unitOfWork.AggInstructorRevenueRepository.AddAsync(instructorRevenue);
         }
         else
         {
-            instructorRevenue.TotalCourses++;
+            // Transition: Approved → Published
+            if (instructorRevenue.ApprovedCourses > 0)
+                instructorRevenue.ApprovedCourses--;
+            instructorRevenue.PublishedCourses++;
             if (string.IsNullOrEmpty(instructorRevenue.InstructorName))
                 instructorRevenue.InstructorName = message.InstructorName;
             await unitOfWork.AggInstructorRevenueRepository.UpdateAsync(instructorRevenue.Id, instructorRevenue);
@@ -49,6 +53,13 @@ public class CoursePublishedEventConsumer(
         var overview = await unitOfWork.AggSystemOverviewRepository.GetOrCreateCurrentAsync();
         overview.TotalCourses++;
         overview.TotalPublishedCourses++;
+
+        var now = DateTime.UtcNow;
+        var yearMonth = $"{now.Year:D4}-{now.Month:D2}";
+        var monthly = await unitOfWork.AggSystemOverviewMonthlyRepository
+            .GetOrCreateForMonthAsync(yearMonth, now.Year, now.Month);
+        monthly.NewCourses++;
+        monthly.NewPublishedCourses++;
 
         await unitOfWork.SaveChangesAsync();
 

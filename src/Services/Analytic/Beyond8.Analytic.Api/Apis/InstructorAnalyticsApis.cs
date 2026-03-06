@@ -32,8 +32,8 @@ public static class InstructorAnalyticsApis
             .WithName("GetMyRevenue")
             .WithDescription("Lấy thống kê doanh thu của giảng viên hiện tại")
             .RequireAuthorization(x => x.RequireRole(Role.Instructor))
-            .Produces<ApiResponse<InstructorRevenueResponse>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<InstructorRevenueResponse>>(StatusCodes.Status400BadRequest);
+            .Produces<ApiResponse<MyRevenueResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<MyRevenueResponse>>(StatusCodes.Status400BadRequest);
 
         group.MapGet("/top", GetTopInstructorsAsync)
             .WithName("GetTopInstructors")

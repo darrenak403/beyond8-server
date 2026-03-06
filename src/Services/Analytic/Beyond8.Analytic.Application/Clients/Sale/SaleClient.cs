@@ -1,0 +1,31 @@
+using Beyond8.Analytic.Application.Dtos.Sale;
+using Beyond8.Common.Clients;
+using Beyond8.Common.Utilities;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
+
+namespace Beyond8.Analytic.Application.Clients.Sale;
+
+public class SaleClient(
+    HttpClient httpClient,
+    IHttpContextAccessor httpContextAccessor,
+    ILogger<SaleClient> logger)
+    : BaseClient(httpClient, httpContextAccessor), ISaleClient
+{
+    public async Task<ApiResponse<List<DailyRevenueSummary>>> GetRevenueByDateRangeAsync(DateTime from, DateTime to)
+    {
+        try
+        {
+            var fromStr = from.Date.ToString("yyyy-MM-dd");
+            var toStr = to.Date.ToString("yyyy-MM-dd");
+            var data = await GetAsync<List<DailyRevenueSummary>>(
+                $"/api/v1/internal/orders/revenue-by-date?from={fromStr}&to={toStr}");
+            return ApiResponse<List<DailyRevenueSummary>>.SuccessResponse(data, "OK");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to call Sale Service GetRevenueByDateRange: {From} – {To}", from, to);
+            return ApiResponse<List<DailyRevenueSummary>>.FailureResponse(ex.Message);
+        }
+    }
+}

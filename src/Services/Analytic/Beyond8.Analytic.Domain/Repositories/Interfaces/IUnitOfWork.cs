@@ -8,5 +8,7 @@ public interface IUnitOfWork : IBaseUnitOfWork
     IAggLessonPerformanceRepository AggLessonPerformanceRepository { get; }
     IAggInstructorRevenueRepository AggInstructorRevenueRepository { get; }
     IAggSystemOverviewRepository AggSystemOverviewRepository { get; }
+    IAggSystemOverviewMonthlyRepository AggSystemOverviewMonthlyRepository { get; }
+    IAggSystemOverviewDailyRepository AggSystemOverviewDailyRepository { get; }
     IAggAiUsageDailyRepository AggAiUsageDailyRepository { get; }
 }
