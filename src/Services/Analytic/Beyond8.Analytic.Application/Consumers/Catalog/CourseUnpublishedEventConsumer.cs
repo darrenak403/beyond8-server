@@ -13,6 +13,13 @@ public class CourseUnpublishedEventConsumer(
     {
         var message = context.Message;
 
+        var instructorRevenue = await unitOfWork.AggInstructorRevenueRepository.GetByInstructorIdAsync(message.InstructorId);
+        if (instructorRevenue != null && instructorRevenue.PublishedCourses > 0)
+        {
+            instructorRevenue.PublishedCourses--;
+            await unitOfWork.AggInstructorRevenueRepository.UpdateAsync(instructorRevenue.Id, instructorRevenue);
+        }
+
         var overview = await unitOfWork.AggSystemOverviewRepository.GetOrCreateCurrentAsync();
         if (overview.TotalPublishedCourses > 0)
             overview.TotalPublishedCourses--;

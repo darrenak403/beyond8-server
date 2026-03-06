@@ -6,14 +6,20 @@ public class InstructorRevenueResponse
     public Guid InstructorId { get; set; }
     public string InstructorName { get; set; } = string.Empty;
     public int TotalCourses { get; set; }
+    public int PublishedCourses { get; set; }
+    public int RejectedCourses { get; set; }
     public int TotalStudents { get; set; }
     public decimal TotalRevenue { get; set; }
     public decimal TotalPlatformFee { get; set; }
     public decimal TotalInstructorEarnings { get; set; }
     public decimal TotalRefundAmount { get; set; }
     public decimal TotalPaidOut { get; set; }
-    public decimal PendingBalance { get; set; }
+    /// <summary>
+    /// Balance available for withdrawal (= TotalInstructorEarnings - TotalPaidOut).
+    /// </summary>
+    public decimal AvailableBalance { get; set; }
     public decimal AvgCourseRating { get; set; }
     public int TotalReviews { get; set; }
+    public DateOnly SnapshotDate { get; set; }
     public DateTime? UpdatedAt { get; set; }
 }

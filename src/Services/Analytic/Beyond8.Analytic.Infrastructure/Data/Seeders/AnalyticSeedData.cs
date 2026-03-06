@@ -115,7 +115,7 @@ public static class AnalyticSeedData
             TotalInstructorEarnings = 0,
             TotalRefundAmount = 0,
             TotalPaidOut = 0,
-            PendingBalance = 0,
+            AvailableBalance = 0,
             AvgCourseRating = 0,
             TotalReviews = 0,
             SnapshotDate = snapshotDate,

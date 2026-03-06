@@ -34,13 +34,15 @@ public class CoursePublishedEventConsumer(
             {
                 InstructorId = message.InstructorId,
                 InstructorName = message.InstructorName,
-                TotalCourses = 1
+                TotalCourses = 1,
+                PublishedCourses = 1
             };
             await unitOfWork.AggInstructorRevenueRepository.AddAsync(instructorRevenue);
         }
         else
         {
             instructorRevenue.TotalCourses++;
+            instructorRevenue.PublishedCourses++;
             if (string.IsNullOrEmpty(instructorRevenue.InstructorName))
                 instructorRevenue.InstructorName = message.InstructorName;
             await unitOfWork.AggInstructorRevenueRepository.UpdateAsync(instructorRevenue.Id, instructorRevenue);

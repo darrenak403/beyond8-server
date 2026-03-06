@@ -30,12 +30,16 @@ public class AggInstructorRevenue : BaseEntity
     public decimal TotalPaidOut { get; set; } = 0;
 
     [Column(TypeName = "decimal(18, 2)")]
-    public decimal PendingBalance { get; set; } = 0;
+    public decimal AvailableBalance { get; set; } = 0;
 
     [Column(TypeName = "decimal(5, 2)")]
     public decimal AvgCourseRating { get; set; } = 0;
 
     public int TotalReviews { get; set; } = 0;
+
+    // Course status breakdown (trackable via events)
+    public int PublishedCourses { get; set; } = 0;
+    public int RejectedCourses { get; set; } = 0;
 
     public DateOnly SnapshotDate { get; set; } = DateOnly.FromDateTime(DateTime.UtcNow);
     public bool IsCurrent { get; set; } = true;

@@ -11,15 +11,18 @@ public static class InstructorRevenueMappings
         InstructorId = entity.InstructorId,
         InstructorName = entity.InstructorName,
         TotalCourses = entity.TotalCourses,
+        PublishedCourses = entity.PublishedCourses,
+        RejectedCourses = entity.RejectedCourses,
         TotalStudents = entity.TotalStudents,
         TotalRevenue = entity.TotalRevenue,
         TotalPlatformFee = entity.TotalPlatformFee,
         TotalInstructorEarnings = entity.TotalInstructorEarnings,
         TotalRefundAmount = entity.TotalRefundAmount,
         TotalPaidOut = entity.TotalPaidOut,
-        PendingBalance = entity.PendingBalance,
+        AvailableBalance = entity.AvailableBalance,
         AvgCourseRating = entity.AvgCourseRating,
         TotalReviews = entity.TotalReviews,
+        SnapshotDate = entity.SnapshotDate,
         UpdatedAt = entity.UpdatedAt
     };
 

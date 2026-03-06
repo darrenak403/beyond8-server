@@ -27,7 +27,8 @@ public class OrderItemCompletedEventConsumer(
             instructorRevenue.TotalRevenue += message.LineTotal;
             instructorRevenue.TotalPlatformFee += message.PlatformFeeAmount;
             instructorRevenue.TotalInstructorEarnings += message.InstructorEarnings;
-            instructorRevenue.PendingBalance = instructorRevenue.TotalInstructorEarnings - instructorRevenue.TotalPaidOut;
+            // Phase 2: credit immediately — AvailableBalance = total earned minus already paid out
+            instructorRevenue.AvailableBalance = instructorRevenue.TotalInstructorEarnings - instructorRevenue.TotalPaidOut;
             await unitOfWork.AggInstructorRevenueRepository.UpdateAsync(instructorRevenue.Id, instructorRevenue);
         }
 
