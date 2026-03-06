@@ -37,6 +37,14 @@ public class OrderItemCompletedEventConsumer(
         overview.TotalPlatformFee += message.PlatformFeeAmount;
         overview.TotalInstructorEarnings += message.InstructorEarnings;
 
+        var now = DateTime.UtcNow;
+        var yearMonth = $"{now.Year:D4}-{now.Month:D2}";
+        var monthly = await unitOfWork.AggSystemOverviewMonthlyRepository
+            .GetOrCreateForMonthAsync(yearMonth, now.Year, now.Month);
+        monthly.Revenue += message.LineTotal;
+        monthly.PlatformProfit += message.PlatformFeeAmount;
+        monthly.InstructorEarnings += message.InstructorEarnings;
+
         await unitOfWork.SaveChangesAsync();
 
         logger.LogInformation("Order item revenue updated in analytics: Course {CourseId}, Amount {Amount}",

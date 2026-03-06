@@ -19,20 +19,20 @@ public static class SystemOverviewApis
 
     private static RouteGroupBuilder MapSystemOverviewRoutes(this RouteGroupBuilder group)
     {
-        group.MapGet("/overview", GetSystemOverviewAsync)
-            .WithName("GetSystemOverview")
-            .WithDescription("Lấy tổng quan hệ thống")
+        group.MapGet("/dashboard", GetSystemDashboardAsync)
+            .WithName("GetSystemDashboard")
+            .WithDescription("Lấy dashboard tổng quan hệ thống (KPI cards + xu hướng 12 tháng)")
             .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
-            .Produces<ApiResponse<SystemOverviewResponse>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<SystemOverviewResponse>>(StatusCodes.Status400BadRequest);
+            .Produces<ApiResponse<SystemDashboardResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<SystemDashboardResponse>>(StatusCodes.Status400BadRequest);
 
         return group;
     }
 
-    private static async Task<IResult> GetSystemOverviewAsync(
+    private static async Task<IResult> GetSystemDashboardAsync(
         [FromServices] ISystemOverviewService service)
     {
-        var result = await service.GetSystemOverviewAsync();
+        var result = await service.GetSystemDashboardAsync();
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 }

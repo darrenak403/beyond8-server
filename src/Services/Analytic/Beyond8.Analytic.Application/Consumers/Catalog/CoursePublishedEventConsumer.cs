@@ -54,6 +54,13 @@ public class CoursePublishedEventConsumer(
         overview.TotalCourses++;
         overview.TotalPublishedCourses++;
 
+        var now = DateTime.UtcNow;
+        var yearMonth = $"{now.Year:D4}-{now.Month:D2}";
+        var monthly = await unitOfWork.AggSystemOverviewMonthlyRepository
+            .GetOrCreateForMonthAsync(yearMonth, now.Year, now.Month);
+        monthly.NewCourses++;
+        monthly.NewPublishedCourses++;
+
         await unitOfWork.SaveChangesAsync();
 
         logger.LogInformation("Course published analytics updated: {CourseId} by {InstructorId}",
