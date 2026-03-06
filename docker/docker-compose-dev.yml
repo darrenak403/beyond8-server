@@ -17,11 +17,13 @@ x-common-environment: &common-environment
 
 x-identity-service-environment: &identity-service-environment
   ConnectionStrings__identity-db: Host=postgres;Port=5432;Database=${IDENTITY_SERVICE_DATABASE};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+  ConnectionStrings__hangfire-identity-db: Host=postgres;Port=5432;Database=${HANGFIRE_IDENTITY_DATABASE};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
   ConnectionStrings__redis-cache: redis:6379,password=${REDIS_PASSWORD}
   ConnectionStrings__rabbitmq: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
 
 x-integration-service-environment: &integration-service-environment
   ConnectionStrings__integration-db: Host=postgres;Port=5432;Database=${INTEGRATION_SERVICE_DATABASE};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+  ConnectionStrings__hangfire-integration-db: Host=postgres;Port=5432;Database=${HANGFIRE_INTEGRATION_DATABASE};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
   ConnectionStrings__redis-cache: redis:6379,password=${REDIS_PASSWORD}
   ConnectionStrings__rabbitmq: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
   Clients__Identity__BaseUrl: http://beyond8-identity-service:8080
@@ -90,6 +92,25 @@ x-learning-service-environment: &learning-service-environment
   ConnectionStrings__rabbitmq: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
   Clients__Identity__BaseUrl: http://beyond8-identity-service:8080
   Clients__Catalog__BaseUrl: http://beyond8-catalog-service:8080
+
+x-analytic-service-environment: &analytic-service-environment
+  ConnectionStrings__analytic-db: Host=postgres;Port=5432;Database=${ANALYTIC_SERVICE_DATABASE};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+  ConnectionStrings__redis-cache: redis:6379,password=${REDIS_PASSWORD}
+  ConnectionStrings__rabbitmq: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+
+x-sale-service-environment: &sale-service-environment
+  ConnectionStrings__sale-db: Host=postgres;Port=5432;Database=${SALE_SERVICE_DATABASE};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+  ConnectionStrings__hangfire-sale-db: Host=postgres;Port=5432;Database=${HANGFIRE_SALE_DATABASE};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+  ConnectionStrings__redis-cache: redis:6379,password=${REDIS_PASSWORD}
+  ConnectionStrings__rabbitmq: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+  Clients__Identity__BaseUrl: http://beyond8-identity-service:8080
+  Clients__Catalog__BaseUrl: http://beyond8-catalog-service:8080
+  VNPay__TmnCode: ${VNPAY_TMN_CODE}
+  VNPay__HashSecret: ${VNPAY_HASH_SECRET}
+  VNPay__BaseUrl: ${VNPAY_BASE_URL}
+  VNPay__ReturnUrl: ${VNPAY_RETURN_URL}
+  VNPay__BackendCallbackUrl: ${VNPAY_BACKEND_CALLBACK_URL}
+  VNPay__PaymentExpiryMinutes: ${VNPAY_PAYMENT_EXPIRY_MINUTES:-15}
 
 services:
   aspire-dashboard:
@@ -189,6 +210,8 @@ services:
       - assessment-service
       - catalog-service
       - learning-service
+      - analytic-service
+      - sale-service
 
   identity-service:
     build:
@@ -273,6 +296,44 @@ services:
       - "${LEARNING_SERVICE_PORT:-8086}:8080"
     environment:
       <<: [ *common-environment, *learning-service-environment ]
+    depends_on:
+      - aspire-dashboard
+      - postgres
+      - redis
+      - rabbitmq
+      - identity-service
+      - catalog-service
+    networks:
+      - beyond8-network
+    restart: unless-stopped
+
+  analytic-service:
+    build:
+      context: ..
+      dockerfile: src/Services/Analytic/Beyond8.Analytic.Api/Dockerfile
+    container_name: beyond8-analytic-service
+    ports:
+      - "${ANALYTIC_SERVICE_PORT:-8087}:8080"
+    environment:
+      <<: [ *common-environment, *analytic-service-environment ]
+    depends_on:
+      - aspire-dashboard
+      - postgres
+      - redis
+      - rabbitmq
+    networks:
+      - beyond8-network
+    restart: unless-stopped
+
+  sale-service:
+    build:
+      context: ..
+      dockerfile: src/Services/Sale/Beyond8.Sale.Api/Dockerfile
+    container_name: beyond8-sale-service
+    ports:
+      - "${SALE_SERVICE_PORT:-8088}:8080"
+    environment:
+      <<: [ *common-environment, *sale-service-environment ]
     depends_on:
       - aspire-dashboard
       - postgres

@@ -1,8 +1,6 @@
 x-common-environment: &common-environment
   ASPNETCORE_ENVIRONMENT: Production
   ASPNETCORE_URLS: http://+:8080
-  OTEL_EXPORTER_OTLP_ENDPOINT: http://aspire-dashboard:18889
-  OTEL_EXPORTER_OTLP_HEADERS: x-otlp-api-key=${ASPIRE_DASHBOARD_OTLP_API_KEY}
   JwtBearer__SecretKey: ${JWT_BEARER_SECRET_KEY}
   JwtBearer__Issuer: https://beyond8.io.vn
   JwtBearer__Audience: https://beyond8.io.vn
@@ -17,11 +15,13 @@ x-common-environment: &common-environment
 
 x-identity-service-environment: &identity-service-environment
   ConnectionStrings__identity-db: Host=postgres;Port=5432;Database=${IDENTITY_SERVICE_DATABASE};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+  ConnectionStrings__hangfire-identity-db: Host=postgres;Port=5432;Database=${HANGFIRE_IDENTITY_DATABASE};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
   ConnectionStrings__redis-cache: redis:6379,password=${REDIS_PASSWORD}
   ConnectionStrings__rabbitmq: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
 
 x-integration-service-environment: &integration-service-environment
   ConnectionStrings__integration-db: Host=postgres;Port=5432;Database=${INTEGRATION_SERVICE_DATABASE};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+  ConnectionStrings__hangfire-integration-db: Host=postgres;Port=5432;Database=${HANGFIRE_INTEGRATION_DATABASE};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
   ConnectionStrings__redis-cache: redis:6379,password=${REDIS_PASSWORD}
   ConnectionStrings__rabbitmq: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
   Clients__Identity__BaseUrl: http://beyond8-identity-service:8080
@@ -91,28 +91,26 @@ x-learning-service-environment: &learning-service-environment
   Clients__Identity__BaseUrl: http://beyond8-identity-service:8080
   Clients__Catalog__BaseUrl: http://beyond8-catalog-service:8080
 
-services:
-  aspire-dashboard:
-    image: mcr.microsoft.com/dotnet/aspire-dashboard:13
-    container_name: aspire-dashboard
-    environment:
-      DASHBOARD__OTLP__AUTHMODE: ApiKey
-      DASHBOARD__OTLP__PRIMARYAPIKEY: ${ASPIRE_DASHBOARD_OTLP_API_KEY}
-      DASHBOARD__OTLP__ENDPOINT: http://+:18889
-      ASPNETCORE_URLS: http://+:18888
-      DASHBOARD__UNSECUREDALLOWEDANONYMOUSACCESS: true
-    ports:
-      - '${ASPIRE_DASHBOARD_UI_PORT:-18888}:18888'
-      - '${ASPIRE_DASHBOARD_OTLP_PORT:-18889}:18889'
-    healthcheck:
-      test: [ 'CMD-SHELL', 'wget -qO- http://localhost:18888 || exit 1' ]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-    networks:
-      - beyond8-network
-    restart: unless-stopped
+x-analytic-service-environment: &analytic-service-environment
+  ConnectionStrings__analytic-db: Host=postgres;Port=5432;Database=${ANALYTIC_SERVICE_DATABASE};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+  ConnectionStrings__redis-cache: redis:6379,password=${REDIS_PASSWORD}
+  ConnectionStrings__rabbitmq: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
 
+x-sale-service-environment: &sale-service-environment
+  ConnectionStrings__sale-db: Host=postgres;Port=5432;Database=${SALE_SERVICE_DATABASE};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+  ConnectionStrings__hangfire-sale-db: Host=postgres;Port=5432;Database=${HANGFIRE_SALE_DATABASE};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+  ConnectionStrings__redis-cache: redis:6379,password=${REDIS_PASSWORD}
+  ConnectionStrings__rabbitmq: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+  Clients__Identity__BaseUrl: http://beyond8-identity-service:8080
+  Clients__Catalog__BaseUrl: http://beyond8-catalog-service:8080
+  VNPay__TmnCode: ${VNPAY_TMN_CODE}
+  VNPay__HashSecret: ${VNPAY_HASH_SECRET}
+  VNPay__BaseUrl: ${VNPAY_BASE_URL}
+  VNPay__ReturnUrl: ${VNPAY_RETURN_URL}
+  VNPay__BackendCallbackUrl: ${VNPAY_BACKEND_CALLBACK_URL}
+  VNPay__PaymentExpiryMinutes: ${VNPAY_PAYMENT_EXPIRY_MINUTES:-15}
+
+services:
   postgres:
     image: postgres:17-alpine
     container_name: beyond8-postgres
@@ -189,6 +187,8 @@ services:
       - assessment-service
       - catalog-service
       - learning-service
+      - analytic-service
+      - sale-service
 
   identity-service:
     image: ngothanhdatak/beyond8-identity-service:latest
@@ -198,7 +198,6 @@ services:
     environment:
       <<: [ *common-environment, *identity-service-environment ]
     depends_on:
-      - aspire-dashboard
       - postgres
       - redis
       - rabbitmq
@@ -214,7 +213,6 @@ services:
     environment:
       <<: [ *common-environment, *integration-service-environment ]
     depends_on:
-      - aspire-dashboard
       - postgres
       - redis
       - rabbitmq
@@ -230,7 +228,6 @@ services:
     environment:
       <<: [ *common-environment, *assessment-service-environment ]
     depends_on:
-      - aspire-dashboard
       - postgres
       - redis
       - rabbitmq
@@ -247,7 +244,6 @@ services:
     environment:
       <<: [ *common-environment, *catalog-service-environment ]
     depends_on:
-      - aspire-dashboard
       - postgres
       - redis
       - rabbitmq
@@ -264,7 +260,38 @@ services:
     environment:
       <<: [ *common-environment, *learning-service-environment ]
     depends_on:
-      - aspire-dashboard
+      - postgres
+      - redis
+      - rabbitmq
+      - identity-service
+      - catalog-service
+    networks:
+      - beyond8-network
+    restart: unless-stopped
+
+  analytic-service:
+    image: ngothanhdatak/beyond8-analytic-service:latest
+    container_name: beyond8-analytic-service
+    ports:
+      - '${ANALYTIC_SERVICE_PORT:-8087}:8080'
+    environment:
+      <<: [ *common-environment, *analytic-service-environment ]
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+    networks:
+      - beyond8-network
+    restart: unless-stopped
+
+  sale-service:
+    image: ngothanhdatak/beyond8-sale-service:latest
+    container_name: beyond8-sale-service
+    ports:
+      - '${SALE_SERVICE_PORT:-8088}:8080'
+    environment:
+      <<: [ *common-environment, *sale-service-environment ]
+    depends_on:
       - postgres
       - redis
       - rabbitmq
