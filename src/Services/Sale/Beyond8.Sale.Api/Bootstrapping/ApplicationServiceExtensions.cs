@@ -138,6 +138,7 @@ public static class ApplicationServiceExtensions
         app.MapPlatformWalletApi();
         app.MapTransactionApi();
         app.MapSettlementApi();
+        app.MapInternalAnalyticsApi();
 
         return app;
     }

@@ -34,4 +34,33 @@ public class AggSystemOverviewMonthlyRepository(AnalyticDbContext context)
             .OrderBy(e => e.YearMonth)
             .ToListAsync();
     }
+
+    public async Task<List<AggSystemOverviewMonthly>> GetByYearAsync(int year)
+    {
+        return await context.AggSystemOverviewMonthlies
+            .Where(e => e.Year == year)
+            .OrderBy(e => e.Month)
+            .ToListAsync();
+    }
+
+    public async Task<List<AggSystemOverviewMonthly>> GetByQuarterAsync(int year, int quarter)
+    {
+        var startMonth = (quarter - 1) * 3 + 1;
+        var endMonth = startMonth + 2;
+
+        return await context.AggSystemOverviewMonthlies
+            .Where(e => e.Year == year && e.Month >= startMonth && e.Month <= endMonth)
+            .OrderBy(e => e.Month)
+            .ToListAsync();
+    }
+
+    public async Task<List<AggSystemOverviewMonthly>> GetByYearMonthRangeAsync(
+        string fromYearMonth, string toYearMonth)
+    {
+        return await context.AggSystemOverviewMonthlies
+            .Where(e => string.Compare(e.YearMonth, fromYearMonth) >= 0
+                     && string.Compare(e.YearMonth, toYearMonth) <= 0)
+            .OrderBy(e => e.YearMonth)
+            .ToListAsync();
+    }
 }

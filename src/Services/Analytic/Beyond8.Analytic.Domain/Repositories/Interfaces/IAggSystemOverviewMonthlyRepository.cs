@@ -7,4 +7,7 @@ public interface IAggSystemOverviewMonthlyRepository : IGenericRepository<AggSys
 {
     Task<AggSystemOverviewMonthly> GetOrCreateForMonthAsync(string yearMonth, int year, int month);
     Task<List<AggSystemOverviewMonthly>> GetLastNMonthsAsync(int n);
+    Task<List<AggSystemOverviewMonthly>> GetByYearAsync(int year);
+    Task<List<AggSystemOverviewMonthly>> GetByQuarterAsync(int year, int quarter);
+    Task<List<AggSystemOverviewMonthly>> GetByYearMonthRangeAsync(string fromYearMonth, string toYearMonth);
 }

@@ -45,6 +45,13 @@ public class OrderItemCompletedEventConsumer(
         monthly.PlatformProfit += message.PlatformFeeAmount;
         monthly.InstructorEarnings += message.InstructorEarnings;
 
+        var dateKey = $"{now.Year:D4}-{now.Month:D2}-{now.Day:D2}";
+        var daily = await unitOfWork.AggSystemOverviewDailyRepository
+            .GetOrCreateForDateAsync(dateKey, now.Year, now.Month, now.Day);
+        daily.Revenue += message.LineTotal;
+        daily.PlatformProfit += message.PlatformFeeAmount;
+        daily.InstructorEarnings += message.InstructorEarnings;
+
         await unitOfWork.SaveChangesAsync();
 
         logger.LogInformation("Order item revenue updated in analytics: Course {CourseId}, Amount {Amount}",

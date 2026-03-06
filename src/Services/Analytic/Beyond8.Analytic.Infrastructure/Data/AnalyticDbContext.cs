@@ -11,6 +11,7 @@ public class AnalyticDbContext(DbContextOptions<AnalyticDbContext> options) : Ba
     public DbSet<AggInstructorRevenue> AggInstructorRevenues { get; set; } = null!;
     public DbSet<AggSystemOverview> AggSystemOverviews { get; set; } = null!;
     public DbSet<AggSystemOverviewMonthly> AggSystemOverviewMonthlies { get; set; } = null!;
+    public DbSet<AggSystemOverviewDaily> AggSystemOverviewDailies { get; set; } = null!;
     public DbSet<AggAiUsageDaily> AggAiUsageDailies { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -54,6 +55,13 @@ public class AnalyticDbContext(DbContextOptions<AnalyticDbContext> options) : Ba
             entity.HasQueryFilter(e => e.DeletedAt == null);
             entity.HasIndex(e => e.YearMonth).IsUnique();
             entity.HasIndex(e => new { e.Year, e.Month });
+        });
+
+        modelBuilder.Entity<AggSystemOverviewDaily>(entity =>
+        {
+            entity.HasQueryFilter(e => e.DeletedAt == null);
+            entity.HasIndex(e => e.DateKey).IsUnique();
+            entity.HasIndex(e => new { e.Year, e.Month, e.Day });
         });
 
         modelBuilder.Entity<AggAiUsageDaily>(entity =>
