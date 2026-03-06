@@ -37,6 +37,8 @@ public static class ApplicationServiceExtensions
             config.AddConsumer<CourseCompletedEventConsumer>();
             config.AddConsumer<CourseRatingUpdatedEventConsumer>();
             // Catalog events
+            config.AddConsumer<CourseCreatedEventConsumer>();
+            config.AddConsumer<CourseSubmittedForApprovalEventConsumer>();
             config.AddConsumer<CoursePublishedEventConsumer>();
             config.AddConsumer<CourseUpdatedMetadataEventConsumer>();
             config.AddConsumer<CourseUnpublishedEventConsumer>();

@@ -41,7 +41,9 @@ public class CoursePublishedEventConsumer(
         }
         else
         {
-            instructorRevenue.TotalCourses++;
+            // Transition: Approved → Published
+            if (instructorRevenue.ApprovedCourses > 0)
+                instructorRevenue.ApprovedCourses--;
             instructorRevenue.PublishedCourses++;
             if (string.IsNullOrEmpty(instructorRevenue.InstructorName))
                 instructorRevenue.InstructorName = message.InstructorName;

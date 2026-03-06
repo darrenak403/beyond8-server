@@ -13,10 +13,13 @@ public class CourseUnpublishedEventConsumer(
     {
         var message = context.Message;
 
+        // Transition: Published → Approved (unpublish returns course to Approved state)
         var instructorRevenue = await unitOfWork.AggInstructorRevenueRepository.GetByInstructorIdAsync(message.InstructorId);
-        if (instructorRevenue != null && instructorRevenue.PublishedCourses > 0)
+        if (instructorRevenue != null)
         {
-            instructorRevenue.PublishedCourses--;
+            if (instructorRevenue.PublishedCourses > 0)
+                instructorRevenue.PublishedCourses--;
+            instructorRevenue.ApprovedCourses++;
             await unitOfWork.AggInstructorRevenueRepository.UpdateAsync(instructorRevenue.Id, instructorRevenue);
         }
 

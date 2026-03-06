@@ -13,7 +13,7 @@ public class CourseApprovedEventConsumer(
     {
         var message = context.Message;
 
-        // Ensure AggInstructorRevenue record exists for this instructor
+        // Transition: PendingApproval → Approved
         var instructorRevenue = await unitOfWork.AggInstructorRevenueRepository.GetByInstructorIdAsync(message.InstructorId);
         if (instructorRevenue == null)
         {
@@ -22,9 +22,14 @@ public class CourseApprovedEventConsumer(
             return;
         }
 
+        if (instructorRevenue.PendingApprovalCourses > 0)
+            instructorRevenue.PendingApprovalCourses--;
+        instructorRevenue.ApprovedCourses++;
+        await unitOfWork.AggInstructorRevenueRepository.UpdateAsync(instructorRevenue.Id, instructorRevenue);
+
         await unitOfWork.SaveChangesAsync();
 
-        logger.LogInformation("Course approved analytics recorded: Course {CourseId}, Instructor {InstructorId}",
-            message.CourseId, message.InstructorId);
+        logger.LogInformation("Course approved analytics recorded: Course {CourseId}, Instructor {InstructorId}, ApprovedCourses={Count}",
+            message.CourseId, message.InstructorId, instructorRevenue.ApprovedCourses);
     }
 }
