@@ -7,6 +7,6 @@ namespace Beyond8.Analytic.Application.Services.Interfaces;
 public interface IInstructorRevenueService
 {
     Task<ApiResponse<List<InstructorRevenueResponse>>> GetAllInstructorRevenueAsync(DateRangeAnalyticRequest request);
-    Task<ApiResponse<InstructorRevenueResponse>> GetInstructorRevenueAsync(Guid instructorId);
+    Task<ApiResponse<MyRevenueResponse>> GetInstructorRevenueAsync(Guid instructorId);
     Task<ApiResponse<List<TopInstructorResponse>>> GetTopInstructorsAsync(int count = 10, string sortBy = "revenue");
 }

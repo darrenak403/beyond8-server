@@ -630,6 +630,18 @@ public class PaymentService(
 
                 totalInstructorEarnings += earnings.InstructorEarnings;
                 groupPlatformFee += earnings.PlatformFee;
+
+                // Publish per-item event for Analytic service to update AggInstructorRevenue / AggCourseStats
+                await publishEndpoint.Publish(new OrderItemCompletedEvent(
+                    order.Id,
+                    item.CourseId,
+                    item.CourseTitle,
+                    item.InstructorId,
+                    item.InstructorName,
+                    item.UnitPrice,
+                    earnings.PlatformFee,
+                    earnings.InstructorEarnings,
+                    order.PaidAt ?? DateTime.UtcNow));
             }
 
             totalPlatformFee += groupPlatformFee;

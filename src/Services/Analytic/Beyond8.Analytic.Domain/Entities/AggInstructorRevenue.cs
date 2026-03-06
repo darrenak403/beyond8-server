@@ -38,8 +38,13 @@ public class AggInstructorRevenue : BaseEntity
     public int TotalReviews { get; set; } = 0;
 
     // Course status breakdown (trackable via events)
+    public int DraftCourses { get; set; } = 0;
+    public int PendingApprovalCourses { get; set; } = 0;
+    public int ApprovedCourses { get; set; } = 0;
     public int PublishedCourses { get; set; } = 0;
     public int RejectedCourses { get; set; } = 0;
+    public int ArchivedCourses { get; set; } = 0;
+    public int SuspendedCourses { get; set; } = 0;
 
     public DateOnly SnapshotDate { get; set; } = DateOnly.FromDateTime(DateTime.UtcNow);
     public bool IsCurrent { get; set; } = true;

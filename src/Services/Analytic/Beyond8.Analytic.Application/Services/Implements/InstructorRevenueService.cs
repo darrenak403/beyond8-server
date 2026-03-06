@@ -41,15 +41,15 @@ public class InstructorRevenueService(
         }
     }
 
-    public async Task<ApiResponse<InstructorRevenueResponse>> GetInstructorRevenueAsync(Guid instructorId)
+    public async Task<ApiResponse<MyRevenueResponse>> GetInstructorRevenueAsync(Guid instructorId)
     {
         try
         {
             var revenue = await unitOfWork.AggInstructorRevenueRepository.GetByInstructorIdAsync(instructorId);
             if (revenue == null)
-                return ApiResponse<InstructorRevenueResponse>.FailureResponse("Không tìm thấy thống kê doanh thu");
+                return ApiResponse<MyRevenueResponse>.FailureResponse("Không tìm thấy thống kê doanh thu");
 
-            return ApiResponse<InstructorRevenueResponse>.SuccessResponse(revenue.ToResponse(), "Lấy thống kê doanh thu thành công");
+            return ApiResponse<MyRevenueResponse>.SuccessResponse(revenue.ToMyResponse(), "Lấy thống kê doanh thu thành công");
         }
         catch (Exception ex)
         {

@@ -11,19 +11,22 @@ public static class InstructorRevenueMappings
         InstructorId = entity.InstructorId,
         InstructorName = entity.InstructorName,
         TotalCourses = entity.TotalCourses,
+        DraftCourses = entity.DraftCourses,
+        PendingApprovalCourses = entity.PendingApprovalCourses,
+        ApprovedCourses = entity.ApprovedCourses,
         PublishedCourses = entity.PublishedCourses,
         RejectedCourses = entity.RejectedCourses,
+        ArchivedCourses = entity.ArchivedCourses,
+        SuspendedCourses = entity.SuspendedCourses,
         TotalStudents = entity.TotalStudents,
-        TotalRevenue = entity.TotalRevenue,
-        TotalPlatformFee = entity.TotalPlatformFee,
         TotalInstructorEarnings = entity.TotalInstructorEarnings,
-        TotalRefundAmount = entity.TotalRefundAmount,
-        TotalPaidOut = entity.TotalPaidOut,
         AvailableBalance = entity.AvailableBalance,
         AvgCourseRating = entity.AvgCourseRating,
         TotalReviews = entity.TotalReviews,
         SnapshotDate = entity.SnapshotDate,
-        UpdatedAt = entity.UpdatedAt
+        UpdatedAt = entity.UpdatedAt,
+        TotalRevenue = entity.TotalRevenue,
+        TotalPlatformFee = entity.TotalPlatformFee
     };
 
     public static TopInstructorResponse ToTopResponse(this AggInstructorRevenue entity) => new()
@@ -34,5 +37,26 @@ public static class InstructorRevenueMappings
         TotalRevenue = entity.TotalRevenue,
         AvgCourseRating = entity.AvgCourseRating,
         TotalCourses = entity.TotalCourses
+    };
+
+    public static MyRevenueResponse ToMyResponse(this AggInstructorRevenue entity) => new()
+    {
+        InstructorId = entity.InstructorId,
+        InstructorName = entity.InstructorName,
+        TotalCourses = entity.TotalCourses,
+        DraftCourses = entity.DraftCourses,
+        PendingApprovalCourses = entity.PendingApprovalCourses,
+        ApprovedCourses = entity.ApprovedCourses,
+        PublishedCourses = entity.PublishedCourses,
+        RejectedCourses = entity.RejectedCourses,
+        ArchivedCourses = entity.ArchivedCourses,
+        SuspendedCourses = entity.SuspendedCourses,
+        TotalStudents = entity.TotalStudents,
+        TotalInstructorEarnings = entity.TotalInstructorEarnings,
+        AvailableBalance = entity.AvailableBalance,
+        AvgCourseRating = entity.AvgCourseRating,
+        TotalReviews = entity.TotalReviews,
+        SnapshotDate = entity.SnapshotDate,
+        UpdatedAt = entity.UpdatedAt
     };
 }
