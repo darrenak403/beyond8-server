@@ -8,9 +8,12 @@ Tổng quan cấu hình Docker cho Beyond8 Server.
 docker/
 ├── .env.example          # Biến môi trường mẫu (copy thành .env)
 ├── docker-compose-dev.yml   # Dev: build từ Dockerfile, đủ 5 API services
-├── docker-compose-prod.yml  # Prod: image pre-built, hiện Identity + Integration
+├── docker-compose-prod.yml  # Prod: image pre-built, đủ services
 ├── README.md             # File này
 └── data/
+    ├── postgres/
+    │   └── init/
+    │       └── 01-create-databases.sql   # Tạo DB lần đầu (service + Hangfire)
     └── gateway/
         └── etc/nginx/conf.d/
             └── default.conf   # Nginx gateway – route theo service & chức năng
@@ -44,6 +47,16 @@ docker/
 Override bằng biến env (ví dụ `IDENTITY_SERVICE_PORT=9081`).
 
 ## Database (Postgres, database-per-service)
+
+**Khởi tạo lần đầu:** Thư mục `data/postgres/init/` chứa script tạo toàn bộ DB (Identities, Integrations, …, HangfiresIdentity, HangfiresIntegration, HangfiresSale). Script chỉ chạy khi volume Postgres **trống** (lần đầu `docker compose up`).
+
+**Nếu volume đã có từ trước** (ví dụ đã chạy Postgres trước khi thêm Hangfire) và thiếu DB Hangfire, tạo thủ công:
+
+```bash
+docker exec -it beyond8-postgres psql -U postgres -c 'CREATE DATABASE "HangfiresIdentity"; CREATE DATABASE "HangfiresIntegration"; CREATE DATABASE "HangfiresSale";'
+```
+
+Sau đó restart Identity / Integration / Sale service.
 
 Tên DB dùng trong connection string (Const.*) và biến env:
 
