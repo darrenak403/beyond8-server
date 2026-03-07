@@ -25,4 +25,19 @@ public class CatalogClient(
             return ApiResponse<PlatformCourseStatsResponse>.FailureResponse(ex.Message);
         }
     }
+
+    public async Task<ApiResponse<InstructorCourseStatsResponse>> GetInstructorCourseStatsAsync(Guid instructorId)
+    {
+        try
+        {
+            var data = await GetAsync<InstructorCourseStatsResponse>(
+                $"/api/v1/internal/stats/instructors/{instructorId}/courses");
+            return ApiResponse<InstructorCourseStatsResponse>.SuccessResponse(data, "OK");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get instructor course stats from Catalog Service. InstructorId={InstructorId}", instructorId);
+            return ApiResponse<InstructorCourseStatsResponse>.FailureResponse(ex.Message);
+        }
+    }
 }

@@ -19,6 +19,14 @@ public static class InternalAnalyticsApis
             .WithName("GetRevenueByDate")
             .Produces<List<Beyond8.Sale.Application.Dtos.Analytics.DailyRevenueSummary>>();
 
+        var walletGroup = app.MapGroup("/api/v1/internal/wallets")
+            .WithTags("Internal - Analytics")
+            .AllowAnonymous();
+
+        walletGroup.MapGet("/instructors/{instructorId:guid}", GetInstructorWallet)
+            .WithName("GetInstructorWalletInternal")
+            .WithSummary("Get instructor wallet stats for analytics");
+
         return app;
     }
 
@@ -35,5 +43,13 @@ public static class InternalAnalyticsApis
 
         var result = await orderService.GetRevenueByDateRangeAsync(from, to);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> GetInstructorWallet(
+        Guid instructorId,
+        [FromServices] IInstructorWalletService walletService)
+    {
+        var result = await walletService.GetWalletByInstructorAsync(instructorId);
+        return result.IsSuccess ? Results.Ok(result) : Results.StatusCode(500);
     }
 }

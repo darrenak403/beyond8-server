@@ -7,4 +7,5 @@ namespace Beyond8.Analytic.Application.Clients.Catalog;
 public interface ICatalogClient : IBaseClient
 {
     Task<ApiResponse<PlatformCourseStatsResponse>> GetPlatformCourseStatsAsync();
+    Task<ApiResponse<InstructorCourseStatsResponse>> GetInstructorCourseStatsAsync(Guid instructorId);
 }

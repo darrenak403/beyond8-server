@@ -16,6 +16,10 @@ public static class InternalCatalogApis
             .WithName("GetPlatformCourseStats")
             .WithSummary("Get platform course counts for analytics");
 
+        group.MapGet("/instructors/{instructorId:guid}/courses", GetInstructorCourseStats)
+            .WithName("GetInstructorCourseStats")
+            .WithSummary("Get course stats for a specific instructor for analytics");
+
         return app;
     }
 
@@ -23,6 +27,14 @@ public static class InternalCatalogApis
         [FromServices] ICourseService courseService)
     {
         var result = await courseService.GetPlatformCourseStatsAsync();
+        return result.IsSuccess ? Results.Ok(result) : Results.StatusCode(500);
+    }
+
+    private static async Task<IResult> GetInstructorCourseStats(
+        Guid instructorId,
+        [FromServices] ICourseService courseService)
+    {
+        var result = await courseService.GetCourseStatsByInstructorAsync(instructorId);
         return result.IsSuccess ? Results.Ok(result) : Results.StatusCode(500);
     }
 }
