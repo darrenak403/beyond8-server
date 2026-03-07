@@ -1,3 +1,6 @@
+using Beyond8.Analytic.Application.Clients.Catalog;
+using Beyond8.Analytic.Application.Clients.Identity;
+using Beyond8.Analytic.Application.Clients.Learning;
 using Beyond8.Analytic.Application.Clients.Sale;
 using Beyond8.Analytic.Application.Dtos.SystemOverview;
 using Beyond8.Analytic.Application.Services.Interfaces;
@@ -11,7 +14,10 @@ namespace Beyond8.Analytic.Application.Services.Implements;
 public class SystemOverviewService(
     ILogger<SystemOverviewService> logger,
     IUnitOfWork unitOfWork,
-    ISaleClient saleClient) : ISystemOverviewService
+    ISaleClient saleClient,
+    IIdentityClient identityClient,
+    ICatalogClient catalogClient,
+    ILearningClient learningClient) : ISystemOverviewService
 {
     public async Task<ApiResponse<SystemDashboardResponse>> GetSystemDashboardAsync()
     {
@@ -22,18 +28,34 @@ public class SystemOverviewService(
 
         var currentYearRecords = monthly12.Where(m => m.Year == now.Year).ToList();
 
+        // Gọi song song tới 3 service để lấy số liệu thực từ database
+        var userTask = identityClient.GetPlatformUserStatsAsync();
+        var courseTask = catalogClient.GetPlatformCourseStatsAsync();
+        var enrollmentTask = learningClient.GetPlatformEnrollmentStatsAsync();
+        await Task.WhenAll(userTask, courseTask, enrollmentTask);
+
+        var userStats = userTask.Result.IsSuccess ? userTask.Result.Data : null;
+        var courseStats = courseTask.Result.IsSuccess ? courseTask.Result.Data : null;
+        var enrollmentStats = enrollmentTask.Result.IsSuccess ? enrollmentTask.Result.Data : null;
+
+        if (userStats == null)
+            logger.LogWarning("Could not fetch user stats from Identity; falling back to aggregate");
+        if (courseStats == null)
+            logger.LogWarning("Could not fetch course stats from Catalog; falling back to aggregate");
+        if (enrollmentStats == null)
+            logger.LogWarning("Could not fetch enrollment stats from Learning; falling back to aggregate");
+
         var dashboard = new SystemDashboardResponse
         {
-            TotalUsers = overview?.TotalUsers ?? 0,
-            TotalInstructors = overview?.TotalInstructors ?? 0,
-            TotalStudents = overview?.TotalStudents ?? 0,
-            TotalCourses = overview?.TotalCourses ?? 0,
-            TotalPublishedCourses = overview?.TotalPublishedCourses ?? 0,
-            TotalEnrollments = overview?.TotalEnrollments ?? 0,
-            TotalCompletedEnrollments = overview?.TotalCompletedEnrollments ?? 0,
-            // TotalRevenue = overview?.TotalRevenue ?? 0,
+            TotalUsers = userStats?.TotalUsers
+                         ?? (overview?.TotalInstructors ?? 0) + (overview?.TotalStudents ?? 0),
+            TotalInstructors = userStats?.TotalInstructors ?? overview?.TotalInstructors ?? 0,
+            TotalStudents = userStats?.TotalStudents ?? overview?.TotalStudents ?? 0,
+            TotalCourses = courseStats?.TotalCourses ?? overview?.TotalCourses ?? 0,
+            TotalPublishedCourses = courseStats?.TotalPublishedCourses ?? overview?.TotalPublishedCourses ?? 0,
+            TotalEnrollments = enrollmentStats?.TotalEnrollments ?? overview?.TotalEnrollments ?? 0,
+            TotalCompletedEnrollments = enrollmentStats?.TotalCompletedEnrollments ?? overview?.TotalCompletedEnrollments ?? 0,
             TotalPlatformFee = overview?.TotalPlatformFee ?? 0,
-            // TotalInstructorEarnings = overview?.TotalInstructorEarnings ?? 0,
             AvgCourseRating = overview?.AvgCourseRating ?? 0,
             UpdatedAt = overview?.UpdatedAt
         };
@@ -46,28 +68,61 @@ public class SystemOverviewService(
     {
         var year = request.Year;
 
+        // Calculate date range for Sale service query
+        DateTime rangeStart, rangeEnd;
+        switch (request.GroupBy)
+        {
+            case GroupByPeriod.Year:
+                rangeStart = new DateTime(year!.Value, 1, 1);
+                rangeEnd = new DateTime(year.Value, 12, 31);
+                break;
+            case GroupByPeriod.Quarter:
+                var qStartMonth = (request.Quarter!.Value - 1) * 3 + 1;
+                var qEndMonth = qStartMonth + 2;
+                rangeStart = new DateTime(year!.Value, qStartMonth, 1);
+                rangeEnd = new DateTime(year.Value, qEndMonth, DateTime.DaysInMonth(year.Value, qEndMonth));
+                break;
+            case GroupByPeriod.Month:
+                rangeStart = new DateTime(year!.Value, request.Month!.Value, 1);
+                rangeEnd = new DateTime(year.Value, request.Month.Value, DateTime.DaysInMonth(year.Value, request.Month.Value));
+                break;
+            case GroupByPeriod.Custom:
+                rangeStart = request.StartDate!.Value.Date;
+                rangeEnd = request.EndDate!.Value.Date;
+                break;
+            default:
+                return ApiResponse<RevenueTrendResponse>.FailureResponse("Loại nhóm không hợp lệ");
+        }
+
+        // Query Sale service directly — source of truth for revenue data
+        var saleResult = await saleClient.GetRevenueByDateRangeAsync(rangeStart, rangeEnd);
+        var dailyData = saleResult.IsSuccess && saleResult.Data != null ? saleResult.Data : [];
+        if (!saleResult.IsSuccess)
+            logger.LogWarning("Revenue trend: Sale Service unavailable for {From}–{To}; returning zeros", rangeStart, rangeEnd);
+
         switch (request.GroupBy)
         {
             case GroupByPeriod.Year:
                 {
-                    var records = await unitOfWork.AggSystemOverviewMonthlyRepository.GetByYearAsync(year!.Value);
-                    var lookup = records.ToDictionary(r => r.Month);
+                    var byMonth = dailyData.GroupBy(d => d.Month)
+                        .ToDictionary(g => g.Key, g => g.ToList());
 
                     var dataPoints = Enumerable.Range(1, 12).Select(m =>
                     {
-                        lookup.TryGetValue(m, out var rec);
+                        var group = byMonth.TryGetValue(m, out var g) ? g : [];
                         return new RevenueDataPoint
                         {
                             Period = $"{year:D4}-{m:D2}",
                             Label = $"Tháng {m}",
-                            Revenue = rec?.Revenue ?? 0,
-                            Profit = rec?.PlatformProfit ?? 0,
-                            InstructorEarnings = rec?.InstructorEarnings ?? 0,
-                            NewEnrollments = rec?.NewEnrollments ?? 0
+                            Revenue = group.Sum(d => d.Revenue),
+                            Profit = group.Sum(d => d.PlatformFee),
+                            InstructorEarnings = group.Sum(d => d.InstructorEarnings),
+                            NewEnrollments = group.Sum(d => d.NewEnrollments)
                         };
                     }).ToList();
 
-                    var response = new RevenueTrendResponse
+                    logger.LogInformation("Revenue trend (Year) fetched for {Year}", year);
+                    return ApiResponse<RevenueTrendResponse>.SuccessResponse(new RevenueTrendResponse
                     {
                         PeriodLabel = $"Năm {year}",
                         TotalRevenue = dataPoints.Sum(d => d.Revenue),
@@ -75,34 +130,32 @@ public class SystemOverviewService(
                         TotalInstructorEarnings = dataPoints.Sum(d => d.InstructorEarnings),
                         TotalNewEnrollments = dataPoints.Sum(d => d.NewEnrollments),
                         DataPoints = dataPoints
-                    };
-
-                    logger.LogInformation("Revenue trend (Year) fetched for {Year}", year);
-                    return ApiResponse<RevenueTrendResponse>.SuccessResponse(response, "Lấy xu hướng doanh thu thành công");
+                    }, "Lấy xu hướng doanh thu thành công");
                 }
 
             case GroupByPeriod.Quarter:
                 {
                     var quarter = request.Quarter!.Value;
-                    var records = await unitOfWork.AggSystemOverviewMonthlyRepository.GetByQuarterAsync(year!.Value, quarter);
-                    var lookup = records.ToDictionary(r => r.Month);
-
                     var startMonth = (quarter - 1) * 3 + 1;
+                    var byMonth = dailyData.GroupBy(d => d.Month)
+                        .ToDictionary(g => g.Key, g => g.ToList());
+
                     var dataPoints = Enumerable.Range(startMonth, 3).Select(m =>
                     {
-                        lookup.TryGetValue(m, out var rec);
+                        var group = byMonth.TryGetValue(m, out var g) ? g : [];
                         return new RevenueDataPoint
                         {
                             Period = $"{year:D4}-{m:D2}",
                             Label = $"Tháng {m}",
-                            Revenue = rec?.Revenue ?? 0,
-                            Profit = rec?.PlatformProfit ?? 0,
-                            InstructorEarnings = rec?.InstructorEarnings ?? 0,
-                            NewEnrollments = rec?.NewEnrollments ?? 0
+                            Revenue = group.Sum(d => d.Revenue),
+                            Profit = group.Sum(d => d.PlatformFee),
+                            InstructorEarnings = group.Sum(d => d.InstructorEarnings),
+                            NewEnrollments = group.Sum(d => d.NewEnrollments)
                         };
                     }).ToList();
 
-                    var response = new RevenueTrendResponse
+                    logger.LogInformation("Revenue trend (Quarter) fetched for Q{Quarter}/{Year}", quarter, year);
+                    return ApiResponse<RevenueTrendResponse>.SuccessResponse(new RevenueTrendResponse
                     {
                         PeriodLabel = $"Q{quarter}/{year}",
                         TotalRevenue = dataPoints.Sum(d => d.Revenue),
@@ -110,34 +163,31 @@ public class SystemOverviewService(
                         TotalInstructorEarnings = dataPoints.Sum(d => d.InstructorEarnings),
                         TotalNewEnrollments = dataPoints.Sum(d => d.NewEnrollments),
                         DataPoints = dataPoints
-                    };
-
-                    logger.LogInformation("Revenue trend (Quarter) fetched for Q{Quarter}/{Year}", quarter, year);
-                    return ApiResponse<RevenueTrendResponse>.SuccessResponse(response, "Lấy xu hướng doanh thu thành công");
+                    }, "Lấy xu hướng doanh thu thành công");
                 }
 
             case GroupByPeriod.Month:
                 {
                     var month = request.Month!.Value;
-                    var records = await unitOfWork.AggSystemOverviewDailyRepository.GetByMonthAsync(year!.Value, month);
-                    var lookup = records.ToDictionary(r => r.Day);
-                    var daysInMonth = DateTime.DaysInMonth(year.Value, month);
+                    var daysInMonth = DateTime.DaysInMonth(year!.Value, month);
+                    var byDay = dailyData.ToDictionary(d => d.Day);
 
                     var dataPoints = Enumerable.Range(1, daysInMonth).Select(d =>
                     {
-                        lookup.TryGetValue(d, out var rec);
+                        byDay.TryGetValue(d, out var rec);
                         return new RevenueDataPoint
                         {
                             Period = $"{year:D4}-{month:D2}-{d:D2}",
                             Label = $"{d}/{month}",
                             Revenue = rec?.Revenue ?? 0,
-                            Profit = rec?.PlatformProfit ?? 0,
+                            Profit = rec?.PlatformFee ?? 0,
                             InstructorEarnings = rec?.InstructorEarnings ?? 0,
                             NewEnrollments = rec?.NewEnrollments ?? 0
                         };
                     }).ToList();
 
-                    var response = new RevenueTrendResponse
+                    logger.LogInformation("Revenue trend (Month) fetched for {Month}/{Year}", month, year);
+                    return ApiResponse<RevenueTrendResponse>.SuccessResponse(new RevenueTrendResponse
                     {
                         PeriodLabel = $"Tháng {month}/{year}",
                         TotalRevenue = dataPoints.Sum(dp => dp.Revenue),
@@ -145,51 +195,39 @@ public class SystemOverviewService(
                         TotalInstructorEarnings = dataPoints.Sum(dp => dp.InstructorEarnings),
                         TotalNewEnrollments = dataPoints.Sum(dp => dp.NewEnrollments),
                         DataPoints = dataPoints
-                    };
-
-                    logger.LogInformation("Revenue trend (Month) fetched for {Month}/{Year}", month, year);
-                    return ApiResponse<RevenueTrendResponse>.SuccessResponse(response, "Lấy xu hướng doanh thu thành công");
+                    }, "Lấy xu hướng doanh thu thành công");
                 }
 
             case GroupByPeriod.Custom:
                 {
-                    var start = request.StartDate!.Value;
-                    var end = request.EndDate!.Value;
-                    var fromKey = $"{start:yyyy-MM-dd}";
-                    var toKey = $"{end:yyyy-MM-dd}";
-
-                    var records = await unitOfWork.AggSystemOverviewDailyRepository.GetByDateRangeAsync(fromKey, toKey);
-                    var lookup = records.ToDictionary(r => r.DateKey);
-
-                    // Generate all dates in range
+                    var byDateKey = dailyData.ToDictionary(d => d.DateKey);
                     var dataPoints = new List<RevenueDataPoint>();
-                    for (var date = start.Date; date <= end.Date; date = date.AddDays(1))
+                    for (var date = rangeStart; date <= rangeEnd; date = date.AddDays(1))
                     {
                         var key = $"{date:yyyy-MM-dd}";
-                        lookup.TryGetValue(key, out var rec);
+                        byDateKey.TryGetValue(key, out var rec);
                         dataPoints.Add(new RevenueDataPoint
                         {
                             Period = key,
                             Label = $"{date.Day}/{date.Month}",
                             Revenue = rec?.Revenue ?? 0,
-                            Profit = rec?.PlatformProfit ?? 0,
+                            Profit = rec?.PlatformFee ?? 0,
                             InstructorEarnings = rec?.InstructorEarnings ?? 0,
                             NewEnrollments = rec?.NewEnrollments ?? 0
                         });
                     }
 
-                    var response = new RevenueTrendResponse
+                    logger.LogInformation("Revenue trend (Custom) fetched from {From} to {To}",
+                        $"{rangeStart:yyyy-MM-dd}", $"{rangeEnd:yyyy-MM-dd}");
+                    return ApiResponse<RevenueTrendResponse>.SuccessResponse(new RevenueTrendResponse
                     {
-                        PeriodLabel = $"{start:dd/MM/yyyy} – {end:dd/MM/yyyy}",
+                        PeriodLabel = $"{rangeStart:dd/MM/yyyy} – {rangeEnd:dd/MM/yyyy}",
                         TotalRevenue = dataPoints.Sum(dp => dp.Revenue),
                         TotalProfit = dataPoints.Sum(dp => dp.Profit),
                         TotalInstructorEarnings = dataPoints.Sum(dp => dp.InstructorEarnings),
                         TotalNewEnrollments = dataPoints.Sum(dp => dp.NewEnrollments),
                         DataPoints = dataPoints
-                    };
-
-                    logger.LogInformation("Revenue trend (Custom) fetched from {From} to {To}", fromKey, toKey);
-                    return ApiResponse<RevenueTrendResponse>.SuccessResponse(response, "Lấy xu hướng doanh thu thành công");
+                    }, "Lấy xu hướng doanh thu thành công");
                 }
 
             default:

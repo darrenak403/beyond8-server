@@ -8,20 +8,55 @@ public class MyRevenueResponse
 {
     public Guid InstructorId { get; set; }
     public string InstructorName { get; set; } = string.Empty;
-    public int TotalCourses { get; set; }
-    public int DraftCourses { get; set; }
-    public int PendingApprovalCourses { get; set; }
-    public int ApprovedCourses { get; set; }
-    public int PublishedCourses { get; set; }
-    public int RejectedCourses { get; set; }
-    public int ArchivedCourses { get; set; }
-    public int SuspendedCourses { get; set; }
-    public int TotalStudents { get; set; }
-    /// <summary>Net earnings after platform fee (70% of gross revenue).</summary>
-    public decimal TotalInstructorEarnings { get; set; }
-    public decimal AvailableBalance { get; set; }
-    public decimal AvgCourseRating { get; set; }
-    public int TotalReviews { get; set; }
+
+    public CourseStatsGroup Courses { get; set; } = new();
+    public StudentStatsGroup Students { get; set; } = new();
+    public RevenueStatsGroup Revenue { get; set; } = new();
+    public RatingGroup Rating { get; set; } = new();
+
     public DateOnly SnapshotDate { get; set; }
     public DateTime? UpdatedAt { get; set; }
+}
+
+public class CourseStatsGroup
+{
+    public int Total { get; set; }
+    public int Draft { get; set; }
+    public int PendingApproval { get; set; }
+    public int Approved { get; set; }
+    public int Published { get; set; }
+    public int Rejected { get; set; }
+    public int Archived { get; set; }
+    public int Suspended { get; set; }
+    // Month-over-month for published courses
+    public int PublishedThisMonth { get; set; }
+    public int PublishedLastMonth { get; set; }
+    public decimal PublishedGrowthPercent { get; set; }
+    public int PublishedGrowthAbsolute { get; set; }
+}
+
+public class StudentStatsGroup
+{
+    public int Total { get; set; }
+    public int ThisMonth { get; set; }
+    public int LastMonth { get; set; }
+    public decimal GrowthPercent { get; set; }
+    public int GrowthAbsolute { get; set; }
+}
+
+/// <summary>Instructor net earnings (70% of gross) and wallet balance.</summary>
+public class RevenueStatsGroup
+{
+    public decimal TotalEarnings { get; set; }
+    public decimal AvailableBalance { get; set; }
+    public decimal ThisMonth { get; set; }
+    public decimal LastMonth { get; set; }
+    public decimal GrowthPercent { get; set; }
+    public decimal GrowthAbsolute { get; set; }
+}
+
+public class RatingGroup
+{
+    public decimal Average { get; set; }
+    public int TotalReviews { get; set; }
 }

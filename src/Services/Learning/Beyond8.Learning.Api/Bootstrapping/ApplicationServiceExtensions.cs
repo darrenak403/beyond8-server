@@ -125,6 +125,7 @@ public static class ApplicationServiceExtensions
         app.MapEnrollmentApi();
         app.MapCertificateApi();
         app.MapCourseReviewApi();
+        app.MapInternalLearningApi();
 
         return app;
     }

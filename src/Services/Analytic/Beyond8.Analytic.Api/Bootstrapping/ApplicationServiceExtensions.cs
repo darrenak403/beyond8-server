@@ -1,6 +1,8 @@
 using Beyond8.Analytic.Api.Apis;
+using Beyond8.Analytic.Application.Clients.Catalog;
+using Beyond8.Analytic.Application.Clients.Identity;
+using Beyond8.Analytic.Application.Clients.Learning;
 using Beyond8.Analytic.Application.Clients.Sale;
-using Beyond8.Analytic.Application.Consumers.Assessment;
 using Beyond8.Analytic.Application.Consumers.Catalog;
 using Beyond8.Analytic.Application.Consumers.Identity;
 using Beyond8.Analytic.Application.Consumers.Integration;
@@ -44,35 +46,65 @@ public static class ApplicationServiceExtensions
             config.AddConsumer<CourseCreatedEventConsumer>();
             config.AddConsumer<CourseSubmittedForApprovalEventConsumer>();
             config.AddConsumer<CoursePublishedEventConsumer>();
-            config.AddConsumer<CourseUpdatedMetadataEventConsumer>();
             config.AddConsumer<CourseUnpublishedEventConsumer>();
             config.AddConsumer<CourseApprovedEventConsumer>();
             config.AddConsumer<CourseRejectedEventConsumer>();
             // Sale events
             config.AddConsumer<OrderItemCompletedEventConsumer>();
-            // Assessment events
-            config.AddConsumer<QuizAttemptCompletedEventConsumer>();
             // Integration (AI usage) events
             config.AddConsumer<AiUsageDailyAggregatedEventConsumer>();
         }, queueNamePrefix: "analytic");
 
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-        builder.Services.AddScoped<ICourseStatsService, CourseStatsService>();
         builder.Services.AddScoped<IInstructorRevenueService, InstructorRevenueService>();
         builder.Services.AddScoped<ISystemOverviewService, SystemOverviewService>();
-        builder.Services.AddScoped<ILessonPerformanceService, LessonPerformanceService>();
         builder.Services.AddScoped<IAiUsageAnalyticService, AiUsageAnalyticService>();
         builder.Services.AddScoped<IValidator<RevenueTrendRequest>, RevenueTrendRequestValidator>();
+
+        builder.AddClientServices();
+
+        return builder;
+    }
+
+    public static IHostApplicationBuilder AddClientServices(this IHostApplicationBuilder builder)
+    {
+        builder.Services.AddHttpContextAccessor();
 
         var saleBaseUrl = builder.Configuration["Clients:Sale:BaseUrl"]
                          ?? throw new ArgumentNullException("Sale Service URL missing");
 
-        builder.Services
-            .AddHttpClient<ISaleClient, SaleClient>(client =>
-            {
-                client.BaseAddress = new Uri(saleBaseUrl);
-                client.Timeout = TimeSpan.FromSeconds(30);
-            });
+        builder.Services.AddHttpClient<ISaleClient, SaleClient>(client =>
+        {
+            client.BaseAddress = new Uri(saleBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
+        var identityBaseUrl = builder.Configuration["Clients:Identity:BaseUrl"]
+                             ?? throw new ArgumentNullException("Identity Service URL missing");
+
+        builder.Services.AddHttpClient<IIdentityClient, IdentityClient>(client =>
+        {
+            client.BaseAddress = new Uri(identityBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
+        var catalogBaseUrl = builder.Configuration["Clients:Catalog:BaseUrl"]
+                            ?? throw new ArgumentNullException("Catalog Service URL missing");
+
+        builder.Services.AddHttpClient<ICatalogClient, CatalogClient>(client =>
+        {
+            client.BaseAddress = new Uri(catalogBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
+        var learningBaseUrl = builder.Configuration["Clients:Learning:BaseUrl"]
+                             ?? throw new ArgumentNullException("Learning Service URL missing");
+
+        builder.Services.AddHttpClient<ILearningClient, LearningClient>(client =>
+        {
+            client.BaseAddress = new Uri(learningBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
 
         return builder;
     }
@@ -80,15 +112,16 @@ public static class ApplicationServiceExtensions
     public static WebApplication UseApplicationServices(this WebApplication app)
     {
         app.UseCommonService();
+
         if (app.Environment.IsDevelopment())
         {
             app.MapOpenApi();
         }
+
         app.UseHttpsRedirection();
+
         app.MapSystemOverviewApi();
-        app.MapCourseStatsApi();
         app.MapInstructorAnalyticsApi();
-        app.MapLessonPerformanceApi();
         app.MapAiUsageAnalyticsApi();
 
         return app;

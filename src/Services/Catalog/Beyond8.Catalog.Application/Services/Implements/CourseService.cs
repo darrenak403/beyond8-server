@@ -423,6 +423,10 @@ public class CourseService(
                 .Where(c => c.InstructorId == instructorId && c.IsActive)
                 .ToListAsync();
 
+            var now = DateTime.UtcNow;
+            var thisMonthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var lastMonthStart = thisMonthStart.AddMonths(-1);
+
             var stats = new CourseStatsResponse
             {
                 TotalCourses = courses.Count,
@@ -434,7 +438,12 @@ public class CourseService(
                 TotalStudents = 0,
                 TotalRevenue = 0,
                 AverageRating = GetAverageRatingSafe(courses),
-                TotalReviews = courses.Sum(c => c.TotalReviews)
+                TotalReviews = courses.Sum(c => c.TotalReviews),
+                // Published courses by month: use ApprovedAt as the publish date
+                CoursesThisMonth = courses.Count(c => c.Status == CourseStatus.Published
+                    && c.ApprovedAt >= thisMonthStart),
+                CoursesLastMonth = courses.Count(c => c.Status == CourseStatus.Published
+                    && c.ApprovedAt >= lastMonthStart && c.ApprovedAt < thisMonthStart),
             };
 
             return ApiResponse<CourseStatsResponse>.SuccessResponse(stats, "Lấy thống kê khóa học thành công.");
@@ -524,6 +533,7 @@ public class CourseService(
 
             course.Status = CourseStatus.Approved;
             course.ApprovalNotes = request.Notes;
+            course.ApprovedAt = DateTime.UtcNow;
             await unitOfWork.CourseRepository.UpdateAsync(courseId, course);
             await unitOfWork.SaveChangesAsync();
 
@@ -991,6 +1001,27 @@ public class CourseService(
         {
             logger.LogError(ex, "Error getting courses by instructor: {InstructorId}", instructorId);
             return ApiResponse<List<CourseResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách khóa học.");
+        }
+    }
+
+    public async Task<ApiResponse<PlatformCourseStatsResponse>> GetPlatformCourseStatsAsync()
+    {
+        try
+        {
+            var totalCourses = (int)await unitOfWork.CourseRepository.CountAsync(c => c.DeletedAt == null);
+            var totalPublished = (int)await unitOfWork.CourseRepository.CountAsync(
+                c => c.DeletedAt == null && c.Status == CourseStatus.Published);
+
+            return ApiResponse<PlatformCourseStatsResponse>.SuccessResponse(new PlatformCourseStatsResponse
+            {
+                TotalCourses = totalCourses,
+                TotalPublishedCourses = totalPublished
+            }, "OK");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting platform course stats");
+            return ApiResponse<PlatformCourseStatsResponse>.FailureResponse("Đã xảy ra lỗi khi lấy thống kê khóa học.");
         }
     }
 }

@@ -142,6 +142,7 @@ namespace Beyond8.Catalog.Api.Bootstrapping
             app.MapLessonApi();
             app.MapCourseDocumentApi();
             app.MapLessonDocumentApi();
+            app.MapInternalCatalogApi();
 
             return app;
         }

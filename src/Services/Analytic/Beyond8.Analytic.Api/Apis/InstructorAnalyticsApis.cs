@@ -21,13 +21,6 @@ public static class InstructorAnalyticsApis
 
     private static RouteGroupBuilder MapInstructorAnalyticsRoutes(this RouteGroupBuilder group)
     {
-        group.MapGet("/", GetAllInstructorRevenueAsync)
-            .WithName("GetAllInstructorRevenue")
-            .WithDescription("Lấy thống kê doanh thu tất cả giảng viên (phân trang, lọc theo ngày)")
-            .RequireAuthorization(x => x.RequireRole(Role.Admin, Role.Staff))
-            .Produces<ApiResponse<List<InstructorRevenueResponse>>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<List<InstructorRevenueResponse>>>(StatusCodes.Status400BadRequest);
-
         group.MapGet("/me", GetMyRevenueAsync)
             .WithName("GetMyRevenue")
             .WithDescription("Lấy thống kê doanh thu của giảng viên hiện tại")
@@ -44,15 +37,6 @@ public static class InstructorAnalyticsApis
 
         return group;
     }
-
-    private static async Task<IResult> GetAllInstructorRevenueAsync(
-        [AsParameters] DateRangeAnalyticRequest request,
-        [FromServices] IInstructorRevenueService service)
-    {
-        var result = await service.GetAllInstructorRevenueAsync(request);
-        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
-    }
-
     private static async Task<IResult> GetMyRevenueAsync(
         [FromServices] IInstructorRevenueService service,
         [FromServices] ICurrentUserService currentUserService)

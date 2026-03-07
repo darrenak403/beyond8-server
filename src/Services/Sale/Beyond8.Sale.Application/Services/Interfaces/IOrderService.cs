@@ -34,4 +34,5 @@ public interface IOrderService
 
     // ── Internal / Analytics ──
     Task<ApiResponse<List<DailyRevenueSummary>>> GetRevenueByDateRangeAsync(DateTime from, DateTime to);
+    Task<ApiResponse<List<DailyRevenueSummary>>> GetInstructorRevenueByDateRangeAsync(Guid instructorId, DateTime from, DateTime to);
 }

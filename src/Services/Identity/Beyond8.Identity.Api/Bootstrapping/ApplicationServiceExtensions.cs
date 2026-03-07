@@ -79,6 +79,7 @@ namespace Beyond8.Identity.Api.Bootstrapping
             app.MapUserApi();
             app.MapInstructorApi();
             app.MapSubscriptionApi();
+            app.MapInternalIdentityApi();
 
             return app;
         }
