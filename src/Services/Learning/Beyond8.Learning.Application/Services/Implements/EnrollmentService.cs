@@ -313,4 +313,47 @@ public class EnrollmentService(
             return ApiResponse<PlatformEnrollmentStatsResponse>.FailureResponse("Đã xảy ra lỗi khi lấy thống kê đăng ký.");
         }
     }
+
+    public async Task<ApiResponse<InstructorEnrollmentStatsResponse>> GetInstructorEnrollmentStatsAsync(Guid instructorId)
+    {
+        try
+        {
+            var now = DateTime.UtcNow;
+            var thisMonthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var lastMonthStart = thisMonthStart.AddMonths(-1);
+
+            // Load all enrollments for this instructor once, count distinct in memory
+            var allEnrollments = await unitOfWork.EnrollmentRepository.GetAllAsync(
+                e => e.InstructorId == instructorId && e.DeletedAt == null);
+
+            // TotalStudents = distinct users who enrolled in ANY course by this instructor
+            var totalStudents = allEnrollments.Select(e => e.UserId).Distinct().Count();
+
+            // StudentsThisMonth = distinct users who enrolled this month
+            var studentsThisMonth = allEnrollments
+                .Where(e => e.EnrolledAt >= thisMonthStart)
+                .Select(e => e.UserId)
+                .Distinct()
+                .Count();
+
+            // StudentsLastMonth = distinct users who enrolled last month
+            var studentsLastMonth = allEnrollments
+                .Where(e => e.EnrolledAt >= lastMonthStart && e.EnrolledAt < thisMonthStart)
+                .Select(e => e.UserId)
+                .Distinct()
+                .Count();
+
+            return ApiResponse<InstructorEnrollmentStatsResponse>.SuccessResponse(new InstructorEnrollmentStatsResponse
+            {
+                TotalStudents = totalStudents,
+                StudentsThisMonth = studentsThisMonth,
+                StudentsLastMonth = studentsLastMonth
+            }, "OK");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting instructor enrollment stats. InstructorId={InstructorId}", instructorId);
+            return ApiResponse<InstructorEnrollmentStatsResponse>.FailureResponse("Đã xảy ra lỗi khi lấy thống kê học viên.");
+        }
+    }
 }

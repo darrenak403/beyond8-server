@@ -25,4 +25,19 @@ public class LearningClient(
             return ApiResponse<PlatformEnrollmentStatsResponse>.FailureResponse(ex.Message);
         }
     }
+
+    public async Task<ApiResponse<InstructorEnrollmentStatsResponse>> GetInstructorEnrollmentStatsAsync(Guid instructorId)
+    {
+        try
+        {
+            var data = await GetAsync<InstructorEnrollmentStatsResponse>(
+                $"/api/v1/internal/stats/instructors/{instructorId}/enrollments");
+            return ApiResponse<InstructorEnrollmentStatsResponse>.SuccessResponse(data, "OK");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get instructor enrollment stats. InstructorId={InstructorId}", instructorId);
+            return ApiResponse<InstructorEnrollmentStatsResponse>.FailureResponse(ex.Message);
+        }
+    }
 }

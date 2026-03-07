@@ -43,4 +43,21 @@ public class SaleClient(
             return ApiResponse<InstructorWalletStatsResponse>.FailureResponse(ex.Message);
         }
     }
+
+    public async Task<ApiResponse<List<DailyRevenueSummary>>> GetInstructorRevenueByDateRangeAsync(Guid instructorId, DateTime from, DateTime to)
+    {
+        try
+        {
+            var fromStr = from.Date.ToString("yyyy-MM-dd");
+            var toStr = to.Date.ToString("yyyy-MM-dd");
+            var data = await GetAsync<List<DailyRevenueSummary>>(
+                $"/api/v1/internal/orders/revenue-by-date/instructor/{instructorId}?from={fromStr}&to={toStr}");
+            return ApiResponse<List<DailyRevenueSummary>>.SuccessResponse(data, "OK");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get instructor revenue from Sale Service. InstructorId={InstructorId}", instructorId);
+            return ApiResponse<List<DailyRevenueSummary>>.FailureResponse(ex.Message);
+        }
+    }
 }

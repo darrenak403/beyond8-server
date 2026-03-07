@@ -10,4 +10,7 @@ public class InstructorCourseStatsResponse
     public int TotalStudents { get; set; }
     public decimal AverageRating { get; set; }
     public int TotalReviews { get; set; }
+    // Month-over-month for published courses (field names match Catalog's CourseStatsResponse)
+    public int CoursesThisMonth { get; set; }
+    public int CoursesLastMonth { get; set; }
 }

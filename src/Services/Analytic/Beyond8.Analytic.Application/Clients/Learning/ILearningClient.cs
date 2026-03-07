@@ -7,4 +7,5 @@ namespace Beyond8.Analytic.Application.Clients.Learning;
 public interface ILearningClient : IBaseClient
 {
     Task<ApiResponse<PlatformEnrollmentStatsResponse>> GetPlatformEnrollmentStatsAsync();
+    Task<ApiResponse<InstructorEnrollmentStatsResponse>> GetInstructorEnrollmentStatsAsync(Guid instructorId);
 }

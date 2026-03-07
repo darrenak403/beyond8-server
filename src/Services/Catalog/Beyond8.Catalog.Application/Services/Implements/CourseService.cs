@@ -423,6 +423,10 @@ public class CourseService(
                 .Where(c => c.InstructorId == instructorId && c.IsActive)
                 .ToListAsync();
 
+            var now = DateTime.UtcNow;
+            var thisMonthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var lastMonthStart = thisMonthStart.AddMonths(-1);
+
             var stats = new CourseStatsResponse
             {
                 TotalCourses = courses.Count,
@@ -434,7 +438,12 @@ public class CourseService(
                 TotalStudents = 0,
                 TotalRevenue = 0,
                 AverageRating = GetAverageRatingSafe(courses),
-                TotalReviews = courses.Sum(c => c.TotalReviews)
+                TotalReviews = courses.Sum(c => c.TotalReviews),
+                // Published courses by month: use ApprovedAt as the publish date
+                CoursesThisMonth = courses.Count(c => c.Status == CourseStatus.Published
+                    && c.ApprovedAt >= thisMonthStart),
+                CoursesLastMonth = courses.Count(c => c.Status == CourseStatus.Published
+                    && c.ApprovedAt >= lastMonthStart && c.ApprovedAt < thisMonthStart),
             };
 
             return ApiResponse<CourseStatsResponse>.SuccessResponse(stats, "Lấy thống kê khóa học thành công.");
@@ -524,6 +533,7 @@ public class CourseService(
 
             course.Status = CourseStatus.Approved;
             course.ApprovalNotes = request.Notes;
+            course.ApprovedAt = DateTime.UtcNow;
             await unitOfWork.CourseRepository.UpdateAsync(courseId, course);
             await unitOfWork.SaveChangesAsync();
 

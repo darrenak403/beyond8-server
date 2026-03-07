@@ -837,4 +837,49 @@ public class OrderService(
         logger.LogInformation("Revenue backfill query: {From} – {To}, {Days} days with data", fromUtc, to.Date, grouped.Count);
         return ApiResponse<List<DailyRevenueSummary>>.SuccessResponse(grouped, "Lấy dữ liệu doanh thu theo ngày thành công");
     }
+
+    public async Task<ApiResponse<List<DailyRevenueSummary>>> GetInstructorRevenueByDateRangeAsync(
+        Guid instructorId, DateTime from, DateTime to)
+    {
+        var fromUtc = from.Date.ToUniversalTime();
+        var toUtc = to.Date.AddDays(1).ToUniversalTime();
+
+        var items = await unitOfWork.OrderRepository.AsQueryable()
+            .AsNoTracking()
+            .Where(o => o.Status == OrderStatus.Paid && o.PaidAt >= fromUtc && o.PaidAt < toUtc)
+            .Include(o => o.OrderItems)
+            .SelectMany(o => o.OrderItems
+                .Where(oi => oi.InstructorId == instructorId)
+                .Select(oi => new
+                {
+                    PaidAt = o.PaidAt!.Value,
+                    oi.LineTotal,
+                    oi.PlatformFeeAmount,
+                    oi.InstructorEarnings,
+                }))
+            .ToListAsync();
+
+        var grouped = items
+            .GroupBy(x => x.PaidAt.Date)
+            .Select(g =>
+            {
+                var date = g.Key;
+                return new DailyRevenueSummary
+                {
+                    DateKey = date.ToString("yyyy-MM-dd"),
+                    Year = date.Year,
+                    Month = date.Month,
+                    Day = date.Day,
+                    Revenue = g.Sum(x => x.LineTotal),
+                    PlatformFee = g.Sum(x => x.PlatformFeeAmount),
+                    InstructorEarnings = g.Sum(x => x.InstructorEarnings),
+                    NewEnrollments = g.Count()
+                };
+            })
+            .OrderBy(s => s.DateKey)
+            .ToList();
+
+        logger.LogInformation("Instructor revenue query: {InstructorId} {From}–{To}", instructorId, from.Date, to.Date);
+        return ApiResponse<List<DailyRevenueSummary>>.SuccessResponse(grouped, "Lấy dữ liệu doanh thu thành công");
+    }
 }
