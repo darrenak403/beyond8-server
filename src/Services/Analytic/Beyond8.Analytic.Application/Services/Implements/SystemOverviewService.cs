@@ -24,16 +24,14 @@ public class SystemOverviewService(
 
         var dashboard = new SystemDashboardResponse
         {
-            TotalUsers = overview?.TotalUsers ?? 0,
+            TotalUsers = (overview?.TotalInstructors ?? 0) + (overview?.TotalStudents ?? 0),
             TotalInstructors = overview?.TotalInstructors ?? 0,
             TotalStudents = overview?.TotalStudents ?? 0,
             TotalCourses = overview?.TotalCourses ?? 0,
             TotalPublishedCourses = overview?.TotalPublishedCourses ?? 0,
             TotalEnrollments = overview?.TotalEnrollments ?? 0,
             TotalCompletedEnrollments = overview?.TotalCompletedEnrollments ?? 0,
-            // TotalRevenue = overview?.TotalRevenue ?? 0,
             TotalPlatformFee = overview?.TotalPlatformFee ?? 0,
-            // TotalInstructorEarnings = overview?.TotalInstructorEarnings ?? 0,
             AvgCourseRating = overview?.AvgCourseRating ?? 0,
             UpdatedAt = overview?.UpdatedAt
         };

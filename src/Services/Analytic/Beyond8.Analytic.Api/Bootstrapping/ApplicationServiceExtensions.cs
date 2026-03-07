@@ -1,6 +1,5 @@
 using Beyond8.Analytic.Api.Apis;
 using Beyond8.Analytic.Application.Clients.Sale;
-using Beyond8.Analytic.Application.Consumers.Assessment;
 using Beyond8.Analytic.Application.Consumers.Catalog;
 using Beyond8.Analytic.Application.Consumers.Identity;
 using Beyond8.Analytic.Application.Consumers.Integration;
@@ -44,23 +43,18 @@ public static class ApplicationServiceExtensions
             config.AddConsumer<CourseCreatedEventConsumer>();
             config.AddConsumer<CourseSubmittedForApprovalEventConsumer>();
             config.AddConsumer<CoursePublishedEventConsumer>();
-            config.AddConsumer<CourseUpdatedMetadataEventConsumer>();
             config.AddConsumer<CourseUnpublishedEventConsumer>();
             config.AddConsumer<CourseApprovedEventConsumer>();
             config.AddConsumer<CourseRejectedEventConsumer>();
             // Sale events
             config.AddConsumer<OrderItemCompletedEventConsumer>();
-            // Assessment events
-            config.AddConsumer<QuizAttemptCompletedEventConsumer>();
             // Integration (AI usage) events
             config.AddConsumer<AiUsageDailyAggregatedEventConsumer>();
         }, queueNamePrefix: "analytic");
 
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-        builder.Services.AddScoped<ICourseStatsService, CourseStatsService>();
         builder.Services.AddScoped<IInstructorRevenueService, InstructorRevenueService>();
         builder.Services.AddScoped<ISystemOverviewService, SystemOverviewService>();
-        builder.Services.AddScoped<ILessonPerformanceService, LessonPerformanceService>();
         builder.Services.AddScoped<IAiUsageAnalyticService, AiUsageAnalyticService>();
         builder.Services.AddScoped<IValidator<RevenueTrendRequest>, RevenueTrendRequestValidator>();
 
@@ -86,9 +80,7 @@ public static class ApplicationServiceExtensions
         }
         app.UseHttpsRedirection();
         app.MapSystemOverviewApi();
-        app.MapCourseStatsApi();
         app.MapInstructorAnalyticsApi();
-        app.MapLessonPerformanceApi();
         app.MapAiUsageAnalyticsApi();
 
         return app;
