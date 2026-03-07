@@ -1,3 +1,4 @@
+using Beyond8.Catalog.Application.Dtos.LessonDocuments;
 using Beyond8.Catalog.Application.Dtos.Lessons;
 using Beyond8.Catalog.Application.Services.Interfaces;
 using Beyond8.Common.Extensions;
@@ -34,8 +35,26 @@ public static class LessonApis
             .WithName("GetLessonsBySectionId")
             .WithDescription("Lấy danh sách bài học của chương")
             .RequireAuthorization(x => x.RequireRole(Role.Instructor))
-            .Produces<ApiResponse<List<LessonSimpleResponse>>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<List<LessonSimpleResponse>>>(StatusCodes.Status400BadRequest)
+            .Produces<ApiResponse<List<LessonResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<List<LessonResponse>>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
+        // Is lesson preview by quiz id (dùng bởi Assessment: quiz preview thì học sinh làm không cần enroll)
+        group.MapGet("/preview-by-quiz/{quizId:guid}", GetIsLessonPreviewByQuizIdAsync)
+            .WithName("GetIsLessonPreviewByQuizId")
+            .WithDescription("Kiểm tra lesson gắn quiz có IsPreview không")
+            .RequireAuthorization()
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+
+        // Get video by lesson id
+        group.MapGet("/{lessonId:guid}/video", GetVideoByLessonIdAsync)
+            .WithName("GetVideoByLessonId")
+            .WithDescription("Lấy thông tin video theo ID bài học")
+            .RequireAuthorization()
+            .Produces<ApiResponse<LessonVideoResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<LessonVideoResponse>>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized);
 
         // Get lesson by id
@@ -201,6 +220,22 @@ public static class LessonApis
     {
         var currentUserId = currentUserService.UserId;
         var result = await lessonService.GetLessonByIdAsync(id, currentUserId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> GetIsLessonPreviewByQuizIdAsync(
+        [FromRoute] Guid quizId,
+        [FromServices] ILessonService lessonService)
+    {
+        var result = await lessonService.IsLessonPreviewByQuizIdAsync(quizId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> GetVideoByLessonIdAsync(
+        Guid lessonId,
+        [FromServices] ILessonService lessonService)
+    {
+        var result = await lessonService.GetVideoByLessonIdAsync(lessonId);
         return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
     }
 

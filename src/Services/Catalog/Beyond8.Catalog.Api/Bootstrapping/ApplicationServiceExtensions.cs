@@ -1,6 +1,11 @@
 using Beyond8.Catalog.Api.Apis;
 using Beyond8.Catalog.Application.Clients.Identity;
+using Beyond8.Catalog.Application.Clients.Learning;
+using Beyond8.Catalog.Application.Clients.Sale;
+using Beyond8.Catalog.Application.Consumers.Assessment;
 using Beyond8.Catalog.Application.Consumers.Identity;
+using Beyond8.Catalog.Application.Consumers.Learning;
+using Beyond8.Catalog.Application.Consumers.Cache;
 using Beyond8.Catalog.Application.Dtos.Categories;
 using Beyond8.Catalog.Application.Services.Implements;
 using Beyond8.Catalog.Application.Services.Interfaces;
@@ -13,6 +18,7 @@ using FluentValidation;
 using Polly;
 using Polly.Extensions.Http;
 using Scalar.AspNetCore;
+using Beyond8.Catalog.Application.Consumers.Sale;
 
 namespace Beyond8.Catalog.Api.Bootstrapping
 {
@@ -30,7 +36,13 @@ namespace Beyond8.Catalog.Api.Bootstrapping
             {
                 config.AddConsumer<InstructorHiddenEventConsumer>();
                 config.AddConsumer<InstructorApprovalEventConsumer>();
-            });
+                config.AddConsumer<CourseEnrollmentCountChangedEventConsumer>();
+                config.AddConsumer<OrderCompletedEventConsumer>();
+                config.AddConsumer<CourseRatingUpdatedEventConsumer>();
+                config.AddConsumer<CacheInvalidateEventConsumer>();
+                config.AddConsumer<AssignmentDeletedEventConsumer>();
+                config.AddConsumer<UserUpdatedEventConsumer>();
+            }, queueNamePrefix: "catalog");
 
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
@@ -45,10 +57,10 @@ namespace Beyond8.Catalog.Api.Bootstrapping
 
             builder.AddClientServices();
 
-            builder.Services.ConfigureHttpJsonOptions(options =>
-            {
-                options.SerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
-            });
+            // builder.Services.ConfigureHttpJsonOptions(options =>
+            // {
+            //     options.SerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+            // });
 
             return builder;
         }
@@ -63,6 +75,26 @@ namespace Beyond8.Catalog.Api.Bootstrapping
             builder.Services.AddHttpClient<IIdentityClient, IdentityClient>(client =>
             {
                 client.BaseAddress = new Uri(identityBaseUrl);
+                client.Timeout = TimeSpan.FromSeconds(30);
+            })
+            .AddPolicyHandler(GetResiliencePolicy());
+
+            var learningBaseUrl = builder.Configuration["Clients:Learning:BaseUrl"]
+                                 ?? throw new ArgumentNullException("Learning URL missing");
+
+            builder.Services.AddHttpClient<ILearningClient, LearningClient>(client =>
+            {
+                client.BaseAddress = new Uri(learningBaseUrl);
+                client.Timeout = TimeSpan.FromSeconds(30);
+            })
+            .AddPolicyHandler(GetResiliencePolicy());
+
+            var saleBaseUrl = builder.Configuration["Clients:Sale:BaseUrl"]
+                             ?? throw new ArgumentNullException("Sale URL missing");
+
+            builder.Services.AddHttpClient<ISaleClient, SaleClient>(client =>
+            {
+                client.BaseAddress = new Uri(saleBaseUrl);
                 client.Timeout = TimeSpan.FromSeconds(30);
             })
             .AddPolicyHandler(GetResiliencePolicy());
@@ -110,6 +142,7 @@ namespace Beyond8.Catalog.Api.Bootstrapping
             app.MapLessonApi();
             app.MapCourseDocumentApi();
             app.MapLessonDocumentApi();
+            app.MapInternalCatalogApi();
 
             return app;
         }

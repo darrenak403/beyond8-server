@@ -1,3 +1,4 @@
+using Beyond8.Common.Events.Identity;
 using Beyond8.Common.Security;
 using Beyond8.Common.Utilities;
 using Beyond8.Identity.Application.Dtos.Users;
@@ -7,6 +8,7 @@ using Beyond8.Identity.Application.Services.Interfaces;
 using Beyond8.Identity.Domain.Entities;
 using Beyond8.Identity.Domain.Enums;
 using Beyond8.Identity.Domain.Repositories.Interfaces;
+using MassTransit;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -17,7 +19,8 @@ namespace Beyond8.Identity.Application.Services.Implements
         ILogger<UserService> logger,
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUserService,
-        PasswordHasher<User> passwordHasher) : IUserService
+        PasswordHasher<User> passwordHasher,
+        IPublishEndpoint publishEndpoint) : IUserService
     {
         public async Task<ApiResponse<UserResponse>> GetUserByIdAsync(Guid id)
         {
@@ -143,6 +146,9 @@ namespace Beyond8.Identity.Application.Services.Implements
 
                 await unitOfWork.UserRepository.UpdateAsync(user!.Id, user!);
                 await unitOfWork.SaveChangesAsync();
+
+                logger.LogInformation("User updated successfully with ID: {UserId}", user.Id);
+                await publishEndpoint.Publish(new UserUpdatedEvent(user.Id, user.FullName, user.Email));
 
                 var updateResponse = user.ToUserResponse();
                 var subscription = await unitOfWork.UserSubscriptionRepository.GetActiveByUserIdAsync(user.Id);
@@ -365,6 +371,32 @@ namespace Beyond8.Identity.Application.Services.Implements
                         logger.LogWarning("Role with code {RoleCode} not found when updating user roles", roleCode);
                     }
                 }
+            }
+        }
+
+        public async Task<ApiResponse<PlatformUserStatsResponse>> GetPlatformUserStatsAsync()
+        {
+            try
+            {
+                var totalUsers = (int)await unitOfWork.UserRepository.CountAsync(u => u.DeletedAt == null);
+                var totalInstructors = (int)await unitOfWork.UserRepository.CountAsync(u =>
+                    u.DeletedAt == null &&
+                    u.UserRoles.Any(ur => ur.Role.Code == Common.Utilities.Role.Instructor && ur.RevokedAt == null));
+                var totalStudents = (int)await unitOfWork.UserRepository.CountAsync(u =>
+                    u.DeletedAt == null &&
+                    u.UserRoles.Any(ur => ur.Role.Code == Common.Utilities.Role.Student && ur.RevokedAt == null));
+
+                return ApiResponse<PlatformUserStatsResponse>.SuccessResponse(new PlatformUserStatsResponse
+                {
+                    TotalUsers = totalUsers,
+                    TotalInstructors = totalInstructors,
+                    TotalStudents = totalStudents
+                }, "OK");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error getting platform user stats");
+                return ApiResponse<PlatformUserStatsResponse>.FailureResponse("Đã xảy ra lỗi khi lấy thống kê người dùng.");
             }
         }
     }

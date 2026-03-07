@@ -15,6 +15,8 @@ public class CreateAssignmentRequest
     public int MaxTextLength { get; set; } = 1000;
     public GradingMode GradingMode { get; set; } = GradingMode.AiAssisted;
     public int TotalPoints { get; set; } = 100;
+    public int PassScorePercent { get; set; } = 50;
     public string? RubricUrl { get; set; }
-    public int? TimeLimitMinutes { get; set; } = 60;
+    public int? TimeLimitMinutes { get; set; }
+    public int MaxSubmissions { get; set; } = 1;
 }

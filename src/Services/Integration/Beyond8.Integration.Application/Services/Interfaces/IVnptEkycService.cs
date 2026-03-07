@@ -10,5 +10,7 @@ namespace Beyond8.Integration.Application.Services.Interfaces
         Task<LivenessResponse> CheckLivenessAsync(LivenessRequest request);
         Task<ApiResponse<LivenessResponse>> UploadAndCheckLivenessAsync(IFormFile file);
         Task<ApiResponse<ClassifyWithOcrResponse>> ClassifyAsync(ClassifyRequest request);
+        Task<CompareFaceResponse> CompareFaceAsync(CompareFaceRequest request);
+        Task<ApiResponse<CompareFaceResponse>> UploadFaceAndCompareAsync(IFormFile faceFile, string imgFrontHash);
     }
 }

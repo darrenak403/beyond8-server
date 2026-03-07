@@ -36,7 +36,26 @@ namespace Beyond8.Integration.Api.Apis
                 .Produces<ApiResponse<ClassifyWithOcrResponse>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<ClassifyWithOcrResponse>>(StatusCodes.Status400BadRequest);
 
+
+            group.MapPost("/compare-face", CompareFaceAsync)
+                .WithName("CompareFace")
+                .WithDescription("So sánh khuôn mặt trên giấy tờ với khuôn mặt chân dung. Upload ảnh chân dung và so sánh với ảnh giấy tờ đã upload trước đó")
+                .RequireAuthorization()
+                .DisableAntiforgery()
+                .Produces<ApiResponse<CompareFaceResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<CompareFaceResponse>>(StatusCodes.Status400BadRequest);
+
             return group;
+        }
+
+        private static async Task<IResult> CompareFaceAsync(
+            [FromForm] IFormFile faceFile,
+            [FromForm] string imgFrontHash,
+            [FromServices] IVnptEkycService vnptEkycService
+        )
+        {
+            var result = await vnptEkycService.UploadFaceAndCompareAsync(faceFile, imgFrontHash);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
 
         private static async Task<IResult> UploadAndCheckLivenessAsync(

@@ -3,10 +3,13 @@ using Amazon;
 using Amazon.S3;
 using Beyond8.Common.Extensions;
 using Beyond8.Common.Utilities;
+using Hangfire;
 using Beyond8.Integration.Api.Apis;
 using Beyond8.Integration.Application.Clients;
+using Beyond8.Integration.Application.Consumers.Assessment;
 using Beyond8.Integration.Application.Consumers.Catalog;
 using Beyond8.Integration.Application.Consumers.Identity;
+using Beyond8.Integration.Application.Consumers.Learning;
 using Beyond8.Integration.Application.Dtos.MediaFiles;
 using Beyond8.Integration.Application.Services.Implements;
 using Beyond8.Integration.Application.Services.Interfaces;
@@ -37,6 +40,8 @@ namespace Beyond8.Integration.Api.Bootstrapping
             builder.AddCommonExtensions();
 
             builder.AddPostgresDatabase<IntegrationDbContext>(Const.IntegrationServiceDatabase);
+
+            builder.AddHangfire(Const.HangfireIntegrationDatabase);
 
             builder.AddServiceRedis(nameof(Integration), connectionName: Const.Redis);
 
@@ -121,16 +126,18 @@ namespace Beyond8.Integration.Api.Bootstrapping
             // Configure MassTransit with RabbitMQ and register consumers
             builder.AddMassTransitWithRabbitMq(config =>
             {
-                // Register consumers from Identity events
                 config.AddConsumer<OtpEmailConsumer>();
                 config.AddConsumer<InstructorProfileSubmittedConsumer>();
                 config.AddConsumer<InstructorApprovalConsumer>();
                 config.AddConsumer<InstructorUpdateRequestEmailConsumer>();
-
-                // Register consumers from Catalog events
                 config.AddConsumer<CourseRejectedEventConsumer>();
                 config.AddConsumer<CourseApprovedEventConsumer>();
-            });
+                config.AddConsumer<TranscodingVideoSuccessEventConsumer>();
+                config.AddConsumer<AssignmentSubmittedConsumer>();
+                config.AddConsumer<AssignmentGradedEventConsumer>();
+                config.AddConsumer<AiAssignmentGradedEventConsumer>();
+                config.AddConsumer<CourseCompletedEventConsumer>();
+            }, queueNamePrefix: "integration");
 
             // Configure Qdrant - Use Aspire Qdrant Client
             builder.AddQdrantClient(Const.Qdrant);
@@ -210,6 +217,9 @@ namespace Beyond8.Integration.Api.Bootstrapping
         {
             app.UseCommonService();
 
+            app.UseHangfireDashboard("/hangfire", allowAnonymousInDevelopment: true);
+            RegisterHangfireRecurringJobs(app);
+
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
@@ -229,6 +239,14 @@ namespace Beyond8.Integration.Api.Bootstrapping
             app.MapNotificationApi();
 
             return app;
+        }
+
+        private static void RegisterHangfireRecurringJobs(WebApplication app)
+        {
+            RecurringJob.AddOrUpdate<IAiUsageService>(
+                "integration:ai-usage.daily-aggregate",
+                x => x.AggregateAndPublishDailyUsageAsync(null),
+                Cron.MinuteInterval(1));
         }
     }
 }

@@ -5,7 +5,7 @@ using Beyond8.Integration.Application.Clients;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Profile;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Embedding;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Quiz;
-using Beyond8.Integration.Application.Helpers.AiService;
+using Beyond8.Integration.Application.Helpers;
 using Beyond8.Integration.Application.Services.Interfaces;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
@@ -34,7 +34,7 @@ namespace Beyond8.Integration.Api.Apis
                 .Produces<ApiResponse<AiProfileReviewResponse>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<AiProfileReviewResponse>>(StatusCodes.Status400BadRequest);
 
-            group.MapPost("/lesson/quiz/generate", GenerateQuiz)
+            group.MapPost("/quiz/generate", GenerateQuiz)
                 .WithName("GenerateQuiz")
                 .WithDescription("Sinh quiz từ ngữ cảnh khóa học. Chia 3 cấp độ Easy/Medium/Hard, số lượng theo request.")
                 .RequireAuthorization()
@@ -51,13 +51,14 @@ namespace Beyond8.Integration.Api.Apis
                 .Produces<ApiResponse<List<GenQuizResponse>>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
-            // group.MapPost("/quiz/explain", ExplainQuiz)
-            //     .WithName("ExplainQuiz")
-            //     .WithDescription("Giải thích quiz từ câu hỏi và đáp án cho sinh viên.")
-            //     .RequireAuthorization()
-            //     .Produces<ApiResponse<ExplainQuizResponse>>(StatusCodes.Status200OK)
-            //     .Produces<ApiResponse<ExplainQuizResponse>>(StatusCodes.Status400BadRequest)
-            //     .Produces(StatusCodes.Status401Unauthorized);
+
+            group.MapPost("/quiz/question/explain", ExplainQuizQuestion)
+                .WithName("ExplainQuizQuestion")
+                .WithDescription("Giải thích câu hỏi quiz từ nội dung câu hỏi.")
+                .RequireAuthorization()
+                .Produces<ApiResponse<ExplainQuizQuestionResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<ExplainQuizQuestionResponse>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
 
             group.MapGet("/health", HealthCheck)
                 .WithName("HealthCheck")
@@ -69,8 +70,7 @@ namespace Beyond8.Integration.Api.Apis
 
             group.MapPost("/embed", EmbedCourseDocuments)
                 .WithName("EmbedCourseDocuments")
-                .WithDescription("Upload PDF, chunk và embed vào Qdrant (Instructor only)")
-                .DisableAntiforgery()
+                .WithDescription("Gửi CloudFront URL của PDF, backend giải mã key, tải từ S3 và embed vào Qdrant (Instructor only)")
                 .RequireAuthorization(r => r.RequireRole(Role.Instructor))
                 .Produces<ApiResponse<EmbedCourseDocumentsResult>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<EmbedCourseDocumentsResult>>(StatusCodes.Status400BadRequest)
@@ -84,6 +84,24 @@ namespace Beyond8.Integration.Api.Apis
                 .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest);
 
             return group;
+        }
+
+        private static async Task<IResult> ExplainQuizQuestion(
+            [FromBody] ExplainQuizQuestionRequest request,
+            [FromServices] IAiService aiService,
+            [FromServices] ICurrentUserService currentUserService,
+            [FromServices] IIdentityClient identityClient,
+            [FromServices] IValidator<ExplainQuizQuestionRequest> validator)
+        {
+            var check = await SubscriptionHelper.CheckSubscriptionStatusAsync(identityClient, currentUserService.UserId);
+            if (!check.IsAllowed)
+                return Results.BadRequest(ApiResponse<ExplainQuizQuestionResponse>.FailureResponse(check.Message, check.Metadata));
+
+            if (!request.ValidateRequest(validator, out var validationResult))
+                return validationResult!;
+
+            var result = await aiService.ExplainQuizQuestionAsync(request, currentUserService.UserId);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
 
         private static async Task<IResult> FormatQuizQuestionsFromPdf(
@@ -144,9 +162,9 @@ namespace Beyond8.Integration.Api.Apis
         }
 
         private static async Task<IResult> EmbedCourseDocuments(
-            [FromForm] EmbedCourseDocumentsRequest request,
-            [FromForm] IFormFile file,
+            [FromBody] EmbedCourseDocumentsRequest request,
             [FromServices] IEmbeddingService embeddingService,
+            [FromServices] IStorageService storageService,
             [FromServices] IValidator<EmbedCourseDocumentsRequest> validator,
             [FromServices] ICurrentUserService currentUserService,
             [FromServices] IIdentityClient identityClient)
@@ -158,14 +176,28 @@ namespace Beyond8.Integration.Api.Apis
             if (!request.ValidateRequest(validator, out var validationResult))
                 return validationResult!;
 
-            if (file == null || file.Length == 0)
-                return Results.BadRequest(ApiResponse<EmbedCourseDocumentsResult>.FailureResponse("File không được để trống."));
+            var s3Key = storageService.ExtractKeyFromUrl(request.CloudFrontUrl);
+            if (string.IsNullOrWhiteSpace(s3Key))
+                return Results.BadRequest(ApiResponse<EmbedCourseDocumentsResult>.FailureResponse("URL CloudFront không hợp lệ."));
 
-            if (file.ContentType != "application/pdf")
+            var alreadyEmbedded = await embeddingService.S3KeyExistsAsync(request.CourseId, s3Key);
+            if (alreadyEmbedded)
+            {
+                return Results.Ok(ApiResponse<EmbedCourseDocumentsResult>.SuccessResponse(
+                    new EmbedCourseDocumentsResult { TotalChunks = 0, AlreadyEmbedded = true },
+                    "Tài liệu này đã được embed trước đó. Bỏ qua."));
+            }
+
+            var (data, contentType) = await storageService.GetObjectAsync(s3Key);
+            if (data == null || data.Length == 0)
+                return Results.BadRequest(ApiResponse<EmbedCourseDocumentsResult>.FailureResponse("File không tồn tại trên S3."));
+
+            var isPdf = contentType != null && contentType.Trim().StartsWith("application/pdf", StringComparison.OrdinalIgnoreCase);
+            if (!isPdf)
                 return Results.BadRequest(ApiResponse<EmbedCourseDocumentsResult>.FailureResponse("Chỉ chấp nhận file PDF."));
 
-            await using var stream = file.OpenReadStream();
-            var result = await embeddingService.EmbedCourseDocumentsAsync(stream, request);
+            await using var stream = new MemoryStream(data);
+            var result = await embeddingService.EmbedCourseDocumentsAsync(stream, request, s3Key);
 
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }

@@ -6,10 +6,17 @@ namespace Beyond8.Common.Utilities
         public const string RabbitMQ = "rabbitmq";
         public const string Qdrant = "qdrant";
 
+
+        public const string HangfireIdentityDatabase = "hangfire-identity-db";
+        public const string HangfireSaleDatabase = "hangfire-sale-db";
+        public const string HangfireIntegrationDatabase = "hangfire-integration-db";
         public const string IdentityServiceDatabase = "identity-db";
         public const string IntegrationServiceDatabase = "integration-db";
         public const string CatalogServiceDatabase = "catalog-db";
         public const string AssessmentServiceDatabase = "assessment-db";
+        public const string LearningServiceDatabase = "learning-db";
+        public const string SaleServiceDatabase = "sale-db";
+        public const string AnalyticServiceDatabase = "analytic-db";
     }
 
     public static class Role

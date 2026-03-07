@@ -4,10 +4,6 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Beyond8.Catalog.Infrastructure.Migrations
 {
-    /// <summary>
-    /// Replaces SearchVector trigger with a function called from application code (CatalogDbContext.SaveChangesAsync).
-    /// Same SearchVector logic; no trigger on Courses table.
-    /// </summary>
     public partial class ReplaceSearchVectorTriggerWithCode : Migration
     {
         /// <inheritdoc />

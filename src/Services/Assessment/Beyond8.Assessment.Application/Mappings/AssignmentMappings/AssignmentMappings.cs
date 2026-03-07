@@ -8,8 +8,14 @@ public static class AssignmentMappings
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
-    public static AssignmentResponse ToResponse(this Assignment entity)
+    public static AssignmentResponse ToResponse(this Assignment entity, DateTime? asOfUtc = null)
     {
+        var now = asOfUtc ?? DateTime.UtcNow;
+        var dueAt = entity.TimeLimitMinutes.HasValue && entity.TimeLimitMinutes.Value > 0
+            ? entity.CreatedAt.AddMinutes(entity.TimeLimitMinutes.Value)
+            : (DateTime?)null;
+        var isExpired = dueAt.HasValue && now > dueAt.Value;
+
         return new AssignmentResponse
         {
             Id = entity.Id,
@@ -24,12 +30,15 @@ public static class AssignmentMappings
             MaxTextLength = entity.MaxTextLength,
             GradingMode = entity.GradingMode,
             TotalPoints = entity.TotalPoints,
+            PassScorePercent = entity.PassScorePercent,
             RubricUrl = entity.RubricUrl,
             TimeLimitMinutes = entity.TimeLimitMinutes,
-            TotalSubmissions = entity.TotalSubmissions,
+            MaxSubmissions = entity.MaxSubmissions,
             AverageScore = entity.AverageScore,
             CreatedAt = entity.CreatedAt,
-            UpdatedAt = entity.UpdatedAt ?? entity.CreatedAt
+            UpdatedAt = entity.UpdatedAt ?? entity.CreatedAt,
+            DueAt = dueAt,
+            IsExpired = isExpired
         };
     }
 
@@ -42,7 +51,7 @@ public static class AssignmentMappings
             CourseId = entity.CourseId,
             SectionId = entity.SectionId,
             Title = entity.Title,
-            TotalSubmissions = entity.TotalSubmissions,
+            MaxSubmissions = entity.MaxSubmissions,
             AverageScore = entity.AverageScore,
             CreatedAt = entity.CreatedAt
         };
@@ -63,8 +72,10 @@ public static class AssignmentMappings
             MaxTextLength = request.MaxTextLength,
             GradingMode = request.GradingMode,
             TotalPoints = request.TotalPoints,
+            PassScorePercent = request.PassScorePercent,
             RubricUrl = request.RubricUrl,
-            TimeLimitMinutes = request.TimeLimitMinutes
+            TimeLimitMinutes = request.TimeLimitMinutes,
+            MaxSubmissions = request.MaxSubmissions
         };
     }
 
@@ -80,8 +91,10 @@ public static class AssignmentMappings
         assignment.MaxTextLength = request.MaxTextLength;
         assignment.GradingMode = request.GradingMode;
         assignment.TotalPoints = request.TotalPoints;
+        assignment.PassScorePercent = request.PassScorePercent;
         assignment.RubricUrl = request.RubricUrl;
         assignment.TimeLimitMinutes = request.TimeLimitMinutes;
+        assignment.MaxSubmissions = request.MaxSubmissions;
     }
 
     private static string? SerializeAttachmentList(List<AssignmentAttachmentItem>? list)

@@ -126,7 +126,7 @@ namespace Beyond8.Identity.Application.Services.Implements
 
                 logger.LogInformation("User registered successfully: {Email}", normalizedEmail);
                 return ApiResponse<UserSimpleResponse>.SuccessResponse(
-                    newUser.ToUserSimpleResponse(),
+                    newUser.ToUserSimpleResponse()!,
                     "Đăng ký người dùng thành công, vui lòng kiểm tra email để xác thực OTP");
             }
             catch (Exception ex)
@@ -248,7 +248,7 @@ namespace Beyond8.Identity.Application.Services.Implements
                 await unitOfWork.SaveChangesAsync();
 
                 logger.LogInformation("Password changed successfully for user with ID {UserId}", userId);
-                return ApiResponse<UserSimpleResponse>.SuccessResponse(u.ToUserSimpleResponse(), "Đổi mật khẩu thành công.");
+                return ApiResponse<UserSimpleResponse>.SuccessResponse(u.ToUserSimpleResponse()!, "Đổi mật khẩu thành công.");
             }
             catch (Exception ex)
             {
@@ -446,6 +446,12 @@ namespace Beyond8.Identity.Application.Services.Implements
 
                 await unitOfWork.SaveChangesAsync();
                 await cacheService.RemoveAsync(cacheKey);
+
+                await publishEndpoint.Publish(new UserRegisteredEvent(
+                    user.Id,
+                    user.Email,
+                    "ROLE_STUDENT",
+                    DateTime.UtcNow));
 
                 logger.LogInformation("User with email {Email} verified successfully", request.Email);
                 return ApiResponse<bool>.SuccessResponse(true, "Xác thực OTP thành công. Tài khoản của bạn đã được xác thực.");

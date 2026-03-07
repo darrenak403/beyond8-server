@@ -1,0 +1,129 @@
+using Beyond8.Analytic.Api.Apis;
+using Beyond8.Analytic.Application.Clients.Catalog;
+using Beyond8.Analytic.Application.Clients.Identity;
+using Beyond8.Analytic.Application.Clients.Learning;
+using Beyond8.Analytic.Application.Clients.Sale;
+using Beyond8.Analytic.Application.Consumers.Catalog;
+using Beyond8.Analytic.Application.Consumers.Identity;
+using Beyond8.Analytic.Application.Consumers.Integration;
+using Beyond8.Analytic.Application.Consumers.Learning;
+using Beyond8.Analytic.Application.Consumers.Sale;
+using Beyond8.Analytic.Application.Dtos.SystemOverview;
+using Beyond8.Analytic.Application.Services.Implements;
+using Beyond8.Analytic.Application.Services.Interfaces;
+using Beyond8.Analytic.Application.Validators.SystemOverview;
+using Beyond8.Analytic.Domain.Repositories.Interfaces;
+using Beyond8.Analytic.Infrastructure.Data;
+using Beyond8.Analytic.Infrastructure.Repositories.Implements;
+using Beyond8.Common.Extensions;
+using Beyond8.Common.Utilities;
+using FluentValidation;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+
+namespace Beyond8.Analytic.Api.Bootstrapping;
+
+public static class ApplicationServiceExtensions
+{
+    public static IHostApplicationBuilder AddApplicationServices(this IHostApplicationBuilder builder)
+    {
+        builder.Services.AddOpenApi();
+        builder.AddCommonExtensions();
+        builder.AddPostgresDatabase<AnalyticDbContext>(Const.AnalyticServiceDatabase, options =>
+            options.ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
+        builder.AddServiceRedis(nameof(Analytic), connectionName: Const.Redis);
+
+        builder.AddMassTransitWithRabbitMq(config =>
+        {
+            // Identity events
+            config.AddConsumer<UserRegisteredEventConsumer>();
+            config.AddConsumer<InstructorApprovalEventConsumer>();
+            config.AddConsumer<InstructorHiddenEventConsumer>();
+            // Learning events
+            config.AddConsumer<CourseEnrollmentCountChangedEventConsumer>();
+            config.AddConsumer<CourseCompletedEventConsumer>();
+            config.AddConsumer<CourseRatingUpdatedEventConsumer>();
+            // Catalog events
+            config.AddConsumer<CourseCreatedEventConsumer>();
+            config.AddConsumer<CourseSubmittedForApprovalEventConsumer>();
+            config.AddConsumer<CoursePublishedEventConsumer>();
+            config.AddConsumer<CourseUnpublishedEventConsumer>();
+            config.AddConsumer<CourseApprovedEventConsumer>();
+            config.AddConsumer<CourseRejectedEventConsumer>();
+            // Sale events
+            config.AddConsumer<OrderItemCompletedEventConsumer>();
+            // Integration (AI usage) events
+            config.AddConsumer<AiUsageDailyAggregatedEventConsumer>();
+        }, queueNamePrefix: "analytic");
+
+        builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+        builder.Services.AddScoped<IInstructorRevenueService, InstructorRevenueService>();
+        builder.Services.AddScoped<ISystemOverviewService, SystemOverviewService>();
+        builder.Services.AddScoped<IAiUsageAnalyticService, AiUsageAnalyticService>();
+        builder.Services.AddScoped<IValidator<RevenueTrendRequest>, RevenueTrendRequestValidator>();
+
+        builder.AddClientServices();
+
+        return builder;
+    }
+
+    public static IHostApplicationBuilder AddClientServices(this IHostApplicationBuilder builder)
+    {
+        builder.Services.AddHttpContextAccessor();
+
+        var saleBaseUrl = builder.Configuration["Clients:Sale:BaseUrl"]
+                         ?? throw new ArgumentNullException("Sale Service URL missing");
+
+        builder.Services.AddHttpClient<ISaleClient, SaleClient>(client =>
+        {
+            client.BaseAddress = new Uri(saleBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
+        var identityBaseUrl = builder.Configuration["Clients:Identity:BaseUrl"]
+                             ?? throw new ArgumentNullException("Identity Service URL missing");
+
+        builder.Services.AddHttpClient<IIdentityClient, IdentityClient>(client =>
+        {
+            client.BaseAddress = new Uri(identityBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
+        var catalogBaseUrl = builder.Configuration["Clients:Catalog:BaseUrl"]
+                            ?? throw new ArgumentNullException("Catalog Service URL missing");
+
+        builder.Services.AddHttpClient<ICatalogClient, CatalogClient>(client =>
+        {
+            client.BaseAddress = new Uri(catalogBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
+        var learningBaseUrl = builder.Configuration["Clients:Learning:BaseUrl"]
+                             ?? throw new ArgumentNullException("Learning Service URL missing");
+
+        builder.Services.AddHttpClient<ILearningClient, LearningClient>(client =>
+        {
+            client.BaseAddress = new Uri(learningBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
+        return builder;
+    }
+
+    public static WebApplication UseApplicationServices(this WebApplication app)
+    {
+        app.UseCommonService();
+
+        if (app.Environment.IsDevelopment())
+        {
+            app.MapOpenApi();
+        }
+
+        app.UseHttpsRedirection();
+
+        app.MapSystemOverviewApi();
+        app.MapInstructorAnalyticsApi();
+        app.MapAiUsageAnalyticsApi();
+
+        return app;
+    }
+}

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Beyond8.Assessment.Domain.Entities;
+using Beyond8.Assessment.Domain.Enums;
 using Beyond8.Assessment.Domain.Repositories.Interfaces;
 using Beyond8.Assessment.Infrastructure.Data;
 using Beyond8.Common.Data.Implements;
@@ -20,6 +21,8 @@ public class QuestionRepository(AssessmentDbContext context) : PostgresRepositor
         int pageNumber,
         int pageSize,
         string? tag = null,
+        string? keyword = null,
+        DifficultyLevel? difficulty = null,
         bool orderByDescending = true)
     {
         IQueryable<Question> query = _dbSet
@@ -29,6 +32,17 @@ public class QuestionRepository(AssessmentDbContext context) : PostgresRepositor
         {
             var tagJson = JsonSerializer.Serialize(new[] { tag.Trim() });
             query = query.Where(q => EF.Functions.JsonContains(q.Tags, tagJson));
+        }
+
+        if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            var lowerKeyword = keyword.Trim().ToLowerInvariant();
+            query = query.Where(q => q.Content.ToLower().Contains(lowerKeyword));
+        }
+
+        if (difficulty != null)
+        {
+            query = query.Where(q => q.Difficulty == difficulty);
         }
 
         var totalCount = await query.CountAsync();

@@ -14,6 +14,7 @@ namespace Beyond8.Integration.Application.Dtos.Notifications
         public DateTime? ReadAt { get; set; }
         public bool? IsRead { get; set; }
         public NotificationContext Context { get; set; }
+        public object? Metadata { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
     }

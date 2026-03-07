@@ -133,6 +133,8 @@ namespace Beyond8.Assessment.Application.Services.Implements
                     request.PageNumber,
                     request.PageSize,
                     string.IsNullOrWhiteSpace(request.Tag) ? null : request.Tag!.Trim(),
+                    string.IsNullOrWhiteSpace(request.Keyword) ? null : request.Keyword!.Trim(),
+                    request.Difficulty,
                     request.IsDescending ?? true);
 
                 var responses = items.Select(q => q.ToResponse()).ToList();

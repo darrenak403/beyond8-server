@@ -10,4 +10,5 @@ public interface IQuizService
     Task<ApiResponse<QuizResponse>> UpdateQuizAsync(Guid id, UpdateQuizRequest request, Guid userId);
     Task<ApiResponse<bool>> DeleteQuizAsync(Guid id, Guid userId);
     Task<ApiResponse<List<QuizSimpleResponse>>> GetAllQuizzesAsync(Guid userId, PaginationRequest paginationRequest);
+    Task<ApiResponse<QuizSimpleResponse>> GetQuizByIdForStudentAsync(Guid id);
 }

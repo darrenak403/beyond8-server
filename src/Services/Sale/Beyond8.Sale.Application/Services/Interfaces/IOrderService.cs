@@ -1,0 +1,38 @@
+using Beyond8.Common;
+using Beyond8.Common.Utilities;
+using Beyond8.Sale.Application.Dtos.Analytics;
+using Beyond8.Sale.Application.Dtos.Orders;
+using Beyond8.Sale.Application.Dtos.Payments;
+using Beyond8.Sale.Application.Dtos.Subscriptions;
+using Beyond8.Sale.Domain.Enums;
+
+namespace Beyond8.Sale.Application.Services.Interfaces;
+
+public interface IOrderService
+{
+    // ── Student (Authenticated) ──
+    Task<ApiResponse<OrderResponse>> BuyNowAsync(BuyNowRequest request, Guid userId);
+    Task<ApiResponse<PaymentUrlResponse>> BuySubscriptionAsync(BuySubscriptionRequest request, Guid userId, string returnUrl, string ipAddress);
+    Task<ApiResponse<PreviewBuyNowResponse>> PreviewBuyNowAsync(PreviewBuyNowRequest request, Guid userId);
+    Task<ApiResponse<PreviewOrderResponse>> PreviewOrderAsync(PreviewOrderRequest request, Guid userId);
+    Task<ApiResponse<OrderResponse>> CreateOrderAsync(CreateOrderRequest request, Guid userId);
+    Task<ApiResponse<OrderResponse>> CancelOrderAsync(Guid orderId, Guid userId);
+    Task<ApiResponse<List<Guid>>> GetPurchasedCourseIdsAsync(Guid userId);
+    Task<ApiResponse<bool>> IsCourseInPendingOrderAndPaymentAsync(Guid courseId, Guid userId);
+
+    // ── Owner / Admin ──
+    Task<ApiResponse<OrderResponse>> GetOrderByIdAsync(Guid orderId);
+    Task<ApiResponse<List<OrderResponse>>> GetOrdersByUserAsync(PaginationRequest pagination, Guid userId);
+
+    // ── Admin Only ──
+    Task<ApiResponse<OrderResponse>> UpdateOrderSettlementAsync(Guid orderId, UpdateOrderSettlementRequest request);
+    Task<ApiResponse<OrderResponse>> UpdateOrderStatusAsync(Guid orderId, UpdateOrderStatusRequest request);
+    Task<ApiResponse<List<OrderResponse>>> GetOrdersByStatusAsync(OrderStatus status, PaginationRequest pagination);
+
+    // ── Instructor ──
+    Task<ApiResponse<List<OrderResponse>>> GetOrdersByInstructorAsync(Guid instructorId, PaginationRequest pagination);
+
+    // ── Internal / Analytics ──
+    Task<ApiResponse<List<DailyRevenueSummary>>> GetRevenueByDateRangeAsync(DateTime from, DateTime to);
+    Task<ApiResponse<List<DailyRevenueSummary>>> GetInstructorRevenueByDateRangeAsync(Guid instructorId, DateTime from, DateTime to);
+}

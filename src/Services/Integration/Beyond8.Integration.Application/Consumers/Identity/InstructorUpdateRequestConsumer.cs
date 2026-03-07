@@ -17,44 +17,42 @@ namespace Beyond8.Integration.Application.Consumers.Identity
         public async Task Consume(ConsumeContext<InstructorUpdateRequestEvent> context)
         {
             var message = context.Message;
+            var status = NotificationStatus.Failed;
 
             try
             {
                 logger.LogInformation("Consuming instructor update request email event for {Email}", message.ToEmail);
-
-                var success = await emailService.SendInstructorUpdateRequestEmailAsync(
-                    message.ToEmail,
-                    message.InstructorName,
-                    message.UpdateNotes
-                );
-
-                if (success)
+                try
                 {
-                    logger.LogInformation("Successfully sent instructor update request email to {Email}", message.ToEmail);
+                    var success = await emailService.SendInstructorUpdateRequestEmailAsync(
+                        message.ToEmail,
+                        message.InstructorName,
+                        message.UpdateNotes
+                    );
 
-                    try
+                    if (success)
                     {
-                        await unitOfWork.NotificationRepository.AddAsync(message.InstructorUpdateRequestEventToNotification(NotificationStatus.Delivered));
-                        await unitOfWork.SaveChangesAsync();
+                        status = NotificationStatus.Delivered;
+                        logger.LogInformation("Successfully sent instructor update request email to {Email}", message.ToEmail);
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        logger.LogWarning(ex, "Failed to save notification for instructor update request email to {Email}, but email was sent successfully", message.ToEmail);
+                        logger.LogError("Failed to send instructor update request email to {Email}", message.ToEmail);
                     }
                 }
-                else
+                catch (Exception ex)
                 {
-                    logger.LogError("Failed to send instructor update request email to {Email}", message.ToEmail);
+                    logger.LogError(ex, "Error sending instructor update request email to {Email}", message.ToEmail);
+                }
 
-                    try
-                    {
-                        await unitOfWork.NotificationRepository.AddAsync(message.InstructorUpdateRequestEventToNotification(NotificationStatus.Failed));
-                        await unitOfWork.SaveChangesAsync();
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogWarning(ex, "Failed to save notification for instructor update request email to {Email}", message.ToEmail);
-                    }
+                try
+                {
+                    await unitOfWork.NotificationRepository.AddAsync(message.InstructorUpdateRequestEventToNotification(status));
+                    await unitOfWork.SaveChangesAsync();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Failed to save notification for instructor update request email to {Email}", message.ToEmail);
                 }
             }
             catch (Exception ex)

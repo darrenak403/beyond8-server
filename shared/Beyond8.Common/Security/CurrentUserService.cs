@@ -10,6 +10,8 @@ namespace Beyond8.Common.Security
         public Guid UserId => Guid.Parse(Claim(ClaimTypes.NameIdentifier) ?? Guid.Empty.ToString());
         public string? Email => Claim(ClaimTypes.Email);
 
+        public bool IsAuthenticated => _httpContextAccessor.HttpContext?.User.Identity?.IsAuthenticated ?? false;
+
         public string? Claim(string claimType)
         {
             return _httpContextAccessor.HttpContext?.User.Claims.FirstOrDefault(c => c.Type == claimType)?.Value;

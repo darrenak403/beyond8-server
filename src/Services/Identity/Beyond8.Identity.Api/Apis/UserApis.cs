@@ -34,7 +34,6 @@ namespace Beyond8.Identity.Api.Apis
             group.MapGet("/{id:guid}", GetUserByIdAsync)
                 .WithName("GetUserById")
                 .WithDescription("Lấy thông tin người dùng theo ID")
-                .RequireAuthorization()
                 .Produces<ApiResponse<UserResponse>>(StatusCodes.Status200OK)
                 .Produces<ApiResponse<UserResponse>>(StatusCodes.Status404NotFound)
                 .Produces<ApiResponse<UserResponse>>(StatusCodes.Status400BadRequest)

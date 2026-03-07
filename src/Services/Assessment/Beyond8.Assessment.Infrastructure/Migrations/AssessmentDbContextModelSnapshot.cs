@@ -62,11 +62,14 @@ namespace Beyond8.Assessment.Infrastructure.Migrations
                     b.Property<Guid>("InstructorId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("MaxSubmissions")
+                        .HasColumnType("integer");
+
                     b.Property<int>("MaxTextLength")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Rubric")
-                        .HasColumnType("jsonb");
+                    b.Property<int>("PassScorePercent")
+                        .HasColumnType("integer");
 
                     b.Property<string>("RubricUrl")
                         .HasColumnType("text");
@@ -86,9 +89,6 @@ namespace Beyond8.Assessment.Infrastructure.Migrations
                         .HasColumnType("character varying(200)");
 
                     b.Property<int>("TotalPoints")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TotalSubmissions")
                         .HasColumnType("integer");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -135,7 +135,7 @@ namespace Beyond8.Assessment.Infrastructure.Migrations
                     b.Property<Guid?>("DeletedBy")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("FileUrls")
+                    b.PrimitiveCollection<string>("FileUrls")
                         .HasColumnType("jsonb");
 
                     b.Property<decimal?>("FinalScore")
@@ -474,6 +474,133 @@ namespace Beyond8.Assessment.Infrastructure.Migrations
                     b.HasIndex("QuizId", "OrderIndex");
 
                     b.ToTable("QuizQuestions");
+                });
+
+            modelBuilder.Entity("Beyond8.Assessment.Domain.Entities.ReassignHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DeletedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("LessonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ReassignRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ResetAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ResetByInstructorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SectionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SourceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ResetAt");
+
+                    b.HasIndex("StudentId");
+
+                    b.HasIndex("Type", "SourceId");
+
+                    b.ToTable("ReassignHistories");
+                });
+
+            modelBuilder.Entity("Beyond8.Assessment.Domain.Entities.ReassignRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ProcessedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Reason")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("SourceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("StudentId");
+
+                    b.HasIndex("Type", "SourceId");
+
+                    b.HasIndex("Type", "SourceId", "StudentId");
+
+                    b.ToTable("ReassignRequests");
                 });
 
             modelBuilder.Entity("Beyond8.Assessment.Domain.Entities.AssignmentSubmission", b =>

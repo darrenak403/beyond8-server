@@ -5,6 +5,7 @@ namespace Beyond8.Integration.Domain.Enums
         Gemini = 0,
         OpenAI = 1,
         Claude = 2,
+        HuggingFace = 3,
         Custom = 99
     }
 }

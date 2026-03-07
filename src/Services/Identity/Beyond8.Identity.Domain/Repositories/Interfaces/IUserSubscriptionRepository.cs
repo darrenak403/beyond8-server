@@ -6,5 +6,7 @@ namespace Beyond8.Identity.Domain.Repositories.Interfaces
     public interface IUserSubscriptionRepository : IGenericRepository<UserSubscription>
     {
         Task<UserSubscription?> GetActiveByUserIdAsync(Guid userId);
+        Task<IReadOnlyCollection<UserSubscription>> GetActiveSubscriptionsWithPlanAsync();
+        Task<IReadOnlyCollection<UserSubscription>> GetActiveSubscriptionsWhereExpiredAsync();
     }
 }

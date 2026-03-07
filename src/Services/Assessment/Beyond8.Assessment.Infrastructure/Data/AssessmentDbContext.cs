@@ -12,6 +12,8 @@ public class AssessmentDbContext(DbContextOptions<AssessmentDbContext> options) 
     public DbSet<Assignment> Assignments { get; set; } = null!;
     public DbSet<QuizAttempt> QuizAttempts { get; set; } = null!;
     public DbSet<AssignmentSubmission> AssignmentSubmissions { get; set; } = null!;
+    public DbSet<ReassignRequest> ReassignRequests { get; set; } = null!;
+    public DbSet<ReassignHistory> ReassignHistories { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -69,6 +71,25 @@ public class AssessmentDbContext(DbContextOptions<AssessmentDbContext> options) 
             entity.HasIndex(e => e.AssignmentId);
             entity.HasIndex(e => new { e.AssignmentId, e.StudentId });
             entity.HasIndex(e => e.Status);
+        });
+
+        modelBuilder.Entity<ReassignRequest>(entity =>
+        {
+            entity.HasQueryFilter(e => e.DeletedAt == null);
+
+            entity.HasIndex(e => new { e.Type, e.SourceId });
+            entity.HasIndex(e => e.StudentId);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => new { e.Type, e.SourceId, e.StudentId });
+        });
+
+        modelBuilder.Entity<ReassignHistory>(entity =>
+        {
+            entity.HasQueryFilter(e => e.DeletedAt == null);
+
+            entity.HasIndex(e => new { e.Type, e.SourceId });
+            entity.HasIndex(e => e.StudentId);
+            entity.HasIndex(e => e.ResetAt);
         });
     }
 }

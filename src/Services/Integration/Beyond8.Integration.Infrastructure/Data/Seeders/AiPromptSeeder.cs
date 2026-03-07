@@ -8,23 +8,38 @@ namespace Beyond8.Integration.Infrastructure.Data.Seeders
   {
     public static async Task SeedAsync(IntegrationDbContext context)
     {
-      if (await context.AiPrompts.AnyAsync())
+      if (!await context.AiPrompts.AnyAsync())
       {
-        return; // Already seeded
+        var prompts = new List<AiPrompt>();
+        prompts.AddRange(GetCourseContentPrompts());
+        prompts.AddRange(GetAssessmentPrompts());
+        prompts.AddRange(GetFeedbackPrompts());
+        prompts.AddRange(GetContentAnalysisPrompts());
+        prompts.AddRange(GetTranslationPrompts());
+        prompts.AddRange(GetPersonalizationPrompts());
+        prompts.AddRange(GetModerationPrompts());
+
+        await context.AiPrompts.AddRangeAsync(prompts);
+        await context.SaveChangesAsync();
       }
 
-      var prompts = new List<AiPrompt>();
+      var allPrompts = new List<AiPrompt>();
+      allPrompts.AddRange(GetCourseContentPrompts());
+      allPrompts.AddRange(GetAssessmentPrompts());
+      allPrompts.AddRange(GetFeedbackPrompts());
+      allPrompts.AddRange(GetContentAnalysisPrompts());
+      allPrompts.AddRange(GetTranslationPrompts());
+      allPrompts.AddRange(GetPersonalizationPrompts());
+      allPrompts.AddRange(GetModerationPrompts());
 
-      // Add prompts from each category
-      prompts.AddRange(GetCourseContentPrompts());
-      prompts.AddRange(GetAssessmentPrompts());
-      prompts.AddRange(GetFeedbackPrompts());
-      prompts.AddRange(GetContentAnalysisPrompts());
-      prompts.AddRange(GetTranslationPrompts());
-      prompts.AddRange(GetPersonalizationPrompts());
-      prompts.AddRange(GetModerationPrompts());
+      foreach (var prompt in allPrompts)
+      {
+        if (!await context.AiPrompts.AnyAsync(p => p.Name == prompt.Name))
+        {
+          await context.AiPrompts.AddAsync(prompt);
+        }
+      }
 
-      await context.AiPrompts.AddRangeAsync(prompts);
       await context.SaveChangesAsync();
     }
 
@@ -91,6 +106,8 @@ OUTPUT SCHEMA (RAW JSON):
 }}"
         },
 
+        GetAssignmentGradingPrompt(),
+
         // PROMPT 2: FORMAT QUIZ
         new AiPrompt
         {
@@ -124,8 +141,111 @@ OUTPUT (RAW JSON ARRAY):
     ""points"": 1.0
   }}
 ]"
+        },
+
+        // PROMPT 3: EXPLAIN QUIZ QUESTION
+        new AiPrompt
+        {
+            Name = "Explain Quiz Question",
+            Description = "Giải thích đầy đủ và chi tiết từng đáp án (tối thiểu 100 ký tự/explanation): tại sao đúng/sai, ý nghĩa nội dung, liên hệ kiến thức. Trả về JSON với mảng answers.",
+            Category = PromptCategory.Assessment,
+            Tags = "Education, Quiz, Explanation, Feedback",
+            SystemPrompt = "Bạn là trợ lý giáo dục. Nhiệm vụ: Với câu hỏi trắc nghiệm và các lựa chọn được cung cấp, giải thích từng đáp án (answer) một cách đầy đủ và chi tiết: tại sao đúng hoặc sai, ý nghĩa nội dung, liên hệ với kiến thức liên quan. Mỗi trường \"explanation\" phải có tối thiểu 100 ký tự. Trả về đúng format JSON theo OUTPUT SCHEMA. Ngôn ngữ: Tiếng Việt. KHÔNG trả về markdown hay text ngoài JSON.",
+            Version = "1.1.0",
+            IsActive = true,
+            MaxTokens = 2048,
+            Temperature = 0.3m,
+            TopP = 0.9m,
+            Template = @"
+CÂU HỎI VÀ CÁC LỰA CHỌN:
+---
+{Content}
+---
+
+YÊU CẦU:
+1. Với mỗi lựa chọn (option) trong câu hỏi trên, tạo một phần tử trong mảng ""answers"".
+2. Mỗi phần tử gồm:
+   - ""answer"": nội dung đáp án (text của lựa chọn đó).
+   - ""isCorrect"": true nếu đáp án đúng, false nếu sai.
+   - ""explanation"": giải thích ĐẦY ĐỦ VÀ CHI TIẾT (tối thiểu 100 ký tự) tại sao đáp án đúng hoặc sai: nêu rõ lý do, ý nghĩa nội dung, có thể liên hệ kiến thức liên quan để người học hiểu sâu (Tiếng Việt).
+3. Thứ tự các phần tử trong ""answers"" phải trùng với thứ tự các lựa chọn trong đề bài.
+4. QUAN TRỌNG: Mỗi ""explanation"" phải có ít nhất 100 ký tự; viết rõ ràng, có chiều sâu, tránh câu quá ngắn.
+
+OUTPUT SCHEMA (chỉ trả về JSON, không markdown):
+{
+  ""answers"": [
+    {
+      ""answer"": ""Nội dung đáp án 1"",
+      ""isCorrect"": true,
+      ""explanation"": ""Giải thích đầy đủ và chi tiết (tối thiểu 100 ký tự) tại sao đáp án này đúng: nêu lý do, ý nghĩa, có thể bổ sung kiến thức liên quan.""
+    },
+    {
+      ""answer"": ""Nội dung đáp án 2"",
+      ""isCorrect"": false,
+      ""explanation"": ""Giải thích đầy đủ và chi tiết (tối thiểu 100 ký tự) tại sao đáp án này sai: chỉ rõ chỗ sai, đưa ra cách hiểu đúng hoặc gợi ý cải thiện.""
+    }
+  ]
+}"
         }
       ];
+    }
+
+    private static AiPrompt GetAssignmentGradingPrompt()
+    {
+      return new AiPrompt
+      {
+        Name = "Assignment Grading",
+        Description = "Chấm điểm bài tập dựa trên nội dung nộp, mô tả bài tập và rubric (nếu có). Trả về điểm số, nhận xét tổng quan, tiêu chí chi tiết và gợi ý cải thiện.",
+        Category = PromptCategory.Assessment,
+        Tags = "Education, Grading, Assignment, Rubric, Feedback",
+        SystemPrompt = "Bạn là trợ lý chấm bài chuyên nghiệp. Nhiệm vụ: Đọc bài nộp của học viên, đối chiếu với yêu cầu bài tập và rubric (nếu có), chấm điểm công bằng và đưa ra nhận xét mang tính xây dựng. Trả về đúng format JSON theo OUTPUT SCHEMA. Ngôn ngữ nhận xét: Tiếng Việt.",
+        Version = "1.0.0",
+        IsActive = true,
+        MaxTokens = 4096,
+        Temperature = 0.3m,
+        TopP = 0.9m,
+        Template = @"
+BÀI TẬP:
+- Tiêu đề: {AssignmentTitle}
+- Mô tả / Yêu cầu: {AssignmentDescription}
+- Thang điểm tối đa: {TotalPoints}
+
+RUBRIC / TIÊU CHÍ CHẤM (nếu có):
+{RubricContent}
+
+---
+NỘI DUNG BÀI NỘP CỦA HỌC VIÊN:
+---
+{SubmissionContent}
+---
+
+YÊU CẦU:
+1. Chấm điểm theo thang {TotalPoints}, có thể dùng số thập phân (ví dụ 7.5).
+2. Điểm số (score) phải trong khoảng 0 đến {TotalPoints}.
+3. Nhận xét tổng quan (summary/overallFeedback): ngắn gọn, mang tính xây dựng, bằng Tiếng Việt.
+4. criteriaResults: mảng các tiêu chí đã chấm (theo rubric hoặc tự đặt tên tiêu chí hợp lý), mỗi phần tử gồm: criteriaName, score, maxScore, level (Xuất sắc/Tốt/Khá/Trung bình/Yếu/Kém), feedback.
+5. strengths: mảng các điểm mạnh của bài (chuỗi).
+6. improvements hoặc areasForImprovement: mảng các điểm cần cải thiện (chuỗi).
+7. suggestions hoặc recommendations: mảng gợi ý cụ thể để học viên tiến bộ (chuỗi).
+
+OUTPUT SCHEMA (chỉ trả về JSON, không markdown):
+{
+  ""score"": <số từ 0 đến " + @"{TotalPoints}" + @">,
+  ""summary"": ""Nhận xét tổng quan ngắn gọn bằng Tiếng Việt"",
+  ""criteriaResults"": [
+    {
+      ""criteriaName"": ""Tên tiêu chí"",
+      ""score"": <số>,
+      ""maxScore"": <số>,
+      ""level"": ""Xuất sắc|Tốt|Khá|Trung bình|Yếu|Kém"",
+      ""feedback"": ""Nhận xét cho tiêu chí này""
+    }
+  ],
+  ""strengths"": [""Điểm mạnh 1"", ""Điểm mạnh 2""],
+  ""improvements"": [""Điểm cần cải thiện 1"", ""Điểm cần cải thiện 2""],
+  ""suggestions"": [""Gợi ý 1"", ""Gợi ý 2""]
+}"
+      };
     }
 
     private static List<AiPrompt> GetFeedbackPrompts()

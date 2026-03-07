@@ -8,6 +8,8 @@ namespace Beyond8.Assessment.Application.Mappings.QuestionMappings
 {
     public static class QuestionMappings
     {
+        private static readonly JsonSerializerOptions OptionJsonOptions = new() { PropertyNameCaseInsensitive = true };
+
         public static Question ToEntity(this QuestionRequest request, Guid instructorId, QuestionType type)
         {
             return new Question
@@ -31,7 +33,7 @@ namespace Beyond8.Assessment.Application.Mappings.QuestionMappings
                 Id = question.Id,
                 Content = question.Content,
                 Type = question.Type,
-                Options = JsonSerializer.Deserialize<List<QuestionOptionItem>>(question.Options) ?? [],
+                Options = JsonSerializer.Deserialize<List<QuestionOptionItem>>(question.Options, OptionJsonOptions) ?? [],
                 Explanation = question.Explanation,
                 Tags = JsonSerializer.Deserialize<List<string>>(question.Tags) ?? [],
                 Difficulty = question.Difficulty,

@@ -12,5 +12,6 @@ namespace Beyond8.Assessment.Application.Dtos.Quizzes
         public bool AllowReview { get; set; } = true;
         public bool ShowExplanation { get; set; } = true;
         public List<Guid> QuestionIds { get; set; } = [];
+        public DifficultyDistributionDto? DifficultyDistribution { get; set; }
     }
 }

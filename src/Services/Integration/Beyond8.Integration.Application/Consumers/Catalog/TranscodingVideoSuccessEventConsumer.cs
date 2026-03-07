@@ -35,7 +35,7 @@ public class TranscodingVideoSuccessEventConsumer(
 
             try
             {
-                await unitOfWork.NotificationRepository.AddAsync(message.TranscodingVideoSuccessEventToNotification(NotificationStatus.Delivered));
+                await unitOfWork.NotificationRepository.AddAsync(message.TranscodingVideoSuccessEventToNotification(NotificationStatus.Delivered, data));
                 await unitOfWork.SaveChangesAsync();
                 logger.LogInformation("Successfully saved notification for transcoding video success event for lesson {LessonId}", message.LessonId);
             }

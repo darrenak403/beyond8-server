@@ -2,6 +2,7 @@ using Beyond8.Catalog.Application.Dtos.Sections;
 using Beyond8.Catalog.Application.Mappings.SectionMappings;
 using Beyond8.Catalog.Application.Services.Interfaces;
 using Beyond8.Catalog.Domain.Entities;
+using Beyond8.Catalog.Domain.Enums;
 using Beyond8.Catalog.Domain.Repositories.Interfaces;
 using Beyond8.Common.Utilities;
 using Microsoft.EntityFrameworkCore;
@@ -58,7 +59,7 @@ public class SectionService(
     {
         try
         {
-            var validation = await CheckCourseOwnershipAsync(request.CourseId, currentUserId);
+            var validation = await CheckCourseOwnershipAsync(request.CourseId, currentUserId, isPublished: true);
             if (!validation.IsValid)
                 return ApiResponse<SectionResponse>.FailureResponse(validation.ErrorMessage!);
 
@@ -93,12 +94,12 @@ public class SectionService(
 
             section!.UpdateFrom(request);
 
-            await unitOfWork.SectionRepository.UpdateAsync(sectionId, section);
+            await unitOfWork.SectionRepository.UpdateAsync(sectionId, section!);
             await unitOfWork.SaveChangesAsync();
 
             logger.LogInformation("Section updated: {SectionId} by user {UserId}", sectionId, currentUserId);
 
-            return ApiResponse<SectionResponse>.SuccessResponse(section.ToResponse(), "Cập nhật chương thành công.");
+            return ApiResponse<SectionResponse>.SuccessResponse(section!.ToResponse(), "Cập nhật chương thành công.");
         }
         catch (Exception ex)
         {
@@ -115,12 +116,27 @@ public class SectionService(
             if (!isValid)
                 return ApiResponse<bool>.FailureResponse(errorMessage!);
 
-            // Cấm xóa chương còn bài học; phải xóa bài học trước.
-            var lessonCount = await unitOfWork.LessonRepository.CountAsync(l => l.SectionId == sectionId);
+            // Kiểm tra xem section có lesson không
+            var lessonCount = await unitOfWork.LessonRepository.CountAsync(l => l.SectionId == sectionId && l.DeletedAt == null);
             if (lessonCount > 0)
             {
                 logger.LogWarning("Cannot delete section {SectionId} with existing lessons", sectionId);
                 return ApiResponse<bool>.FailureResponse("Không thể xóa chương có chứa bài học. Vui lòng xóa các bài học trước.");
+            }
+
+            // Cập nhật OrderIndex của các section còn lại
+            var remainingSections = await unitOfWork.SectionRepository.AsQueryable()
+                .Where(s => s.CourseId == section!.CourseId && s.Id != sectionId && s.DeletedAt == null)
+                .OrderBy(s => s.OrderIndex)
+                .ToListAsync();
+
+            for (int i = 0; i < remainingSections.Count; i++)
+            {
+                if (remainingSections[i].OrderIndex != i + 1)
+                {
+                    remainingSections[i].OrderIndex = i + 1;
+                    await unitOfWork.SectionRepository.UpdateAsync(remainingSections[i].Id, remainingSections[i]);
+                }
             }
 
             section!.DeletedAt = DateTime.UtcNow;
@@ -139,7 +155,7 @@ public class SectionService(
         }
     }
 
-    public async Task<ApiResponse<bool>> ChangeAssignmentForSectionAsync(Guid sectionId, Guid? assignmentId, Guid currentUserId)
+    public async Task<ApiResponse<bool>> UpdateAssignmentForSectionAsync(Guid sectionId, Guid? assignmentId, Guid currentUserId)
     {
         try
         {
@@ -162,7 +178,70 @@ public class SectionService(
         }
     }
 
-    private async Task<(bool IsValid, string? ErrorMessage)> CheckCourseOwnershipAsync(Guid courseId, Guid currentUserId)
+    public async Task<ApiResponse<bool>> SwitchSectionActivationAsync(Guid sectionId, bool isPublished, Guid currentUserId)
+    {
+        try
+        {
+            var (isValid, section, errorMessage) = await CheckSectionOwnershipAsync(sectionId, currentUserId);
+            if (!isValid)
+                return ApiResponse<bool>.FailureResponse(errorMessage!);
+
+            section!.IsPublished = isPublished;
+            await unitOfWork.SectionRepository.UpdateAsync(sectionId, section);
+
+            // Cập nhật trạng thái tất cả lesson trong section
+            var lessons = await unitOfWork.LessonRepository.AsQueryable()
+                .Where(l => l.SectionId == sectionId && l.DeletedAt == null)
+                .ToListAsync();
+
+            foreach (var lesson in lessons)
+            {
+                lesson.IsPublished = isPublished;
+                await unitOfWork.LessonRepository.UpdateAsync(lesson.Id, lesson);
+            }
+
+            await unitOfWork.SaveChangesAsync();
+
+            var action = isPublished ? "hiện" : "ẩn";
+            logger.LogInformation("Section activation switched: {SectionId} to {IsPublished} by user {UserId}", sectionId, isPublished, currentUserId);
+
+            return ApiResponse<bool>.SuccessResponse(true, $"{action} chương thành công.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error switching section activation: {SectionId}", sectionId);
+            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi chuyển đổi trạng thái kích hoạt chương.");
+        }
+    }
+
+    public async Task<ApiResponse<bool>> UnlinkSectionsByAssignmentIdAsync(Guid assignmentId)
+    {
+        try
+        {
+            var sections = await unitOfWork.SectionRepository.AsQueryable()
+                .Where(s => s.AssignmentId == assignmentId && s.DeletedAt == null)
+                .ToListAsync();
+
+            foreach (var section in sections)
+            {
+                section.AssignmentId = null;
+                await unitOfWork.SectionRepository.UpdateAsync(section.Id, section);
+            }
+
+            if (sections.Count > 0)
+                await unitOfWork.SaveChangesAsync();
+
+            logger.LogInformation("Unlinked {Count} section(s) from assignment {AssignmentId}", sections.Count, assignmentId);
+            return ApiResponse<bool>.SuccessResponse(true, "Đã gỡ assignment khỏi các chương.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error unlinking sections for assignment: {AssignmentId}", assignmentId);
+            return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi gỡ assignment khỏi các chương.");
+        }
+    }
+
+    private async Task<(bool IsValid, string? ErrorMessage)> CheckCourseOwnershipAsync(Guid courseId, Guid currentUserId, bool isPublished = false)
     {
         var course = await unitOfWork.CourseRepository.FindOneAsync(c => c.Id == courseId && c.InstructorId == currentUserId);
         if (course == null)
@@ -170,6 +249,13 @@ public class SectionService(
             logger.LogWarning("Course not found or access denied: {CourseId} for user {UserId}", courseId, currentUserId);
             return (false, "Khóa học không tồn tại hoặc bạn không có quyền truy cập.");
         }
+
+        if (course.Status == CourseStatus.Published && isPublished)
+        {
+            logger.LogWarning("Cannot modify lessons in published course {CourseId} by user {UserId}", course.Id, currentUserId);
+            return (false, "Không thể thêm/sửa bài học trong khóa học đã xuất bản.");
+        }
+
         return (true, null);
     }
 
@@ -190,7 +276,6 @@ public class SectionService(
             logger.LogWarning("Access denied for section {SectionId} by user {UserId}", sectionId, currentUserId);
             return (false, null, "Bạn không có quyền truy cập chương này.");
         }
-
         return (true, section, null);
     }
 }

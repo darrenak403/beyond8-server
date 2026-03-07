@@ -55,6 +55,7 @@ public static class SectionMappingExtensions
             Order = section.OrderIndex,
             TotalLessons = section.Lessons?.Count ?? 0,
             TotalDurationMinutes = section.Lessons?.Sum(l => (l.Video?.DurationSeconds ?? 0) / 60) ?? 0,
+            AssignmentId = section.AssignmentId,
             Lessons = section.Lessons?
                 .OrderBy(l => l.OrderIndex)
                 .Select(l => l.ToSummaryResponse())

@@ -46,8 +46,8 @@ namespace Beyond8.Integration.Application.Consumers.Identity
                 // Save notifications to database for Admin and Staff
                 try
                 {
-                    var adminNotification = message.InstructorProfileSubmittedEventToNotification(NotificationTarget.AllAdmin, NotificationStatus.Delivered);
-                    var staffNotification = message.InstructorProfileSubmittedEventToNotification(NotificationTarget.AllStaff, NotificationStatus.Delivered);
+                    var adminNotification = message.InstructorProfileSubmittedEventToNotification(NotificationTarget.AllAdmin, NotificationStatus.Delivered, data);
+                    var staffNotification = message.InstructorProfileSubmittedEventToNotification(NotificationTarget.AllStaff, NotificationStatus.Delivered, data);
 
                     await unitOfWork.NotificationRepository.AddAsync(adminNotification);
                     await unitOfWork.NotificationRepository.AddAsync(staffNotification);

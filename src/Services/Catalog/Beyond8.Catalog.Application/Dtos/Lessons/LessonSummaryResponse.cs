@@ -14,8 +14,10 @@ public class LessonSummaryResponse
 
     public int? DurationSeconds { get; set; }
     public string? VideoThumbnailUrl { get; set; }
+    public string? VideoOriginalUrl { get; set; }
+    public string? HlsVariants { get; set; }
 
     public Guid? QuizId { get; set; }
 
-    public bool HasTextContent { get; set; }
+    public string? TextContent { get; set; }
 }

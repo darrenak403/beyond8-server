@@ -178,5 +178,32 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices.Email
                 throw;
             }
         }
+
+        public async Task<bool> SendCourseCompletedEmailAsync(string toEmail, string userName, string courseName)
+        {
+            try
+            {
+                var htmlContent = EmailTemplates.GetCourseCompletedEmailTemplate(userName, courseName);
+
+                var message = new EmailMessage
+                {
+                    From = $"{_fromName} <{_fromEmail}>",
+                    To = [toEmail],
+                    Subject = $"🎓 Chúc mừng! Bạn đã hoàn thành khóa học \"{courseName}\"",
+                    HtmlBody = htmlContent
+                };
+
+                await resend.EmailSendAsync(message);
+
+                logger.LogInformation("Course completed email sent successfully to {Email} for course {CourseName}",
+                    toEmail, courseName);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error sending course completed email to {Email}: {Message}", toEmail, ex.Message);
+                throw;
+            }
+        }
     }
 }

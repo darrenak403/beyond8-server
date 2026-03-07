@@ -21,5 +21,25 @@ namespace Beyond8.Identity.Infrastructure.Repositories.Inplements
                 .OrderByDescending(s => s.ExpiresAt)
                 .FirstOrDefaultAsync();
         }
+
+        public async Task<IReadOnlyCollection<UserSubscription>> GetActiveSubscriptionsWithPlanAsync()
+        {
+            var now = DateTime.UtcNow;
+            return await AsQueryable()
+                .Include(s => s.Plan)
+                .Where(s => s.Status == SubscriptionStatus.Active
+                    && (s.ExpiresAt == null || s.ExpiresAt > now))
+                .ToListAsync();
+        }
+
+        public async Task<IReadOnlyCollection<UserSubscription>> GetActiveSubscriptionsWhereExpiredAsync()
+        {
+            var now = DateTime.UtcNow;
+            return await AsQueryable()
+                .Where(s => s.Status == SubscriptionStatus.Active
+                    && s.ExpiresAt != null
+                    && s.ExpiresAt < now)
+                .ToListAsync();
+        }
     }
 }

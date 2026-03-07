@@ -33,9 +33,24 @@ jobs:
           filters: |
             identity:
               - 'src/Services/Identity/**'
-              - 'shared/**'       
+              - 'shared/**'
             integration:
               - 'src/Services/Integration/**'
+              - 'shared/**'
+            catalog:
+              - 'src/Services/Catalog/**'
+              - 'shared/**'
+            assessment:
+              - 'src/Services/Assessment/**'
+              - 'shared/**'
+            learning:
+              - 'src/Services/Learning/**'
+              - 'shared/**'
+            analytic:
+              - 'src/Services/Analytic/**'
+              - 'shared/**'
+            sale:
+              - 'src/Services/Sale/**'
               - 'shared/**'
             orchestration:
               - 'src/Orchestration/**'
@@ -46,20 +61,20 @@ jobs:
 
       - name: Debug changes detection
         run: |
-          echo "Identity changed: ${{ steps.changes.outputs.identity }}"
-          echo "Integration changed: ${{ steps.changes.outputs.integration }}"
-          echo "Docker changed: ${{ steps.changes.outputs.docker }}"
+          echo "Identity: ${{ steps.changes.outputs.identity }}, Integration: ${{ steps.changes.outputs.integration }}"
+          echo "Catalog: ${{ steps.changes.outputs.catalog }}, Assessment: ${{ steps.changes.outputs.assessment }}, Learning: ${{ steps.changes.outputs.learning }}"
+          echo "Analytic: ${{ steps.changes.outputs.analytic }}, Sale: ${{ steps.changes.outputs.sale }}, Docker: ${{ steps.changes.outputs.docker }}"
           echo "Event: ${{ github.event_name }}"
 
       - name: Log in to Docker Hub
-        if: steps.changes.outputs.identity == 'true' || steps.changes.outputs.integration == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.changes.outputs.identity == 'true' || steps.changes.outputs.integration == 'true' || steps.changes.outputs.catalog == 'true' || steps.changes.outputs.assessment == 'true' || steps.changes.outputs.learning == 'true' || steps.changes.outputs.analytic == 'true' || steps.changes.outputs.sale == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Set up Docker Buildx
-        if: steps.changes.outputs.identity == 'true' || steps.changes.outputs.integration == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.changes.outputs.identity == 'true' || steps.changes.outputs.integration == 'true' || steps.changes.outputs.catalog == 'true' || steps.changes.outputs.assessment == 'true' || steps.changes.outputs.learning == 'true' || steps.changes.outputs.analytic == 'true' || steps.changes.outputs.sale == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
         uses: docker/setup-buildx-action@v3
         with:
           driver-opts: |
@@ -94,7 +109,7 @@ jobs:
             BUILDKIT_INLINE_CACHE=1
 
       - name: Extract metadata for Integration Service
-        if: steps.changes.outputs.integration == 'true' || steps.changes.outputs.docker == 'true' || steps.changes.outputs.identity == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.changes.outputs.integration == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
         id: meta-integration
         uses: docker/metadata-action@v5
         with:
@@ -107,7 +122,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Integration Service
-        if: steps.changes.outputs.integration == 'true' || steps.changes.outputs.docker == 'true' || steps.changes.outputs.identity == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.changes.outputs.integration == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -117,5 +132,140 @@ jobs:
           labels: ${{ steps.meta-integration.outputs.labels }}
           cache-from: type=gha,scope=integration
           cache-to: type=gha,mode=max,scope=integration
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
+      - name: Extract metadata for Catalog Service
+        if: steps.changes.outputs.catalog == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        id: meta-catalog
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/beyond8-catalog-service
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Catalog Service
+        if: steps.changes.outputs.catalog == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: src/Services/Catalog/Beyond8.Catalog.Api/Dockerfile
+          push: true
+          tags: ${{ steps.meta-catalog.outputs.tags }}
+          labels: ${{ steps.meta-catalog.outputs.labels }}
+          cache-from: type=gha,scope=catalog
+          cache-to: type=gha,mode=max,scope=catalog
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
+      - name: Extract metadata for Assessment Service
+        if: steps.changes.outputs.assessment == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        id: meta-assessment
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/beyond8-assessment-service
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Assessment Service
+        if: steps.changes.outputs.assessment == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: src/Services/Assessment/Beyond8.Assessment.Api/Dockerfile
+          push: true
+          tags: ${{ steps.meta-assessment.outputs.tags }}
+          labels: ${{ steps.meta-assessment.outputs.labels }}
+          cache-from: type=gha,scope=assessment
+          cache-to: type=gha,mode=max,scope=assessment
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
+      - name: Extract metadata for Learning Service
+        if: steps.changes.outputs.learning == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        id: meta-learning
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/beyond8-learning-service
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Learning Service
+        if: steps.changes.outputs.learning == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: src/Services/Learning/Beyond8.Learning.Api/Dockerfile
+          push: true
+          tags: ${{ steps.meta-learning.outputs.tags }}
+          labels: ${{ steps.meta-learning.outputs.labels }}
+          cache-from: type=gha,scope=learning
+          cache-to: type=gha,mode=max,scope=learning
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
+      - name: Extract metadata for Analytic Service
+        if: steps.changes.outputs.analytic == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        id: meta-analytic
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/beyond8-analytic-service
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Analytic Service
+        if: steps.changes.outputs.analytic == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: src/Services/Analytic/Beyond8.Analytic.Api/Dockerfile
+          push: true
+          tags: ${{ steps.meta-analytic.outputs.tags }}
+          labels: ${{ steps.meta-analytic.outputs.labels }}
+          cache-from: type=gha,scope=analytic
+          cache-to: type=gha,mode=max,scope=analytic
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
+      - name: Extract metadata for Sale Service
+        if: steps.changes.outputs.sale == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        id: meta-sale
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/beyond8-sale-service
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Sale Service
+        if: steps.changes.outputs.sale == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: src/Services/Sale/Beyond8.Sale.Api/Dockerfile
+          push: true
+          tags: ${{ steps.meta-sale.outputs.tags }}
+          labels: ${{ steps.meta-sale.outputs.labels }}
+          cache-from: type=gha,scope=sale
+          cache-to: type=gha,mode=max,scope=sale
           build-args: |
             BUILDKIT_INLINE_CACHE=1

@@ -110,6 +110,30 @@ namespace Beyond8.Integration.Api.Apis
                 .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
+            group.MapDelete("/student/delete-all", DeleteAllStudentNotifications)
+                .WithName("DeleteAllStudentNotifications")
+                .WithDescription("Xóa tất cả thông báo")
+                .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized)
+                .RequireAuthorization(x => x.RequireRole(Role.Student));
+
+            group.MapDelete("/instructor/delete-all", DeleteAllInstructorNotifications)
+                .WithName("DeleteAllInstructorNotifications")
+                .WithDescription("Xóa tất cả thông báo")
+                .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized)
+                .RequireAuthorization(x => x.RequireRole(Role.Instructor));
+
+            group.MapDelete("/staff/delete-all", DeleteAllStaffNotifications)
+                .WithName("DeleteAllStaffNotifications")
+                .WithDescription("Xóa tất cả thông báo")
+                .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized)
+                .RequireAuthorization(x => x.RequireRole(Role.Staff, Role.Admin));
+
             // Admin endpoints
             group.MapGet("/admin/logs", GetAllNotificationLogs)
                 .WithName("GetAllNotificationLogs")
@@ -121,6 +145,7 @@ namespace Beyond8.Integration.Api.Apis
 
             return group;
         }
+
 
         private static async Task<IResult> GetAllNotificationLogs(
             [FromServices] INotificationHistoryService notificationHistoryService,
@@ -262,6 +287,48 @@ namespace Beyond8.Integration.Api.Apis
             [FromServices] ICurrentUserService currentUserService)
         {
             var result = await notificationHistoryService.DeleteNotificationAsync(id, currentUserService.UserId);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
+
+        private static async Task<IResult> DeleteAllStudentNotifications(
+            [FromServices] INotificationHistoryService notificationHistoryService,
+            [FromServices] ICurrentUserService currentUserService)
+        {
+            var result = await notificationHistoryService.DeleteAllNotificationsAsync(
+                currentUserService.UserId,
+                NotificationContext.Student);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
+
+        private static async Task<IResult> DeleteAllInstructorNotifications(
+            [FromServices] INotificationHistoryService notificationHistoryService,
+            [FromServices] ICurrentUserService currentUserService)
+        {
+            if (!currentUserService.IsInRole(Role.Instructor))
+            {
+                return Results.BadRequest(ApiResponse<bool>.FailureResponse(
+                    "Chỉ Instructor mới có thể xóa tất cả thông báo."));
+            }
+
+            var result = await notificationHistoryService.DeleteAllNotificationsAsync(
+                currentUserService.UserId,
+                NotificationContext.Instructor);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+        }
+
+        private static async Task<IResult> DeleteAllStaffNotifications(
+            [FromServices] INotificationHistoryService notificationHistoryService,
+            [FromServices] ICurrentUserService currentUserService)
+        {
+            if (!currentUserService.IsInAnyRole(Role.Staff, Role.Admin))
+            {
+                return Results.BadRequest(ApiResponse<bool>.FailureResponse(
+                    "Chỉ Staff và Admin mới có thể xóa tất cả thông báo."));
+            }
+
+            var result = await notificationHistoryService.DeleteAllNotificationsAsync(
+                currentUserService.UserId,
+                NotificationContext.Staff);
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
 

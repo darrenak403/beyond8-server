@@ -140,6 +140,36 @@ namespace Beyond8.Integration.Application.Services.Implements
             }
         }
 
+        public async Task<ApiResponse<bool>> DeleteAllNotificationsAsync(Guid userId, NotificationContext context)
+        {
+            try
+            {
+                var notifications = await unitOfWork.NotificationRepository.GetAllAsync(n =>
+                    n.UserId == userId &&
+                    (n.Context == context || n.Context == NotificationContext.General));
+
+                foreach (var notification in notifications)
+                {
+                    notification.Status = NotificationStatus.Deleted;
+                    notification.DeletedAt = DateTime.UtcNow;
+                    notification.DeletedBy = userId;
+                    await unitOfWork.NotificationRepository.UpdateAsync(notification.Id, notification);
+                }
+
+                await unitOfWork.SaveChangesAsync();
+
+                logger.LogInformation("Deleted {Count} notifications for user {UserId} in context {Context}",
+                    notifications.Count, userId, context);
+
+                return ApiResponse<bool>.SuccessResponse(true, "Xóa tất cả thông báo thành công.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error deleting all notifications for user {UserId} in context {Context}", userId, context);
+                return ApiResponse<bool>.FailureResponse("Đã xảy ra lỗi khi xóa tất cả thông báo.");
+            }
+        }
+
         public async Task<ApiResponse<NotificationStatusResponse>> GetNotificationStatusAsync(Guid userId, NotificationContext context)
         {
             try

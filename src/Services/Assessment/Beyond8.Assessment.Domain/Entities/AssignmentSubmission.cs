@@ -11,7 +11,6 @@ public class AssignmentSubmission : BaseEntity
 
     public Guid AssignmentId { get; set; }
 
-
     [ForeignKey(nameof(AssignmentId))]
     public virtual Assignment Assignment { get; set; } = null!;
 
@@ -22,7 +21,7 @@ public class AssignmentSubmission : BaseEntity
     public string? TextContent { get; set; }
 
     [Column(TypeName = "jsonb")]
-    public string? FileUrls { get; set; }
+    public List<string>? FileUrls { get; set; }
 
     [Column(TypeName = "decimal(10, 2)")]
     public decimal? AiScore { get; set; }

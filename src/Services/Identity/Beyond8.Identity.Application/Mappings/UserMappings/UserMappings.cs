@@ -31,8 +31,10 @@ namespace Beyond8.Identity.Application.Mappings.AuthMappings
             };
         }
 
-        public static UserSimpleResponse ToUserSimpleResponse(this User user)
+        public static UserSimpleResponse? ToUserSimpleResponse(this User? user)
         {
+            if (user == null)
+                return null;
             return new UserSimpleResponse
             {
                 Id = user.Id,

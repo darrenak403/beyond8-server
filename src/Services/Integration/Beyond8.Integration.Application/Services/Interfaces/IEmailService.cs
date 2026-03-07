@@ -13,4 +13,6 @@ public interface IEmailService
     Task<bool> SendCourseRejectedEmailAsync(string toEmail, string instructorName, string courseName, string reason);
 
     Task<bool> SendCourseApprovedEmailAsync(string toEmail, string instructorName, string courseName);
+
+    Task<bool> SendCourseCompletedEmailAsync(string toEmail, string userName, string courseName);
 }

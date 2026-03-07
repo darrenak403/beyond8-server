@@ -1,0 +1,144 @@
+using Beyond8.Common.Extensions;
+using Beyond8.Common.Security;
+using Beyond8.Common.Utilities;
+using Beyond8.Sale.Application.Dtos.Carts;
+using Beyond8.Sale.Application.Dtos.Orders;
+using Beyond8.Sale.Application.Services.Interfaces;
+using FluentValidation;
+using Microsoft.AspNetCore.Mvc;
+
+namespace Beyond8.Sale.Api.Apis;
+
+public static class CartApis
+{
+    public static IEndpointRouteBuilder MapCartApi(this IEndpointRouteBuilder builder)
+    {
+        builder.MapGroup("/api/v1/cart")
+            .MapCartRoutes()
+            .RequireRateLimiting("Fixed")
+            .RequireAuthorization()
+            .WithTags("Cart Api");
+
+        return builder;
+    }
+
+    public static RouteGroupBuilder MapCartRoutes(this RouteGroupBuilder group)
+    {
+        group.MapGet("/", GetCartAsync)
+            .WithName("GetCart")
+            .WithDescription("Lấy giỏ hàng hiện tại (Student)")
+            .Produces<ApiResponse<CartResponse>>(StatusCodes.Status200OK);
+
+        group.MapPost("/add", AddToCartAsync)
+            .WithName("AddToCart")
+            .WithDescription("Thêm khóa học vào giỏ hàng (Student)")
+            .Produces<ApiResponse<CartResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<CartResponse>>(StatusCodes.Status400BadRequest);
+
+        group.MapDelete("/remove/{courseId}", RemoveFromCartAsync)
+            .WithName("RemoveFromCart")
+            .WithDescription("Xóa khóa học khỏi giỏ hàng (Student)")
+            .Produces<ApiResponse<CartResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<CartResponse>>(StatusCodes.Status400BadRequest);
+
+        group.MapDelete("/clear", ClearCartAsync)
+            .WithName("ClearCart")
+            .WithDescription("Xóa toàn bộ giỏ hàng (Student)")
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK);
+
+        group.MapPost("/checkout", CheckoutCartAsync)
+            .WithName("CheckoutCart")
+            .WithDescription("Thanh toán giỏ hàng — tạo đơn hàng từ giỏ. " +
+                           "Hỗ trợ 2-tier coupon: instructor coupons (per item) + system coupon (per order). " +
+                           "(Student)")
+            .Produces<ApiResponse<OrderResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<OrderResponse>>(StatusCodes.Status400BadRequest);
+
+        group.MapGet("/count", TotalItemsInCartAsync)
+            .WithName("TotalItemsInCart")
+            .WithDescription("Lấy tổng số mục trong giỏ hàng (Student)")
+            .Produces<ApiResponse<int>>(StatusCodes.Status200OK);
+
+        group.MapPost("/check", CheckCoursesInCartAsync)
+            .WithName("CheckCoursesInCart")
+            .WithDescription("Kiểm tra các khóa học đã có trong giỏ hàng chưa (Student). " +
+                           "Use case: UI needs to show 'Add to Cart' vs 'Already Added' button. " +
+                           "Performance optimized: Uses WHERE IN query instead of loading entire cart.")
+            .Produces<ApiResponse<Dictionary<Guid, bool>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<Dictionary<Guid, bool>>>(StatusCodes.Status400BadRequest);
+
+        return group;
+    }
+
+    private static async Task<IResult> GetCartAsync(
+        [FromServices] ICartService cartService,
+        [FromServices] ICurrentUserService currentUserService)
+    {
+        var result = await cartService.GetCartAsync(currentUserService.UserId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> AddToCartAsync(
+        [FromBody] AddToCartRequest request,
+        [FromServices] ICartService cartService,
+        [FromServices] IValidator<AddToCartRequest> validator,
+        [FromServices] ICurrentUserService currentUserService)
+    {
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
+        var result = await cartService.AddToCartAsync(currentUserService.UserId, request);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> RemoveFromCartAsync(
+        [FromRoute] Guid courseId,
+        [FromServices] ICartService cartService,
+        [FromServices] ICurrentUserService currentUserService)
+    {
+        var result = await cartService.RemoveFromCartAsync(currentUserService.UserId, courseId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> ClearCartAsync(
+        [FromServices] ICartService cartService,
+        [FromServices] ICurrentUserService currentUserService)
+    {
+        var result = await cartService.ClearCartAsync(currentUserService.UserId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> CheckoutCartAsync(
+        [FromBody] CheckoutCartRequest request,
+        [FromServices] ICartService cartService,
+        [FromServices] IValidator<CheckoutCartRequest> validator,
+        [FromServices] ICurrentUserService currentUserService)
+    {
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
+        var result = await cartService.CheckoutCartAsync(currentUserService.UserId, request);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> TotalItemsInCartAsync(
+        [FromServices] ICartService cartService,
+        [FromServices] ICurrentUserService currentUserService)
+    {
+        var result = await cartService.CountCartItemsAsync(currentUserService.UserId);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> CheckCoursesInCartAsync(
+        [FromBody] CheckCoursesInCartRequest request,
+        [FromServices] ICartService cartService,
+        [FromServices] IValidator<CheckCoursesInCartRequest> validator,
+        [FromServices] ICurrentUserService currentUserService)
+    {
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
+        var result = await cartService.CheckCoursesInCartAsync(currentUserService.UserId, request.CourseIds);
+        return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+    }
+}

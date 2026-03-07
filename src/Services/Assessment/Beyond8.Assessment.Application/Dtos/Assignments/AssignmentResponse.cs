@@ -17,10 +17,15 @@ public class AssignmentResponse
     public int MaxTextLength { get; set; }
     public GradingMode GradingMode { get; set; }
     public int TotalPoints { get; set; }
+    public int PassScorePercent { get; set; }
     public string? RubricUrl { get; set; }
     public int? TimeLimitMinutes { get; set; }
-    public int TotalSubmissions { get; set; }
+    public int MaxSubmissions { get; set; }
     public decimal? AverageScore { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    /// <summary>Hạn nộp bài (tính từ CreatedAt + TimeLimitMinutes). Null nếu không giới hạn thời gian.</summary>
+    public DateTime? DueAt { get; set; }
+    /// <summary>True nếu đã quá hạn nộp (DueAt != null và hiện tại > DueAt).</summary>
+    public bool IsExpired { get; set; }
 }

@@ -38,7 +38,7 @@ namespace Beyond8.Assessment.Api.Apis
                 .Produces<ApiResponse<List<QuizSimpleResponse>>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
-            group.MapGet("/{id}", GetQuizByIdAsync)
+            group.MapGet("/{id:guid}", GetQuizByIdAsync)
                 .WithName("GetQuizById")
                 .WithDescription("Lấy quiz theo ID")
                 .RequireAuthorization(x => x.RequireRole(Role.Instructor))
@@ -46,7 +46,7 @@ namespace Beyond8.Assessment.Api.Apis
                 .Produces<ApiResponse<QuizResponse>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
-            group.MapPut("/{id}", UpdateQuizAsync)
+            group.MapPut("/{id:guid}", UpdateQuizAsync)
                 .WithName("UpdateQuiz")
                 .WithDescription("Cập nhật quiz")
                 .RequireAuthorization(x => x.RequireRole(Role.Instructor))
@@ -54,7 +54,7 @@ namespace Beyond8.Assessment.Api.Apis
                 .Produces<ApiResponse<QuizResponse>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
-            group.MapDelete("/{id}", DeleteQuizAsync)
+            group.MapDelete("/{id:guid}", DeleteQuizAsync)
                 .WithName("DeleteQuiz")
                 .WithDescription("Xóa quiz")
                 .RequireAuthorization(x => x.RequireRole(Role.Instructor))
@@ -62,7 +62,24 @@ namespace Beyond8.Assessment.Api.Apis
                 .Produces<ApiResponse<bool>>(StatusCodes.Status400BadRequest)
                 .Produces(StatusCodes.Status401Unauthorized);
 
+            group.MapGet("/{id:guid}/student", GetQuizByIdForStudentAsync)
+                .WithName("GetQuizByIdForStudent")
+                .WithDescription("Lấy quiz theo ID cho student")
+                .RequireAuthorization(x => x.RequireRole(Role.Student))
+                .Produces<ApiResponse<QuizSimpleResponse>>(StatusCodes.Status200OK)
+                .Produces<ApiResponse<QuizSimpleResponse>>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized);
+
             return group;
+        }
+
+        private static async Task<IResult> GetQuizByIdForStudentAsync(
+            [FromRoute] Guid id,
+            [FromServices] IQuizService quizService,
+            [FromServices] ICurrentUserService currentUserService)
+        {
+            var result = await quizService.GetQuizByIdForStudentAsync(id);
+            return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         }
 
         private static async Task<IResult> GetAllQuizzesAsync(

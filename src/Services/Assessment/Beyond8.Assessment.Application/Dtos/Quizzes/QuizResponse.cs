@@ -17,6 +17,7 @@ public class QuizResponse
     public bool ShuffleQuestions { get; set; }
     public bool AllowReview { get; set; }
     public bool ShowExplanation { get; set; }
+    public DifficultyDistributionDto? DifficultyDistribution { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public List<QuestionResponse> Questions { get; set; } = [];

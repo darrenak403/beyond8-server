@@ -4,9 +4,6 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Beyond8.Catalog.Infrastructure.Migrations
 {
-    /// <summary>
-    /// Removes SearchableText column and uses only PostgreSQL full-text search (unaccent) for SearchVector.
-    /// </summary>
     public partial class RemoveSearchableTextUsePostgresFullText : Migration
     {
         /// <inheritdoc />

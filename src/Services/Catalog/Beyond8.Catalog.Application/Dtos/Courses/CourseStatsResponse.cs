@@ -14,6 +14,7 @@ public class CourseStatsResponse
 
     // Recent activity
     public int CoursesThisMonth { get; set; }
+    public int CoursesLastMonth { get; set; }
     public int StudentsThisMonth { get; set; }
     public decimal RevenueThisMonth { get; set; }
 }

@@ -12,6 +12,8 @@ public class UnitOfWork(AssessmentDbContext context) : BaseUnitOfWork<Assessment
     private IAssignmentRepository? _assignmentRepository;
     private IQuizAttemptRepository? _quizAttemptRepository;
     private IAssignmentSubmissionRepository? _assignmentSubmissionRepository;
+    private IReassignRequestRepository? _reassignRequestRepository;
+    private IReassignHistoryRepository? _reassignHistoryRepository;
 
     public IQuestionRepository QuestionRepository => _questionRepository ??= new QuestionRepository(context);
     public IQuizRepository QuizRepository => _quizRepository ??= new QuizRepository(context);
@@ -19,4 +21,6 @@ public class UnitOfWork(AssessmentDbContext context) : BaseUnitOfWork<Assessment
     public IAssignmentRepository AssignmentRepository => _assignmentRepository ??= new AssignmentRepository(context);
     public IQuizAttemptRepository QuizAttemptRepository => _quizAttemptRepository ??= new QuizAttemptRepository(context);
     public IAssignmentSubmissionRepository AssignmentSubmissionRepository => _assignmentSubmissionRepository ??= new AssignmentSubmissionRepository(context);
+    public IReassignRequestRepository ReassignRequestRepository => _reassignRequestRepository ??= new ReassignRequestRepository(context);
+    public IReassignHistoryRepository ReassignHistoryRepository => _reassignHistoryRepository ??= new ReassignHistoryRepository(context);
 }

@@ -7,5 +7,6 @@ namespace Beyond8.Common.Security
         string? Claim(string claimType);
         bool IsInRole(string role);
         bool IsInAnyRole(params string[] roles);
+        bool IsAuthenticated { get; }
     }
 }

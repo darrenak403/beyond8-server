@@ -1,4 +1,5 @@
 using Beyond8.Assessment.Application.Dtos.Assignments;
+using Beyond8.Assessment.Domain.Enums;
 using FluentValidation;
 
 namespace Beyond8.Assessment.Application.Validators.Assignments;
@@ -15,10 +16,14 @@ public class CreateAssignmentRequestValidator : AbstractValidator<CreateAssignme
             .NotEmpty().WithMessage("Mô tả không được để trống");
 
         RuleFor(x => x.MaxTextLength)
-            .GreaterThan(0).WithMessage("Độ dài tối đa nội dung phải lớn hơn 0");
+            .GreaterThan(0).WithMessage("Độ dài tối đa nội dung phải lớn hơn 0")
+            .When(x => x.SubmissionType == AssignmentSubmissionType.Text);
 
         RuleFor(x => x.TotalPoints)
             .GreaterThanOrEqualTo(0).WithMessage("Tổng điểm phải lớn hơn hoặc bằng 0");
+
+        RuleFor(x => x.PassScorePercent)
+            .InclusiveBetween(0, 100).WithMessage("Điểm đạt phải từ 0 đến 100 %");
 
         RuleFor(x => x.TimeLimitMinutes)
             .GreaterThan(0).WithMessage("Thời gian làm bài (phút) phải lớn hơn 0")

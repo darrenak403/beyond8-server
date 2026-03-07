@@ -4,8 +4,10 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Beyond8.Integration.Application.Dtos.AiIntegration.Embedding;
+using Beyond8.Integration.Application.Dtos.Usages;
 using Beyond8.Integration.Application.Mappings.AiIntegrationMappings;
 using Beyond8.Integration.Application.Services.Interfaces;
+using Beyond8.Integration.Domain.Enums;
 using Beyond8.Integration.Infrastructure.Configuration;
 using Beyond8.Integration.Infrastructure.Mappings;
 using Microsoft.Extensions.Logging;
@@ -19,6 +21,7 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
         IHttpClientFactory httpClientFactory,
         QdrantClient qdrantClient,
         IPdfChunkService pdfChunkService,
+        IAiUsageService aiUsageService,
         IOptions<HuggingFaceSettings> huggingFaceSettings,
         IOptions<QdrantSettings> qdrantSettings,
         ILogger<VectorEmbeddingService> logger) : IVectorEmbeddingService
@@ -26,10 +29,14 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
         private readonly HuggingFaceSettings _hfSettings = huggingFaceSettings.Value;
         private readonly QdrantSettings _qdrantSettings = qdrantSettings.Value;
 
+        /// <summary>Ước lượng token từ ký tự (Hugging Face không trả về token count).</summary>
+        private const int CharsPerTokenEstimate = 4;
+
         public async Task<List<DocumentEmbeddingResponse>> EmbedAndSavePdfAsync(
             Stream pdfStream,
             Guid courseId,
             Guid documentId,
+            string s3Key,
             Guid? lessonId = null)
         {
             var stopwatch = Stopwatch.StartNew();
@@ -87,7 +94,7 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
 
             await DeleteDocumentPointsAsync(courseId, documentId, lessonId);
 
-            var upsertResult = await UpsertCourseDocumentsAsync(courseId, embeddings);
+            var upsertResult = await UpsertCourseDocumentsAsync(courseId, embeddings, s3Key);
             if (!upsertResult)
                 throw new InvalidOperationException("Không thể lưu chunks vào Qdrant.");
 
@@ -267,7 +274,8 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
 
         private async Task<bool> UpsertCourseDocumentsAsync(
             Guid courseId,
-            List<DocumentEmbedding> embeddings)
+            List<DocumentEmbedding> embeddings,
+            string s3Key)
         {
             var stopwatch = Stopwatch.StartNew();
             var collectionName = GetCollectionName(courseId);
@@ -288,6 +296,7 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                     {
                         ["courseId"] = courseId.ToString(),
                         ["documentId"] = embedding.DocumentId.ToString(),
+                        ["s3Key"] = s3Key,
                         ["pageNumber"] = embedding.PageNumber,
                         ["chunkIndex"] = embedding.ChunkIndex,
                         ["text"] = embedding.Text,
@@ -426,6 +435,58 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
             }
         }
 
+        public async Task<bool> S3KeyExistsInCollectionAsync(Guid courseId, string s3Key)
+        {
+            try
+            {
+                var exists = await CourseCollectionExistsAsync(courseId);
+                if (!exists)
+                {
+                    return false;
+                }
+
+                var collectionName = GetCollectionName(courseId);
+                var filter = new Filter
+                {
+                    Must =
+                    {
+                        new Condition
+                        {
+                            Field = new FieldCondition
+                            {
+                                Key = "s3Key",
+                                Match = new Match { Text = s3Key }
+                            }
+                        }
+                    }
+                };
+
+                // Scroll with limit 1 to check if any point exists with this s3Key
+                var scrollResult = await qdrantClient.ScrollAsync(
+                    collectionName,
+                    filter: filter,
+                    limit: 1);
+
+                var pointExists = scrollResult.Result.Count > 0;
+
+                logger.LogDebug(
+                    "S3Key existence check for course {CourseId}, s3Key: {S3Key}, exists: {Exists}",
+                    courseId,
+                    s3Key,
+                    pointExists);
+
+                return pointExists;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex,
+                    "Error checking S3Key existence for course {CourseId}, s3Key: {S3Key}",
+                    courseId,
+                    s3Key);
+                return false;
+            }
+        }
+
         public async Task<bool> CheckHealthAsync()
         {
             try
@@ -506,6 +567,7 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                 return [];
             }
 
+            var stopwatch = Stopwatch.StartNew();
             var httpClient = httpClientFactory.CreateClient();
             httpClient.Timeout = TimeSpan.FromSeconds(_hfSettings.TimeoutSeconds);
 
@@ -554,7 +616,9 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
 
             if (response == null || !response.IsSuccessStatusCode)
             {
+                stopwatch.Stop();
                 logger.LogError("Hugging Face API error: {StatusCode} - {Content}", response?.StatusCode, lastResponseContent);
+                await TrackHuggingFaceUsageAsync(texts, stopwatch.ElapsedMilliseconds, AiUsageStatus.Failed);
                 return [];
             }
 
@@ -589,12 +653,45 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
                     logger.LogWarning("Response vector count ({VectorCount}) does not match input text count ({TextCount})", vectors.Count, texts.Length);
                 }
 
+                stopwatch.Stop();
+                await TrackHuggingFaceUsageAsync(texts, stopwatch.ElapsedMilliseconds, AiUsageStatus.Success);
                 return vectors;
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error parsing Hugging Face response: {Content}", lastResponseContent);
+                stopwatch.Stop();
+                await TrackHuggingFaceUsageAsync(texts, stopwatch.ElapsedMilliseconds, AiUsageStatus.Failed);
                 return [];
+            }
+        }
+
+        private async Task TrackHuggingFaceUsageAsync(string[] texts, long responseTimeMs, AiUsageStatus status)
+        {
+            try
+            {
+                var totalChars = texts.Sum(t => t?.Length ?? 0);
+                var estimatedInputTokens = Math.Max(0, totalChars / CharsPerTokenEstimate);
+                var inputCost = (estimatedInputTokens / 1_000_000m) * _hfSettings.Pricing.InputCostPer1MTokens;
+                var usageRequest = new AiUsageRequest
+                {
+                    UserId = Guid.Empty,
+                    Provider = AiProvider.HuggingFace,
+                    Model = _hfSettings.DefaultModel,
+                    Operation = AiOperation.Embedding,
+                    InputTokens = estimatedInputTokens,
+                    OutputTokens = 0,
+                    InputCost = inputCost,
+                    OutputCost = 0,
+                    RequestSummary = $"Embedding batch, {texts.Length} text(s), ~{estimatedInputTokens} tokens",
+                    ResponseTimeMs = (int)Math.Min(responseTimeMs, int.MaxValue),
+                    Status = status
+                };
+                await aiUsageService.TrackUsageAsync(usageRequest);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to track Hugging Face usage");
             }
         }
 

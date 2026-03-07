@@ -34,15 +34,22 @@ namespace Beyond8.AppHost.Extensions
                 .WithImageTag("dev")
                 .WithDataVolume();
 
+            var hangfireIdentityDb = postgres.AddDatabase("hangfire-identity-db", "HangfiresIdentity");
+            var hangfireSaleDb = postgres.AddDatabase("hangfire-sale-db", "HangfiresSale");
+            var hangfireIntegrationDb = postgres.AddDatabase("hangfire-integration-db", "HangfiresIntegration");
             var identityDb = postgres.AddDatabase("identity-db", "Identities");
             var integrationDb = postgres.AddDatabase("integration-db", "Integrations");
             var catalogDb = postgres.AddDatabase("catalog-db", "Catalogs");
             var assessmentDb = postgres.AddDatabase("assessment-db", "Assessments");
+            var learningDb = postgres.AddDatabase("learning-db", "Learnings");
+            var saleDb = postgres.AddDatabase("sale-db", "Sales");
+            var analyticDb = postgres.AddDatabase("analytic-db", "Analytics");
 
             var identityService = builder.AddProject<Projects.Beyond8_Identity_Api>("Identity-Service")
                 .WithReference(identityDb)
                 .WithReference(redis)
                 .WithReference(rabbitMq)
+                .WithReference(hangfireIdentityDb)
                 .WaitFor(postgres)
                 .WaitFor(redis)
                 .WaitFor(rabbitMq);
@@ -52,6 +59,7 @@ namespace Beyond8.AppHost.Extensions
                 .WithReference(redis)
                 .WithReference(rabbitMq)
                 .WithReference(qdrant)
+                .WithReference(hangfireIntegrationDb)
                 .WaitFor(postgres)
                 .WaitFor(redis)
                 .WaitFor(rabbitMq)
@@ -73,6 +81,34 @@ namespace Beyond8.AppHost.Extensions
                 .WaitFor(redis)
                 .WaitFor(rabbitMq);
 
+            var learningService = builder.AddProject<Projects.Beyond8_Learning_Api>("Learning-Service")
+                .WithReference(learningDb)
+                .WithReference(redis)
+                .WithReference(rabbitMq)
+                .WithReference(catalogService)
+                .WaitFor(postgres)
+                .WaitFor(redis)
+                .WaitFor(rabbitMq);
+
+            var saleService = builder.AddProject<Projects.Beyond8_Sale_Api>("Sale-Service")
+                .WithReference(saleDb)
+                .WithReference(redis)
+                .WithReference(rabbitMq)
+                .WithReference(catalogService)
+                .WithReference(hangfireSaleDb)
+                .WithReference(learningService)
+                .WaitFor(postgres)
+                .WaitFor(redis)
+                .WaitFor(rabbitMq);
+
+            var analyticService = builder.AddProject<Projects.Beyond8_Analytic_Api>("Analytic-Service")
+                .WithReference(analyticDb)
+                .WithReference(redis)
+                .WithReference(rabbitMq)
+                .WaitFor(postgres)
+                .WaitFor(redis)
+                .WaitFor(rabbitMq);
+
             var apiGateway = builder.AddYarp("api-gateway")
                 .WithContainerName("ApiGateway")
                 .WithHostPort(8080)
@@ -85,6 +121,7 @@ namespace Beyond8.AppHost.Extensions
                     config.AddRoute("/api/v1/subscriptions/{**catch-all}", identityCluster);
 
                     var integrationCluster = config.AddProjectCluster(integrationService);
+                    config.AddRoute("/hangfire/{**catch-all}", integrationCluster);
                     config.AddRoute("/api/v1/media/{**catch-all}", integrationCluster);
                     config.AddRoute("/api/v1/ai/{**catch-all}", integrationCluster);
                     config.AddRoute("/api/v1/vnpt-ekyc/{**catch-all}", integrationCluster);
@@ -107,6 +144,27 @@ namespace Beyond8.AppHost.Extensions
                     config.AddRoute("/api/v1/quiz-attempts/{**catch-all}", assessmentCluster);
                     config.AddRoute("/api/v1/assignments/{**catch-all}", assessmentCluster);
                     config.AddRoute("/api/v1/assignment-submissions/{**catch-all}", assessmentCluster);
+                    config.AddRoute("/api/v1/reassign/{**catch-all}", assessmentCluster);
+
+                    var learningCluster = config.AddProjectCluster(learningService);
+                    config.AddRoute("/api/v1/enrollments/{**catch-all}", learningCluster);
+                    config.AddRoute("/api/v1/certificates/{**catch-all}", learningCluster);
+                    config.AddRoute("/api/v1/course-reviews/{**catch-all}", learningCluster);
+
+                    var saleCluster = config.AddProjectCluster(saleService);
+                    config.AddRoute("/api/v1/orders/{**catch-all}", saleCluster);
+                    config.AddRoute("/api/v1/cart/{**catch-all}", saleCluster);
+                    config.AddRoute("/api/v1/payments/{**catch-all}", saleCluster);
+                    config.AddRoute("/api/v1/coupons/{**catch-all}", saleCluster);
+                    config.AddRoute("/api/v1/coupon-usages/{**catch-all}", saleCluster);
+                    config.AddRoute("/api/v1/wallets/{**catch-all}", saleCluster);
+                    config.AddRoute("/api/v1/payouts/{**catch-all}", saleCluster);
+                    config.AddRoute("/api/v1/transactions/{**catch-all}", saleCluster);
+                    config.AddRoute("/api/v1/platform-wallet/{**catch-all}", saleCluster);
+                    config.AddRoute("/api/v1/settlements/{**catch-all}", saleCluster);
+
+                    var analyticCluster = config.AddProjectCluster(analyticService);
+                    config.AddRoute("/api/v1/analytics/{**catch-all}", analyticCluster);
 
                     // SignalR hub route
                     config.AddRoute("/hubs/{**catch-all}", integrationCluster);
@@ -121,7 +179,10 @@ namespace Beyond8.AppHost.Extensions
                .WithApiReference(identityService, options => options.AddPreferredSecuritySchemes("Bearer"))
                .WithApiReference(integrationService, options => options.AddPreferredSecuritySchemes("Bearer"))
                .WithApiReference(catalogService, options => options.AddPreferredSecuritySchemes("Bearer"))
-               .WithApiReference(assessmentService, options => options.AddPreferredSecuritySchemes("Bearer"));
+               .WithApiReference(assessmentService, options => options.AddPreferredSecuritySchemes("Bearer"))
+               .WithApiReference(learningService, options => options.AddPreferredSecuritySchemes("Bearer"))
+               .WithApiReference(saleService, options => options.AddPreferredSecuritySchemes("Bearer"))
+               .WithApiReference(analyticService, options => options.AddPreferredSecuritySchemes("Bearer"));
 
             return builder;
         }

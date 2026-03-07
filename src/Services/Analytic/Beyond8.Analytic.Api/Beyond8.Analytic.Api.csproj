@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\shared\Beyond8.DatabaseMigrationHelpers\Beyond8.DatabaseMigrationHelpers.csproj" />
+    <ProjectReference Include="..\..\..\Orchestration\Beyond8.ServiceDefaults\Beyond8.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\Beyond8.Analytic.Application\Beyond8.Analytic.Application.csproj" />
+    <ProjectReference Include="..\Beyond8.Analytic.Infrastructure\Beyond8.Analytic.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>
