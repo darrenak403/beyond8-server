@@ -993,4 +993,25 @@ public class CourseService(
             return ApiResponse<List<CourseResponse>>.FailureResponse("Đã xảy ra lỗi khi lấy danh sách khóa học.");
         }
     }
+
+    public async Task<ApiResponse<PlatformCourseStatsResponse>> GetPlatformCourseStatsAsync()
+    {
+        try
+        {
+            var totalCourses = (int)await unitOfWork.CourseRepository.CountAsync(c => c.DeletedAt == null);
+            var totalPublished = (int)await unitOfWork.CourseRepository.CountAsync(
+                c => c.DeletedAt == null && c.Status == CourseStatus.Published);
+
+            return ApiResponse<PlatformCourseStatsResponse>.SuccessResponse(new PlatformCourseStatsResponse
+            {
+                TotalCourses = totalCourses,
+                TotalPublishedCourses = totalPublished
+            }, "OK");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting platform course stats");
+            return ApiResponse<PlatformCourseStatsResponse>.FailureResponse("Đã xảy ra lỗi khi lấy thống kê khóa học.");
+        }
+    }
 }

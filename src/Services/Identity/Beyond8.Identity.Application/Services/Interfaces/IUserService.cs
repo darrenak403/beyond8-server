@@ -14,5 +14,6 @@ namespace Beyond8.Identity.Application.Services.Interfaces
         Task<ApiResponse<bool>> DeleteUserAsync(Guid id);
         Task<ApiResponse<string>> UploadUserAvatarAsync(Guid id, UpdateFileUrlRequest request);
         Task<ApiResponse<string>> UploadUserCoverAsync(Guid id, UpdateFileUrlRequest request);
+        Task<ApiResponse<PlatformUserStatsResponse>> GetPlatformUserStatsAsync();
     }
 }

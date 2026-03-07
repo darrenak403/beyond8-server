@@ -373,5 +373,31 @@ namespace Beyond8.Identity.Application.Services.Implements
                 }
             }
         }
+
+        public async Task<ApiResponse<PlatformUserStatsResponse>> GetPlatformUserStatsAsync()
+        {
+            try
+            {
+                var totalUsers = (int)await unitOfWork.UserRepository.CountAsync(u => u.DeletedAt == null);
+                var totalInstructors = (int)await unitOfWork.UserRepository.CountAsync(u =>
+                    u.DeletedAt == null &&
+                    u.UserRoles.Any(ur => ur.Role.Code == Common.Utilities.Role.Instructor && ur.RevokedAt == null));
+                var totalStudents = (int)await unitOfWork.UserRepository.CountAsync(u =>
+                    u.DeletedAt == null &&
+                    u.UserRoles.Any(ur => ur.Role.Code == Common.Utilities.Role.Student && ur.RevokedAt == null));
+
+                return ApiResponse<PlatformUserStatsResponse>.SuccessResponse(new PlatformUserStatsResponse
+                {
+                    TotalUsers = totalUsers,
+                    TotalInstructors = totalInstructors,
+                    TotalStudents = totalStudents
+                }, "OK");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error getting platform user stats");
+                return ApiResponse<PlatformUserStatsResponse>.FailureResponse("Đã xảy ra lỗi khi lấy thống kê người dùng.");
+            }
+        }
     }
 }

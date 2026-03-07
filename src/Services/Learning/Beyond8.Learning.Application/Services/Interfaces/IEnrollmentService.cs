@@ -12,4 +12,5 @@ public interface IEnrollmentService
     Task<ApiResponse<List<EnrollmentSimpleResponse>>> GetEnrolledCoursesAsync(Guid userId);
     Task<ApiResponse<EnrollmentResponse>> GetEnrollmentByIdAsync(Guid id, Guid userId);
     Task<ApiResponse<bool>> HasCertificateForCourseAsync(Guid studentId, Guid courseId);
+    Task<ApiResponse<PlatformEnrollmentStatsResponse>> GetPlatformEnrollmentStatsAsync();
 }

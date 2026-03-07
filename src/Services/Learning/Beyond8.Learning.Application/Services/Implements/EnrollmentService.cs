@@ -292,4 +292,25 @@ public class EnrollmentService(
             return ApiResponse<EnrollmentResponse>.FailureResponse("Lấy thông tin khóa học đã đăng ký thất bại.");
         }
     }
+
+    public async Task<ApiResponse<PlatformEnrollmentStatsResponse>> GetPlatformEnrollmentStatsAsync()
+    {
+        try
+        {
+            var totalEnrollments = (int)await unitOfWork.EnrollmentRepository.CountAsync(e => e.DeletedAt == null);
+            var totalCompleted = (int)await unitOfWork.EnrollmentRepository.CountAsync(
+                e => e.DeletedAt == null && e.Status == EnrollmentStatus.Completed);
+
+            return ApiResponse<PlatformEnrollmentStatsResponse>.SuccessResponse(new PlatformEnrollmentStatsResponse
+            {
+                TotalEnrollments = totalEnrollments,
+                TotalCompletedEnrollments = totalCompleted
+            }, "OK");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting platform enrollment stats");
+            return ApiResponse<PlatformEnrollmentStatsResponse>.FailureResponse("Đã xảy ra lỗi khi lấy thống kê đăng ký.");
+        }
+    }
 }

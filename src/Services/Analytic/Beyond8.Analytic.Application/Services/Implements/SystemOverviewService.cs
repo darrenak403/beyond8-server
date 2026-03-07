@@ -1,3 +1,6 @@
+using Beyond8.Analytic.Application.Clients.Catalog;
+using Beyond8.Analytic.Application.Clients.Identity;
+using Beyond8.Analytic.Application.Clients.Learning;
 using Beyond8.Analytic.Application.Clients.Sale;
 using Beyond8.Analytic.Application.Dtos.SystemOverview;
 using Beyond8.Analytic.Application.Services.Interfaces;
@@ -11,7 +14,10 @@ namespace Beyond8.Analytic.Application.Services.Implements;
 public class SystemOverviewService(
     ILogger<SystemOverviewService> logger,
     IUnitOfWork unitOfWork,
-    ISaleClient saleClient) : ISystemOverviewService
+    ISaleClient saleClient,
+    IIdentityClient identityClient,
+    ICatalogClient catalogClient,
+    ILearningClient learningClient) : ISystemOverviewService
 {
     public async Task<ApiResponse<SystemDashboardResponse>> GetSystemDashboardAsync()
     {
@@ -22,15 +28,33 @@ public class SystemOverviewService(
 
         var currentYearRecords = monthly12.Where(m => m.Year == now.Year).ToList();
 
+        // Gọi song song tới 3 service để lấy số liệu thực từ database
+        var userTask = identityClient.GetPlatformUserStatsAsync();
+        var courseTask = catalogClient.GetPlatformCourseStatsAsync();
+        var enrollmentTask = learningClient.GetPlatformEnrollmentStatsAsync();
+        await Task.WhenAll(userTask, courseTask, enrollmentTask);
+
+        var userStats = userTask.Result.IsSuccess ? userTask.Result.Data : null;
+        var courseStats = courseTask.Result.IsSuccess ? courseTask.Result.Data : null;
+        var enrollmentStats = enrollmentTask.Result.IsSuccess ? enrollmentTask.Result.Data : null;
+
+        if (userStats == null)
+            logger.LogWarning("Could not fetch user stats from Identity; falling back to aggregate");
+        if (courseStats == null)
+            logger.LogWarning("Could not fetch course stats from Catalog; falling back to aggregate");
+        if (enrollmentStats == null)
+            logger.LogWarning("Could not fetch enrollment stats from Learning; falling back to aggregate");
+
         var dashboard = new SystemDashboardResponse
         {
-            TotalUsers = (overview?.TotalInstructors ?? 0) + (overview?.TotalStudents ?? 0),
-            TotalInstructors = overview?.TotalInstructors ?? 0,
-            TotalStudents = overview?.TotalStudents ?? 0,
-            TotalCourses = overview?.TotalCourses ?? 0,
-            TotalPublishedCourses = overview?.TotalPublishedCourses ?? 0,
-            TotalEnrollments = overview?.TotalEnrollments ?? 0,
-            TotalCompletedEnrollments = overview?.TotalCompletedEnrollments ?? 0,
+            TotalUsers = userStats?.TotalUsers
+                         ?? (overview?.TotalInstructors ?? 0) + (overview?.TotalStudents ?? 0),
+            TotalInstructors = userStats?.TotalInstructors ?? overview?.TotalInstructors ?? 0,
+            TotalStudents = userStats?.TotalStudents ?? overview?.TotalStudents ?? 0,
+            TotalCourses = courseStats?.TotalCourses ?? overview?.TotalCourses ?? 0,
+            TotalPublishedCourses = courseStats?.TotalPublishedCourses ?? overview?.TotalPublishedCourses ?? 0,
+            TotalEnrollments = enrollmentStats?.TotalEnrollments ?? overview?.TotalEnrollments ?? 0,
+            TotalCompletedEnrollments = enrollmentStats?.TotalCompletedEnrollments ?? overview?.TotalCompletedEnrollments ?? 0,
             TotalPlatformFee = overview?.TotalPlatformFee ?? 0,
             AvgCourseRating = overview?.AvgCourseRating ?? 0,
             UpdatedAt = overview?.UpdatedAt

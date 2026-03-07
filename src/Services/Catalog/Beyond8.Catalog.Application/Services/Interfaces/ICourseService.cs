@@ -29,4 +29,5 @@ public interface ICourseService
     Task<ApiResponse<List<CourseResponse>>> GetMostPopularCoursesAsync(PaginationCourseSearchRequest pagination);
     Task<ApiResponse<List<bool>>> PublishBulkCoursesAsync(List<Guid> courseIds, Guid currentUserId);
     Task<ApiResponse<List<LessonVideoResponse>>> GetCourseVideosPreviewAsync(Guid courseId);
+    Task<ApiResponse<PlatformCourseStatsResponse>> GetPlatformCourseStatsAsync();
 }
