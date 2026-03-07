@@ -206,7 +206,14 @@ namespace Beyond8.Integration.Infrastructure.ExternalServices
         {
             if (!string.IsNullOrWhiteSpace(_s3Settings.CloudFrontUrl))
             {
-                return $"{_s3Settings.CloudFrontUrl.TrimEnd('/')}/{fileKey}";
+                var cfUrl = _s3Settings.CloudFrontUrl.TrimEnd('/');
+                if (!cfUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase) &&
+                    !cfUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+                {
+                    cfUrl = $"https://{cfUrl}";
+                }
+
+                return $"{cfUrl}/{fileKey}";
             }
 
             return $"https://{_s3Settings.BucketName}.s3.{_s3Settings.Region}.amazonaws.com/{fileKey}";
