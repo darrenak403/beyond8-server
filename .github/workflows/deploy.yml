@@ -1,15 +1,13 @@
 name: Build and Push Docker
 
-# Chạy khi git push code (branch main), pull request vào main, hoặc manual. KHÔNG chạy khi push tag.
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
     paths:
-      - 'src/**'
-      - 'shared/**'
-      - '.github/workflows/deploy.yml'
-      - 'docker/**'
-      - '*.sln'
+      - "src/**"
+      - "shared/**"
+      - ".github/workflows/deploy.yml"
+      - "*.sln"
   workflow_dispatch:
 
 jobs:
@@ -52,29 +50,16 @@ jobs:
             sale:
               - 'src/Services/Sale/**'
               - 'shared/**'
-            orchestration:
-              - 'src/Orchestration/**'
-            docker:
-              - 'docker/**'
-              - '**/Dockerfile'
-              - '.dockerignore'
-
-      - name: Debug changes detection
-        run: |
-          echo "Identity: ${{ steps.changes.outputs.identity }}, Integration: ${{ steps.changes.outputs.integration }}"
-          echo "Catalog: ${{ steps.changes.outputs.catalog }}, Assessment: ${{ steps.changes.outputs.assessment }}, Learning: ${{ steps.changes.outputs.learning }}"
-          echo "Analytic: ${{ steps.changes.outputs.analytic }}, Sale: ${{ steps.changes.outputs.sale }}, Docker: ${{ steps.changes.outputs.docker }}"
-          echo "Event: ${{ github.event_name }}"
 
       - name: Log in to Docker Hub
-        if: steps.changes.outputs.identity == 'true' || steps.changes.outputs.integration == 'true' || steps.changes.outputs.catalog == 'true' || steps.changes.outputs.assessment == 'true' || steps.changes.outputs.learning == 'true' || steps.changes.outputs.analytic == 'true' || steps.changes.outputs.sale == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.changes.outputs.identity == 'true' || steps.changes.outputs.integration == 'true' || steps.changes.outputs.catalog == 'true' || steps.changes.outputs.assessment == 'true' || steps.changes.outputs.learning == 'true' || steps.changes.outputs.analytic == 'true' || steps.changes.outputs.sale == 'true' || github.event_name == 'workflow_dispatch'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Set up Docker Buildx
-        if: steps.changes.outputs.identity == 'true' || steps.changes.outputs.integration == 'true' || steps.changes.outputs.catalog == 'true' || steps.changes.outputs.assessment == 'true' || steps.changes.outputs.learning == 'true' || steps.changes.outputs.analytic == 'true' || steps.changes.outputs.sale == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.changes.outputs.identity == 'true' || steps.changes.outputs.integration == 'true' || steps.changes.outputs.catalog == 'true' || steps.changes.outputs.assessment == 'true' || steps.changes.outputs.learning == 'true' || steps.changes.outputs.analytic == 'true' || steps.changes.outputs.sale == 'true' || github.event_name == 'workflow_dispatch'
         uses: docker/setup-buildx-action@v3
         with:
           driver-opts: |
@@ -82,7 +67,7 @@ jobs:
             network=host
 
       - name: Extract metadata for Identity Service
-        if: steps.changes.outputs.identity == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.changes.outputs.identity == 'true' || github.event_name == 'workflow_dispatch'
         id: meta-identity
         uses: docker/metadata-action@v5
         with:
@@ -95,7 +80,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Identity Service
-        if: steps.changes.outputs.identity == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.changes.outputs.identity == 'true' || github.event_name == 'workflow_dispatch'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -109,7 +94,7 @@ jobs:
             BUILDKIT_INLINE_CACHE=1
 
       - name: Extract metadata for Integration Service
-        if: steps.changes.outputs.integration == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.changes.outputs.integration == 'true' || github.event_name == 'workflow_dispatch'
         id: meta-integration
         uses: docker/metadata-action@v5
         with:
@@ -136,7 +121,7 @@ jobs:
             BUILDKIT_INLINE_CACHE=1
 
       - name: Extract metadata for Catalog Service
-        if: steps.changes.outputs.catalog == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.changes.outputs.catalog == 'true' || github.event_name == 'workflow_dispatch'
         id: meta-catalog
         uses: docker/metadata-action@v5
         with:
@@ -149,7 +134,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Catalog Service
-        if: steps.changes.outputs.catalog == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.changes.outputs.catalog == 'true' || github.event_name == 'workflow_dispatch'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -163,7 +148,7 @@ jobs:
             BUILDKIT_INLINE_CACHE=1
 
       - name: Extract metadata for Assessment Service
-        if: steps.changes.outputs.assessment == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.changes.outputs.assessment == 'true' || github.event_name == 'workflow_dispatch'
         id: meta-assessment
         uses: docker/metadata-action@v5
         with:
@@ -176,7 +161,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Assessment Service
-        if: steps.changes.outputs.assessment == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.changes.outputs.assessment == 'true' || github.event_name == 'workflow_dispatch'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -190,7 +175,7 @@ jobs:
             BUILDKIT_INLINE_CACHE=1
 
       - name: Extract metadata for Learning Service
-        if: steps.changes.outputs.learning == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.changes.outputs.learning == 'true' || github.event_name == 'workflow_dispatch'
         id: meta-learning
         uses: docker/metadata-action@v5
         with:
@@ -203,7 +188,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Learning Service
-        if: steps.changes.outputs.learning == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.changes.outputs.learning == 'true' || github.event_name == 'workflow_dispatch'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -217,7 +202,7 @@ jobs:
             BUILDKIT_INLINE_CACHE=1
 
       - name: Extract metadata for Analytic Service
-        if: steps.changes.outputs.analytic == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.changes.outputs.analytic == 'true' || github.event_name == 'workflow_dispatch'
         id: meta-analytic
         uses: docker/metadata-action@v5
         with:
@@ -230,7 +215,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Analytic Service
-        if: steps.changes.outputs.analytic == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.changes.outputs.analytic == 'true' || github.event_name == 'workflow_dispatch'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -257,7 +242,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Sale Service
-        if: steps.changes.outputs.sale == 'true' || steps.changes.outputs.docker == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.changes.outputs.sale == 'true' || github.event_name == 'workflow_dispatch'
         uses: docker/build-push-action@v5
         with:
           context: .

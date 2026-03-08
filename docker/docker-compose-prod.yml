@@ -22,6 +22,7 @@ x-identity-service-environment: &identity-service-environment
 x-integration-service-environment: &integration-service-environment
   ConnectionStrings__integration-db: Host=postgres;Port=5432;Database=${INTEGRATION_SERVICE_DATABASE};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
   ConnectionStrings__hangfire-integration-db: Host=postgres;Port=5432;Database=${HANGFIRE_INTEGRATION_DATABASE};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+  ConnectionStrings__qdrant: ${QDRANT_URL:-http://beyond8-qdrant:6333}
   ConnectionStrings__redis-cache: redis:6379,password=${REDIS_PASSWORD}
   ConnectionStrings__rabbitmq: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
   Clients__Identity__BaseUrl: http://beyond8-identity-service:8080
@@ -172,6 +173,17 @@ services:
       - beyond8-network
     restart: unless-stopped
 
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: beyond8-qdrant
+    ports:
+      - '${QDRANT_PORT:-6333}:6333'
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - beyond8-network
+    restart: unless-stopped
+
   gateway:
     image: nginx:latest
     container_name: beyond8-gateway
@@ -220,6 +232,7 @@ services:
       - postgres
       - redis
       - rabbitmq
+      - qdrant
     networks:
       - beyond8-network
     restart: unless-stopped
@@ -322,6 +335,7 @@ volumes:
   postgres_data:
   redis_data:
   rabbitmq_data:
+  qdrant_data:
   gateway_data:
 
 networks:
