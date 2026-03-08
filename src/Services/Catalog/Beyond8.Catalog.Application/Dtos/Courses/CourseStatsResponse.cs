@@ -5,6 +5,7 @@ public class CourseStatsResponse
     public int TotalCourses { get; set; }
     public int DraftCourses { get; set; }
     public int PendingApprovalCourses { get; set; }
+    public int ApprovedCourses { get; set; }
     public int PublishedCourses { get; set; }
     public int RejectedCourses { get; set; }
     public int TotalStudents { get; set; }

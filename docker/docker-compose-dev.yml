@@ -98,6 +98,10 @@ x-analytic-service-environment: &analytic-service-environment
   ConnectionStrings__analytic-db: Host=postgres;Port=5432;Database=${ANALYTIC_SERVICE_DATABASE};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
   ConnectionStrings__redis-cache: redis:6379,password=${REDIS_PASSWORD}
   ConnectionStrings__rabbitmq: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+  Clients__Identity__BaseUrl: http://beyond8-identity-service:8080
+  Clients__Catalog__BaseUrl: http://beyond8-catalog-service:8080
+  Clients__Learning__BaseUrl: http://beyond8-learning-service:8080
+  Clients__Sale__BaseUrl: http://beyond8-sale-service:8080
 
 x-sale-service-environment: &sale-service-environment
   ConnectionStrings__sale-db: Host=postgres;Port=5432;Database=${SALE_SERVICE_DATABASE};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}

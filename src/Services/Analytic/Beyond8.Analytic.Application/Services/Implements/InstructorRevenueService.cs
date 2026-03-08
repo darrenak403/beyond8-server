@@ -83,7 +83,7 @@ public class InstructorRevenueService(
                     Total = courseStats?.TotalCourses ?? revenue?.TotalCourses ?? 0,
                     Draft = courseStats?.DraftCourses ?? revenue?.DraftCourses ?? 0,
                     PendingApproval = courseStats?.PendingApprovalCourses ?? revenue?.PendingApprovalCourses ?? 0,
-                    Approved = revenue?.ApprovedCourses ?? 0,
+                    Approved = courseStats?.ApprovedCourses ?? revenue?.ApprovedCourses ?? 0,
                     Published = courseStats?.PublishedCourses ?? revenue?.PublishedCourses ?? 0,
                     Rejected = courseStats?.RejectedCourses ?? revenue?.RejectedCourses ?? 0,
                     Archived = revenue?.ArchivedCourses ?? 0,

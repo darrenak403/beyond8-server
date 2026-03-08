@@ -47,8 +47,7 @@ public class SystemOverviewService(
 
         var dashboard = new SystemDashboardResponse
         {
-            TotalUsers = userStats?.TotalUsers
-                         ?? (overview?.TotalInstructors ?? 0) + (overview?.TotalStudents ?? 0),
+            TotalUsers = userStats?.TotalUsers ?? overview?.TotalUsers ?? 0,
             TotalInstructors = userStats?.TotalInstructors ?? overview?.TotalInstructors ?? 0,
             TotalStudents = userStats?.TotalStudents ?? overview?.TotalStudents ?? 0,
             TotalCourses = courseStats?.TotalCourses ?? overview?.TotalCourses ?? 0,
