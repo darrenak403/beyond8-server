@@ -98,6 +98,10 @@ x-analytic-service-environment: &analytic-service-environment
   ConnectionStrings__analytic-db: Host=postgres;Port=5432;Database=${ANALYTIC_SERVICE_DATABASE};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
   ConnectionStrings__redis-cache: redis:6379,password=${REDIS_PASSWORD}
   ConnectionStrings__rabbitmq: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+  Clients__Identity__BaseUrl: http://beyond8-identity-service:8080
+  Clients__Catalog__BaseUrl: http://beyond8-catalog-service:8080
+  Clients__Learning__BaseUrl: http://beyond8-learning-service:8080
+  Clients__Sale__BaseUrl: http://beyond8-sale-service:8080
 
 x-sale-service-environment: &sale-service-environment
   ConnectionStrings__sale-db: Host=postgres;Port=5432;Database=${SALE_SERVICE_DATABASE};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
@@ -111,6 +115,9 @@ x-sale-service-environment: &sale-service-environment
   VNPay__BaseUrl: ${VNPAY_BASE_URL}
   VNPay__ReturnUrl: ${VNPAY_RETURN_URL}
   VNPay__BackendCallbackUrl: ${VNPAY_BACKEND_CALLBACK_URL}
+  VNPay__CallbackPath: /payment/callback
+  VNPay__AllowedOrigins__0: https://beyond8.io.vn
+  VNPay__AllowedOrigins__1: https://www.beyond8.io.vn
   VNPay__PaymentExpiryMinutes: ${VNPAY_PAYMENT_EXPIRY_MINUTES:-15}
 
 services:
@@ -126,7 +133,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./data/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: [ 'CMD-SHELL', 'pg_isready -U ${POSTGRES_USER}' ]
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER}']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -143,7 +150,7 @@ services:
     volumes:
       - redis_data:/data
     healthcheck:
-      test: [ 'CMD-SHELL', 'redis-cli -a ${REDIS_PASSWORD} ping' ]
+      test: ['CMD-SHELL', 'redis-cli -a ${REDIS_PASSWORD} ping']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -164,7 +171,7 @@ services:
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
-      test: [ 'CMD-SHELL', 'rabbitmq-diagnostics -q ping' ]
+      test: ['CMD-SHELL', 'rabbitmq-diagnostics -q ping']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -211,7 +218,7 @@ services:
     ports:
       - '${IDENTITY_SERVICE_PORT:-8081}:8080'
     environment:
-      <<: [ *common-environment, *identity-service-environment ]
+      <<: [*common-environment, *identity-service-environment]
     depends_on:
       - postgres
       - redis
@@ -226,7 +233,7 @@ services:
     ports:
       - '${INTEGRATION_SERVICE_PORT:-8082}:8080'
     environment:
-      <<: [ *common-environment, *integration-service-environment ]
+      <<: [*common-environment, *integration-service-environment]
     depends_on:
       - postgres
       - redis
@@ -242,7 +249,7 @@ services:
     ports:
       - '${ASSESSMENT_SERVICE_PORT:-8084}:8080'
     environment:
-      <<: [ *common-environment, *assessment-service-environment ]
+      <<: [*common-environment, *assessment-service-environment]
     depends_on:
       - postgres
       - redis
@@ -258,7 +265,7 @@ services:
     ports:
       - '${CATALOG_SERVICE_PORT:-8085}:8080'
     environment:
-      <<: [ *common-environment, *catalog-service-environment ]
+      <<: [*common-environment, *catalog-service-environment]
     depends_on:
       - postgres
       - redis
@@ -274,7 +281,7 @@ services:
     ports:
       - '${LEARNING_SERVICE_PORT:-8086}:8080'
     environment:
-      <<: [ *common-environment, *learning-service-environment ]
+      <<: [*common-environment, *learning-service-environment]
     depends_on:
       - postgres
       - redis
@@ -291,7 +298,7 @@ services:
     ports:
       - '${ANALYTIC_SERVICE_PORT:-8087}:8080'
     environment:
-      <<: [ *common-environment, *analytic-service-environment ]
+      <<: [*common-environment, *analytic-service-environment]
     depends_on:
       - postgres
       - redis
@@ -306,7 +313,7 @@ services:
     ports:
       - '${SALE_SERVICE_PORT:-8088}:8080'
     environment:
-      <<: [ *common-environment, *sale-service-environment ]
+      <<: [*common-environment, *sale-service-environment]
     depends_on:
       - postgres
       - redis
@@ -336,7 +343,6 @@ volumes:
   rabbitmq_data:
   qdrant_data:
   gateway_data:
-
 
 networks:
   beyond8-network:

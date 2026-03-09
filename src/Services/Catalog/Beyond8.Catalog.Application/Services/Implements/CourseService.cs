@@ -432,6 +432,7 @@ public class CourseService(
                 TotalCourses = courses.Count,
                 DraftCourses = courses.Count(c => c.Status == CourseStatus.Draft),
                 PendingApprovalCourses = courses.Count(c => c.Status == CourseStatus.PendingApproval),
+                ApprovedCourses = courses.Count(c => c.Status == CourseStatus.Approved),
                 PublishedCourses = courses.Count(c => c.Status == CourseStatus.Published),
                 RejectedCourses = courses.Count(c => c.Status == CourseStatus.Rejected),
                 // TODO(event): TotalStudents, TotalRevenue - khi có Enrollment service: consume event hoặc gọi client
