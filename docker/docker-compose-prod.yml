@@ -61,6 +61,8 @@ x-integration-service-environment: &integration-service-environment
   Gemini__DefaultParameters__TopP: ${GEMINI_DEFAULT_PARAMETERS_TOP_P}
   Gemini__DefaultParameters__TopK: ${GEMINI_DEFAULT_PARAMETERS_TOP_K}
 
+  HuggingFace__ApiKey: ${HUGGINGFACE_API_KEY}
+
   Email__Resend__ApiKey: ${RESEND_API_KEY}
   Email__Resend__FromEmail: ${RESEND_FROM_EMAIL}
   Email__Resend__FromName: ${RESEND_FROM_NAME}
