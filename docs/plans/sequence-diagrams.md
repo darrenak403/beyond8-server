@@ -1,52 +1,41 @@
 # Sequence Diagrams (Mermaid)
 
-Controllers and EmailService (no consumers). Paste each block from `sequenceDiagram`.
+Tham chiếu: [UML Sequence Diagram – Visual Paradigm](https://www.visual-paradigm.com/guide/uml-unified-modeling-language/what-is-sequence-diagram/).  
+Quy ước: **Actor**, **Lifeline** (participant), **Call** (->>), **Return** (-->>). Paste từng block vào `sequenceDiagram`.
 
 ---
 
 ## 1. Instructor registration and approval
 
-User apply → AI profile review → Admin approve or reject → EmailService.
+User nộp hồ sơ → Admin AI review → Admin duyệt/từ chối → EmailService gửi mail.
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor User
     actor Admin
-    participant "InstructorController" as :InstructorController
-    participant "AiController" as :AiController
-    participant "EmailService" as :EmailService
+    participant InstructorController
+    participant AiController
+    participant EmailService
 
-    rect rgb(230, 245, 255)
-        User->>+:InstructorController: POST /api/v1/instructors/apply (CreateInstructorProfileRequest)
-        :InstructorController->>:InstructorController: ValidateRequest (validator)
-        :InstructorController->>:InstructorController: GetUser, check existing profile (reject if Pending/Verified/RequestUpdate)
-        :InstructorController->>:InstructorController: Create InstructorProfile, AddAsync, SaveChanges
-        :InstructorController->>:InstructorController: Publish InstructorProfileSubmittedEvent
-        :InstructorController-->>-User: 200 OK – Application submitted successfully
-    end
+    User->>InstructorController: apply
+    InstructorController->>InstructorController: validate, create profile, Publish(Submitted)
+    InstructorController-->>User: 200 OK
 
-    rect rgb(255, 248, 220)
-        Admin->>+:AiController: POST /api/v1/ai/profile-review (ProfileReviewRequest)
-        :AiController->>:AiController: GetPrompt, build prompt, GenerateContentAsync (Gemini), parse AiProfileReviewResponse
-        :AiController-->>-Admin: 200 OK – AiProfileReviewResponse (IsAccepted, TotalScore, Details)
-    end
+    Admin->>AiController: profile-review
+    AiController->>AiController: GenerateContent, parse response
+    AiController-->>Admin: AiProfileReviewResponse
 
-    rect rgb(220, 255, 220)
-        alt Approved
-            Admin->>+:InstructorController: POST /api/v1/instructors/{id}/approve
-            :InstructorController->>:InstructorController: ValidateProfileForReviewAsync, get ROLE_INSTRUCTOR, add UserRole, set profile Verified/VerifiedAt/VerifiedBy, SaveChanges
-            :InstructorController->>:InstructorController: Publish InstructorApprovalEvent
-            :InstructorController->>:EmailService: SendInstructorApprovalEmailAsync
-            :InstructorController-->>-Admin: 200 OK
-
-        else Reject or request update
-            Admin->>+:InstructorController: POST /api/v1/instructors/{id}/not-approve (NotApproveInstructorProfileRequest)
-            :InstructorController->>:InstructorController: ValidateProfileForReviewAsync, set VerificationStatus + VerificationNotes, SaveChanges
-            :InstructorController->>:InstructorController: Publish InstructorUpdateRequestEvent
-            :InstructorController->>:EmailService: SendInstructorUpdateRequestEmailAsync
-            :InstructorController-->>-Admin: 200 OK
-        end
+    alt Approved
+        Admin->>InstructorController: approve(id)
+        InstructorController->>InstructorController: add role, Verified, Publish(Approval)
+        InstructorController->>EmailService: SendApprovalEmail
+        InstructorController-->>Admin: 200 OK
+    else Reject / Request update
+        Admin->>InstructorController: not-approve(id, notes)
+        InstructorController->>InstructorController: set status, Publish(UpdateRequest)
+        InstructorController->>EmailService: SendUpdateRequestEmail
+        InstructorController-->>Admin: 200 OK
     end
 ```
 
@@ -54,130 +43,96 @@ sequenceDiagram
 
 ## 2. Course lifecycle: create, submit, approve, publish
 
-Instructor: create course → section → lesson → submit for approval. Admin: approve. Instructor: publish.
+Instructor tạo course → section → lesson → submit. Admin approve. Instructor publish.
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Instructor
     actor Admin
-    participant "CourseController" as :CourseController
-    participant "SectionController" as :SectionController
-    participant "LessonController" as :LessonController
+    participant CourseController
+    participant SectionController
+    participant LessonController
 
-    rect rgb(230, 245, 255)
-        Instructor->>+:CourseController: POST /api/v1/courses (CreateCourseRequest)
-        :CourseController->>:CourseController: Validate category, get instructor, ToEntity, AddAsync Course, SaveChanges
-        :CourseController->>:CourseController: Publish CourseCreatedEvent
-        :CourseController-->>-Instructor: 200 OK – CourseResponse
+    Instructor->>CourseController: create course
+    CourseController-->>Instructor: CourseResponse
 
-        Instructor->>+:SectionController: POST /api/v1/sections (CreateSectionRequest, courseId)
-        :SectionController->>:SectionController: CheckCourseOwnership, max OrderIndex, ToEntity, AddAsync Section, SaveChanges
-        :SectionController-->>-Instructor: 200 OK – SectionResponse
+    Instructor->>SectionController: create section
+    SectionController-->>Instructor: SectionResponse
 
-        Instructor->>+:LessonController: POST /api/v1/lessons/video | /text | /quiz (Create…LessonRequest, sectionId)
-        :LessonController->>:LessonController: CheckSectionOwnership, OrderIndex, AddAsync Lesson + type, UpdateSectionStatistics, SaveChanges
-        :LessonController-->>-Instructor: 200 OK – LessonResponse
-    end
+    Instructor->>LessonController: create lesson
+    LessonController-->>Instructor: LessonResponse
 
-    rect rgb(255, 248, 220)
-        Instructor->>+:CourseController: POST /api/v1/courses/{id}/submit-approval
-        :CourseController->>:CourseController: Validate Draft, min 1 section, min 3 lessons, all videos HLS, Status = PendingApproval, SaveChanges
-        :CourseController->>:CourseController: Publish CourseSubmittedForApprovalEvent
-        :CourseController-->>-Instructor: 200 OK
-    end
+    Instructor->>CourseController: submit-approval
+    CourseController->>CourseController: validate, Publish(SubmittedForApproval)
+    CourseController-->>Instructor: 200 OK
 
-    rect rgb(220, 255, 220)
-        Admin->>+:CourseController: POST /api/v1/courses/{id}/approve (ApproveCourseRequest)
-        :CourseController->>:CourseController: Validate PendingApproval, Status = Approved, ApprovalNotes, SaveChanges
-        :CourseController->>:CourseController: Publish CourseApprovedEvent
-        :CourseController-->>-Admin: 200 OK
-    end
+    Admin->>CourseController: approve
+    CourseController->>CourseController: set Approved, Publish(Approved)
+    CourseController-->>Admin: 200 OK
 
-    rect rgb(230, 230, 255)
-        Instructor->>+:CourseController: POST /api/v1/courses/{id}/publish
-        :CourseController->>:CourseController: Validate Approved, Status = Published, SaveChanges
-        :CourseController->>:CourseController: Publish CoursePublishedEvent
-        :CourseController-->>-Instructor: 200 OK
-    end
+    Instructor->>CourseController: publish
+    CourseController->>CourseController: set Published, Publish(Published)
+    CourseController-->>Instructor: 200 OK
 ```
 
 ---
 
 ## 3. Student purchases course
 
-Student: create order → process payment. Callback: Order=Paid, Publish OrderCompletedEvent.
+Student tạo order → thanh toán → callback: Order=Paid, Publish(OrderCompletedEvent).
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Student
-    participant "OrderController" as :OrderController
-    participant "PaymentController" as :PaymentController
+    participant OrderController
+    participant PaymentController
 
-    rect rgb(230, 245, 255)
-        Student->>+:OrderController: POST /api/v1/orders/buy-now or POST /api/v1/cart/checkout
-        :OrderController->>:OrderController: Validate, get course price (Catalog), create Order (Pending), SaveChanges
-        :OrderController-->>-Student: 200 OK – OrderResponse
-    end
+    Student->>OrderController: buy-now / checkout
+    OrderController->>OrderController: create Order
+    OrderController-->>Student: OrderResponse
 
-    rect rgb(255, 248, 220)
-        Student->>+:PaymentController: POST /api/v1/payments/process (OrderId, callbackUrl)
-        :PaymentController->>:PaymentController: Validate Order Pending, TotalAmount > 0, create Payment (Pending), GenerateVNPayUrl, SaveChanges
-        :PaymentController-->>-Student: 200 OK – PaymentUrlResponse
-    end
+    Student->>PaymentController: process
+    PaymentController->>PaymentController: create Payment, VNPay URL
+    PaymentController-->>Student: PaymentUrlResponse
 
-    rect rgb(220, 255, 220)
-        :PaymentController->>:PaymentController: GET callback: ValidateCallback, Payment=Completed, Order=Paid, SaveChanges, Publish OrderCompletedEvent, redirect frontend
-    end
+    Note over PaymentController: Callback: Order=Paid, Publish(OrderCompletedEvent)
 ```
 
 ---
 
-## 4. Student learns course and certificate issuance
+## 4. Student learns course and certificate
 
-Student: enrollments → curriculum progress → course/lesson details → heartbeat. System: try issue certificate. Student: get certificates.
+Student: enrollments, curriculum progress, course/lesson, heartbeat. Hệ thống: thử cấp certificate. Student: lấy certificates.
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Student
-    participant "EnrollmentController" as :EnrollmentController
-    participant "CourseController" as :CourseController
-    participant "LessonController" as :LessonController
-    participant "CertificateController" as :CertificateController
+    participant EnrollmentController
+    participant CourseController
+    participant LessonController
+    participant CertificateController
 
-    rect rgb(230, 245, 255)
-        Student->>+:EnrollmentController: GET /api/v1/enrollments/me or GET /api/v1/enrollments/{id}
-        :EnrollmentController->>:EnrollmentController: Get enrolled courses / enrollment by id
-        :EnrollmentController-->>-Student: 200 OK – Enrollment list / EnrollmentResponse
+    Student->>EnrollmentController: GET enrollments/me
+    EnrollmentController-->>Student: Enrollment list
 
-        Student->>+:EnrollmentController: GET /api/v1/enrollments/{id}/curriculum-progress
-        :EnrollmentController->>:EnrollmentController: Get sections, lessons, section progress (LessonProgress, quiz/assignment state)
-        :EnrollmentController-->>-Student: 200 OK – CurriculumProgressResponse
-    end
+    Student->>EnrollmentController: GET curriculum-progress
+    EnrollmentController-->>Student: CurriculumProgressResponse
 
-    rect rgb(255, 248, 220)
-        Student->>+:CourseController: GET /api/v1/courses/{id}/details
-        :CourseController->>:CourseController: Validate enrollment (Learning), return course details for student
-        :CourseController-->>-Student: 200 OK – CourseDetailResponse
+    Student->>CourseController: GET course details
+    CourseController-->>Student: CourseDetailResponse
 
-        Student->>+:LessonController: GET /api/v1/lessons/{id} or GET /api/v1/lessons/{lessonId}/video
-        :LessonController->>:LessonController: Validate enrollment, return lesson content / video URL
-        :LessonController-->>-Student: 200 OK – LessonResponse / LessonVideoResponse
-    end
+    Student->>LessonController: GET lesson / video
+    LessonController-->>Student: LessonResponse
 
-    rect rgb(220, 255, 220)
-        Student->>+:EnrollmentController: PUT /api/v1/enrollments/lesson/{lessonId}/heartbeat (position, completed)
-        :EnrollmentController->>:EnrollmentController: Update LessonProgress, SectionProgress, SaveChanges
-        :EnrollmentController->>:CertificateController: TryIssueCertificateIfEligibleAsync(enrollmentId)
-        :CertificateController->>:CertificateController: Check all lessons completed, quiz/assignment config, create Certificate, Publish CourseCompletedEvent
-        :EnrollmentController-->>-Student: 200 OK – LessonProgressResponse
-    end
+    Student->>EnrollmentController: PUT lesson heartbeat
+    EnrollmentController->>EnrollmentController: update progress
+    EnrollmentController->>CertificateController: TryIssueCertificateIfEligible
+    CertificateController->>CertificateController: create Certificate, Publish(CourseCompleted)
+    EnrollmentController-->>Student: 200 OK
 
-    rect rgb(230, 230, 255)
-        Student->>+:CertificateController: GET /api/v1/certificates/me or GET /api/v1/certificates/{id}
-        :CertificateController->>:CertificateController: Get my certificates / certificate by id
-        :CertificateController-->>-Student: 200 OK – Certificate list / CertificateDetailResponse
-    end
+    Student->>CertificateController: GET certificates/me
+    CertificateController-->>Student: Certificate list
 ```
