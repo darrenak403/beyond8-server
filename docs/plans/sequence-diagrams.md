@@ -14,28 +14,28 @@ sequenceDiagram
     autonumber
     actor User
     actor Admin
-    participant InstructorController
-    participant AiController
-    participant EmailService
+    participant "InstructorController" as :InstructorController
+    participant "AiController" as :AiController
+    participant "EmailService" as :EmailService
 
-    User->>InstructorController: apply
-    InstructorController->>InstructorController: validate, create profile, Publish(Submitted)
-    InstructorController-->>User: 200 OK
+    User->>:InstructorController: apply
+    :InstructorController->>:InstructorController: validate, create profile, Publish(Submitted)
+    :InstructorController-->>User: 200 OK
 
-    Admin->>AiController: profile-review
-    AiController->>AiController: GenerateContent, parse response
-    AiController-->>Admin: AiProfileReviewResponse
+    Admin->>:AiController: profile-review
+    :AiController->>:AiController: GenerateContent, parse response
+    :AiController-->>Admin: AiProfileReviewResponse
 
     alt Approved
-        Admin->>InstructorController: approve(id)
-        InstructorController->>InstructorController: add role, Verified, Publish(Approval)
-        InstructorController->>EmailService: SendApprovalEmail
-        InstructorController-->>Admin: 200 OK
+        Admin->>:InstructorController: approve(id)
+        :InstructorController->>:InstructorController: add role, Verified, Publish(Approval)
+        :InstructorController->>:EmailService: SendApprovalEmail
+        :InstructorController-->>Admin: 200 OK
     else Reject / Request update
-        Admin->>InstructorController: not-approve(id, notes)
-        InstructorController->>InstructorController: set status, Publish(UpdateRequest)
-        InstructorController->>EmailService: SendUpdateRequestEmail
-        InstructorController-->>Admin: 200 OK
+        Admin->>:InstructorController: not-approve(id, notes)
+        :InstructorController->>:InstructorController: set status, Publish(UpdateRequest)
+        :InstructorController->>:EmailService: SendUpdateRequestEmail
+        :InstructorController-->>Admin: 200 OK
     end
 ```
 
@@ -50,30 +50,30 @@ sequenceDiagram
     autonumber
     actor Instructor
     actor Admin
-    participant CourseController
-    participant SectionController
-    participant LessonController
+    participant "CourseController" as :CourseController
+    participant "SectionController" as :SectionController
+    participant "LessonController" as :LessonController
 
-    Instructor->>CourseController: create course
-    CourseController-->>Instructor: CourseResponse
+    Instructor->>:CourseController: create course
+    :CourseController-->>Instructor: CourseResponse
 
-    Instructor->>SectionController: create section
-    SectionController-->>Instructor: SectionResponse
+    Instructor->>:SectionController: create section
+    :SectionController-->>Instructor: SectionResponse
 
-    Instructor->>LessonController: create lesson
-    LessonController-->>Instructor: LessonResponse
+    Instructor->>:LessonController: create lesson
+    :LessonController-->>Instructor: LessonResponse
 
-    Instructor->>CourseController: submit-approval
-    CourseController->>CourseController: validate, Publish(SubmittedForApproval)
-    CourseController-->>Instructor: 200 OK
+    Instructor->>:CourseController: submit-approval
+    :CourseController->>:CourseController: validate, Publish(SubmittedForApproval)
+    :CourseController-->>Instructor: 200 OK
 
-    Admin->>CourseController: approve
-    CourseController->>CourseController: set Approved, Publish(Approved)
-    CourseController-->>Admin: 200 OK
+    Admin->>:CourseController: approve
+    :CourseController->>:CourseController: set Approved, Publish(Approved)
+    :CourseController-->>Admin: 200 OK
 
-    Instructor->>CourseController: publish
-    CourseController->>CourseController: set Published, Publish(Published)
-    CourseController-->>Instructor: 200 OK
+    Instructor->>:CourseController: publish
+    :CourseController->>:CourseController: set Published, Publish(Published)
+    :CourseController-->>Instructor: 200 OK
 ```
 
 ---
@@ -86,18 +86,18 @@ Student tạo order → thanh toán → callback: Order=Paid, Publish(OrderCompl
 sequenceDiagram
     autonumber
     actor Student
-    participant OrderController
-    participant PaymentController
+    participant "OrderController" as :OrderController
+    participant "PaymentController" as :PaymentController
 
-    Student->>OrderController: buy-now / checkout
-    OrderController->>OrderController: create Order
-    OrderController-->>Student: OrderResponse
+    Student->>:OrderController: buy-now / checkout
+    :OrderController->>:OrderController: create Order
+    :OrderController-->>Student: OrderResponse
 
-    Student->>PaymentController: process
-    PaymentController->>PaymentController: create Payment, VNPay URL
-    PaymentController-->>Student: PaymentUrlResponse
+    Student->>:PaymentController: process
+    :PaymentController->>:PaymentController: create Payment, VNPay URL
+    :PaymentController-->>Student: PaymentUrlResponse
 
-    Note over PaymentController: Callback: Order=Paid, Publish(OrderCompletedEvent)
+    Note over :PaymentController: Callback: Order=Paid, Publish(OrderCompletedEvent)
 ```
 
 ---
@@ -110,29 +110,29 @@ Student: enrollments, curriculum progress, course/lesson, heartbeat. Hệ thốn
 sequenceDiagram
     autonumber
     actor Student
-    participant EnrollmentController
-    participant CourseController
-    participant LessonController
-    participant CertificateController
+    participant "EnrollmentController" as :EnrollmentController
+    participant "CourseController" as :CourseController
+    participant "LessonController" as :LessonController
+    participant "CertificateController" as :CertificateController
 
-    Student->>EnrollmentController: GET enrollments/me
-    EnrollmentController-->>Student: Enrollment list
+    Student->>:EnrollmentController: GET enrollments/me
+    :EnrollmentController-->>Student: Enrollment list
 
-    Student->>EnrollmentController: GET curriculum-progress
-    EnrollmentController-->>Student: CurriculumProgressResponse
+    Student->>:EnrollmentController: GET curriculum-progress
+    :EnrollmentController-->>Student: CurriculumProgressResponse
 
-    Student->>CourseController: GET course details
-    CourseController-->>Student: CourseDetailResponse
+    Student->>:CourseController: GET course details
+    :CourseController-->>Student: CourseDetailResponse
 
-    Student->>LessonController: GET lesson / video
-    LessonController-->>Student: LessonResponse
+    Student->>:LessonController: GET lesson / video
+    :LessonController-->>Student: LessonResponse
 
-    Student->>EnrollmentController: PUT lesson heartbeat
-    EnrollmentController->>EnrollmentController: update progress
-    EnrollmentController->>CertificateController: TryIssueCertificateIfEligible
-    CertificateController->>CertificateController: create Certificate, Publish(CourseCompleted)
-    EnrollmentController-->>Student: 200 OK
+    Student->>:EnrollmentController: PUT lesson heartbeat
+    :EnrollmentController->>:EnrollmentController: update progress
+    :EnrollmentController->>:CertificateController: TryIssueCertificateIfEligible
+    :CertificateController->>:CertificateController: create Certificate, Publish(CourseCompleted)
+    :EnrollmentController-->>Student: 200 OK
 
-    Student->>CertificateController: GET certificates/me
-    CertificateController-->>Student: Certificate list
+    Student->>:CertificateController: GET certificates/me
+    :CertificateController-->>Student: Certificate list
 ```
