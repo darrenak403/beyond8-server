@@ -254,3 +254,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=sale
           build-args: |
             BUILDKIT_INLINE_CACHE=1
+
+      - name: Trigger Dokploy Deployment
+        if: steps.changes.outputs.identity == 'true' || steps.changes.outputs.integration == 'true' || steps.changes.outputs.catalog == 'true' || steps.changes.outputs.assessment == 'true' || steps.changes.outputs.learning == 'true' || steps.changes.outputs.analytic == 'true' || steps.changes.outputs.sale == 'true' || github.event_name == 'workflow_dispatch'
+        run: curl -X GET "${{ secrets.DOKPLOY_WEBHOOK_URL }}"
