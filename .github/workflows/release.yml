@@ -122,3 +122,6 @@ jobs:
             echo "- \`${{ secrets.DOCKER_USERNAME }}/beyond8-identity-service:latest\`" >> $GITHUB_STEP_SUMMARY
             echo "- \`${{ secrets.DOCKER_USERNAME }}/beyond8-integration-service:latest\`" >> $GITHUB_STEP_SUMMARY
           fi
+
+      - name: Trigger Dokploy Deployment
+        run: curl -X GET "${{ secrets.DOKPLOY_WEBHOOK_URL }}"
