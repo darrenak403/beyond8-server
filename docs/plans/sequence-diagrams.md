@@ -1,138 +1,124 @@
-# Sequence Diagrams (Mermaid)
-
-Tham chiếu: [UML Sequence Diagram – Visual Paradigm](https://www.visual-paradigm.com/guide/uml-unified-modeling-language/what-is-sequence-diagram/).  
-Quy ước: **Actor**, **Lifeline** (participant), **Call** (->>), **Return** (-->>). Paste từng block vào `sequenceDiagram`.
-
 ---
 
-## 1. Instructor registration and approval
-
-User nộp hồ sơ → Admin AI review → Admin duyệt/từ chối → EmailService gửi mail.
+## 1. Instructor Registration & AI Approval
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor User
     actor Admin
-    participant "InstructorController" as :InstructorController
-    participant "AiController" as :AiController
-    participant "EmailService" as :EmailService
+    participant IC as :InstructorController
+    participant AC as :AiController
+    participant ES as :EmailService
 
-    User->>:InstructorController: apply
-    :InstructorController->>:InstructorController: validate, create profile, Publish(Submitted)
-    :InstructorController-->>User: 200 OK
+    User->>IC: Apply(profile)
+    IC->>IC: Create Profile (Pending)
+    IC-->>User: 202 Accepted
 
-    Admin->>:AiController: profile-review
-    :AiController->>:AiController: GenerateContent, parse response
-    :AiController-->>Admin: AiProfileReviewResponse
+    Admin->>AC: ReviewProfile(id)
+    AC->>AC: Analyze & Score
+    AC-->>Admin: AIReviewResponse
 
     alt Approved
-        Admin->>:InstructorController: approve(id)
-        :InstructorController->>:InstructorController: add role, Verified, Publish(Approval)
-        :InstructorController->>:EmailService: SendApprovalEmail
-        :InstructorController-->>Admin: 200 OK
-    else Reject / Request update
-        Admin->>:InstructorController: not-approve(id, notes)
-        :InstructorController->>:InstructorController: set status, Publish(UpdateRequest)
-        :InstructorController->>:EmailService: SendUpdateRequestEmail
-        :InstructorController-->>Admin: 200 OK
+        Admin->>IC: Approve(id)
+        IC->>IC: Update Status (Verified)
+        IC->>ES: SendApprovalEmail()
+    else Rejected
+        Admin->>IC: Reject(id, reason)
+        IC->>IC: Update Status (Rejected)
+        IC->>ES: SendRejectionEmail()
     end
+    IC-->>Admin: 200 OK
+
 ```
 
 ---
 
-## 2. Course lifecycle: create, submit, approve, publish
-
-Instructor tạo course → section → lesson → submit. Admin approve. Instructor publish.
+## 2. Course Lifecycle
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Instructor
     actor Admin
-    participant "CourseController" as :CourseController
-    participant "SectionController" as :SectionController
-    participant "LessonController" as :LessonController
+    participant CC as :CourseController
+    participant SC as :SectionController
+    participant LC as :LessonController
 
-    Instructor->>:CourseController: create course
-    :CourseController-->>Instructor: CourseResponse
+    Instructor->>CC: Create Course
+    CC-->>Instructor: CourseID
+    Instructor->>SC: Add Section(CourseID)
+    Instructor->>LC: Add Lesson(SectionID)
 
-    Instructor->>:SectionController: create section
-    :SectionController-->>Instructor: SectionResponse
+    Instructor->>CC: SubmitForApproval(id)
+    Admin->>CC: ApproveCourse(id)
+    CC->>CC: Set Status (Approved)
 
-    Instructor->>:LessonController: create lesson
-    :LessonController-->>Instructor: LessonResponse
+    Instructor->>CC: Publish(id)
+    CC->>CC: Set Status (Published)
+    CC-->>Instructor: 200 OK
 
-    Instructor->>:CourseController: submit-approval
-    :CourseController->>:CourseController: validate, Publish(SubmittedForApproval)
-    :CourseController-->>Instructor: 200 OK
-
-    Admin->>:CourseController: approve
-    :CourseController->>:CourseController: set Approved, Publish(Approved)
-    :CourseController-->>Admin: 200 OK
-
-    Instructor->>:CourseController: publish
-    :CourseController->>:CourseController: set Published, Publish(Published)
-    :CourseController-->>Instructor: 200 OK
 ```
 
 ---
 
-## 3. Student purchases course
-
-Student tạo order → thanh toán → callback: Order=Paid, Publish(OrderCompletedEvent).
+## 3. Student Purchases Course
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Student
-    participant "OrderController" as :OrderController
-    participant "PaymentController" as :PaymentController
+    participant OC as :OrderController
+    participant PC as :PaymentController
 
-    Student->>:OrderController: buy-now / checkout
-    :OrderController->>:OrderController: create Order
-    :OrderController-->>Student: OrderResponse
+    Student->>OC: Checkout(Items)
+    OC->>OC: Create Order (Pending)
+    OC-->>Student: OrderID
 
-    Student->>:PaymentController: process
-    :PaymentController->>:PaymentController: create Payment, VNPay URL
-    :PaymentController-->>Student: PaymentUrlResponse
+    Student->>PC: ProcessPayment(OrderID)
+    PC->>PC: Generate Gateway URL
+    PC-->>Student: PaymentUrl
 
-    Note over :PaymentController: Callback: Order=Paid, Publish(OrderCompletedEvent)
+    PC->>PC: Handle Callback
+    PC->>OC: MarkAsPaid(OrderID)
+    OC->>OC: Publish(OrderCompletedEvent)
+
 ```
 
 ---
 
-## 4. Student learns course and certificate
-
-Student: enrollments, curriculum progress, course/lesson, heartbeat. Hệ thống: thử cấp certificate. Student: lấy certificates.
+## 4. Learning & Certification
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Student
-    participant "EnrollmentController" as :EnrollmentController
-    participant "CourseController" as :CourseController
-    participant "LessonController" as :LessonController
-    participant "CertificateController" as :CertificateController
+    participant EC as :EnrollmentController
+    participant CC as :CourseController
+    participant LC as :LessonController
+    participant CertC as :CertificateController
 
-    Student->>:EnrollmentController: GET enrollments/me
-    :EnrollmentController-->>Student: Enrollment list
+    Student->>EC: GET enrollments/me
+    EC-->>Student: Enrollments
 
-    Student->>:EnrollmentController: GET curriculum-progress
-    :EnrollmentController-->>Student: CurriculumProgressResponse
+    Student->>EC: GET curriculum-progress
+    EC-->>Student: Progress Data
 
-    Student->>:CourseController: GET course details
-    :CourseController-->>Student: CourseDetailResponse
+    Student->>CC: GET course details
+    CC-->>Student: CourseDetail
 
-    Student->>:LessonController: GET lesson / video
-    :LessonController-->>Student: LessonResponse
+    Student->>LC: GET lesson content
+    LC-->>Student: LessonResponse
 
-    Student->>:EnrollmentController: PUT lesson heartbeat
-    :EnrollmentController->>:EnrollmentController: update progress
-    :EnrollmentController->>:CertificateController: TryIssueCertificateIfEligible
-    :CertificateController->>:CertificateController: create Certificate, Publish(CourseCompleted)
-    :EnrollmentController-->>Student: 200 OK
+    Student->>EC: PUT lesson heartbeat
+    EC->>EC: Update progress
+    EC->>CertC: TryIssueCertificate(UserId, CourseId)
+    CertC->>CertC: Create & Publish(Completed)
+    EC-->>Student: 200 OK
 
-    Student->>:CertificateController: GET certificates/me
-    :CertificateController-->>Student: Certificate list
+    Student->>CertC: GET certificates/me
+    CertC-->>Student: Certificates
+
 ```
+
+---
