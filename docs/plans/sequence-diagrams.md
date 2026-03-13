@@ -1,5 +1,3 @@
----
-
 ## 1. Instructor Registration & AI Approval
 
 ```mermaid
@@ -120,5 +118,3 @@ sequenceDiagram
     CertC-->>Student: Certificates
 
 ```
-
----
