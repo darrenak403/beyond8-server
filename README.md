@@ -1,7 +1,7 @@
 # Beyond8 Server
 
 <p align="center">
-  <img src="logo.png" alt="Beyond8 Logo" width="200" />
+  <img src="logo.png" alt="Beyond8 Logo" width="400" />
 </p>
 
 Backend microservices cho nền tảng học trực tuyến Beyond8 — xây dựng bằng ASP.NET Core, .NET Aspire và Clean Architecture.
